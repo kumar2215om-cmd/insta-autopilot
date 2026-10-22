@@ -160,7 +160,8 @@ async function loadStats(force) {
   const data = await res.json();
   const err = document.getElementById("err");
   if (data.error) { err.textContent = "Instagram API error: " + data.error; err.style.display = "block"; return; }
-  err.style.display = "none";
+  err.textContent = data.warning || "";
+  err.style.display = data.warning ? "block" : "none";
   stats = data;
   // Don't wipe a rule form the user is typing in.
   if (!document.activeElement || !document.activeElement.closest("#reels form")) render();

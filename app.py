@@ -24,8 +24,11 @@ APP_SECRET = os.environ.get("IG_APP_SECRET", "")
 VERIFY_TOKEN = os.environ.get("IG_VERIFY_TOKEN", "change-me")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
+# Serverless functions freeze after responding, so webhook work can't run in background threads.
+SERVERLESS = bool(os.environ.get("VERCEL"))
 # On a server, point DATA_DIR at a persistent volume so rules and activity survive redeploys.
-DATA_DIR = os.environ.get("DATA_DIR", ".")
+# Vercel only allows writing to /tmp (wiped often), which is why Redis is needed there.
+DATA_DIR = os.environ.get("DATA_DIR", "/tmp" if SERVERLESS else ".")
 os.makedirs(DATA_DIR, exist_ok=True)
 RULES_FILE = os.environ.get("RULES_FILE", os.path.join(DATA_DIR, "rules.json"))
 DB_FILE = os.environ.get("DB_FILE", os.path.join(DATA_DIR, "autopilot.db"))
@@ -33,8 +36,6 @@ STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "60"))
 # Serverless hosts (Vercel) have no lasting disk: store data in Upstash Redis when it's configured.
 REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
 REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
-# Serverless functions freeze after responding, so webhook work can't run in background threads.
-SERVERLESS = bool(os.environ.get("VERCEL"))
 
 REEL_METRICS = "views,reach,likes,comments,shares,saved,total_interactions"
 
@@ -398,7 +399,11 @@ def api_stats():
         except Exception as e:
             if not _stats_cache["data"]:
                 return jsonify({"error": str(e)}), 502
-    return jsonify(_stats_cache["data"])
+    data = dict(_stats_cache["data"])
+    if SERVERLESS and not REDIS_URL:
+        data["warning"] = ("No database connected: rules and activity will be lost. "
+                           "In Vercel, add Storage → Upstash Redis and redeploy.")
+    return jsonify(data)
 
 
 @app.get("/api/activity")
