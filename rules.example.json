@@ -1,0 +1,15 @@
+{
+  "reels": {
+    "PUT_REEL_MEDIA_ID_HERE": {
+      "enabled": true,
+      "keywords": ["LINK"],
+      "comment_reply": "Check your DM @{username} 📩",
+      "opening_dm": "Hey {username}! 👋 Tap the button below and I'll send it to you.",
+      "button_text": "Send me the link",
+      "require_follow": true,
+      "follow_dm": "Almost there! 👀 Follow me first to unlock it, then tap \"I followed\" below.",
+      "followed_button_text": "I followed ✅",
+      "dm": "Here you go 🎁 https://example.com"
+    }
+  }
+}

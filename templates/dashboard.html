@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Insta Autopilot</title>
+<style>
+  :root { --bg:#f6f6f8; --card:#fff; --text:#16161a; --muted:#6b6b76; --line:#e4e4ea;
+          --accent:#d62976; --ok:#1a8f4c; --err:#c62828; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111114; --card:#1b1b20; --text:#ececf1; --muted:#9a9aa6; --line:#2c2c34; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:16px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;
+           border-bottom:1px solid var(--line); background:var(--card); }
+  header h1 { font-size:18px; margin:0; margin-right:auto; }
+  .stat b { display:block; font-size:18px; } .stat span { color:var(--muted); font-size:12px; }
+  main { padding:16px; display:grid; gap:16px; grid-template-columns: 2fr 1fr; max-width:1300px; margin:auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  h2 { font-size:15px; margin:0 0 10px; }
+  .muted { color:var(--muted); font-size:12px; }
+  .reel { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px;
+          display:grid; grid-template-columns: 90px 1fr; gap:12px; margin-bottom:12px; }
+  .reel img { width:90px; height:160px; object-fit:cover; border-radius:6px; background:var(--line); }
+  .caption { margin:0 0 6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .metrics { display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:8px; }
+  .metrics div b { font-variant-numeric: tabular-nums; }
+  details summary { cursor:pointer; color:var(--accent); font-weight:600; }
+  form { display:grid; gap:6px; margin-top:8px; }
+  input[type=text], textarea { width:100%; padding:7px; border:1px solid var(--line); border-radius:6px;
+          background:var(--bg); color:var(--text); font:inherit; }
+  button { padding:7px 12px; border:0; border-radius:6px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  button.secondary { background:transparent; color:var(--muted); border:1px solid var(--line); }
+  .badge { font-size:11px; padding:1px 7px; border-radius:99px; border:1px solid var(--line); }
+  .badge.on { color:var(--ok); border-color:var(--ok); }
+  .log { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .log-item { border-top:1px solid var(--line); padding:8px 0; word-break:break-word; }
+  .ok { color:var(--ok); } .error { color:var(--err); }
+  .err-banner { background:var(--err); color:#fff; padding:10px 16px; display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📸 Insta Autopilot <span class="muted" id="username"></span></h1>
+  <div class="stat"><b id="followers">–</b><span>followers</span></div>
+  <div class="stat"><b id="posts">–</b><span>posts</span></div>
+  <div class="stat"><b id="totalViews">–</b><span>reel views</span></div>
+  <div class="stat"><b id="dmsSent">–</b><span>DMs sent</span></div>
+  <button class="secondary" onclick="loadStats(true)">Refresh</button>
+</header>
+<div class="err-banner" id="err"></div>
+<main>
+  <section>
+    <h2>Your reels <span class="muted" id="fetched"></span></h2>
+    <div class="reel" style="display:block">
+      <details>
+        <summary>Rule for ALL reels (fallback) <span class="badge" id="badge-*"></span></summary>
+        <div id="form-*"></div>
+      </details>
+    </div>
+    <div id="reels"><p class="muted">Loading…</p></div>
+  </section>
+  <aside class="log">
+    <h2>Live activity</h2>
+    <div id="activity"><p class="muted">No activity yet.</p></div>
+  </aside>
+</main>
+<script>
+let rules = {reels: {}};
+const ACTIONS = {comment_reply: "comment reply", opening_dm: "opening DM", follow_prompt: "asked to follow",
+                 follow_check: "follow check", dm: "link sent"};
+const fmt = n => n == null ? "–" : Intl.NumberFormat(undefined, {notation: "compact"}).format(n);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function ruleForm(id) {
+  const r = {enabled: true, keywords: [], comment_reply: "", opening_dm: "", button_text: "",
+             require_follow: true, follow_dm: "", followed_button_text: "", dm: "",
+             ...(rules.reels[id] || {})};
+  return `<form onsubmit="saveRule(event, '${id}')">
+    <label><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> Enabled</label>
+    <label class="muted">1. Trigger keywords (comma separated, empty = every comment)</label>
+    <input type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="LINK, guide">
+    <label class="muted">2. Public comment reply ({username} works)</label>
+    <input type="text" name="comment_reply" value="${esc(r.comment_reply)}" placeholder="Check your DM @{username} 📩">
+    <label class="muted">3. Opening DM + button</label>
+    <textarea name="opening_dm" rows="2" placeholder="Hey {username}! 👋 Tap the button below and I'll send it to you.">${esc(r.opening_dm)}</textarea>
+    <input type="text" name="button_text" maxlength="20" value="${esc(r.button_text)}" placeholder="Send me the link">
+    <label><input type="checkbox" name="require_follow" ${r.require_follow ? "checked" : ""}> 4. Must follow me first</label>
+    <textarea name="follow_dm" rows="2" placeholder="Almost there! 👀 Follow me first to unlock it, then tap &quot;I followed&quot; below.">${esc(r.follow_dm)}</textarea>
+    <input type="text" name="followed_button_text" maxlength="20" value="${esc(r.followed_button_text)}" placeholder="I followed ✅">
+    <label class="muted">5. Final DM (the link / reward)</label>
+    <textarea name="dm" rows="3" placeholder="Here you go 🎁 https://...">${esc(r.dm)}</textarea>
+    <div style="display:flex;gap:8px">
+      <button>Save rule</button>
+      ${rules.reels[id] ? `<button type="button" class="secondary" onclick="deleteRule('${id}')">Remove</button>` : ""}
+    </div></form>`;
+}
+
+function badge(id) {
+  const r = rules.reels[id];
+  if (!r) return "";
+  return r.enabled !== false ? `<span class="badge on">auto-reply on</span>` : `<span class="badge">paused</span>`;
+}
+
+async function saveRule(e, id) {
+  e.preventDefault();
+  const f = e.target;
+  const body = {enabled: f.enabled.checked, keywords: f.keywords.value.split(","),
+                comment_reply: f.comment_reply.value, opening_dm: f.opening_dm.value,
+                button_text: f.button_text.value, require_follow: f.require_follow.checked,
+                follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value,
+                dm: f.dm.value};
+  await fetch(`/api/rules/${encodeURIComponent(id)}`, {method: "PUT",
+    headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  await loadRules(); render();
+}
+
+async function deleteRule(id) {
+  await fetch(`/api/rules/${encodeURIComponent(id)}`, {method: "DELETE"});
+  await loadRules(); render();
+}
+
+let stats = null;
+function render() {
+  document.getElementById("form-*").innerHTML = ruleForm("*");
+  document.getElementById("badge-*").outerHTML = `<span id="badge-*">${badge("*")}</span>`;
+  if (!stats) return;
+  const a = stats.account;
+  document.getElementById("username").textContent = "@" + a.username;
+  document.getElementById("followers").textContent = fmt(a.followers_count);
+  document.getElementById("posts").textContent = fmt(a.media_count);
+  document.getElementById("totalViews").textContent =
+    fmt(stats.reels.reduce((s, r) => s + (r.insights.views || 0), 0));
+  document.getElementById("fetched").textContent = "· updated " + new Date(stats.fetched_at).toLocaleTimeString();
+  const open = new Set([...document.querySelectorAll("#reels details[open]")].map(d => d.dataset.id));
+  document.getElementById("reels").innerHTML = stats.reels.length ? stats.reels.map(r => {
+    const i = r.insights;
+    return `<div class="reel">
+      <a href="${esc(r.permalink)}" target="_blank"><img src="${esc(r.thumbnail_url)}" alt=""></a>
+      <div>
+        <p class="caption">${esc(r.caption) || "<span class=muted>(no caption)</span>"}</p>
+        <div class="muted">${new Date(r.timestamp).toLocaleString()} · id ${esc(r.id)} ${badge(r.id)}</div>
+        <div class="metrics">
+          <div>▶ <b>${fmt(i.views)}</b> views</div><div>👁 <b>${fmt(i.reach)}</b> reach</div>
+          <div>❤ <b>${fmt(i.likes ?? r.like_count)}</b></div><div>💬 <b>${fmt(i.comments ?? r.comments_count)}</b></div>
+          <div>↗ <b>${fmt(i.shares)}</b> shares</div><div>🔖 <b>${fmt(i.saved)}</b> saves</div>
+        </div>
+        <details data-id="${esc(r.id)}" ${open.has(r.id) ? "open" : ""}>
+          <summary>Auto comment + DM rule</summary>${ruleForm(r.id)}</details>
+      </div></div>`;
+  }).join("") : `<p class="muted">No reels found on this account.</p>`;
+}
+
+async function loadRules() { rules = await (await fetch("/api/rules")).json(); rules.reels ||= {}; }
+
+async function loadStats(force) {
+  const res = await fetch("/api/stats" + (force ? "?refresh=1" : ""));
+  const data = await res.json();
+  const err = document.getElementById("err");
+  if (data.error) { err.textContent = "Instagram API error: " + data.error; err.style.display = "block"; return; }
+  err.style.display = "none";
+  stats = data;
+  // Don't wipe a rule form the user is typing in.
+  if (!document.activeElement || !document.activeElement.closest("#reels form")) render();
+}
+
+async function loadActivity() {
+  const items = await (await fetch("/api/activity")).json();
+  document.getElementById("dmsSent").textContent =
+    items.filter(x => x.action === "dm" && x.status === "ok").length;
+  if (!items.length) return;
+  document.getElementById("activity").innerHTML = items.map(x => `<div class="log-item">
+    <div><b>@${esc(x.username)}</b>: ${/^(GET|FOLLOWED)\|/.test(x.comment) ? "tapped button" : `“${esc(x.comment)}”`}</div>
+    <div class="muted">${new Date(x.at).toLocaleTimeString()} · ${ACTIONS[x.action] || x.action}
+      · <span class="${x.status}">${x.status}</span></div>
+    ${x.detail ? `<div class="muted error">${esc(x.detail)}</div>` : ""}</div>`).join("");
+}
+
+(async () => {
+  await loadRules(); render();
+  loadStats(); loadActivity();
+  setInterval(loadStats, 60000);
+  setInterval(loadActivity, 4000);
+})();
+</script>
+</body>
+</html>
