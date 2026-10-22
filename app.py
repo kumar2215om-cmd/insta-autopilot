@@ -19,11 +19,18 @@ load_dotenv()
 
 API_VERSION = os.environ.get("IG_API_VERSION", "v23.0")
 GRAPH = f"https://graph.instagram.com/{API_VERSION}"
-ACCESS_TOKEN = os.environ.get("IG_ACCESS_TOKEN", "")
-APP_SECRET = os.environ.get("IG_APP_SECRET", "")
-VERIFY_TOKEN = os.environ.get("IG_VERIFY_TOKEN", "change-me")
-CRON_SECRET = os.environ.get("CRON_SECRET", "")
-DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
+
+
+def secret(name, default=""):
+    # Values pasted into hosting dashboards often pick up stray spaces, newlines or quotes.
+    return os.environ.get(name, default).strip().strip("\"'").strip()
+
+
+ACCESS_TOKEN = secret("IG_ACCESS_TOKEN")
+APP_SECRET = secret("IG_APP_SECRET")
+VERIFY_TOKEN = secret("IG_VERIFY_TOKEN", "change-me")
+CRON_SECRET = secret("CRON_SECRET")
+DASHBOARD_PASSWORD = secret("DASHBOARD_PASSWORD")
 # Serverless functions freeze after responding, so webhook work can't run in background threads.
 SERVERLESS = bool(os.environ.get("VERCEL"))
 # On a server, point DATA_DIR at a persistent volume so rules and activity survive redeploys.
@@ -365,7 +372,7 @@ def check_password():
     if not DASHBOARD_PASSWORD or request.path.startswith(("/webhook", "/cron/")):
         return
     auth = request.authorization
-    if not auth or auth.password != DASHBOARD_PASSWORD:
+    if not auth or (auth.password or "").strip() != DASHBOARD_PASSWORD:
         return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="autopilot"'})
 
 
