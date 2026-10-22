@@ -46,6 +46,18 @@ It uses Instagram's **official API**, so your account is not at risk the way it 
    To make it work for everyone who comments, switch the app to **Live** in the dashboard.
    That needs App Review for the permissions above, and Advanced Access for comments and messages.
 
+## Run 24/7 on Railway
+1. On railway.com: **New Project → Deploy from GitHub repo** and pick this repo.
+2. **Variables:** add `IG_ACCESS_TOKEN`, `IG_APP_SECRET`, `IG_VERIFY_TOKEN`, `DASHBOARD_PASSWORD`
+   (always set a password, because the dashboard is public on a server) and `DATA_DIR=/data`.
+3. **Volume:** right-click the service → **Attach volume** with mount path `/data`. This keeps your rules
+   and activity log when the app redeploys.
+4. **Settings → Networking → Generate Domain** gives you `https://<name>.up.railway.app`.
+5. In the Meta webhook settings, change the Callback URL to `https://<name>.up.railway.app/webhook`
+   and click **Verify and save**.
+
+The `Procfile` starts the app with gunicorn. Keep it at one worker, because the stats cache lives in memory.
+
 ## Usage
 Open the dashboard. Under any reel, open **Auto comment + DM rule** and fill in:
 1. **Keywords**: only comments that contain one of these trigger a reply (case doesn't matter).

@@ -23,8 +23,11 @@ ACCESS_TOKEN = os.environ.get("IG_ACCESS_TOKEN", "")
 APP_SECRET = os.environ.get("IG_APP_SECRET", "")
 VERIFY_TOKEN = os.environ.get("IG_VERIFY_TOKEN", "change-me")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
-RULES_FILE = os.environ.get("RULES_FILE", "rules.json")
-DB_FILE = os.environ.get("DB_FILE", "autopilot.db")
+# On a server, point DATA_DIR at a persistent volume so rules and activity survive redeploys.
+DATA_DIR = os.environ.get("DATA_DIR", ".")
+os.makedirs(DATA_DIR, exist_ok=True)
+RULES_FILE = os.environ.get("RULES_FILE", os.path.join(DATA_DIR, "rules.json"))
+DB_FILE = os.environ.get("DB_FILE", os.path.join(DATA_DIR, "autopilot.db"))
 STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "60"))
 
 REEL_METRICS = "views,reach,likes,comments,shares,saved,total_interactions"
