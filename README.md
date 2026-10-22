@@ -51,8 +51,11 @@ It uses Instagram's **official API**, so your account is not at risk the way it 
 2. **Storage:** in the project, open **Storage → Create Database → Upstash (Redis)**, use the free plan
    and connect it to the project. This adds the `KV_REST_API_URL` / `KV_REST_API_TOKEN` variables,
    and the app then stores rules and activity there instead of on disk.
-3. **Settings → Environment Variables:** add `IG_ACCESS_TOKEN`, `IG_APP_SECRET`, `IG_VERIFY_TOKEN` and
-   `DASHBOARD_PASSWORD` (always set a password, because the dashboard is public), then **Redeploy**.
+3. **Settings → Environment Variables:** add `IG_ACCESS_TOKEN`, `IG_APP_SECRET`, `IG_VERIFY_TOKEN`,
+   `DASHBOARD_PASSWORD` (always set a password, because the dashboard is public) and `CRON_SECRET`
+   (any long random string), then **Redeploy**.
+   With `CRON_SECRET` set, a weekly Vercel Cron job (`vercel.json`) renews the Instagram token, so it never
+   expires. If you paste a new `IG_ACCESS_TOKEN` later, the app switches to it.
 4. In the Meta webhook settings, set the Callback URL to `https://<project>.vercel.app/webhook` and click
    **Verify and save**.
 
@@ -90,6 +93,6 @@ The **Rule for ALL reels** box is a fallback for reels that don't have their own
 - Button labels can be at most 20 characters (an Instagram limit).
 - Each comment is handled only once. Your own comments and replies inside threads are ignored.
 - Instagram allows **one DM per comment, within 7 days**. Normal messaging rules apply after that.
-- The access token expires after 60 days. Refresh it with
+- The access token expires after 60 days. On Vercel it renews itself every week (see above). Elsewhere, refresh it with
   `GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=TOKEN`.
 - Stats are cached for 60 seconds (`STATS_CACHE_SECONDS`) to stay under API rate limits.

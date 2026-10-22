@@ -22,6 +22,7 @@ GRAPH = f"https://graph.instagram.com/{API_VERSION}"
 ACCESS_TOKEN = os.environ.get("IG_ACCESS_TOKEN", "")
 APP_SECRET = os.environ.get("IG_APP_SECRET", "")
 VERIFY_TOKEN = os.environ.get("IG_VERIFY_TOKEN", "change-me")
+CRON_SECRET = os.environ.get("CRON_SECRET", "")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 # On a server, point DATA_DIR at a persistent volume so rules and activity survive redeploys.
 DATA_DIR = os.environ.get("DATA_DIR", ".")
@@ -124,15 +125,40 @@ def save_rules(rules):
 
 # ---------- Instagram API ----------
 
+def _env_token_id():
+    return hashlib.sha256(ACCESS_TOKEN.encode()).hexdigest()[:16]
+
+
+def current_token():
+    """The latest auto-refreshed token, unless IG_ACCESS_TOKEN was changed since it was saved."""
+    if REDIS_URL:
+        saved = redis("GET", "ig_token")
+        if saved:
+            saved = json.loads(saved)
+            if saved.get("env") == _env_token_id():
+                return saved["token"]
+    return ACCESS_TOKEN
+
+
+def refresh_token():
+    # Long-lived tokens last 60 days; refreshing returns a new 60-day token.
+    r = requests.get("https://graph.instagram.com/refresh_access_token", timeout=20, params={
+        "grant_type": "ig_refresh_token", "access_token": current_token()})
+    r.raise_for_status()
+    data = r.json()
+    redis("SET", "ig_token", json.dumps({"token": data["access_token"], "env": _env_token_id()}))
+    return data.get("expires_in")
+
+
 def ig_get(path, **params):
-    params["access_token"] = ACCESS_TOKEN
+    params["access_token"] = current_token()
     r = requests.get(f"{GRAPH}/{path}", params=params, timeout=20)
     r.raise_for_status()
     return r.json()
 
 
 def ig_post(path, payload):
-    r = requests.post(f"{GRAPH}/{path}", params={"access_token": ACCESS_TOKEN},
+    r = requests.post(f"{GRAPH}/{path}", params={"access_token": current_token()},
                       json=payload, timeout=20)
     if not r.ok:
         raise RuntimeError(f"{r.status_code}: {r.text}")
@@ -335,11 +361,27 @@ def receive_webhook():
 
 @app.before_request
 def check_password():
-    if not DASHBOARD_PASSWORD or request.path.startswith("/webhook"):
+    if not DASHBOARD_PASSWORD or request.path.startswith(("/webhook", "/cron/")):
         return
     auth = request.authorization
     if not auth or auth.password != DASHBOARD_PASSWORD:
         return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="autopilot"'})
+
+
+@app.get("/cron/refresh-token")
+def cron_refresh_token():
+    # Vercel Cron sends "Authorization: Bearer <CRON_SECRET>".
+    if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
+        abort(403)
+    if not REDIS_URL:
+        return jsonify({"error": "token refresh needs Redis storage"}), 400
+    try:
+        expires_in = refresh_token()
+        log_activity("", "system", "", "token_refresh", "ok")
+        return jsonify({"expires_in_days": round((expires_in or 0) / 86400)})
+    except Exception as e:
+        log_activity("", "system", "", "token_refresh", "error", str(e))
+        return jsonify({"error": str(e)}), 502
 
 
 @app.get("/")

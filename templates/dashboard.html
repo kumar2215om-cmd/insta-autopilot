@@ -69,7 +69,8 @@
 <script>
 let rules = {reels: {}};
 const ACTIONS = {comment_reply: "comment reply", opening_dm: "opening DM", follow_prompt: "asked to follow",
-                 follow_check: "follow check", dm: "link sent"};
+                 follow_check: "follow check", dm: "link sent",
+                 token_refresh: "Instagram token renewed"};
 const fmt = n => n == null ? "–" : Intl.NumberFormat(undefined, {notation: "compact"}).format(n);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -171,7 +172,7 @@ async function loadActivity() {
     items.filter(x => x.action === "dm" && x.status === "ok").length;
   if (!items.length) return;
   document.getElementById("activity").innerHTML = items.map(x => `<div class="log-item">
-    <div><b>@${esc(x.username)}</b>: ${/^(GET|FOLLOWED)\|/.test(x.comment) ? "tapped button" : `“${esc(x.comment)}”`}</div>
+    <div>${x.username === "system" ? "<b>System</b>" : `<b>@${esc(x.username)}</b>: ${/^(GET|FOLLOWED)\|/.test(x.comment) ? "tapped button" : `“${esc(x.comment)}”`}`}</div>
     <div class="muted">${new Date(x.at).toLocaleTimeString()} · ${ACTIONS[x.action] || x.action}
       · <span class="${x.status}">${x.status}</span></div>
     ${x.detail ? `<div class="muted error">${esc(x.detail)}</div>` : ""}</div>`).join("");
