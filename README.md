@@ -46,6 +46,18 @@ It uses Instagram's **official API**, so your account is not at risk the way it 
    To make it work for everyone who comments, switch the app to **Live** in the dashboard.
    That needs App Review for the permissions above, and Advanced Access for comments and messages.
 
+## Run 24/7 on Vercel (free)
+1. On vercel.com: **Add New → Project** and import this GitHub repo. Keep the defaults, since Vercel detects Flask.
+2. **Storage:** in the project, open **Storage → Create Database → Upstash (Redis)**, use the free plan
+   and connect it to the project. This adds the `KV_REST_API_URL` / `KV_REST_API_TOKEN` variables,
+   and the app then stores rules and activity there instead of on disk.
+3. **Settings → Environment Variables:** add `IG_ACCESS_TOKEN`, `IG_APP_SECRET`, `IG_VERIFY_TOKEN` and
+   `DASHBOARD_PASSWORD` (always set a password, because the dashboard is public), then **Redeploy**.
+4. In the Meta webhook settings, set the Callback URL to `https://<project>.vercel.app/webhook` and click
+   **Verify and save**.
+
+On Vercel, comments are handled before the app answers Instagram, because a serverless function stops once it responds.
+
 ## Run 24/7 on Railway
 1. On railway.com: **New Project → Deploy from GitHub repo** and pick this repo.
 2. **Variables:** add `IG_ACCESS_TOKEN`, `IG_APP_SECRET`, `IG_VERIFY_TOKEN`, `DASHBOARD_PASSWORD`

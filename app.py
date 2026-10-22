@@ -29,6 +29,11 @@ os.makedirs(DATA_DIR, exist_ok=True)
 RULES_FILE = os.environ.get("RULES_FILE", os.path.join(DATA_DIR, "rules.json"))
 DB_FILE = os.environ.get("DB_FILE", os.path.join(DATA_DIR, "autopilot.db"))
 STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "60"))
+# Serverless hosts (Vercel) have no lasting disk: store data in Upstash Redis when it's configured.
+REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
+REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
+# Serverless functions freeze after responding, so webhook work can't run in background threads.
+SERVERLESS = bool(os.environ.get("VERCEL"))
 
 REEL_METRICS = "views,reach,likes,comments,shares,saved,total_interactions"
 
@@ -38,6 +43,13 @@ _stats_cache = {"at": 0, "data": None}
 
 
 # ---------- storage ----------
+
+def redis(*command):
+    r = requests.post(REDIS_URL, headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
+                      json=list(command), timeout=10)
+    r.raise_for_status()
+    return r.json()["result"]
+
 
 def db():
     conn = sqlite3.connect(DB_FILE)
@@ -56,23 +68,43 @@ def init_db():
 
 
 def log_activity(media_id, username, comment, action, status, detail=""):
+    at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if REDIS_URL:
+        redis("LPUSH", "activity", json.dumps({
+            "at": at, "media_id": media_id, "username": username, "comment": comment,
+            "action": action, "status": status, "detail": detail[:500]}))
+        redis("LTRIM", "activity", 0, 99)
+        return
     with _db_lock, db() as conn:
         conn.execute(
             "INSERT INTO activity (at, media_id, username, comment, action, status, detail) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (datetime.now(timezone.utc).isoformat(timespec="seconds"), media_id,
-             username, comment, action, status, detail[:500]),
+            (at, media_id, username, comment, action, status, detail[:500]),
         )
 
 
 def claim_comment(comment_id):
     """Returns True the first time a comment is seen, so each comment is handled once."""
+    if REDIS_URL:
+        # Instagram only allows private replies within 7 days, so 30 days of memory is plenty.
+        return redis("SET", f"processed:{comment_id}", 1, "NX", "EX", 30 * 86400) == "OK"
     with _db_lock, db() as conn:
         cur = conn.execute("INSERT OR IGNORE INTO processed VALUES (?)", (comment_id,))
         return cur.rowcount == 1
 
 
+def recent_activity():
+    if REDIS_URL:
+        return [json.loads(x) for x in redis("LRANGE", "activity", 0, 99)]
+    with db() as conn:
+        rows = conn.execute("SELECT * FROM activity ORDER BY id DESC LIMIT 100").fetchall()
+    return [dict(r) for r in rows]
+
+
 def load_rules():
+    if REDIS_URL:
+        raw = redis("GET", "rules")
+        return json.loads(raw) if raw else {"reels": {}}
     try:
         with open(RULES_FILE) as f:
             return json.load(f)
@@ -81,6 +113,9 @@ def load_rules():
 
 
 def save_rules(rules):
+    if REDIS_URL:
+        redis("SET", "rules", json.dumps(rules, ensure_ascii=False))
+        return
     tmp = RULES_FILE + ".tmp"
     with open(tmp, "w") as f:
         json.dump(rules, f, indent=2, ensure_ascii=False)
@@ -266,6 +301,15 @@ def verify_webhook():
     abort(403)
 
 
+def run_task(fn, *args):
+    # Respond to Instagram fast by doing API calls in the background, except on serverless
+    # hosts where the function would be frozen before the thread finishes.
+    if SERVERLESS:
+        fn(*args)
+    else:
+        threading.Thread(target=fn, args=args).start()
+
+
 @app.post("/webhook")
 def receive_webhook():
     if APP_SECRET:
@@ -277,16 +321,13 @@ def receive_webhook():
     for entry in body.get("entry", []):
         for change in entry.get("changes", []):
             if change.get("field") == "comments":
-                # Respond to Instagram fast; do API calls in the background.
-                threading.Thread(target=handle_comment,
-                                 args=(entry.get("id"), change.get("value", {}))).start()
+                run_task(handle_comment, entry.get("id"), change.get("value", {}))
         for event in entry.get("messaging", []):
             msg = event.get("message", {})
             payload = (event.get("postback", {}).get("payload")
                        or msg.get("quick_reply", {}).get("payload"))
             if payload and not msg.get("is_echo"):
-                threading.Thread(target=handle_button,
-                                 args=(entry.get("id"), event["sender"]["id"], payload)).start()
+                run_task(handle_button, entry.get("id"), event["sender"]["id"], payload)
     return "ok"
 
 
@@ -320,9 +361,7 @@ def api_stats():
 
 @app.get("/api/activity")
 def api_activity():
-    with db() as conn:
-        rows = conn.execute("SELECT * FROM activity ORDER BY id DESC LIMIT 100").fetchall()
-    return jsonify([dict(r) for r in rows])
+    return jsonify(recent_activity())
 
 
 @app.get("/api/rules")
@@ -357,7 +396,8 @@ def api_delete_rule(media_id):
     return "", 204
 
 
-init_db()
+if not REDIS_URL:
+    init_db()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8000")))
