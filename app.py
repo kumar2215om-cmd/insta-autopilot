@@ -312,7 +312,9 @@ def handle_button(ig_user_id, igsid, payload):
     fill = lambda s: s.replace("{username}", username)
     try:
         if follows:
-            send_dm(ig_user_id, recipient, {"text": fill(rule.get("dm") or "")})
+            if not rule.get("dm"):
+                raise RuntimeError("Final DM is empty: add your message and link to this rule in the dashboard")
+            send_dm(ig_user_id, recipient, {"text": fill(rule["dm"])})
             log_activity(key, username or igsid, payload, "dm", "ok")
         else:
             me = my_username()
