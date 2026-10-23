@@ -101,8 +101,9 @@ comment is handled once, so the button is safe to click again. It handles up to 
   DMs a keyword, the app answers in that conversation with the same button → follow check → link flow, which works
   even while comment DMs are refused. Refused DMs are also retried once a day (Vercel Cron) or with
   **🔁 Retry failed DMs**, while Instagram's 7-day window is open.
-- If the follow check itself fails (an API error), the link is still sent and the error appears in the activity feed,
-  so nobody gets stuck.
+- The follow gate is strict: the link is only sent once Instagram confirms the person follows you. If the check
+  fails (an API error), they get the "follow me first" message instead and can tap "I followed" to be checked again;
+  the error appears in the activity feed.
 - Button labels can be at most 20 characters (an Instagram limit).
 - Each comment is handled only once. Your own comments and replies inside threads are ignored.
 - Instagram allows **one DM per comment, within 7 days**. Normal messaging rules apply after that.

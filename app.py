@@ -536,8 +536,11 @@ def handle_button(ig_user_id, igsid, payload):
         try:
             username, follows = get_follow_status(igsid)
         except Exception as e:
-            # Don't leave people stuck if the lookup fails; deliver and log it.
-            log_activity(key, igsid, payload, "follow_check", "error", str(e))
+            # Strict gate: no confirmed follow, no link. They get the follow prompt and can tap
+            # "I followed" to be checked again.
+            follows = False
+            log_activity(key, igsid, payload, "follow_check", "error",
+                         "Couldn't confirm they follow you, so the link was held back. | " + str(e))
     fill = lambda s: s.replace("{username}", username)
     try:
         if follows:
