@@ -241,6 +241,57 @@ DEFAULT_FOLLOW = ("Almost there! 👀 Follow me first to unlock it, "
                   "then tap \"I followed\" below.")
 
 
+def normalize_words(text):
+    """Lowercase words with emoji/punctuation, repeated letters and a plural "s" removed.
+
+    "PROMPTS!!🔥" -> ["prompt"], "Ootto" -> ["oto"], so variations of a keyword still match.
+    """
+    words = "".join(ch if ch.isalnum() else " " for ch in text.lower()).split()
+    out = []
+    for w in words:
+        w = "".join(ch for i, ch in enumerate(w) if i == 0 or ch != w[i - 1])
+        if len(w) > 3 and w.endswith("s"):
+            w = w[:-1]
+        out.append(w)
+    return out
+
+
+def one_typo_apart(a, b):
+    """True if a and b differ by one inserted, deleted, changed or swapped letter."""
+    if abs(len(a) - len(b)) > 1:
+        return False
+    diff = [i for i in range(len(a)) if len(a) == len(b) and a[i] != b[i]]
+    if len(diff) == 2 and diff[1] == diff[0] + 1 and a[diff[0]] == b[diff[1]] and a[diff[1]] == b[diff[0]]:
+        return True
+    if len(a) > len(b):
+        a, b = b, a
+    i = j = edits = 0
+    while i < len(a) and j < len(b):
+        if a[i] != b[j]:
+            edits += 1
+            if edits > 1:
+                return False
+            if len(a) == len(b):
+                i += 1
+        else:
+            i += 1
+        j += 1
+    return edits + (len(b) - j) <= 1
+
+
+def keyword_matches(keyword, text):
+    kw = normalize_words(keyword)
+    words = normalize_words(text)
+    if not kw:
+        return False
+    if len(kw) > 1:  # a phrase must appear as consecutive words
+        return f" {' '.join(kw)} " in f" {' '.join(words)} "
+    # Whole words only (so "ai" doesn't fire on "said"). Longer keywords tolerate one typo after
+    # the first letter ("promt" -> prompt, but not "emerge" -> merge).
+    k = kw[0]
+    return any(w == k or (len(k) >= 5 and w[0] == k[0] and one_typo_apart(w, k)) for w in words)
+
+
 def find_rule(rules, media_id, text):
     """Returns (rule_key, rule) for a comment, or (None, None)."""
     reels = rules.get("reels", {})
@@ -248,8 +299,8 @@ def find_rule(rules, media_id, text):
     rule = reels.get(key)
     if not rule or not rule.get("enabled", True):
         return None, None
-    keywords = [k.strip().lower() for k in rule.get("keywords", []) if k.strip()]
-    if keywords and not any(k in text.lower() for k in keywords):
+    keywords = [k for k in rule.get("keywords", []) if k.strip()]
+    if keywords and not any(keyword_matches(k, text) for k in keywords):
         return None, None
     return key, rule
 

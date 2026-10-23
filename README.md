@@ -75,8 +75,10 @@ The `Procfile` starts the app with gunicorn. Keep it at one worker, because the 
 
 ## Usage
 Open the dashboard. Under any reel, open **Auto comment + DM rule** and fill in:
-1. **Keywords**: only comments that contain one of these trigger a reply (case doesn't matter).
-   Leave it empty to reply to every comment.
+1. **Keywords**: only comments containing one of these words trigger a reply. Matching is forgiving:
+   capitals, emojis, punctuation, plural "s", repeated letters and one typo don't matter
+   (`PROMPTS` matches prompt, Prompts!!, promt, pormpt 🔥; `OTTO` matches Ootto). It matches whole words, so
+   `AI` won't fire on "said". Leave it empty to reply to every comment.
 2. **Public comment reply**: one per line, for example `@{username} Check your DM 📩`. A random line is
    used each time, which keeps replies looking natural. Lines without `{username}` get the @mention added in front.
 3. **Opening DM + button text**. Leave them empty to use the defaults.

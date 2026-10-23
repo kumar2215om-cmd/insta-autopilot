@@ -90,7 +90,7 @@ function ruleForm(id) {
              ...(rules.reels[id] || {})};
   return `<form onsubmit="saveRule(event, '${id}')">
     <label><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> Enabled</label>
-    <label class="muted">1. Trigger keywords (comma separated, empty = every comment)</label>
+    <label class="muted">1. Trigger keywords, comma separated (catches variations: PROMPTS = prompt, Prompts!, promt…)</label>
     <input type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="Empty = replies to EVERY comment. Type a word like AGENT">
     <label class="muted">2. Public comment reply: one per line, a random one is used each time ({username} = their @name)</label>
     <textarea name="comment_reply" rows="3">${val(r, "comment_reply")}</textarea>
