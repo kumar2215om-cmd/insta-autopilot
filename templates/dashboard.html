@@ -76,7 +76,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 
 // Boxes start filled with real text (not grey hints) so what you see is what gets sent.
 const DEFAULTS = {
-  comment_reply: "Check your DM @{username} 📩",
+  comment_reply: "@{username} Check your DM 📩\n@{username} Sent! Check your inbox 📥\n@{username} Done ✅ check your DMs",
   opening_dm: "Hey {username}! 👋 Tap the button below and I'll send it to you.",
   button_text: "Send me the link",
   follow_dm: 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.',
@@ -92,8 +92,8 @@ function ruleForm(id) {
     <label><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> Enabled</label>
     <label class="muted">1. Trigger keywords (comma separated, empty = every comment)</label>
     <input type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="Empty = replies to EVERY comment. Type a word like AGENT">
-    <label class="muted">2. Public comment reply ({username} works)</label>
-    <input type="text" name="comment_reply" value="${val(r, "comment_reply")}">
+    <label class="muted">2. Public comment reply: one per line, a random one is used each time ({username} = their @name)</label>
+    <textarea name="comment_reply" rows="3">${val(r, "comment_reply")}</textarea>
     <label class="muted">3. Opening DM + button</label>
     <textarea name="opening_dm" rows="2">${val(r, "opening_dm")}</textarea>
     <input type="text" name="button_text" maxlength="20" value="${val(r, "button_text")}">
@@ -105,7 +105,6 @@ function ruleForm(id) {
     <div style="display:flex;gap:8px">
       <button>Save rule</button>
       ${rules.reels[id] ? `<button type="button" class="secondary" onclick="deleteRule('${id}')">Remove</button>` : ""}
-      ${rules.reels[id] && id !== "*" ? `<button type="button" class="secondary" onclick="backfill(this, '${id}')">Send to past comments</button>` : ""}
     </div></form>`;
 }
 
@@ -141,7 +140,7 @@ async function backfill(btn, id) {
       `Already handled or no keyword: ${r.already_done_or_no_match}.` +
       (r.more_left ? "\n\nMore are left: click the button again in a minute." : ""));
   } finally {
-    btn.disabled = false; btn.textContent = "Send to past comments"; loadActivity();
+    btn.disabled = false; btn.textContent = "📨 Send to past comments"; loadActivity();
   }
 }
 
@@ -175,6 +174,8 @@ function render() {
           <div>❤ <b>${fmt(i.likes ?? r.like_count)}</b></div><div>💬 <b>${fmt(i.comments ?? r.comments_count)}</b></div>
           <div>↗ <b>${fmt(i.shares)}</b> shares</div><div>🔖 <b>${fmt(i.saved)}</b> saves</div>
         </div>
+        ${rules.reels[r.id] ? `<button type="button" class="secondary" style="margin-bottom:8px"
+          onclick="backfill(this, '${esc(r.id)}')">📨 Send to past comments</button>` : ""}
         <details data-id="${esc(r.id)}" ${open.has(r.id) ? "open" : ""}>
           <summary>Auto comment + DM rule</summary>${ruleForm(r.id)}</details>
       </div></div>`;

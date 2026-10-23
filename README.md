@@ -77,7 +77,8 @@ The `Procfile` starts the app with gunicorn. Keep it at one worker, because the 
 Open the dashboard. Under any reel, open **Auto comment + DM rule** and fill in:
 1. **Keywords**: only comments that contain one of these trigger a reply (case doesn't matter).
    Leave it empty to reply to every comment.
-2. **Public comment reply**, for example `Check your DM @{username} 📩`
+2. **Public comment reply**: one per line, for example `@{username} Check your DM 📩`. A random line is
+   used each time, which keeps replies looking natural. Lines without `{username}` get the @mention added in front.
 3. **Opening DM + button text**. Leave them empty to use the defaults.
 4. **Must follow me first**, plus the "follow me" message and button text
 5. **Final DM**: the link or reward
@@ -87,7 +88,7 @@ and leave the opening DM empty, the final DM is sent straight away with no butto
 
 The **Rule for ALL reels** box is a fallback for reels that don't have their own rule.
 
-**Send to past comments** (on a saved reel rule) runs the rule on comments left before the automation was
+**📨 Send to past comments** (on the card of a reel that has a rule) runs the rule on comments left before the automation was
 set up. Instagram only allows a DM reply within 7 days of a comment, so older comments are skipped. Each
 comment is handled once, so the button is safe to click again. It handles up to 50 comments per click.
 

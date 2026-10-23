@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import os
+import random
 import sqlite3
 import threading
 import time
@@ -257,6 +258,15 @@ def uses_button_flow(rule):
     return rule.get("require_follow") or rule.get("opening_dm")
 
 
+def pick_reply(replies):
+    """One line at random, so replies vary (identical repeats can look like spam to Instagram).
+
+    Starts with an @mention like a normal Instagram reply, unless the line already uses {username}.
+    """
+    line = random.choice([l.strip() for l in replies.splitlines() if l.strip()])
+    return line if "{username}" in line else "@{username} " + line
+
+
 def handle_comment(ig_user_id, value):
     comment_id = value.get("id")
     text = value.get("text", "")
@@ -274,7 +284,7 @@ def handle_comment(ig_user_id, value):
     fill = lambda s: s.replace("{username}", username)
     if rule.get("comment_reply"):
         try:
-            reply_to_comment(comment_id, fill(rule["comment_reply"]))
+            reply_to_comment(comment_id, fill(pick_reply(rule["comment_reply"])))
             log_activity(media_id, username, text, "comment_reply", "ok")
         except Exception as e:
             log_activity(media_id, username, text, "comment_reply", "error", str(e))
