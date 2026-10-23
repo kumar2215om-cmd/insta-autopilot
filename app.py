@@ -375,19 +375,64 @@ def handle_comment(ig_user_id, value):
     if not rule or not claim_comment(comment_id):
         return False
 
-    fill = lambda s: s.replace("{username}", username)
-    if rule.get("comment_reply"):
-        try:
-            reply_to_comment(comment_id, fill(pick_reply(rule["comment_reply"])))
-            log_activity(media_id, username, text, "comment_reply", "ok")
-        except Exception as e:
-            log_activity(media_id, username, text, "comment_reply", "error", str(e))
-
+    # DM first, so the public reply can tell people what to do if Instagram refuses the DM.
     item = {"ig_user_id": ig_user_id, "key": key, "media_id": media_id, "username": username,
             "text": text, "at": time.time()}
-    if not send_comment_dm(comment_id, item, rule):
+    dm_ok = send_comment_dm(comment_id, item, rule)
+    if not dm_ok:
         add_retry(comment_id, item)
+
+    reply = rule.get("comment_reply") if dm_ok else (rule.get("dm_fail_reply") or DEFAULT_DM_FAIL_REPLY)
+    if reply:
+        reply = pick_reply(reply).replace("{keyword}", dm_keywords(rule)[0].upper())
+        try:
+            reply_to_comment(comment_id, reply.replace("{username}", username))
+            log_activity(media_id, username, text, "comment_reply" if dm_ok else "dm_fail_reply", "ok")
+        except Exception as e:
+            log_activity(media_id, username, text, "comment_reply", "error", str(e))
     return True
+
+
+DEFAULT_DM_FAIL_REPLY = "@{username} your DM didn't come through 😅 DM me {keyword} and I'll send it instantly 📩"
+
+
+def dm_keywords(rule):
+    """Words that trigger this rule when someone DMs them; rules without keywords answer to LINK."""
+    return [k.strip() for k in rule.get("keywords", []) if k.strip()] or ["LINK"]
+
+
+def handle_dm_text(ig_user_id, igsid, text):
+    """Someone DMed a keyword (e.g. because the comment DM was refused): start the same flow.
+
+    Replying inside a conversation the person started works even when Instagram refuses to open
+    new conversations from comments.
+    """
+    for key, rule in load_rules().get("reels", {}).items():
+        if rule.get("enabled", True) and any(keyword_matches(k, text) for k in dm_keywords(rule)):
+            break
+    else:
+        return
+    # Answer the same keyword from the same person at most once per 10 minutes.
+    if not claim_comment(f"dm:{igsid}:{key}:{int(time.time() // 600)}"):
+        return
+    try:
+        username = ig_get(igsid, fields="username").get("username", "")
+    except Exception:
+        username = ""
+    fill = lambda s: s.replace("{username}", username)
+    try:
+        if uses_button_flow(rule):
+            send_buttons(ig_user_id, {"id": igsid}, fill(rule.get("opening_dm") or DEFAULT_OPENING),
+                         postbacks=[(rule.get("button_text") or "Send me the link", f"GET|{key}")])
+        else:
+            send_dm(ig_user_id, {"id": igsid}, {"text": fill(rule["dm"])})
+        log_activity(key, username or igsid, text, "dm_keyword", "ok")
+        # They're being served now, so don't also send them the refused comment DM later.
+        for comment_id, item in pending_retries().items():
+            if username and item.get("username") == username:
+                remove_retry(comment_id)
+    except Exception as e:
+        log_activity(key, username or igsid, text, "dm_keyword", "error", explain_error(e))
 
 
 def send_comment_dm(comment_id, item, rule, retry=False):
@@ -546,8 +591,12 @@ def receive_webhook():
             msg = event.get("message", {})
             payload = (event.get("postback", {}).get("payload")
                        or msg.get("quick_reply", {}).get("payload"))
-            if payload and not msg.get("is_echo"):
+            if msg.get("is_echo"):
+                continue  # our own outgoing messages
+            if payload:
                 run_task(handle_button, entry.get("id"), event["sender"]["id"], payload)
+            elif msg.get("text"):
+                run_task(handle_dm_text, entry.get("id"), event["sender"]["id"], msg["text"])
     return "ok"
 
 
@@ -638,6 +687,7 @@ def api_put_rule(media_id):
         "button_text": data.get("button_text", "").strip()[:20],
         "require_follow": bool(data.get("require_follow")),
         "follow_dm": data.get("follow_dm", "").strip(),
+        "dm_fail_reply": data.get("dm_fail_reply", "").strip(),
         "followed_button_text": data.get("followed_button_text", "").strip()[:20],
         "dm": data.get("dm", "").strip(),
     }

@@ -134,10 +134,12 @@
 let rules = {reels: {}};
 const ACTIONS = {comment_reply: "comment reply", opening_dm: "opening DM", follow_prompt: "asked to follow",
                  follow_check: "follow check", dm: "link sent",
-                 token_refresh: "Instagram token renewed"};
+                 token_refresh: "Instagram token renewed", dm_fail_reply: "asked them to DM keyword",
+                 dm_keyword: "replied to DM keyword"};
 // Icon and colour for each step in the activity feed.
 const LOOK = {comment_reply: ["💬", "#3b82f6"], opening_dm: ["✉️", "#962fbf"], follow_prompt: ["👀", "#f77737"],
-              follow_check: ["🔎", "#64748b"], dm: ["🔗", "#16a34a"], token_refresh: ["🔑", "#ca8a04"]};
+              follow_check: ["🔎", "#64748b"], dm: ["🔗", "#16a34a"], token_refresh: ["🔑", "#ca8a04"],
+              dm_fail_reply: ["↩️", "#f59e0b"], dm_keyword: ["📥", "#0d9488"]};
 const fmt = n => n == null ? "–" : Intl.NumberFormat(undefined, {notation: "compact"}).format(n);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -148,6 +150,7 @@ const DEFAULTS = {
   button_text: "Send me the link",
   follow_dm: 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.',
   followed_button_text: "I followed ✅",
+  dm_fail_reply: "@{username} your DM didn't come through 😅 DM me {keyword} and I'll send it instantly 📩",
 };
 const val = (r, k) => esc(r[k] || DEFAULTS[k]);
 
@@ -161,6 +164,8 @@ function ruleForm(id) {
     <input type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="Empty = replies to EVERY comment. Type a word like AGENT">
     <div class="step" style="--c:#3b82f6"><i>2</i> Public comment reply: one per line, a random one is used each time ({username} = their @name)</div>
     <textarea name="comment_reply" rows="3">${val(r, "comment_reply")}</textarea>
+    <div class="step" style="--c:#dc2626"><i>!</i> If Instagram refuses the DM, reply this instead ({keyword} = your first keyword; they DM it to you and get the link)</div>
+    <textarea name="dm_fail_reply" rows="2">${val(r, "dm_fail_reply")}</textarea>
     <div class="step" style="--c:#962fbf"><i>3</i> Opening DM + button</div>
     <textarea name="opening_dm" rows="2">${val(r, "opening_dm")}</textarea>
     <input type="text" name="button_text" maxlength="20" value="${val(r, "button_text")}">
@@ -188,6 +193,7 @@ async function saveRule(e, id) {
                 comment_reply: f.comment_reply.value, opening_dm: f.opening_dm.value,
                 button_text: f.button_text.value, require_follow: f.require_follow.checked,
                 follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value,
+                dm_fail_reply: f.dm_fail_reply.value,
                 dm: f.dm.value};
   await fetch(`/api/rules/${encodeURIComponent(id)}`, {method: "PUT",
     headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
