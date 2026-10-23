@@ -5,55 +5,117 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Insta Autopilot</title>
 <style>
-  :root { --bg:#f6f6f8; --card:#fff; --text:#16161a; --muted:#6b6b76; --line:#e4e4ea;
-          --accent:#d62976; --ok:#1a8f4c; --err:#c62828; }
+  :root {
+    --bg:#f7f4fb; --card:#fff; --text:#1d1530; --muted:#6f6886; --line:#ece6f5;
+    --ig: linear-gradient(120deg, #4f5bd5 0%, #962fbf 30%, #d62976 60%, #fa7e1e 85%, #feda75 100%);
+    --pink:#d62976; --purple:#962fbf; --orange:#f77737; --blue:#3b82f6; --green:#16a34a;
+    --ok:#16a34a; --err:#dc2626; --shadow: 0 6px 24px rgba(80, 40, 140, .08);
+  }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#111114; --card:#1b1b20; --text:#ececf1; --muted:#9a9aa6; --line:#2c2c34; }
+    :root { --bg:#120f1a; --card:#1c1727; --text:#f1ecfa; --muted:#a59cba; --line:#2d2540;
+            --shadow: 0 6px 24px rgba(0,0,0,.35); }
   }
   * { box-sizing: border-box; }
-  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--text); }
-  header { padding:16px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;
-           border-bottom:1px solid var(--line); background:var(--card); }
-  header h1 { font-size:18px; margin:0; margin-right:auto; }
-  .stat b { display:block; font-size:18px; } .stat span { color:var(--muted); font-size:12px; }
-  main { padding:16px; display:grid; gap:16px; grid-template-columns: 2fr 1fr; max-width:1300px; margin:auto; }
+  body { margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+         background:var(--bg); color:var(--text); }
+
+  header { background:var(--ig); color:#fff; padding:20px 16px 56px; }
+  .top { max-width:1300px; margin:auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h1 { font-size:22px; margin:0; margin-right:auto; letter-spacing:-.3px; }
+  header h1 small { font-weight:500; opacity:.85; font-size:14px; margin-left:6px; }
+  header .refresh { background:rgba(255,255,255,.2); color:#fff; border:1px solid rgba(255,255,255,.45);
+                    backdrop-filter: blur(6px); }
+  header .refresh:hover { background:rgba(255,255,255,.32); }
+
+  .stats { max-width:1300px; margin:-40px auto 0; padding:0 16px; display:grid; gap:12px;
+           grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat { background:var(--card); border-radius:16px; padding:14px 16px; box-shadow:var(--shadow);
+          border-top:4px solid var(--c); display:flex; align-items:center; gap:12px; }
+  .stat .ico { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; font-size:20px;
+               background: color-mix(in srgb, var(--c) 15%, transparent); }
+  .stat b { display:block; font-size:22px; line-height:1.1; font-variant-numeric: tabular-nums; }
+  .stat span { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+
+  main { padding:20px 16px; display:grid; gap:20px; grid-template-columns: 2fr 1fr;
+         max-width:1300px; margin:auto; align-items:start; }
   @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-  h2 { font-size:15px; margin:0 0 10px; }
-  .muted { color:var(--muted); font-size:12px; }
-  .reel { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px;
-          display:grid; grid-template-columns: 90px 1fr; gap:12px; margin-bottom:12px; }
-  .reel img { width:90px; height:160px; object-fit:cover; border-radius:6px; background:var(--line); }
-  .caption { margin:0 0 6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-  .metrics { display:flex; flex-wrap:wrap; gap:6px 14px; margin-bottom:8px; }
-  .metrics div b { font-variant-numeric: tabular-nums; }
-  details summary { cursor:pointer; color:var(--accent); font-weight:600; }
-  form { display:grid; gap:6px; margin-top:8px; }
-  input[type=text], textarea { width:100%; padding:7px; border:1px solid var(--line); border-radius:6px;
-          background:var(--bg); color:var(--text); font:inherit; }
-  button { padding:7px 12px; border:0; border-radius:6px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  h2 { font-size:17px; margin:0 0 12px; display:flex; align-items:center; gap:8px; }
+  .muted { color:var(--muted); font-size:12px; font-weight:400; }
+
+  .card { background:var(--card); border-radius:16px; box-shadow:var(--shadow); border:1px solid var(--line); }
+  .reel { padding:14px; display:grid; grid-template-columns: 96px 1fr; gap:14px; margin-bottom:14px;
+          transition: transform .15s; }
+  .reel:hover { transform: translateY(-2px); }
+  .thumb { position:relative; display:block; border-radius:12px; padding:2px; background:var(--ig); align-self:start; }
+  .thumb img { display:block; width:92px; height:164px; object-fit:cover; border-radius:10px; background:var(--line); }
+  .thumb::after { content:"▶"; position:absolute; inset:auto 8px 8px auto; color:#fff; font-size:12px;
+                  text-shadow:0 1px 4px rgba(0,0,0,.6); }
+  .caption { margin:0 0 6px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+             font-weight:500; }
+  .metrics { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 10px; }
+  .chip { font-size:12px; padding:4px 10px; border-radius:99px; font-variant-numeric: tabular-nums;
+          background: color-mix(in srgb, var(--c) 13%, transparent); color: var(--c); }
+  .chip b { font-weight:700; }
+  @media (prefers-color-scheme: dark) { .chip { color: color-mix(in srgb, var(--c) 70%, white); } }
+
+  details { border-radius:12px; }
+  details summary { cursor:pointer; font-weight:600; list-style:none; padding:8px 12px; border-radius:10px;
+                    background: color-mix(in srgb, var(--pink) 10%, transparent); color:var(--pink); display:inline-block; }
+  details summary::before { content:"⚙️ "; }
+  details[open] summary { margin-bottom:6px; }
+  form { display:grid; gap:7px; margin-top:6px; padding:12px; border-radius:12px; background:var(--bg); }
+  form .step { font-size:12px; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:6px; margin-top:4px; }
+  form .step i { font-style:normal; width:20px; height:20px; border-radius:50%; display:grid; place-items:center;
+                 color:#fff; font-size:11px; background:var(--c); flex:none; }
+  input[type=text], textarea { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:10px;
+          background:var(--card); color:var(--text); font:inherit; }
+  input[type=text]:focus, textarea:focus { outline:2px solid color-mix(in srgb, var(--purple) 45%, transparent); border-color:transparent; }
+  input[type=checkbox] { accent-color: var(--pink); }
+
+  button { padding:8px 14px; border:0; border-radius:10px; background:var(--ig); color:#fff; font-weight:600;
+           cursor:pointer; font:inherit; font-weight:600; }
+  button:hover { filter:brightness(1.07); }
+  button:disabled { opacity:.6; cursor:wait; }
   button.secondary { background:transparent; color:var(--muted); border:1px solid var(--line); }
-  .badge { font-size:11px; padding:1px 7px; border-radius:99px; border:1px solid var(--line); }
-  .badge.on { color:var(--ok); border-color:var(--ok); }
-  .log { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; }
-  .log-item { border-top:1px solid var(--line); padding:8px 0; word-break:break-word; }
+  button.send { background: linear-gradient(120deg, #3b82f6, #8b5cf6); margin-bottom:6px; }
+
+  .badge { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:600; }
+  .badge.on { background:color-mix(in srgb, var(--green) 15%, transparent); color:var(--green); }
+  .badge.off { background:color-mix(in srgb, var(--muted) 15%, transparent); color:var(--muted); }
+
+  .log { padding:16px; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; }
+  .live { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 0 var(--green);
+          animation: pulse 1.8s infinite; }
+  @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(22,163,74,.5); } 70% { box-shadow:0 0 0 8px rgba(22,163,74,0); }
+                     100% { box-shadow:0 0 0 0 rgba(22,163,74,0); } }
+  .log-item { display:flex; gap:10px; padding:10px 0; border-top:1px solid var(--line); word-break:break-word; }
+  .log-item .dot { width:32px; height:32px; border-radius:10px; flex:none; display:grid; place-items:center; font-size:15px;
+                   background: color-mix(in srgb, var(--c) 15%, transparent); }
+  .log-item .tag { font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; color:var(--c);
+                   background: color-mix(in srgb, var(--c) 13%, transparent); }
   .ok { color:var(--ok); } .error { color:var(--err); }
-  .err-banner { background:var(--err); color:#fff; padding:10px 16px; display:none; }
+  .err-banner { background:var(--err); color:#fff; padding:10px 16px; display:none; text-align:center; }
 </style>
 </head>
 <body>
 <header>
-  <h1>📸 Insta Autopilot <span class="muted" id="username"></span></h1>
-  <div class="stat"><b id="followers">–</b><span>followers</span></div>
-  <div class="stat"><b id="posts">–</b><span>posts</span></div>
-  <div class="stat"><b id="totalViews">–</b><span>reel views</span></div>
-  <div class="stat"><b id="dmsSent">–</b><span>DMs sent</span></div>
-  <button class="secondary" onclick="loadStats(true)">Refresh</button>
+  <div class="top">
+    <h1>📸 Insta Autopilot <small id="username"></small></h1>
+    <button class="refresh" onclick="loadStats(true)">↻ Refresh</button>
+  </div>
 </header>
+<div class="stats">
+  <div class="stat" style="--c:#d62976"><div class="ico">👥</div><div><b id="followers">–</b><span>Followers</span></div></div>
+  <div class="stat" style="--c:#962fbf"><div class="ico">🎬</div><div><b id="posts">–</b><span>Posts</span></div></div>
+  <div class="stat" style="--c:#f77737"><div class="ico">▶️</div><div><b id="totalViews">–</b><span>Reel views</span></div></div>
+  <div class="stat" style="--c:#16a34a"><div class="ico">📩</div><div><b id="dmsSent">–</b><span>Links sent</span></div></div>
+</div>
 <div class="err-banner" id="err"></div>
 <main>
   <section>
-    <h2>Your reels <span class="muted" id="fetched"></span></h2>
-    <div class="reel" style="display:block">
+    <h2>🎞️ Your reels <span class="muted" id="fetched"></span></h2>
+    <div class="card reel" style="display:block">
       <details>
         <summary>Rule for ALL reels (fallback) <span class="badge" id="badge-*"></span></summary>
         <div id="form-*"></div>
@@ -61,8 +123,8 @@
     </div>
     <div id="reels"><p class="muted">Loading…</p></div>
   </section>
-  <aside class="log">
-    <h2>Live activity</h2>
+  <aside class="card log">
+    <h2><span class="live"></span> Live activity</h2>
     <div id="activity"><p class="muted">No activity yet.</p></div>
   </aside>
 </main>
@@ -71,6 +133,9 @@ let rules = {reels: {}};
 const ACTIONS = {comment_reply: "comment reply", opening_dm: "opening DM", follow_prompt: "asked to follow",
                  follow_check: "follow check", dm: "link sent",
                  token_refresh: "Instagram token renewed"};
+// Icon and colour for each step in the activity feed.
+const LOOK = {comment_reply: ["💬", "#3b82f6"], opening_dm: ["✉️", "#962fbf"], follow_prompt: ["👀", "#f77737"],
+              follow_check: ["🔎", "#64748b"], dm: ["🔗", "#16a34a"], token_refresh: ["🔑", "#ca8a04"]};
 const fmt = n => n == null ? "–" : Intl.NumberFormat(undefined, {notation: "compact"}).format(n);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -90,17 +155,17 @@ function ruleForm(id) {
              ...(rules.reels[id] || {})};
   return `<form onsubmit="saveRule(event, '${id}')">
     <label><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> Enabled</label>
-    <label class="muted">1. Trigger keywords, comma separated (catches variations: PROMPTS = prompt, Prompts!, promt…)</label>
+    <div class="step" style="--c:#d62976"><i>1</i> Trigger keywords, comma separated (catches variations: PROMPTS = prompt, Prompts!, promt…)</div>
     <input type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="Empty = replies to EVERY comment. Type a word like AGENT">
-    <label class="muted">2. Public comment reply: one per line, a random one is used each time ({username} = their @name)</label>
+    <div class="step" style="--c:#3b82f6"><i>2</i> Public comment reply: one per line, a random one is used each time ({username} = their @name)</div>
     <textarea name="comment_reply" rows="3">${val(r, "comment_reply")}</textarea>
-    <label class="muted">3. Opening DM + button</label>
+    <div class="step" style="--c:#962fbf"><i>3</i> Opening DM + button</div>
     <textarea name="opening_dm" rows="2">${val(r, "opening_dm")}</textarea>
     <input type="text" name="button_text" maxlength="20" value="${val(r, "button_text")}">
-    <label><input type="checkbox" name="require_follow" ${r.require_follow ? "checked" : ""}> 4. Must follow me first</label>
+    <label class="step" style="--c:#f77737"><i>4</i><input type="checkbox" name="require_follow" ${r.require_follow ? "checked" : ""}> Must follow me first</label>
     <textarea name="follow_dm" rows="2">${val(r, "follow_dm")}</textarea>
     <input type="text" name="followed_button_text" maxlength="20" value="${val(r, "followed_button_text")}">
-    <label class="muted">5. Final DM (the link / reward) <b class="error">required</b></label>
+    <div class="step" style="--c:#16a34a"><i>5</i> Final DM (the link / reward) <b class="error">required</b></div>
     <textarea name="dm" rows="3" required placeholder="Required: type your message with the link, e.g. Here you go 🎁 https://...">${esc(r.dm)}</textarea>
     <div style="display:flex;gap:8px">
       <button>Save rule</button>
@@ -111,7 +176,7 @@ function ruleForm(id) {
 function badge(id) {
   const r = rules.reels[id];
   if (!r) return "";
-  return r.enabled !== false ? `<span class="badge on">auto-reply on</span>` : `<span class="badge">paused</span>`;
+  return r.enabled !== false ? `<span class="badge on">auto-reply on</span>` : `<span class="badge off">paused</span>`;
 }
 
 async function saveRule(e, id) {
@@ -164,17 +229,20 @@ function render() {
   const open = new Set([...document.querySelectorAll("#reels details[open]")].map(d => d.dataset.id));
   document.getElementById("reels").innerHTML = stats.reels.length ? stats.reels.map(r => {
     const i = r.insights;
-    return `<div class="reel">
-      <a href="${esc(r.permalink)}" target="_blank"><img src="${esc(r.thumbnail_url)}" alt=""></a>
+    return `<div class="card reel">
+      <a class="thumb" href="${esc(r.permalink)}" target="_blank"><img src="${esc(r.thumbnail_url)}" alt=""></a>
       <div>
         <p class="caption">${esc(r.caption) || "<span class=muted>(no caption)</span>"}</p>
         <div class="muted">${new Date(r.timestamp).toLocaleString()} · id ${esc(r.id)} ${badge(r.id)}</div>
         <div class="metrics">
-          <div>▶ <b>${fmt(i.views)}</b> views</div><div>👁 <b>${fmt(i.reach)}</b> reach</div>
-          <div>❤ <b>${fmt(i.likes ?? r.like_count)}</b></div><div>💬 <b>${fmt(i.comments ?? r.comments_count)}</b></div>
-          <div>↗ <b>${fmt(i.shares)}</b> shares</div><div>🔖 <b>${fmt(i.saved)}</b> saves</div>
+          <span class="chip" style="--c:#f77737">▶ <b>${fmt(i.views)}</b> views</span>
+          <span class="chip" style="--c:#962fbf">👁 <b>${fmt(i.reach)}</b> reach</span>
+          <span class="chip" style="--c:#e11d48">❤ <b>${fmt(i.likes ?? r.like_count)}</b></span>
+          <span class="chip" style="--c:#3b82f6">💬 <b>${fmt(i.comments ?? r.comments_count)}</b></span>
+          <span class="chip" style="--c:#0d9488">↗ <b>${fmt(i.shares)}</b> shares</span>
+          <span class="chip" style="--c:#ca8a04">🔖 <b>${fmt(i.saved)}</b> saves</span>
         </div>
-        ${rules.reels[r.id] ? `<button type="button" class="secondary" style="margin-bottom:8px"
+        ${rules.reels[r.id] ? `<button type="button" class="send"
           onclick="backfill(this, '${esc(r.id)}')">📨 Send to past comments</button>` : ""}
         <details data-id="${esc(r.id)}" ${open.has(r.id) ? "open" : ""}>
           <summary>Auto comment + DM rule</summary>${ruleForm(r.id)}</details>
@@ -201,11 +269,17 @@ async function loadActivity() {
   document.getElementById("dmsSent").textContent =
     items.filter(x => x.action === "dm" && x.status === "ok").length;
   if (!items.length) return;
-  document.getElementById("activity").innerHTML = items.map(x => `<div class="log-item">
-    <div>${x.username === "system" ? "<b>System</b>" : `<b>@${esc(x.username)}</b>: ${/^(GET|FOLLOWED)\|/.test(x.comment) ? "tapped button" : `“${esc(x.comment)}”`}`}</div>
-    <div class="muted">${new Date(x.at).toLocaleTimeString()} · ${ACTIONS[x.action] || x.action}
-      · <span class="${x.status}">${x.status}</span></div>
-    ${x.detail ? `<div class="muted error">${esc(x.detail)}</div>` : ""}</div>`).join("");
+  document.getElementById("activity").innerHTML = items.map(x => {
+    const [icon, color] = x.status === "error" ? ["⚠️", "#dc2626"] : (LOOK[x.action] || ["•", "#64748b"]);
+    return `<div class="log-item" style="--c:${color}">
+      <div class="dot">${icon}</div>
+      <div style="min-width:0">
+        <div>${x.username === "system" ? "<b>System</b>" : `<b>@${esc(x.username)}</b> ${/^(GET|FOLLOWED)\|/.test(x.comment) ? "<span class=muted>tapped button</span>" : `“${esc(x.comment)}”`}`}</div>
+        <div class="muted"><span class="tag">${ACTIONS[x.action] || x.action}${x.status === "error" ? " failed" : ""}</span>
+          ${new Date(x.at).toLocaleTimeString()}</div>
+        ${x.detail ? `<div class="muted error">${esc(x.detail)}</div>` : ""}
+      </div></div>`;
+  }).join("");
 }
 
 (async () => {
