@@ -105,6 +105,7 @@ function ruleForm(id) {
     <div style="display:flex;gap:8px">
       <button>Save rule</button>
       ${rules.reels[id] ? `<button type="button" class="secondary" onclick="deleteRule('${id}')">Remove</button>` : ""}
+      ${rules.reels[id] && id !== "*" ? `<button type="button" class="secondary" onclick="backfill(this, '${id}')">Send to past comments</button>` : ""}
     </div></form>`;
 }
 
@@ -125,6 +126,23 @@ async function saveRule(e, id) {
   await fetch(`/api/rules/${encodeURIComponent(id)}`, {method: "PUT",
     headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
   await loadRules(); render();
+}
+
+async function backfill(btn, id) {
+  if (!confirm("Run this rule on comments people already left on this reel?\n\n" +
+               "Instagram only allows DMs for comments from the last 7 days. " +
+               "Each person is handled once, so it's safe to click again.")) return;
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const r = await (await fetch(`/api/backfill/${encodeURIComponent(id)}`, {method: "POST"})).json();
+    alert(r.error ? "Error: " + r.error :
+      `Sent to ${r.sent} comment(s).\n` +
+      `Too old (over 7 days): ${r.too_old}.\n` +
+      `Already handled or no keyword: ${r.already_done_or_no_match}.` +
+      (r.more_left ? "\n\nMore are left: click the button again in a minute." : ""));
+  } finally {
+    btn.disabled = false; btn.textContent = "Send to past comments"; loadActivity();
+  }
 }
 
 async function deleteRule(id) {

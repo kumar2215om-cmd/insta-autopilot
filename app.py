@@ -266,10 +266,10 @@ def handle_comment(ig_user_id, value):
 
     # Skip our own comments/replies and replies inside threads.
     if not comment_id or sender.get("id") == ig_user_id or value.get("parent_id"):
-        return
+        return False
     key, rule = find_rule(load_rules(), media_id, text)
     if not rule or not claim_comment(comment_id):
-        return
+        return False
 
     fill = lambda s: s.replace("{username}", username)
     if rule.get("comment_reply"):
@@ -293,6 +293,40 @@ def handle_comment(ig_user_id, value):
     except Exception as e:
         log_activity(media_id, username, text, "opening_dm" if uses_button_flow(rule) else "dm",
                      "error", str(e))
+    return True
+
+
+PRIVATE_REPLY_WINDOW = 7 * 86400  # Instagram allows a DM reply to a comment only within 7 days.
+
+
+def backfill_comments(media_id, max_sends=50):
+    """Runs a reel's rule on comments posted before the automation was set up."""
+    ig_user_id = ig_get("me", fields="user_id")["user_id"]
+    rules = load_rules()
+    counts = {"sent": 0, "too_old": 0, "already_done_or_no_match": 0, "more_left": False}
+    page = ig_get(f"{media_id}/comments", fields="id,text,timestamp,from,username", limit=50)
+    while page:
+        for c in page.get("data", []):
+            if counts["sent"] >= max_sends:
+                counts["more_left"] = True
+                return counts
+            text = c.get("text", "")
+            if not find_rule(rules, media_id, text)[1]:
+                counts["already_done_or_no_match"] += 1
+                continue
+            age = time.time() - datetime.strptime(c["timestamp"], "%Y-%m-%dT%H:%M:%S%z").timestamp()
+            if age > PRIVATE_REPLY_WINDOW:
+                counts["too_old"] += 1
+                continue
+            sender = c.get("from") or {"username": c.get("username", "")}
+            value = {"id": c["id"], "text": text, "from": sender, "media": {"id": media_id}}
+            if handle_comment(ig_user_id, value):
+                counts["sent"] += 1
+            else:
+                counts["already_done_or_no_match"] += 1
+        next_url = page.get("paging", {}).get("next")
+        page = requests.get(next_url, timeout=20).json() if next_url else None
+    return counts
 
 
 def handle_button(ig_user_id, igsid, payload):
@@ -442,6 +476,14 @@ def api_put_rule(media_id):
     }
     save_rules(rules)
     return jsonify(rules["reels"][media_id])
+
+
+@app.post("/api/backfill/<media_id>")
+def api_backfill(media_id):
+    try:
+        return jsonify(backfill_comments(media_id))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
 
 
 @app.delete("/api/rules/<media_id>")
