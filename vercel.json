@@ -1,3 +1,6 @@
 {
-  "crons": [{ "path": "/cron/refresh-token", "schedule": "0 3 * * 1" }]
+  "crons": [
+    { "path": "/cron/refresh-token", "schedule": "0 3 * * 1" },
+    { "path": "/cron/retry-failed", "schedule": "30 4 * * *" }
+  ]
 }

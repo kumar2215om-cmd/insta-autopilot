@@ -70,6 +70,7 @@ def db():
 def init_db():
     with _db_lock, db() as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS processed (comment_id TEXT PRIMARY KEY)")
+        conn.execute("CREATE TABLE IF NOT EXISTS retry (comment_id TEXT PRIMARY KEY, data TEXT)")
         conn.execute(
             """CREATE TABLE IF NOT EXISTS activity (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, media_id TEXT,
@@ -101,6 +102,30 @@ def claim_comment(comment_id):
     with _db_lock, db() as conn:
         cur = conn.execute("INSERT OR IGNORE INTO processed VALUES (?)", (comment_id,))
         return cur.rowcount == 1
+
+
+def add_retry(comment_id, item):
+    if REDIS_URL:
+        redis("HSET", "dm_retry", comment_id, json.dumps(item))
+        return
+    with _db_lock, db() as conn:
+        conn.execute("INSERT OR REPLACE INTO retry VALUES (?, ?)", (comment_id, json.dumps(item)))
+
+
+def remove_retry(comment_id):
+    if REDIS_URL:
+        redis("HDEL", "dm_retry", comment_id)
+        return
+    with _db_lock, db() as conn:
+        conn.execute("DELETE FROM retry WHERE comment_id = ?", (comment_id,))
+
+
+def pending_retries():
+    if REDIS_URL:
+        flat = redis("HGETALL", "dm_retry") or []
+        return {flat[i]: json.loads(flat[i + 1]) for i in range(0, len(flat), 2)}
+    with db() as conn:
+        return {r["comment_id"]: json.loads(r["data"]) for r in conn.execute("SELECT * FROM retry")}
 
 
 def recent_activity():
@@ -183,6 +208,19 @@ def send_dm(ig_user_id, recipient, message):
     return ig_post(f"{ig_user_id}/messages", {"recipient": recipient, "message": message})
 
 
+# Instagram's "thread owner has archived or deleted this conversation" error. It isn't documented;
+# developers report it when Instagram temporarily refuses new DM threads (often after many sends).
+CANT_OPEN_THREAD = "2534001"
+
+
+def explain_error(err):
+    err = str(err)
+    if CANT_OPEN_THREAD in err:
+        return ("Instagram refused to open a DM with this person right now (error 2534001). "
+                "It will be retried automatically. | " + err)
+    return err
+
+
 def send_buttons(ig_user_id, recipient, text, postbacks=(), links=()):
     """Sends text with buttons. postbacks: [(title, payload)], links: [(title, url)].
 
@@ -193,10 +231,15 @@ def send_buttons(ig_user_id, recipient, text, postbacks=(), links=()):
     try:
         return send_dm(ig_user_id, recipient, {"attachment": {"type": "template", "payload": {
             "template_type": "button", "text": text[:640], "buttons": buttons[:3]}}})
-    except RuntimeError:
+    except RuntimeError as first:
+        if CANT_OPEN_THREAD in str(first):
+            raise  # retrying with another message style can't help, and hides the real error
         text += "".join(f"\n{t}: {u}" for t, u in links)
-        return send_dm(ig_user_id, recipient, {"text": text, "quick_replies": [
-            {"content_type": "text", "title": t[:20], "payload": p} for t, p in postbacks]})
+        try:
+            return send_dm(ig_user_id, recipient, {"text": text, "quick_replies": [
+                {"content_type": "text", "title": t[:20], "payload": p} for t, p in postbacks]})
+        except RuntimeError as second:
+            raise RuntimeError(f"button DM: {first} | plain DM: {second}") from second
 
 
 def get_follow_status(igsid):
@@ -340,21 +383,52 @@ def handle_comment(ig_user_id, value):
         except Exception as e:
             log_activity(media_id, username, text, "comment_reply", "error", str(e))
 
+    item = {"ig_user_id": ig_user_id, "key": key, "media_id": media_id, "username": username,
+            "text": text, "at": time.time()}
+    if not send_comment_dm(comment_id, item, rule):
+        add_retry(comment_id, item)
+    return True
+
+
+def send_comment_dm(comment_id, item, rule, retry=False):
+    """Sends the first DM for a comment (a private reply). Returns True on success."""
+    fill = lambda s: s.replace("{username}", item["username"])
+    action = "opening_dm" if uses_button_flow(rule) else "dm"
+    note = "sent on retry" if retry else ""
     recipient = {"comment_id": comment_id}
     try:
         if uses_button_flow(rule):
             # Step 1: opening DM with a button. The tap opens the conversation, which
             # Instagram requires before we can look up whether the user follows us.
-            send_buttons(ig_user_id, recipient, fill(rule.get("opening_dm") or DEFAULT_OPENING),
-                         postbacks=[(rule.get("button_text") or "Send me the link", f"GET|{key}")])
-            log_activity(media_id, username, text, "opening_dm", "ok")
+            send_buttons(item["ig_user_id"], recipient, fill(rule.get("opening_dm") or DEFAULT_OPENING),
+                         postbacks=[(rule.get("button_text") or "Send me the link", f"GET|{item['key']}")])
         elif rule.get("dm"):
-            send_dm(ig_user_id, recipient, {"text": fill(rule["dm"])})
-            log_activity(media_id, username, text, "dm", "ok")
+            send_dm(item["ig_user_id"], recipient, {"text": fill(rule["dm"])})
+        log_activity(item["media_id"], item["username"], item["text"], action, "ok", note)
+        return True
     except Exception as e:
-        log_activity(media_id, username, text, "opening_dm" if uses_button_flow(rule) else "dm",
-                     "error", str(e))
-    return True
+        log_activity(item["media_id"], item["username"], item["text"], action, "error", explain_error(e))
+        return False
+
+
+def retry_failed_dms(max_sends=30):
+    """Retries DMs that Instagram refused earlier, while the 7-day private-reply window is open."""
+    rules = load_rules().get("reels", {})
+    counts = {"sent": 0, "still_failing": 0, "expired": 0}
+    for comment_id, item in list(pending_retries().items()):
+        rule = rules.get(item["key"])
+        # Leave a day of margin: the window counts from the comment, which came slightly earlier.
+        if not rule or time.time() - item["at"] > PRIVATE_REPLY_WINDOW - 86400:
+            remove_retry(comment_id)
+            counts["expired"] += 1
+        elif counts["sent"] + counts["still_failing"] >= max_sends:
+            break
+        elif send_comment_dm(comment_id, item, rule, retry=True):
+            remove_retry(comment_id)
+            counts["sent"] += 1
+        else:
+            counts["still_failing"] += 1
+    return counts
 
 
 PRIVATE_REPLY_WINDOW = 7 * 86400  # Instagram allows a DM reply to a comment only within 7 days.
@@ -364,7 +438,12 @@ def backfill_comments(media_id, max_sends=50):
     """Runs a reel's rule on comments posted before the automation was set up."""
     ig_user_id = ig_get("me", fields="user_id")["user_id"]
     rules = load_rules()
-    counts = {"sent": 0, "too_old": 0, "already_done_or_no_match": 0, "more_left": False}
+    counts = {"sent": 0, "dm_retried": 0, "too_old": 0, "already_done_or_no_match": 0, "more_left": False}
+    # People whose first DM failed on this reel (per the activity log) and never got one since.
+    # Their comments are already marked handled, so they get the DM again without a new public reply.
+    log = [a for a in recent_activity() if a.get("media_id") == media_id and a["action"] in ("opening_dm", "dm")]
+    got_dm = {a["username"] for a in log if a["status"] == "ok"}
+    dm_failed = {a["username"] for a in log if a["status"] == "error"} - got_dm
     page = ig_get(f"{media_id}/comments", fields="id,text,timestamp,from,username", limit=50)
     while page:
         for c in page.get("data", []):
@@ -383,6 +462,16 @@ def backfill_comments(media_id, max_sends=50):
             value = {"id": c["id"], "text": text, "from": sender, "media": {"id": media_id}}
             if handle_comment(ig_user_id, value):
                 counts["sent"] += 1
+            elif sender.get("username") in dm_failed:
+                dm_failed.discard(sender["username"])
+                key, rule = find_rule(rules, media_id, text)
+                item = {"ig_user_id": ig_user_id, "key": key, "media_id": media_id,
+                        "username": sender["username"], "text": text, "at": time.time()}
+                if send_comment_dm(c["id"], item, rule, retry=True):
+                    counts["dm_retried"] += 1
+                else:
+                    add_retry(c["id"], item)
+                    counts["already_done_or_no_match"] += 1
             else:
                 counts["already_done_or_no_match"] += 1
         next_url = page.get("paging", {}).get("next")
@@ -471,6 +560,23 @@ def check_password():
     auth = request.authorization
     if not auth or (auth.password or "").strip() != DASHBOARD_PASSWORD:
         return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="autopilot"'})
+
+
+@app.post("/api/retry-failed")
+def api_retry_failed():
+    return jsonify(retry_failed_dms())
+
+
+@app.get("/api/retry-failed")
+def api_retry_count():
+    return jsonify({"pending": len(pending_retries())})
+
+
+@app.get("/cron/retry-failed")
+def cron_retry_failed():
+    if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
+        abort(403)
+    return jsonify(retry_failed_dms())
 
 
 @app.get("/cron/refresh-token")

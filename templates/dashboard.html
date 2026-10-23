@@ -124,7 +124,9 @@
     <div id="reels"><p class="muted">Loading…</p></div>
   </section>
   <aside class="card log">
-    <h2><span class="live"></span> Live activity</h2>
+    <h2><span class="live"></span> Live activity
+      <button class="send" id="retryBtn" style="margin:0 0 0 auto; display:none; font-size:12px; padding:6px 10px"
+              onclick="retryFailed(this)"></button></h2>
     <div id="activity"><p class="muted">No activity yet.</p></div>
   </aside>
 </main>
@@ -201,6 +203,7 @@ async function backfill(btn, id) {
     const r = await (await fetch(`/api/backfill/${encodeURIComponent(id)}`, {method: "POST"})).json();
     alert(r.error ? "Error: " + r.error :
       `Sent to ${r.sent} comment(s).\n` +
+      (r.dm_retried ? `Failed DMs re-sent: ${r.dm_retried}.\n` : "") +
       `Too old (over 7 days): ${r.too_old}.\n` +
       `Already handled or no keyword: ${r.already_done_or_no_match}.` +
       (r.more_left ? "\n\nMore are left: click the button again in a minute." : ""));
@@ -264,6 +267,26 @@ async function loadStats(force) {
   if (!document.activeElement || !document.activeElement.closest("#reels form")) render();
 }
 
+async function loadRetryCount() {
+  const {pending} = await (await fetch("/api/retry-failed")).json();
+  const btn = document.getElementById("retryBtn");
+  if (btn.disabled) return;
+  btn.style.display = pending ? "inline-block" : "none";
+  btn.textContent = `🔁 Retry failed DMs (${pending})`;
+}
+
+async function retryFailed(btn) {
+  btn.disabled = true; btn.textContent = "Retrying…";
+  try {
+    const r = await (await fetch("/api/retry-failed", {method: "POST"})).json();
+    alert(`Sent now: ${r.sent}\nStill refused by Instagram: ${r.still_failing}\n` +
+          `Dropped (older than Instagram's 7-day limit): ${r.expired}\n\n` +
+          "Failed DMs are also retried automatically once a day.");
+  } finally {
+    btn.disabled = false; loadActivity(); loadRetryCount();
+  }
+}
+
 async function loadActivity() {
   const items = await (await fetch("/api/activity")).json();
   document.getElementById("dmsSent").textContent =
@@ -277,15 +300,16 @@ async function loadActivity() {
         <div>${x.username === "system" ? "<b>System</b>" : `<b>@${esc(x.username)}</b> ${/^(GET|FOLLOWED)\|/.test(x.comment) ? "<span class=muted>tapped button</span>" : `“${esc(x.comment)}”`}`}</div>
         <div class="muted"><span class="tag">${ACTIONS[x.action] || x.action}${x.status === "error" ? " failed" : ""}</span>
           ${new Date(x.at).toLocaleTimeString()}</div>
-        ${x.detail ? `<div class="muted error">${esc(x.detail)}</div>` : ""}
+        ${x.detail ? `<div class="muted ${x.status === "error" ? "error" : "ok"}" title="${esc(x.detail)}">${esc(x.detail.split(" | ")[0])}</div>` : ""}
       </div></div>`;
   }).join("");
 }
 
 (async () => {
   await loadRules(); render();
-  loadStats(); loadActivity();
+  loadStats(); loadActivity(); loadRetryCount();
   setInterval(loadStats, 60000);
+  setInterval(loadRetryCount, 30000);
   setInterval(loadActivity, 4000);
 })();
 </script>

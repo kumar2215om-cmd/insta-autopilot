@@ -95,6 +95,10 @@ set up. Instagram only allows a DM reply within 7 days of a comment, so older co
 comment is handled once, so the button is safe to click again. It handles up to 50 comments per click.
 
 ## Notes and limits
+- Sometimes Instagram refuses to open a DM (error 2534001, "thread owner has archived or deleted this
+  conversation"), usually after many automated DMs in a short time. The public reply still posts. Failed DMs are
+  kept and retried once a day (Vercel Cron), or right away with **🔁 Retry failed DMs** in the activity panel,
+  while Instagram's 7-day window is open. **📨 Send to past comments** also re-sends DMs that failed earlier on that reel.
 - If the follow check itself fails (an API error), the link is still sent and the error appears in the activity feed,
   so nobody gets stuck.
 - Button labels can be at most 20 characters (an Instagram limit).
