@@ -394,7 +394,8 @@ def record_dm_result(ok):
         return
     streak = int(kv_get("dm_fail_streak") or 0) + 1
     kv_set("dm_fail_streak", streak)
-    if streak >= DM_PAUSE_AFTER_FAILURES:
+    # After a manual "Resume DMs now", don't pause again for a while (e.g. while recording a demo).
+    if streak >= DM_PAUSE_AFTER_FAILURES and time.time() > float(kv_get("dm_pause_blocked_until") or 0):
         kv_set("dm_paused_until", time.time() + DM_PAUSE_SECONDS)
         kv_set("dm_fail_streak", 0)
 
@@ -837,6 +838,17 @@ def check_password():
     auth = request.authorization
     if not auth or (auth.password or "").strip() != DASHBOARD_PASSWORD:
         return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="autopilot"'})
+
+
+RESUME_HOLD_SECONDS = 20 * 60
+
+
+@app.post("/api/resume-dms")
+def api_resume_dms():
+    kv_set("dm_paused_until", 0)
+    kv_set("dm_fail_streak", 0)
+    kv_set("dm_pause_blocked_until", time.time() + RESUME_HOLD_SECONDS)
+    return jsonify({"resumed": True, "no_pause_until": time.time() + RESUME_HOLD_SECONDS})
 
 
 @app.post("/api/retry-failed")

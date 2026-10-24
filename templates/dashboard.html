@@ -282,7 +282,8 @@ async function loadStats(force) {
     new Date(data.paused_until * 1000).toLocaleTimeString() +
     " because Instagram kept refusing them. Commenters are asked to DM you the keyword instead, and those DMs are answered as usual.");
   pause.style.display = notes.length ? "block" : "none";
-  pause.innerHTML = notes.map(esc).join("<br>");
+  pause.innerHTML = notes.map(esc).join("<br>") + (data.paused_until ?
+    ` <button class="secondary" style="color:#fff;border-color:#fff;margin-left:8px" onclick="resumeDMs(this)">▶️ Resume DMs now</button>` : "");
   if (!data.account || !data.account.username) {  // no stats yet (logged out or rate limited)
     if (!stats) document.getElementById("reels").innerHTML =
       `<p class="muted">Reel stats will appear once Instagram is reachable again. Automations resume on their own.</p>`;
@@ -291,6 +292,13 @@ async function loadStats(force) {
   stats = data;
   // Don't wipe a rule form the user is typing in.
   if (!document.activeElement || !document.activeElement.closest("#reels form")) render();
+}
+
+async function resumeDMs(btn) {
+  btn.disabled = true;
+  await fetch("/api/resume-dms", {method: "POST"});
+  alert("Comment DMs resumed. The automatic pause is off for the next 20 minutes.");
+  loadStats(true);
 }
 
 async function loadRetryCount() {
