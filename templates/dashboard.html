@@ -167,7 +167,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 
 // Boxes start filled with real text (not grey hints) so what you see is what gets sent.
 const DEFAULTS = {
-  comment_reply: "@{username} Check your DM 📩\n@{username} Sent! Check your inbox 📥\n@{username} Done ✅ check your DMs",
+  comment_reply: "@{username} Check your DM 📩 follow zaroor karna 🙌\n@{username} Sent! Inbox check karo 📥 aur follow kar lo for more 🔥\n@{username} Done ✅ DM check karo, follow for daily AI tips 🤖",
   opening_dm: "Hey {username}! 👋 Tap the button below and I'll send it to you.",
   button_text: "Send me the link",
   follow_dm: 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.',
@@ -186,8 +186,7 @@ function ruleForm(id) {
     <input type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="Empty = replies to EVERY comment. Type a word like AGENT">
     <div class="step" style="--c:#3b82f6"><i>2</i> Public comment reply: one per line, a random one is used each time ({username} = their @name)</div>
     <textarea name="comment_reply" rows="3">${val(r, "comment_reply")}</textarea>
-    <div class="step" style="--c:#dc2626"><i>!</i> If Instagram refuses the DM, reply this instead ({keyword} = your first keyword; they DM it to you and get the link)</div>
-    <textarea name="dm_fail_reply" rows="2">${val(r, "dm_fail_reply")}</textarea>
+    <input type="hidden" name="dm_fail_reply" value="${esc(r.dm_fail_reply || "")}">
     <div class="step" style="--c:#962fbf"><i>3</i> Opening DM + button</div>
     <textarea name="opening_dm" rows="2">${val(r, "opening_dm")}</textarea>
     <input type="text" name="button_text" maxlength="20" value="${val(r, "button_text")}">

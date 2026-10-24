@@ -449,7 +449,14 @@ DM_PAUSE_SECONDS = 30 * 60
 DM_PROBE_SECONDS = 5 * 60  # while paused, try one real DM this often to see if Instagram accepts them again
 
 
+# Off by default: every keyword comment gets a DM attempt, as in the original flow.
+# Set DM_AUTO_PAUSE=1 to pause comment DMs after repeated refusals instead.
+DM_AUTO_PAUSE = os.environ.get("DM_AUTO_PAUSE", "0") == "1"
+
+
 def dms_paused_until():
+    if not DM_AUTO_PAUSE:
+        return 0
     return float(kv_get("dm_paused_until") or 0)
 
 
@@ -671,19 +678,29 @@ def handle_comment(ig_user_id, value):
         if not dm_ok:
             add_retry(comment_id, item)
 
-    fail_reply = rule.get("dm_fail_reply") or DEFAULT_DM_FAIL_REPLY
-    if fail_reply.strip() == OLD_DM_FAIL_REPLY:
-        fail_reply = DEFAULT_DM_FAIL_REPLY
-    reply = rule.get("comment_reply") if dm_ok else fail_reply
+    # Always the normal public reply, as in the original flow. A refused DM is retried later,
+    # and people who DM the keyword are answered there.
+    reply = rule.get("comment_reply") or ""
+    if reply.strip() in OLD_COMMENT_REPLIES:
+        reply = DEFAULT_COMMENT_REPLY
     if reply:
         reply = pick_reply(reply).replace("{keyword}", dm_keywords(rule)[0].upper())
         try:
             reply_to_comment(comment_id, reply.replace("{username}", username))
-            log_activity(media_id, username, text, "comment_reply" if dm_ok else "dm_fail_reply", "ok")
+            log_activity(media_id, username, text, "comment_reply", "ok")
         except Exception as e:
             log_activity(media_id, username, text, "comment_reply", "error", str(e))
     return True
 
+
+DEFAULT_COMMENT_REPLY = ("@{username} Check your DM 📩 follow zaroor karna 🙌\n"
+                         "@{username} Sent! Inbox check karo 📥 aur follow kar lo for more 🔥\n"
+                         "@{username} Done ✅ DM check karo, follow for daily AI tips 🤖")
+# Earlier default replies (without a follow nudge); rules still using them get the new ones.
+OLD_COMMENT_REPLIES = {
+    "Check your DM @{username} 📩",
+    "@{username} Check your DM 📩\n@{username} Sent! Check your inbox 📥\n@{username} Done ✅ check your DMs",
+}
 
 DEFAULT_DM_FAIL_REPLY = ("@{username} Follow me + DM \"{keyword}\" 📩 I'll send it instantly!\n"
                          "@{username} Follow karo aur DM karo \"{keyword}\" 🔥 link turant milega\n"

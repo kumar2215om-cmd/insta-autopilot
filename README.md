@@ -100,8 +100,7 @@ followers per 1,000 views, and **followers from automation**, meaning people who
 and then got the link (also shown per reel). A snapshot is taken whenever stats refresh and once a day by the
 daily Vercel Cron job. Reel views are counted for the latest 12 reels.
 
-When a comment DM is refused, the public reply asks people to **follow + DM the keyword**. Rules still using the
-first version of that reply ("your DM didn't come through…") switch to the follow-first text automatically.
+Rules still using the earlier default public replies switch automatically to the new ones that also ask people to follow.
 
 ## Link-in-bio page
 A Linktree-style page for your Instagram bio at `/links` (for example `https://<project>.vercel.app/links`).
@@ -132,10 +131,11 @@ Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pic
 - Instagram limits how many requests an app makes per hour (error code 4, "Application request limit reached").
   After one such error the app stops calling Instagram for 15 minutes, leaves new comments unhandled so
   **📨 Send to past comments** can answer them afterwards, and shows a banner on the dashboard.
-- After 15 refused comment DMs in a row (error 2534001), comment DMs pause for 30 minutes; commenters get the
-  "Follow + DM me KEYWORD" reply instead. While paused, one test DM is tried every 5 minutes, and DMs resume as soon
-  as Instagram accepts one. If Instagram logs the app out (error 190, e.g. after a password change), a red
-  banner explains how to reconnect and comments are kept until then.
+- Every keyword comment gets a DM attempt and the normal public reply (the default replies also ask people to
+  follow). DMs that Instagram refuses (error 2534001) are retried later, and people who DM the keyword are answered
+  in that chat. Optional: set `DM_AUTO_PAUSE=1` to pause comment DMs for 30 minutes after 15 refusals in a row
+  (one test DM every 5 minutes; **▶️ Resume DMs now** lifts it). If Instagram logs the app out (error 190, e.g.
+  after a password change), a red banner explains how to reconnect and comments are kept until then.
 - Reel stats refresh every 10 minutes (`STATS_CACHE_SECONDS`) for the latest 12 reels (`STATS_REELS`), loaded in parallel;
   the follower count refreshes every 2 minutes (`ACCOUNT_CACHE_SECONDS`) and **↻ Refresh** forces a full update after 30 seconds,
   because each reel costs one request against the same hourly limit. The retry list holds at most 1,000 people.
