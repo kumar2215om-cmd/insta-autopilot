@@ -10,6 +10,7 @@ import random
 import sqlite3
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -44,6 +45,8 @@ DB_FILE = os.environ.get("DB_FILE", os.path.join(DATA_DIR, "autopilot.db"))
 # Stats cost one Instagram request per reel, so refresh them rarely (they share the app's hourly limit).
 STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "600"))
 STATS_REELS = int(os.environ.get("STATS_REELS", "12"))
+# Follower count is a single cheap request, so it can refresh more often than reel stats.
+ACCOUNT_CACHE_SECONDS = int(os.environ.get("ACCOUNT_CACHE_SECONDS", "120"))
 # Serverless hosts (Vercel) have no lasting disk: store data in Upstash Redis when it's configured.
 REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
 REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
@@ -530,24 +533,30 @@ def my_username():
     return _my_username["u"]
 
 
+def fetch_account():
+    return ig_get("me", fields="user_id,username,followers_count,follows_count,media_count")
+
+
+def _reel_insights(m):
+    try:
+        ins = ig_get(f"{m['id']}/insights", metric=REEL_METRICS)["data"]
+        m["insights"] = {i["name"]: i["values"][0]["value"] for i in ins}
+    except Exception as e:
+        m["insights"] = {}
+        m["insights_error"] = str(e)
+    return m
+
+
 def fetch_stats():
-    me = ig_get("me", fields="user_id,username,followers_count,follows_count,media_count")
+    me = fetch_account()
     media = ig_get("me/media", limit=STATS_REELS, fields=(
         "id,caption,media_type,media_product_type,permalink,thumbnail_url,"
         "media_url,timestamp,like_count,comments_count"))["data"]
-    reels = []
-    for m in media:
-        if m.get("media_product_type") != "REELS":
-            continue
-        try:
-            ins = ig_get(f"{m['id']}/insights", metric=REEL_METRICS)["data"]
-            m["insights"] = {i["name"]: i["values"][0]["value"] for i in ins}
-        except Exception as e:
-            if rate_limited_until():
-                raise  # stop here; keep showing the last stats
-            m["insights"] = {}
-            m["insights_error"] = str(e)
-        reels.append(m)
+    # One request per reel; run them side by side so the dashboard loads in about a second.
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        reels = list(pool.map(_reel_insights, [m for m in media if m.get("media_product_type") == "REELS"]))
+    if rate_limited_until():
+        raise RuntimeError("Instagram rate limit reached")  # keep showing the last stats
     return {"account": me, "reels": reels,
             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
@@ -1030,10 +1039,21 @@ def api_stats():
         if saved:
             _stats_cache.update(json.loads(saved))
     stale = time.time() - _stats_cache["at"] > STATS_CACHE_SECONDS
-    if not dead and not limited and (stale or (request.args.get("refresh") and time.time() - _stats_cache["at"] > 60)):
+    forced = request.args.get("refresh") and time.time() - _stats_cache["at"] > 30
+    if (not dead and not limited and not stale and not forced and _stats_cache["data"]
+            and time.time() - _stats_cache.get("acct_at", 0) > ACCOUNT_CACHE_SECONDS):
+        # Between full refreshes, update just the follower count (one request).
+        try:
+            _stats_cache["data"]["account"] = fetch_account()
+            _stats_cache["acct_at"] = time.time()
+            kv_set("stats_cache", json.dumps(_stats_cache))
+            record_growth(_stats_cache["data"])
+        except Exception:
+            limited, dead = rate_limited_until(), token_is_dead()
+    if not dead and not limited and (stale or forced):
         try:
             _stats_cache["data"] = fetch_stats()
-            _stats_cache["at"] = time.time()
+            _stats_cache["at"] = _stats_cache["acct_at"] = time.time()
             kv_set("stats_cache", json.dumps(_stats_cache))
             record_growth(_stats_cache["data"])
         except Exception as e:

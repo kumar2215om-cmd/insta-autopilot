@@ -115,7 +115,7 @@
   <div class="top">
     <h1>📸 Insta Autopilot <small id="username"></small></h1>
     <a class="refresh" href="/links/edit" style="text-decoration:none; padding:8px 14px; border-radius:10px; font-weight:600">🔗 Link page</a>
-    <button class="refresh" onclick="loadStats(true)">↻ Refresh</button>
+    <button class="refresh" id="refreshBtn" onclick="refreshNow(this)">↻ Refresh</button>
   </div>
 </header>
 <div class="stats">
@@ -307,6 +307,12 @@ function render() {
 
 async function loadRules() { rules = await (await fetch("/api/rules")).json(); rules.reels ||= {}; }
 
+async function refreshNow(btn) {
+  btn.disabled = true; btn.textContent = "Refreshing…";
+  try { await Promise.all([loadStats(true), loadActivity(), loadRetryCount()]); }
+  finally { btn.disabled = false; btn.textContent = "↻ Refresh"; }
+}
+
 async function loadStats(force) {
   const res = await fetch("/api/stats" + (force ? "?refresh=1" : ""));
   const data = await res.json();
@@ -385,9 +391,14 @@ async function loadActivity() {
 (async () => {
   await loadRules(); render();
   loadStats(); loadActivity(); loadRetryCount();
-  setInterval(loadStats, 60000);
-  setInterval(loadRetryCount, 60000);
-  setInterval(loadActivity, 10000);
+  // Poll only while the tab is visible; catch up immediately when it comes back.
+  const every = (fn, ms) => setInterval(() => { if (!document.hidden) fn(); }, ms);
+  every(loadStats, 60000);
+  every(loadRetryCount, 60000);
+  every(loadActivity, 5000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) { loadStats(); loadActivity(); loadRetryCount(); }
+  });
 })();
 </script>
 </body>

@@ -136,5 +136,6 @@ Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pic
   "Follow + DM me KEYWORD" reply instead. While paused, one test DM is tried every 5 minutes, and DMs resume as soon
   as Instagram accepts one. If Instagram logs the app out (error 190, e.g. after a password change), a red
   banner explains how to reconnect and comments are kept until then.
-- Stats are refreshed at most every 10 minutes (`STATS_CACHE_SECONDS`) for the latest 12 reels (`STATS_REELS`),
+- Reel stats refresh every 10 minutes (`STATS_CACHE_SECONDS`) for the latest 12 reels (`STATS_REELS`), loaded in parallel;
+  the follower count refreshes every 2 minutes (`ACCOUNT_CACHE_SECONDS`) and **↻ Refresh** forces a full update after 30 seconds,
   because each reel costs one request against the same hourly limit. The retry list holds at most 1,000 people.
