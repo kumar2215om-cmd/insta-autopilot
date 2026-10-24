@@ -441,17 +441,28 @@ def token_is_dead():
 
 # When Instagram keeps refusing comment DMs, stop trying for a while: every refused attempt
 # is another automated message, and the "DM me KEYWORD" reply works without one.
-DM_PAUSE_AFTER_FAILURES = 5
-DM_PAUSE_SECONDS = 3 * 3600
+DM_PAUSE_AFTER_FAILURES = 15
+DM_PAUSE_SECONDS = 30 * 60
+DM_PROBE_SECONDS = 5 * 60  # while paused, try one real DM this often to see if Instagram accepts them again
 
 
 def dms_paused_until():
     return float(kv_get("dm_paused_until") or 0)
 
 
+def dm_probe_due():
+    """While DMs are paused, allow one test DM every few minutes (and claim the slot)."""
+    if time.time() - float(kv_get("dm_last_probe") or 0) < DM_PROBE_SECONDS:
+        return False
+    kv_set("dm_last_probe", time.time())
+    return True
+
+
 def record_dm_result(ok):
     if ok:
         kv_set("dm_fail_streak", 0)
+        if dms_paused_until():
+            kv_set("dm_paused_until", 0)  # Instagram accepted a DM again: resume right away
         return
     streak = int(kv_get("dm_fail_streak") or 0) + 1
     kv_set("dm_fail_streak", streak)
@@ -644,7 +655,7 @@ def handle_comment(ig_user_id, value):
     # DM first, so the public reply can tell people what to do if Instagram refuses the DM.
     item = {"ig_user_id": ig_user_id, "key": key, "media_id": media_id, "username": username,
             "text": text, "at": time.time()}
-    if time.time() < dms_paused_until():
+    if time.time() < dms_paused_until() and not dm_probe_due():
         dm_ok = False  # skip the attempt; the reply below asks them to DM the keyword
     else:
         dm_ok = send_comment_dm(comment_id, item, rule)

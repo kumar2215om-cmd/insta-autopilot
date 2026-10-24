@@ -132,8 +132,9 @@ Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pic
 - Instagram limits how many requests an app makes per hour (error code 4, "Application request limit reached").
   After one such error the app stops calling Instagram for 15 minutes, leaves new comments unhandled so
   **📨 Send to past comments** can answer them afterwards, and shows a banner on the dashboard.
-- After 5 refused comment DMs in a row (error 2534001), comment DMs pause for 3 hours; commenters get the
-  "DM me KEYWORD" reply instead. If Instagram logs the app out (error 190, e.g. after a password change), a red
+- After 15 refused comment DMs in a row (error 2534001), comment DMs pause for 30 minutes; commenters get the
+  "Follow + DM me KEYWORD" reply instead. While paused, one test DM is tried every 5 minutes, and DMs resume as soon
+  as Instagram accepts one. If Instagram logs the app out (error 190, e.g. after a password change), a red
   banner explains how to reconnect and comments are kept until then.
 - Stats are refreshed at most every 10 minutes (`STATS_CACHE_SECONDS`) for the latest 12 reels (`STATS_REELS`),
   because each reel costs one request against the same hourly limit. The retry list holds at most 1,000 people.
