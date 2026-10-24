@@ -113,6 +113,7 @@
   <div class="stat" style="--c:#16a34a"><div class="ico">📩</div><div><b id="dmsSent">–</b><span>Links sent</span></div></div>
 </div>
 <div class="err-banner" id="err"></div>
+<div class="err-banner" id="pause" style="background:#d97706"></div>
 <main>
   <section>
     <h2>🎞️ Your reels <span class="muted" id="fetched"></span></h2>
@@ -269,8 +270,15 @@ async function loadStats(force) {
   const data = await res.json();
   const err = document.getElementById("err");
   if (data.error) { err.textContent = "Instagram API error: " + data.error; err.style.display = "block"; return; }
-  err.textContent = data.warning || "";
-  err.style.display = data.warning ? "block" : "none";
+  const msg = data.alert || data.warning || "";
+  err.textContent = msg ? "⚠️ " + msg : "";
+  err.style.display = msg ? "block" : "none";
+  const pause = document.getElementById("pause");
+  pause.style.display = data.paused_until ? "block" : "none";
+  pause.textContent = data.paused_until ? "⏸️ Comment DMs paused until " +
+    new Date(data.paused_until * 1000).toLocaleTimeString() +
+    " because Instagram kept refusing them. Commenters are asked to DM you the keyword instead, and those DMs are answered as usual." : "";
+  if (!data.account || !data.account.username) return;  // no fresh stats while logged out
   stats = data;
   // Don't wipe a rule form the user is typing in.
   if (!document.activeElement || !document.activeElement.closest("#reels form")) render();
@@ -288,6 +296,7 @@ async function retryFailed(btn) {
   btn.disabled = true; btn.textContent = "Retrying…";
   try {
     const r = await (await fetch("/api/retry-failed", {method: "POST"})).json();
+    if (r.skipped) { alert(r.skipped); return; }
     alert(`Sent now: ${r.sent}\nStill refused by Instagram: ${r.still_failing}\n` +
           `Dropped (older than Instagram's 7-day limit): ${r.expired}\n\n` +
           "Failed DMs are also retried automatically once a day.");
