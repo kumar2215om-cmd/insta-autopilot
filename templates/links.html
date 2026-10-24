@@ -41,6 +41,11 @@
   .socials a { color:var(--text); text-decoration:none; font-size:13px; font-weight:600; padding:6px 12px;
                border-radius:99px; background:var(--chip); }
 
+  .follow { display:block; text-align:center; margin:18px auto 0; max-width:320px; padding:12px 18px; border-radius:99px;
+            font-weight:800; font-size:16px; color:#fff; text-decoration:none;
+            background:linear-gradient(120deg,#4f5bd5,#962fbf 35%,#d62976 65%,#fa7e1e);
+            box-shadow:0 8px 22px rgba(214,41,118,.35); animation: pulse 2.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(1.03); } }
   .items { display:grid; gap:12px; }
   a.item { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; text-decoration:none;
            background:var(--card); color:var(--card-text); box-shadow:0 6px 20px rgba(0,0,0,.12);
@@ -73,6 +78,9 @@
     <h1>{{ name }}</h1>
     {% if username %}<div class="handle">@{{ username }}</div>{% endif %}
     {% if page.bio %}<p class="bio">{{ page.bio }}</p>{% endif %}
+    {% if username %}
+      <a class="follow" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">📸 Follow @{{ username }} on Instagram</a>
+    {% endif %}
     {% if socials %}
       <nav class="socials">
         {% for key, label, url in socials %}<a href="{{ url }}" target="_blank" rel="noopener">{{ label }}</a>{% endfor %}

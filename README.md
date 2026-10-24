@@ -94,6 +94,15 @@ The **Rule for ALL reels** box is a fallback for reels that don't have their own
 set up. Instagram only allows a DM reply within 7 days of a comment, so older comments are skipped. Each
 comment is handled once, so the button is safe to click again. It handles up to 50 comments per click.
 
+## Follower growth
+The dashboard shows followers gained today (Indian time) and a 7-day table: followers, gained, reel views,
+followers per 1,000 views, and **followers from automation**, meaning people who followed after the "Follow me first" DM
+and then got the link (also shown per reel). A snapshot is taken whenever stats refresh and once a day by the
+daily Vercel Cron job. Reel views are counted for the latest 12 reels.
+
+When a comment DM is refused, the public reply asks people to **follow + DM the keyword**. Rules still using the
+first version of that reply ("your DM didn't come through…") switch to the follow-first text automatically.
+
 ## Link-in-bio page
 A Linktree-style page for your Instagram bio at `/links` (for example `https://<project>.vercel.app/links`).
 Edit it at `/links/edit`, or with **🔗 Link page** on the dashboard (password protected):
@@ -101,6 +110,7 @@ Edit it at `/links/edit`, or with **🔗 Link page** on the dashboard (password 
 - social buttons for Instagram, YouTube, WhatsApp, email, X and your website
 - **links** and **products** (image, price, "Get it" button); ⭐ featured items glow; hide, reorder or delete any item
 - click counts for every item (each tap goes through `/go/<id>`, which counts it and redirects)
+- a pulsing **Follow @you on Instagram** button under your bio
 
 Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pictures hosted elsewhere.
 

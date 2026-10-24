@@ -95,6 +95,18 @@
   .log-item .tag { font-size:11px; font-weight:600; padding:1px 8px; border-radius:99px; color:var(--c);
                    background: color-mix(in srgb, var(--c) 13%, transparent); }
   .ok { color:var(--ok); } .error { color:var(--err); }
+  .delta { display:block; font-size:12px; font-weight:700; margin-top:2px; }
+  .delta.up { color:var(--green); } .delta.down { color:var(--err); }
+  .growth { padding:16px; margin-bottom:14px; }
+  .growth-top { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:12px; }
+  @media (max-width: 700px) { .growth-top { grid-template-columns: 1fr; } }
+  .gbox { border-radius:12px; padding:10px 12px; background: color-mix(in srgb, var(--c) 10%, transparent); }
+  .gbox b { display:block; font-size:20px; color:var(--c); }
+  .gbox span { font-size:12px; color:var(--muted); }
+  table.gt { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric: tabular-nums; }
+  table.gt th, table.gt td { text-align:right; padding:6px 8px; border-top:1px solid var(--line); }
+  table.gt th:first-child, table.gt td:first-child { text-align:left; }
+  table.gt th { color:var(--muted); font-weight:600; font-size:12px; }
   .err-banner { background:var(--err); color:#fff; padding:10px 16px; display:none; text-align:center; }
 </style>
 </head>
@@ -107,7 +119,7 @@
   </div>
 </header>
 <div class="stats">
-  <div class="stat" style="--c:#d62976"><div class="ico">👥</div><div><b id="followers">–</b><span>Followers</span></div></div>
+  <div class="stat" style="--c:#d62976"><div class="ico">👥</div><div><b id="followers">–</b><span>Followers</span><small class="delta" id="followersToday"></small></div></div>
   <div class="stat" style="--c:#962fbf"><div class="ico">🎬</div><div><b id="posts">–</b><span>Posts</span></div></div>
   <div class="stat" style="--c:#f77737"><div class="ico">▶️</div><div><b id="totalViews">–</b><span>Reel views</span></div></div>
   <div class="stat" style="--c:#16a34a"><div class="ico">📩</div><div><b id="dmsSent">–</b><span>Links sent</span></div></div>
@@ -116,6 +128,12 @@
 <div class="err-banner" id="pause" style="background:#d97706"></div>
 <main>
   <section>
+    <div class="card growth" id="growthCard" style="display:none">
+      <h2>📈 Follower growth <span class="muted">(Indian time)</span></h2>
+      <div class="growth-top" id="growthTop"></div>
+      <table class="gt" id="growthTable"></table>
+      <p class="muted" style="margin:8px 0 0">“From automation” = people who followed after the “Follow me first” DM and then got the link.</p>
+    </div>
     <h2>🎞️ Your reels <span class="muted" id="fetched"></span></h2>
     <div class="card reel" style="display:block">
       <details>
@@ -136,7 +154,7 @@
 let rules = {reels: {}};
 const ACTIONS = {comment_reply: "comment reply", opening_dm: "opening DM", follow_prompt: "asked to follow",
                  follow_check: "follow check", dm: "link sent",
-                 token_refresh: "Instagram token renewed", dm_fail_reply: "asked them to DM keyword",
+                 token_refresh: "Instagram token renewed", dm_fail_reply: "asked to follow + DM keyword",
                  dm_keyword: "replied to DM keyword"};
 // Icon and colour for each step in the activity feed.
 const LOOK = {comment_reply: ["💬", "#3b82f6"], opening_dm: ["✉️", "#962fbf"], follow_prompt: ["👀", "#f77737"],
@@ -154,7 +172,7 @@ const DEFAULTS = {
   button_text: "Send me the link",
   follow_dm: 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.',
   followed_button_text: "I followed ✅",
-  dm_fail_reply: "@{username} your DM didn't come through 😅 DM me {keyword} and I'll send it instantly 📩",
+  dm_fail_reply: '@{username} Follow me + DM "{keyword}" 📩 I\'ll send it instantly!\n@{username} Follow karo aur DM karo "{keyword}" 🔥 link turant milega\n@{username} Follow + DM me "{keyword}" for the link ✅',
 };
 const val = (r, k) => esc(r[k] || DEFAULTS[k]);
 
@@ -227,6 +245,28 @@ async function deleteRule(id) {
   await loadRules(); render();
 }
 
+const signed = n => (n > 0 ? "+" : "") + exact(n);
+
+function renderGrowth(g) {
+  const t = document.getElementById("followersToday");
+  const today = g[0], yday = g[1];
+  t.textContent = today ? signed(today.gained) + " today" : "";
+  t.className = "delta " + (today && today.gained < 0 ? "down" : "up");
+  document.getElementById("growthCard").style.display = g.length ? "block" : "none";
+  if (!g.length) return;
+  const box = (c, v, label) => `<div class="gbox" style="--c:${c}"><b>${v}</b><span>${label}</span></div>`;
+  document.getElementById("growthTop").innerHTML =
+    box("#d62976", signed(today.gained), "followers today" + (today.partial ? " (since tracking started)" : "")) +
+    box("#16a34a", exact(today.gate_follows), "followers from automation today") +
+    box("#f77737", today.per_1k_views == null ? "–" : today.per_1k_views, "followers per 1,000 views today");
+  document.getElementById("growthTable").innerHTML =
+    `<tr><th>Day</th><th>Followers</th><th>Gained</th><th>Reel views</th><th>Per 1k views</th><th>From automation</th></tr>` +
+    g.map(d => `<tr><td>${d.date === today.date ? "Today" : (yday && d.date === yday.date ? "Yesterday" : d.date)}</td>
+      <td>${exact(d.followers)}</td>
+      <td class="${d.gained < 0 ? "error" : "ok"}">${signed(d.gained)}</td>
+      <td>${exact(d.views)}</td><td>${d.per_1k_views ?? "–"}</td><td>${exact(d.gate_follows)}</td></tr>`).join("");
+}
+
 let stats = null;
 function render() {
   document.getElementById("form-*").innerHTML = ruleForm("*");
@@ -235,6 +275,7 @@ function render() {
   const a = stats.account;
   document.getElementById("username").textContent = "@" + a.username;
   document.getElementById("followers").textContent = exact(a.followers_count);
+  renderGrowth(stats.growth || []);
   document.getElementById("posts").textContent = exact(a.media_count);
   document.getElementById("totalViews").textContent =
     exact(stats.reels.reduce((s, r) => s + (r.insights.views || 0), 0));
@@ -254,6 +295,7 @@ function render() {
           <span class="chip" style="--c:#3b82f6">💬 <b>${fmt(i.comments ?? r.comments_count)}</b></span>
           <span class="chip" style="--c:#0d9488">↗ <b>${fmt(i.shares)}</b> shares</span>
           <span class="chip" style="--c:#ca8a04">🔖 <b>${fmt(i.saved)}</b> saves</span>
+          ${(stats.gate_follows || {})[r.id] ? `<span class="chip" style="--c:#16a34a">🎯 <b>${exact(stats.gate_follows[r.id])}</b> follows from automation</span>` : ""}
         </div>
         ${rules.reels[r.id] ? `<button type="button" class="send"
           onclick="backfill(this, '${esc(r.id)}')">📨 Send to past comments</button>` : ""}

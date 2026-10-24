@@ -10,7 +10,7 @@ import random
 import sqlite3
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 from dotenv import load_dotenv
@@ -51,7 +51,7 @@ REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_R
 REEL_METRICS = "views,reach,likes,comments,shares,saved,total_interactions"
 
 app = Flask(__name__)
-_db_lock = threading.Lock()
+_db_lock = threading.RLock()  # re-entrant: counter_add holds it while calling kv_set
 _stats_cache = {"at": 0, "data": None}
 
 
@@ -123,6 +123,67 @@ def kv_set(k, v):
         return
     with _db_lock, db() as conn:
         conn.execute("INSERT OR REPLACE INTO kv VALUES (?, ?)", (k, str(v)))
+
+
+def counter_add(name, field, n=1):
+    if REDIS_URL:
+        redis("HINCRBY", f"cnt:{name}", field, n)
+        return
+    with _db_lock:
+        data = json.loads(kv_get(f"cnt:{name}") or "{}")
+        data[field] = data.get(field, 0) + n
+        kv_set(f"cnt:{name}", json.dumps(data))
+
+
+def counter_all(name):
+    if REDIS_URL:
+        flat = redis("HGETALL", f"cnt:{name}") or []
+        return {flat[i]: int(flat[i + 1]) for i in range(0, len(flat), 2)}
+    return json.loads(kv_get(f"cnt:{name}") or "{}")
+
+
+# ---------- follower growth ----------
+
+IST = timezone(timedelta(hours=5, minutes=30))  # days are counted in Indian time
+
+
+def today_ist(offset_days=0):
+    return (datetime.now(IST) + timedelta(days=offset_days)).strftime("%Y-%m-%d")
+
+
+def record_growth(stats):
+    """Keeps one follower/views snapshot per day (first and latest), for the last 30 days."""
+    followers = stats.get("account", {}).get("followers_count")
+    if followers is None:
+        return
+    views = {r["id"]: r.get("insights", {}).get("views", 0) or 0 for r in stats.get("reels", [])}
+    growth = json.loads(kv_get("growth") or "{}")
+    day = growth.setdefault(today_ist(), {"f0": followers, "v0": views})
+    day["f"], day["v"] = followers, views
+    for old in sorted(growth)[:-30]:
+        del growth[old]
+    kv_set("growth", json.dumps(growth))
+
+
+def growth_summary(days=7):
+    """Followers and reel views gained per day, newest first, plus follows won by the follow gate."""
+    growth = json.loads(kv_get("growth") or "{}")
+    gate = counter_all("gate_follows_day")
+    out = []
+    for i in range(days):
+        date = today_ist(-i)
+        day = growth.get(date)
+        if not day:
+            continue
+        prev = growth.get(today_ist(-i - 1))
+        base_f = prev["f"] if prev else day["f0"]
+        base_v = prev["v"] if prev else day["v0"]
+        views = sum(max(v - base_v.get(rid, 0), 0) for rid, v in day["v"].items())
+        gained = day["f"] - base_f
+        out.append({"date": date, "followers": day["f"], "gained": gained, "views": views,
+                    "per_1k_views": round(gained / views * 1000, 1) if views else None,
+                    "gate_follows": gate.get(date, 0), "partial": not prev})
+    return out
 
 
 MAX_RETRIES = 1000  # beyond this, people still get the "DM me KEYWORD" reply
@@ -590,7 +651,10 @@ def handle_comment(ig_user_id, value):
         if not dm_ok:
             add_retry(comment_id, item)
 
-    reply = rule.get("comment_reply") if dm_ok else (rule.get("dm_fail_reply") or DEFAULT_DM_FAIL_REPLY)
+    fail_reply = rule.get("dm_fail_reply") or DEFAULT_DM_FAIL_REPLY
+    if fail_reply.strip() == OLD_DM_FAIL_REPLY:
+        fail_reply = DEFAULT_DM_FAIL_REPLY
+    reply = rule.get("comment_reply") if dm_ok else fail_reply
     if reply:
         reply = pick_reply(reply).replace("{keyword}", dm_keywords(rule)[0].upper())
         try:
@@ -601,7 +665,11 @@ def handle_comment(ig_user_id, value):
     return True
 
 
-DEFAULT_DM_FAIL_REPLY = "@{username} your DM didn't come through 😅 DM me {keyword} and I'll send it instantly 📩"
+DEFAULT_DM_FAIL_REPLY = ("@{username} Follow me + DM \"{keyword}\" 📩 I'll send it instantly!\n"
+                         "@{username} Follow karo aur DM karo \"{keyword}\" 🔥 link turant milega\n"
+                         "@{username} Follow + DM me \"{keyword}\" for the link ✅")
+# The first version of this reply didn't ask for a follow; rules saved with it get the new one.
+OLD_DM_FAIL_REPLY = "@{username} your DM didn't come through 😅 DM me {keyword} and I'll send it instantly 📩"
 
 
 def dm_keywords(rule):
@@ -772,6 +840,10 @@ def handle_button(ig_user_id, igsid, payload):
                 raise RuntimeError("Final DM is empty: add your message and link to this rule in the dashboard")
             send_dm(ig_user_id, recipient, {"text": fill(rule["dm"])})
             log_activity(key, username or igsid, payload, "dm", "ok")
+            # Tapped "I followed" after the follow prompt and now follows: a follower won by the gate.
+            if step == "FOLLOWED" and rule.get("require_follow") and claim_comment(f"gatefollow:{igsid}"):
+                counter_add("gate_follows", key)
+                counter_add("gate_follows_day", today_ist())
         else:
             me = my_username()
             send_buttons(ig_user_id, recipient, fill(rule.get("follow_dm") or DEFAULT_FOLLOW),
@@ -865,6 +937,12 @@ def api_retry_count():
 def cron_retry_failed():
     if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
         abort(403)
+    # Daily job: also takes a follower snapshot, so growth is tracked even if nobody opens the dashboard.
+    if not token_is_dead() and not rate_limited_until():
+        try:
+            record_growth(fetch_stats())
+        except Exception:
+            pass
     return jsonify(retry_failed_dms())
 
 
@@ -946,6 +1024,7 @@ def api_stats():
             _stats_cache["data"] = fetch_stats()
             _stats_cache["at"] = time.time()
             kv_set("stats_cache", json.dumps(_stats_cache))
+            record_growth(_stats_cache["data"])
         except Exception as e:
             limited = rate_limited_until()
             dead = token_is_dead()
@@ -965,6 +1044,8 @@ def api_stats():
     if SERVERLESS and not REDIS_URL:
         data["warning"] = ("No database connected: rules and activity will be lost. "
                            "In Vercel, add Storage → Upstash Redis and redeploy.")
+    data["growth"] = growth_summary()
+    data["gate_follows"] = counter_all("gate_follows")
     return jsonify(data)
 
 
