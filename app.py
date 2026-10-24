@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, abort, jsonify, render_template, request
+from flask import Flask, abort, jsonify, redirect, render_template, request
 
 load_dotenv()
 
@@ -39,6 +39,7 @@ SERVERLESS = bool(os.environ.get("VERCEL"))
 DATA_DIR = os.environ.get("DATA_DIR", "/tmp" if SERVERLESS else ".")
 os.makedirs(DATA_DIR, exist_ok=True)
 RULES_FILE = os.environ.get("RULES_FILE", os.path.join(DATA_DIR, "rules.json"))
+LINKPAGE_FILE = os.environ.get("LINKPAGE_FILE", os.path.join(DATA_DIR, "linkpage.json"))
 DB_FILE = os.environ.get("DB_FILE", os.path.join(DATA_DIR, "autopilot.db"))
 STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "60"))
 # Serverless hosts (Vercel) have no lasting disk: store data in Upstash Redis when it's configured.
@@ -70,6 +71,7 @@ def db():
 def init_db():
     with _db_lock, db() as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS processed (comment_id TEXT PRIMARY KEY)")
+        conn.execute("CREATE TABLE IF NOT EXISTS clicks (item_id TEXT PRIMARY KEY, n INTEGER)")
         conn.execute("CREATE TABLE IF NOT EXISTS retry (comment_id TEXT PRIMARY KEY, data TEXT)")
         conn.execute(
             """CREATE TABLE IF NOT EXISTS activity (
@@ -145,6 +147,130 @@ def load_rules():
             return json.load(f)
     except FileNotFoundError:
         return {"reels": {}}
+
+
+# ---------- link-in-bio page ----------
+
+THEMES = ["sunset", "midnight", "ocean", "candy", "mono"]
+SOCIALS = ["instagram", "youtube", "whatsapp", "email", "x", "website"]
+
+
+def load_linkpage():
+    if REDIS_URL:
+        raw = redis("GET", "linkpage")
+        page = json.loads(raw) if raw else {}
+    else:
+        try:
+            with open(LINKPAGE_FILE) as f:
+                page = json.load(f)
+        except FileNotFoundError:
+            page = {}
+    page.setdefault("name", "")
+    page.setdefault("bio", "")
+    page.setdefault("avatar", "")
+    page.setdefault("theme", "sunset")
+    page.setdefault("socials", {})
+    page.setdefault("items", [])
+    return page
+
+
+def save_linkpage(page):
+    if REDIS_URL:
+        redis("SET", "linkpage", json.dumps(page, ensure_ascii=False))
+        return
+    tmp = LINKPAGE_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(page, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, LINKPAGE_FILE)
+
+
+def safe_url(url):
+    """Only real web, email and phone links; blocks javascript: and similar."""
+    url = (url or "").strip()
+    if url and not url.lower().startswith(("http://", "https://", "mailto:", "tel:")):
+        url = "https://" + url if "." in url and ":" not in url.split("/")[0] else ""
+    return url
+
+
+def clean_linkpage(data):
+    items = []
+    for it in data.get("items", [])[:100]:
+        url = safe_url(it.get("url"))
+        if not (it.get("title") or "").strip() or not url:
+            continue
+        items.append({
+            "id": "".join(ch for ch in str(it.get("id") or os.urandom(4).hex()) if ch.isalnum())[:16],
+            "type": "product" if it.get("type") == "product" else "link",
+            "title": it["title"].strip()[:120],
+            "subtitle": (it.get("subtitle") or "").strip()[:200],
+            "price": (it.get("price") or "").strip()[:30],
+            "image": safe_url(it.get("image")),
+            "url": url,
+            "featured": bool(it.get("featured")),
+            "enabled": it.get("enabled", True) is not False,
+        })
+    socials = {k: (data.get("socials", {}).get(k) or "").strip()[:200] for k in SOCIALS}
+    return {
+        "name": (data.get("name") or "").strip()[:80],
+        "bio": (data.get("bio") or "").strip()[:300],
+        "avatar": safe_url(data.get("avatar")),
+        "theme": data.get("theme") if data.get("theme") in THEMES else "sunset",
+        "socials": socials,
+        "items": items,
+    }
+
+
+def social_links(socials):
+    """(label, icon, url) for each filled-in social; accepts handles, numbers or full links."""
+    out = []
+    for key in SOCIALS:
+        v = (socials.get(key) or "").strip()
+        if not v:
+            continue
+        handle = v.lstrip("@")
+        url = {
+            "instagram": v if v.startswith("http") else f"https://instagram.com/{handle}",
+            "youtube": v if v.startswith("http") else f"https://youtube.com/@{handle}",
+            "whatsapp": v if v.startswith("http") else "https://wa.me/" + "".join(ch for ch in v if ch.isdigit()),
+            "email": v if v.startswith("mailto:") else f"mailto:{v}",
+            "x": v if v.startswith("http") else f"https://x.com/{handle}",
+            "website": safe_url(v),
+        }[key]
+        label = {"instagram": "Instagram", "youtube": "YouTube", "whatsapp": "WhatsApp",
+                 "email": "Email", "x": "X", "website": "Website"}[key]
+        out.append((key, label, url))
+    return out
+
+
+def count_click(item_id):
+    if REDIS_URL:
+        redis("HINCRBY", "link_clicks", item_id, 1)
+        return
+    with _db_lock, db() as conn:
+        conn.execute("INSERT INTO clicks VALUES (?, 1) ON CONFLICT(item_id) DO UPDATE SET n = n + 1",
+                     (item_id,))
+
+
+def click_counts():
+    if REDIS_URL:
+        flat = redis("HGETALL", "link_clicks") or []
+        return {flat[i]: int(flat[i + 1]) for i in range(0, len(flat), 2)}
+    with db() as conn:
+        return {r["item_id"]: r["n"] for r in conn.execute("SELECT * FROM clicks")}
+
+
+_profile_cache = {"at": 0, "data": {}}
+
+
+def instagram_profile():
+    """Name/photo from Instagram for the link page, cached for an hour; {} if unavailable."""
+    if time.time() - _profile_cache["at"] > 3600:
+        try:
+            _profile_cache["data"] = ig_get("me", fields="username,name,profile_picture_url")
+        except Exception:
+            pass  # keep the last good one (or none); the page still renders
+        _profile_cache["at"] = time.time()
+    return _profile_cache["data"]
 
 
 def save_rules(rules):
@@ -607,7 +733,9 @@ def receive_webhook():
 
 @app.before_request
 def check_password():
-    if not DASHBOARD_PASSWORD or request.path.startswith(("/webhook", "/cron/")):
+    # The link page and its click redirects are public; its editor (/links/edit) is not.
+    public = request.path in ("/links", "/links/") or request.path.startswith(("/webhook", "/cron/", "/go/"))
+    if not DASHBOARD_PASSWORD or public:
         return
     auth = request.authorization
     if not auth or (auth.password or "").strip() != DASHBOARD_PASSWORD:
@@ -650,6 +778,48 @@ def cron_refresh_token():
 @app.get("/")
 def dashboard():
     return render_template("dashboard.html")
+
+
+@app.get("/links")
+@app.get("/links/")
+def link_page():
+    page = load_linkpage()
+    ig = instagram_profile()
+    items = [it for it in page["items"] if it["enabled"]]
+    return render_template(
+        "links.html", page=page, items=items, socials=social_links(page["socials"]),
+        name=page["name"] or ig.get("name") or ig.get("username", ""),
+        avatar=page["avatar"] or ig.get("profile_picture_url", ""),
+        username=ig.get("username", ""))
+
+
+@app.get("/go/<item_id>")
+def go(item_id):
+    for it in load_linkpage()["items"]:
+        if it["id"] == item_id and it["enabled"]:
+            try:
+                count_click(item_id)
+            except Exception:
+                pass  # never block the visitor over a counter
+            return redirect(it["url"], code=302)
+    abort(404)
+
+
+@app.get("/links/edit")
+def link_page_editor():
+    return render_template("links_edit.html", themes=THEMES)
+
+
+@app.get("/api/linkpage")
+def api_get_linkpage():
+    return jsonify({"page": load_linkpage(), "clicks": click_counts(), "profile": instagram_profile()})
+
+
+@app.put("/api/linkpage")
+def api_put_linkpage():
+    page = clean_linkpage(request.get_json(force=True))
+    save_linkpage(page)
+    return jsonify(page)
 
 
 @app.get("/api/stats")
