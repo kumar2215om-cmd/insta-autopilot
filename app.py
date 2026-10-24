@@ -71,6 +71,7 @@ def init_db():
     with _db_lock, db() as conn:
         conn.execute("CREATE TABLE IF NOT EXISTS processed (comment_id TEXT PRIMARY KEY)")
         conn.execute("CREATE TABLE IF NOT EXISTS retry (comment_id TEXT PRIMARY KEY, data TEXT)")
+        conn.execute("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT)")
         conn.execute(
             """CREATE TABLE IF NOT EXISTS activity (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, media_id TEXT,
@@ -102,6 +103,22 @@ def claim_comment(comment_id):
     with _db_lock, db() as conn:
         cur = conn.execute("INSERT OR IGNORE INTO processed VALUES (?)", (comment_id,))
         return cur.rowcount == 1
+
+
+def kv_get(k):
+    if REDIS_URL:
+        return redis("GET", f"kv:{k}")
+    with db() as conn:
+        row = conn.execute("SELECT v FROM kv WHERE k = ?", (k,)).fetchone()
+        return row["v"] if row else None
+
+
+def kv_set(k, v):
+    if REDIS_URL:
+        redis("SET", f"kv:{k}", v)
+        return
+    with _db_lock, db() as conn:
+        conn.execute("INSERT OR REPLACE INTO kv VALUES (?, ?)", (k, str(v)))
 
 
 def add_retry(comment_id, item):
@@ -184,19 +201,48 @@ def refresh_token():
     return data.get("expires_in")
 
 
+def _check(r):
+    if r.ok:
+        return r.json()
+    if '"code":190' in r.text.replace(" ", ""):
+        kv_set("token_invalid", _env_token_id())  # until IG_ACCESS_TOKEN is replaced
+    raise RuntimeError(f"{r.status_code}: {r.text}")
+
+
 def ig_get(path, **params):
     params["access_token"] = current_token()
-    r = requests.get(f"{GRAPH}/{path}", params=params, timeout=20)
-    r.raise_for_status()
-    return r.json()
+    return _check(requests.get(f"{GRAPH}/{path}", params=params, timeout=20))
 
 
 def ig_post(path, payload):
-    r = requests.post(f"{GRAPH}/{path}", params={"access_token": current_token()},
-                      json=payload, timeout=20)
-    if not r.ok:
-        raise RuntimeError(f"{r.status_code}: {r.text}")
-    return r.json()
+    return _check(requests.post(f"{GRAPH}/{path}", params={"access_token": current_token()},
+                                json=payload, timeout=20))
+
+
+def token_is_dead():
+    """Instagram invalidated the login (error 190) and IG_ACCESS_TOKEN hasn't been replaced since."""
+    return kv_get("token_invalid") == _env_token_id()
+
+
+# When Instagram keeps refusing comment DMs, stop trying for a while: every refused attempt
+# is another automated message, and the "DM me KEYWORD" reply works without one.
+DM_PAUSE_AFTER_FAILURES = 5
+DM_PAUSE_SECONDS = 3 * 3600
+
+
+def dms_paused_until():
+    return float(kv_get("dm_paused_until") or 0)
+
+
+def record_dm_result(ok):
+    if ok:
+        kv_set("dm_fail_streak", 0)
+        return
+    streak = int(kv_get("dm_fail_streak") or 0) + 1
+    kv_set("dm_fail_streak", streak)
+    if streak >= DM_PAUSE_AFTER_FAILURES:
+        kv_set("dm_paused_until", time.time() + DM_PAUSE_SECONDS)
+        kv_set("dm_fail_streak", 0)
 
 
 def reply_to_comment(comment_id, text):
@@ -372,15 +418,19 @@ def handle_comment(ig_user_id, value):
     if not comment_id or sender.get("id") == ig_user_id or value.get("parent_id"):
         return False
     key, rule = find_rule(load_rules(), media_id, text)
-    if not rule or not claim_comment(comment_id):
+    # While the login is dead, leave comments unhandled so "Send to past comments" can reach them later.
+    if not rule or token_is_dead() or not claim_comment(comment_id):
         return False
 
     # DM first, so the public reply can tell people what to do if Instagram refuses the DM.
     item = {"ig_user_id": ig_user_id, "key": key, "media_id": media_id, "username": username,
             "text": text, "at": time.time()}
-    dm_ok = send_comment_dm(comment_id, item, rule)
-    if not dm_ok:
-        add_retry(comment_id, item)
+    if time.time() < dms_paused_until():
+        dm_ok = False  # skip the attempt; the reply below asks them to DM the keyword
+    else:
+        dm_ok = send_comment_dm(comment_id, item, rule)
+        if not dm_ok:
+            add_retry(comment_id, item)
 
     reply = rule.get("comment_reply") if dm_ok else (rule.get("dm_fail_reply") or DEFAULT_DM_FAIL_REPLY)
     if reply:
@@ -407,6 +457,8 @@ def handle_dm_text(ig_user_id, igsid, text):
     Replying inside a conversation the person started works even when Instagram refuses to open
     new conversations from comments.
     """
+    if token_is_dead():
+        return
     for key, rule in load_rules().get("reels", {}).items():
         if rule.get("enabled", True) and any(keyword_matches(k, text) for k in dm_keywords(rule)):
             break
@@ -450,16 +502,25 @@ def send_comment_dm(comment_id, item, rule, retry=False):
         elif rule.get("dm"):
             send_dm(item["ig_user_id"], recipient, {"text": fill(rule["dm"])})
         log_activity(item["media_id"], item["username"], item["text"], action, "ok", note)
+        record_dm_result(True)
         return True
     except Exception as e:
         log_activity(item["media_id"], item["username"], item["text"], action, "error", explain_error(e))
+        if CANT_OPEN_THREAD in str(e):
+            record_dm_result(False)
         return False
 
 
 def retry_failed_dms(max_sends=30):
     """Retries DMs that Instagram refused earlier, while the 7-day private-reply window is open."""
     rules = load_rules().get("reels", {})
-    counts = {"sent": 0, "still_failing": 0, "expired": 0}
+    counts = {"sent": 0, "still_failing": 0, "expired": 0, "skipped": ""}
+    if token_is_dead():
+        counts["skipped"] = "Instagram login expired: reconnect the app first."
+        return counts
+    if time.time() < dms_paused_until():
+        counts["skipped"] = "Comment DMs are paused because Instagram kept refusing them. Try again later."
+        return counts
     for comment_id, item in list(pending_retries().items()):
         rule = rules.get(item["key"])
         # Leave a day of margin: the window counts from the comment, which came slightly earlier.
@@ -473,6 +534,8 @@ def retry_failed_dms(max_sends=30):
             counts["sent"] += 1
         else:
             counts["still_failing"] += 1
+            if time.time() < dms_paused_until():
+                break
     return counts
 
 
@@ -528,7 +591,7 @@ def handle_button(ig_user_id, igsid, payload):
     """User tapped "Send me the link" or "I followed": check follow, then deliver or ask."""
     step, _, key = payload.partition("|")
     rule = load_rules().get("reels", {}).get(key)
-    if step not in ("GET", "FOLLOWED") or not rule:
+    if step not in ("GET", "FOLLOWED") or not rule or token_is_dead():
         return
     recipient = {"id": igsid}
     username, follows = "", True
@@ -654,14 +717,24 @@ def dashboard():
 
 @app.get("/api/stats")
 def api_stats():
-    if request.args.get("refresh") or time.time() - _stats_cache["at"] > STATS_CACHE_SECONDS:
+    dead = token_is_dead()
+    if not dead and (request.args.get("refresh") or time.time() - _stats_cache["at"] > STATS_CACHE_SECONDS):
         try:
             _stats_cache["data"] = fetch_stats()
             _stats_cache["at"] = time.time()
         except Exception as e:
-            if not _stats_cache["data"]:
+            dead = token_is_dead()
+            if not _stats_cache["data"] and not dead:
                 return jsonify({"error": str(e)}), 502
-    data = dict(_stats_cache["data"])
+    data = dict(_stats_cache["data"] or {"account": {}, "reels": [], "fetched_at": None})
+    if dead:
+        data["alert"] = ("Instagram logged the app out (error 190), so nothing is being sent. Fix: Meta app → "
+                         "API setup with Instagram login → Generate token, paste it into Vercel → Settings → "
+                         "Environment Variables → IG_ACCESS_TOKEN, then Redeploy. Comments that arrive "
+                         "meanwhile are kept: use “Send to past comments” afterwards.")
+    paused = dms_paused_until()
+    if not dead and time.time() < paused:
+        data["paused_until"] = paused
     if SERVERLESS and not REDIS_URL:
         data["warning"] = ("No database connected: rules and activity will be lost. "
                            "In Vercel, add Storage → Upstash Redis and redeploy.")
