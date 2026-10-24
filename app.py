@@ -41,7 +41,9 @@ os.makedirs(DATA_DIR, exist_ok=True)
 RULES_FILE = os.environ.get("RULES_FILE", os.path.join(DATA_DIR, "rules.json"))
 LINKPAGE_FILE = os.environ.get("LINKPAGE_FILE", os.path.join(DATA_DIR, "linkpage.json"))
 DB_FILE = os.environ.get("DB_FILE", os.path.join(DATA_DIR, "autopilot.db"))
-STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "60"))
+# Stats cost one Instagram request per reel, so refresh them rarely (they share the app's hourly limit).
+STATS_CACHE_SECONDS = int(os.environ.get("STATS_CACHE_SECONDS", "600"))
+STATS_REELS = int(os.environ.get("STATS_REELS", "12"))
 # Serverless hosts (Vercel) have no lasting disk: store data in Upstash Redis when it's configured.
 REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
 REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
@@ -123,7 +125,19 @@ def kv_set(k, v):
         conn.execute("INSERT OR REPLACE INTO kv VALUES (?, ?)", (k, str(v)))
 
 
+MAX_RETRIES = 1000  # beyond this, people still get the "DM me KEYWORD" reply
+
+
+def retry_count():
+    if REDIS_URL:
+        return int(redis("HLEN", "dm_retry") or 0)
+    with db() as conn:
+        return conn.execute("SELECT COUNT(*) FROM retry").fetchone()[0]
+
+
 def add_retry(comment_id, item):
+    if retry_count() >= MAX_RETRIES:
+        return
     if REDIS_URL:
         redis("HSET", "dm_retry", comment_id, json.dumps(item))
         return
@@ -330,9 +344,23 @@ def refresh_token():
 def _check(r):
     if r.ok:
         return r.json()
-    if '"code":190' in r.text.replace(" ", ""):
+    body = r.text.replace(" ", "")
+    if '"code":190' in body:
         kv_set("token_invalid", _env_token_id())  # until IG_ACCESS_TOKEN is replaced
+    elif any(f'"code":{c},' in body for c in RATE_LIMIT_CODES):
+        kv_set("rate_limited_until", time.time() + RATE_LIMIT_BACKOFF)
     raise RuntimeError(f"{r.status_code}: {r.text}")
+
+
+# Meta's "too many requests" errors (app, user and page level). Each failed call still counts,
+# so after one we stop calling for a while instead of making it worse.
+RATE_LIMIT_CODES = (4, 17, 32, 613)
+RATE_LIMIT_BACKOFF = 15 * 60
+
+
+def rate_limited_until():
+    until = float(kv_get("rate_limited_until") or 0)
+    return until if until > time.time() else 0
 
 
 def ig_get(path, **params):
@@ -431,7 +459,7 @@ def my_username():
 
 def fetch_stats():
     me = ig_get("me", fields="user_id,username,followers_count,follows_count,media_count")
-    media = ig_get("me/media", limit=50, fields=(
+    media = ig_get("me/media", limit=STATS_REELS, fields=(
         "id,caption,media_type,media_product_type,permalink,thumbnail_url,"
         "media_url,timestamp,like_count,comments_count"))["data"]
     reels = []
@@ -441,7 +469,9 @@ def fetch_stats():
         try:
             ins = ig_get(f"{m['id']}/insights", metric=REEL_METRICS)["data"]
             m["insights"] = {i["name"]: i["values"][0]["value"] for i in ins}
-        except requests.HTTPError as e:
+        except Exception as e:
+            if rate_limited_until():
+                raise  # stop here; keep showing the last stats
             m["insights"] = {}
             m["insights_error"] = str(e)
         reels.append(m)
@@ -545,7 +575,8 @@ def handle_comment(ig_user_id, value):
         return False
     key, rule = find_rule(load_rules(), media_id, text)
     # While the login is dead, leave comments unhandled so "Send to past comments" can reach them later.
-    if not rule or token_is_dead() or not claim_comment(comment_id):
+    # While logged out or rate limited, leave comments unhandled so "Send to past comments" reaches them later.
+    if not rule or token_is_dead() or rate_limited_until() or not claim_comment(comment_id):
         return False
 
     # DM first, so the public reply can tell people what to do if Instagram refuses the DM.
@@ -646,6 +677,9 @@ def retry_failed_dms(max_sends=30):
         return counts
     if time.time() < dms_paused_until():
         counts["skipped"] = "Comment DMs are paused because Instagram kept refusing them. Try again later."
+        return counts
+    if rate_limited_until():
+        counts["skipped"] = "Instagram's hourly request limit was reached. Try again in 15 minutes."
         return counts
     for comment_id, item in list(pending_retries().items()):
         rule = rules.get(item["key"])
@@ -812,7 +846,7 @@ def api_retry_failed():
 
 @app.get("/api/retry-failed")
 def api_retry_count():
-    return jsonify({"pending": len(pending_retries())})
+    return jsonify({"pending": retry_count()})
 
 
 @app.get("/cron/retry-failed")
@@ -888,13 +922,22 @@ def api_put_linkpage():
 @app.get("/api/stats")
 def api_stats():
     dead = token_is_dead()
-    if not dead and (request.args.get("refresh") or time.time() - _stats_cache["at"] > STATS_CACHE_SECONDS):
+    limited = rate_limited_until()
+    if not _stats_cache["data"]:
+        # Serverless instances start empty: reuse the last stats saved by any instance.
+        saved = kv_get("stats_cache")
+        if saved:
+            _stats_cache.update(json.loads(saved))
+    stale = time.time() - _stats_cache["at"] > STATS_CACHE_SECONDS
+    if not dead and not limited and (stale or (request.args.get("refresh") and time.time() - _stats_cache["at"] > 60)):
         try:
             _stats_cache["data"] = fetch_stats()
             _stats_cache["at"] = time.time()
+            kv_set("stats_cache", json.dumps(_stats_cache))
         except Exception as e:
+            limited = rate_limited_until()
             dead = token_is_dead()
-            if not _stats_cache["data"] and not dead:
+            if not _stats_cache["data"] and not dead and not limited:
                 return jsonify({"error": str(e)}), 502
     data = dict(_stats_cache["data"] or {"account": {}, "reels": [], "fetched_at": None})
     if dead:
@@ -905,6 +948,8 @@ def api_stats():
     paused = dms_paused_until()
     if not dead and time.time() < paused:
         data["paused_until"] = paused
+    if not dead and limited:
+        data["rate_limited_until"] = limited
     if SERVERLESS and not REDIS_URL:
         data["warning"] = ("No database connected: rules and activity will be lost. "
                            "In Vercel, add Storage → Upstash Redis and redeploy.")
@@ -943,6 +988,8 @@ def api_put_rule(media_id):
 
 @app.post("/api/backfill/<media_id>")
 def api_backfill(media_id):
+    if rate_limited_until():
+        return jsonify({"error": "Instagram's hourly request limit was reached. Try again in 15 minutes."}), 429
     try:
         return jsonify(backfill_comments(media_id))
     except Exception as e:

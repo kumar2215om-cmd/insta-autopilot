@@ -119,4 +119,11 @@ Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pic
 - Instagram allows **one DM per comment, within 7 days**. Normal messaging rules apply after that.
 - The access token expires after 60 days. On Vercel it renews itself every week (see above). Elsewhere, refresh it with
   `GET https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=TOKEN`.
-- Stats are cached for 60 seconds (`STATS_CACHE_SECONDS`) to stay under API rate limits.
+- Instagram limits how many requests an app makes per hour (error code 4, "Application request limit reached").
+  After one such error the app stops calling Instagram for 15 minutes, leaves new comments unhandled so
+  **📨 Send to past comments** can answer them afterwards, and shows a banner on the dashboard.
+- After 5 refused comment DMs in a row (error 2534001), comment DMs pause for 3 hours; commenters get the
+  "DM me KEYWORD" reply instead. If Instagram logs the app out (error 190, e.g. after a password change), a red
+  banner explains how to reconnect and comments are kept until then.
+- Stats are refreshed at most every 10 minutes (`STATS_CACHE_SECONDS`) for the latest 12 reels (`STATS_REELS`),
+  because each reel costs one request against the same hourly limit. The retry list holds at most 1,000 people.

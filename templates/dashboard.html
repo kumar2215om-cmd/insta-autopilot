@@ -274,11 +274,20 @@ async function loadStats(force) {
   err.textContent = msg ? "⚠️ " + msg : "";
   err.style.display = msg ? "block" : "none";
   const pause = document.getElementById("pause");
-  pause.style.display = data.paused_until ? "block" : "none";
-  pause.textContent = data.paused_until ? "⏸️ Comment DMs paused until " +
+  const notes = [];
+  if (data.rate_limited_until) notes.push("⏳ Instagram's hourly request limit was reached. The app is waiting until " +
+    new Date(data.rate_limited_until * 1000).toLocaleTimeString() +
+    ". Comments that arrive meanwhile are kept: click “Send to past comments” on the reel afterwards.");
+  if (data.paused_until) notes.push("⏸️ Comment DMs paused until " +
     new Date(data.paused_until * 1000).toLocaleTimeString() +
-    " because Instagram kept refusing them. Commenters are asked to DM you the keyword instead, and those DMs are answered as usual." : "";
-  if (!data.account || !data.account.username) return;  // no fresh stats while logged out
+    " because Instagram kept refusing them. Commenters are asked to DM you the keyword instead, and those DMs are answered as usual.");
+  pause.style.display = notes.length ? "block" : "none";
+  pause.innerHTML = notes.map(esc).join("<br>");
+  if (!data.account || !data.account.username) {  // no stats yet (logged out or rate limited)
+    if (!stats) document.getElementById("reels").innerHTML =
+      `<p class="muted">Reel stats will appear once Instagram is reachable again. Automations resume on their own.</p>`;
+    return;
+  }
   stats = data;
   // Don't wipe a rule form the user is typing in.
   if (!document.activeElement || !document.activeElement.closest("#reels form")) render();
@@ -327,8 +336,8 @@ async function loadActivity() {
   await loadRules(); render();
   loadStats(); loadActivity(); loadRetryCount();
   setInterval(loadStats, 60000);
-  setInterval(loadRetryCount, 30000);
-  setInterval(loadActivity, 4000);
+  setInterval(loadRetryCount, 60000);
+  setInterval(loadActivity, 10000);
 })();
 </script>
 </body>
