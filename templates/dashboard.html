@@ -142,6 +142,8 @@ const LOOK = {comment_reply: ["💬", "#3b82f6"], opening_dm: ["✉️", "#962fb
               follow_check: ["🔎", "#64748b"], dm: ["🔗", "#16a34a"], token_refresh: ["🔑", "#ca8a04"],
               dm_fail_reply: ["↩️", "#f59e0b"], dm_keyword: ["📥", "#0d9488"]};
 const fmt = n => n == null ? "–" : Intl.NumberFormat(undefined, {notation: "compact"}).format(n);
+// Top tiles show the exact number (10,123), not a rounded one (10k).
+const exact = n => n == null ? "–" : Number(n).toLocaleString();
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 // Boxes start filled with real text (not grey hints) so what you see is what gets sent.
@@ -231,10 +233,10 @@ function render() {
   if (!stats) return;
   const a = stats.account;
   document.getElementById("username").textContent = "@" + a.username;
-  document.getElementById("followers").textContent = fmt(a.followers_count);
-  document.getElementById("posts").textContent = fmt(a.media_count);
+  document.getElementById("followers").textContent = exact(a.followers_count);
+  document.getElementById("posts").textContent = exact(a.media_count);
   document.getElementById("totalViews").textContent =
-    fmt(stats.reels.reduce((s, r) => s + (r.insights.views || 0), 0));
+    exact(stats.reels.reduce((s, r) => s + (r.insights.views || 0), 0));
   document.getElementById("fetched").textContent = "· updated " + new Date(stats.fetched_at).toLocaleTimeString();
   const open = new Set([...document.querySelectorAll("#reels details[open]")].map(d => d.dataset.id));
   document.getElementById("reels").innerHTML = stats.reels.length ? stats.reels.map(r => {
