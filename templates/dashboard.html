@@ -177,7 +177,8 @@ const DEFAULTS = {
 const val = (r, k) => esc(r[k] || DEFAULTS[k]);
 
 function ruleForm(id) {
-  const r = {enabled: true, keywords: [], comment_reply: "", opening_dm: "", button_text: "",
+  // A new fallback rule starts unticked: with empty keywords it would answer every comment on every reel.
+  const r = {enabled: id !== "*", keywords: [], comment_reply: "", opening_dm: "", button_text: "",
              require_follow: true, follow_dm: "", followed_button_text: "", dm: "",
              ...(rules.reels[id] || {})};
   return `<form onsubmit="saveRule(event, '${id}')">
@@ -194,7 +195,7 @@ function ruleForm(id) {
     <textarea name="follow_dm" rows="2">${val(r, "follow_dm")}</textarea>
     <input type="text" name="followed_button_text" maxlength="20" value="${val(r, "followed_button_text")}">
     <div class="step" style="--c:#16a34a"><i>5</i> Final DM (the link / reward) <b class="error">required</b></div>
-    <textarea name="dm" rows="3" required placeholder="Required: type your message with the link, e.g. Here you go 🎁 https://...">${esc(r.dm)}</textarea>
+    <textarea name="dm" rows="3" placeholder="Required: type your message with the link, e.g. Here you go 🎁 https://...">${esc(r.dm)}</textarea>
     <div style="display:flex;gap:8px">
       <button>Save rule</button>
       ${rules.reels[id] ? `<button type="button" class="secondary" onclick="deleteRule('${id}')">Remove</button>` : ""}
@@ -203,13 +204,17 @@ function ruleForm(id) {
 
 function badge(id) {
   const r = rules.reels[id];
-  if (!r) return "";
+  if (!r) return id === "*" ? `<span class="badge off">off (not set)</span>` : "";
   return r.enabled !== false ? `<span class="badge on">auto-reply on</span>` : `<span class="badge off">paused</span>`;
 }
 
 async function saveRule(e, id) {
   e.preventDefault();
   const f = e.target;
+  if (f.enabled.checked && !f.dm.value.trim()) {
+    alert("Type the Final DM (step 5) first, or untick Enabled to save the rule as paused.");
+    return f.dm.focus();
+  }
   const body = {enabled: f.enabled.checked, keywords: f.keywords.value.split(","),
                 comment_reply: f.comment_reply.value, opening_dm: f.opening_dm.value,
                 button_text: f.button_text.value, require_follow: f.require_follow.checked,
