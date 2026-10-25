@@ -789,6 +789,9 @@ def retry_failed_dms(max_sends=30):
         return counts
     for comment_id, item in list(pending_retries().items()):
         rule = rules.get(item["key"])
+        # A paused rule drops its retries too (e.g. the reel is handed to another tool).
+        if rule and not rule.get("enabled", True):
+            rule = None
         # Leave a day of margin: the window counts from the comment, which came slightly earlier.
         if not rule or time.time() - item["at"] > PRIVATE_REPLY_WINDOW - 86400:
             remove_retry(comment_id)
