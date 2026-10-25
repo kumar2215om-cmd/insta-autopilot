@@ -115,11 +115,11 @@ Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pic
 
 ## Notes and limits
 - Sometimes Instagram refuses to open a DM from a comment (error 2534001, "thread owner has archived or
-  deleted this conversation"), often after many automated DMs in a short time. The app sends the DM first; if it's
-  refused, the public reply asks the person to **DM you the keyword** instead (step "!" in the rule). When someone
-  DMs a keyword, the app answers in that conversation with the same button → follow check → link flow, which works
-  even while comment DMs are refused. Refused DMs are also retried once a day (Vercel Cron) or with
-  **🔁 Retry failed DMs**, while Instagram's 7-day window is open.
+  deleted this conversation"), often after many automated DMs in a short time. The normal public reply still posts,
+  refused DMs are retried once a day (Vercel Cron) or with **🔁 Retry failed DMs** while Instagram's 7-day window is
+  open, and people who DM you the keyword are answered in that chat with the same button → follow check → link flow.
+- Meta's app-level limit is about 200 Instagram requests per hour per connected account. Each keyword comment uses
+  roughly 2-3 requests, so very busy reels can hit the limit; the app then waits 15 minutes (see below).
 - The follow gate is strict: the link is only sent once Instagram confirms the person follows you. If the check
   fails (an API error), they get the "follow me first" message instead and can tap "I followed" to be checked again;
   the error appears in the activity feed.
