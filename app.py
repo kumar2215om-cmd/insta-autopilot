@@ -17,6 +17,8 @@ import requests
 from dotenv import load_dotenv
 from flask import Flask, abort, jsonify, redirect, render_template, request
 
+import linkedin
+
 load_dotenv()
 
 API_VERSION = os.environ.get("IG_API_VERSION", "v23.0")
@@ -983,6 +985,10 @@ def cron_retry_failed():
             record_growth(fetch_stats())
         except Exception:
             pass
+    try:
+        linkedin.tick()  # Vercel's free plan runs cron once a day; see README for minute-by-minute posting
+    except Exception:
+        pass
     return jsonify(retry_failed_dms())
 
 
@@ -1150,6 +1156,9 @@ def api_delete_rule(media_id):
 
 if not REDIS_URL:
     init_db()
+
+linkedin.register(app, kv_get=kv_get, kv_set=kv_set, claim=claim_comment, matches=keyword_matches,
+                  cron_secret=CRON_SECRET, serverless=SERVERLESS)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8000")))

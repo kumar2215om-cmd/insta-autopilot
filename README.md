@@ -139,3 +139,39 @@ Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pic
 - Reel stats refresh every 10 minutes (`STATS_CACHE_SECONDS`) for the latest 12 reels (`STATS_REELS`), loaded in parallel;
   the follower count refreshes every 2 minutes (`ACCOUNT_CACHE_SECONDS`) and **↻ Refresh** forces a full update after 30 seconds,
   because each reel costs one request against the same hourly limit. The retry list holds at most 1,000 people.
+
+## LinkedIn: scheduled posts + comment automation
+Open **💼 LinkedIn** on the dashboard (`/linkedin`). It can:
+- **Schedule posts** (text, #hashtags, up to 20 images) to your **profile** or your **company pages**, or post right away.
+- On **company page** posts: watch comments for your keywords, **reply in public**, and put each person in a
+  **DM queue** with your message ready. Click **📋 Copy**, then **Open comment**, click their name → Message,
+  paste, and mark it **✅ Sent**.
+
+**Why DMs aren't sent automatically:** LinkedIn's messaging API is closed to almost all apps, and tools that
+auto-DM run a logged-in browser on your account. That breaks LinkedIn's terms and often gets accounts
+restricted, so this app only uses the official API. Also, LinkedIn's API can't read comments on **personal
+profile** posts, so comment automation works on company page posts only.
+
+### Setup
+1. Go to https://www.linkedin.com/developers/apps → **Create app**. LinkedIn requires a company page to link
+   the app to; any page you admin works.
+2. **Products** tab: add **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**
+   (both approved instantly). For company pages, also request **Community Management API**, which LinkedIn reviews.
+3. **Auth** tab: under *Authorized redirect URLs*, add `https://<your-domain>/linkedin/callback`
+   (`http://localhost:8000/linkedin/callback` for local testing). Copy the **Client ID** and **Client Secret**.
+4. Add the env variables `LI_CLIENT_ID` and `LI_CLIENT_SECRET`, plus `LI_PAGES=1` once Community Management is
+   approved. Redeploy, open `/linkedin` and click **Connect LinkedIn**. After turning on `LI_PAGES`,
+   click **Reconnect** so your pages are added.
+
+### When posts go out
+- **Railway / a server:** the app checks every minute, so posts go out on time.
+- **Vercel:** the free plan's cron runs only once a day. For on-time posts, create a free job at
+  https://cron-job.org that opens `https://<project>.vercel.app/cron/linkedin?key=<CRON_SECRET>` every 5 minutes.
+  While the LinkedIn dashboard is open in a tab, it also publishes due posts itself.
+
+### Notes
+- Profile logins last 60 days, and the dashboard warns you a week before. Apps approved for Community Management
+  get a refresh token, so their login renews itself.
+- Comments are checked every 5 minutes (`LI_POLL_SECONDS`). Each comment is handled once, and your own comments are ignored.
+- LinkedIn doesn't tell the app who commented by name. **Open comment** takes you straight to the comment.
+- Links in post text stay as plain text. LinkedIn's API doesn't create link previews by itself.

@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinkedIn Autopilot</title>
+<style>
+  :root {
+    --bg:#f3f6fa; --card:#fff; --text:#13202f; --muted:#5f6f82; --line:#e3e9f1;
+    --li: linear-gradient(120deg, #0a66c2 0%, #0b4f96 60%, #0d3b6e 100%);
+    --blue:#0a66c2; --green:#16a34a; --orange:#f59e0b; --err:#dc2626; --ok:#16a34a;
+    --shadow: 0 6px 24px rgba(10, 60, 120, .08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d131b; --card:#151d28; --text:#e9f0f8; --muted:#97a6b8; --line:#243142;
+            --shadow: 0 6px 24px rgba(0,0,0,.35); }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--li); color:#fff; padding:20px 16px; }
+  .top { max-width:1300px; margin:auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h1 { font-size:22px; margin:0; margin-right:auto; letter-spacing:-.3px; }
+  header h1 small { font-weight:500; opacity:.85; font-size:14px; margin-left:6px; }
+  header a, header button.ghost { background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.4);
+             text-decoration:none; padding:8px 14px; border-radius:10px; font-weight:600; }
+  main { padding:20px 16px; display:grid; gap:20px; grid-template-columns: 3fr 2fr; max-width:1300px; margin:auto; align-items:start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .col { display:grid; gap:20px; min-width:0; }
+  .card { background:var(--card); border-radius:16px; box-shadow:var(--shadow); border:1px solid var(--line); padding:16px; min-width:0;
+          overflow-wrap:anywhere; }
+  h2 { font-size:17px; margin:0 0 12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .muted { color:var(--muted); font-size:12px; font-weight:400; }
+  form { display:grid; gap:8px; }
+  label.field { font-size:12px; font-weight:600; color:var(--muted); }
+  input[type=text], input[type=datetime-local], textarea, select {
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); font:inherit; }
+  textarea:focus, input:focus, select:focus { outline:2px solid color-mix(in srgb, var(--blue) 45%, transparent); border-color:transparent; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .row > * { flex:1 1 180px; }
+  button { padding:8px 14px; border:0; border-radius:10px; background:var(--blue); color:#fff; cursor:pointer; font:inherit; font-weight:600; }
+  button:hover { filter:brightness(1.08); }
+  button:disabled { opacity:.6; cursor:wait; }
+  button.secondary { background:transparent; color:var(--muted); border:1px solid var(--line); }
+  button.small { padding:4px 10px; font-size:12px; }
+  .box { padding:12px; border-radius:12px; background:var(--bg); display:grid; gap:8px; }
+  .item { border-top:1px solid var(--line); padding:12px 0; display:grid; gap:6px; word-break:break-word; }
+  .item:first-of-type { border-top:0; }
+  .text { white-space:pre-wrap; overflow:hidden; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:600; color:var(--c);
+           background: color-mix(in srgb, var(--c) 14%, transparent); }
+  .counter { text-align:right; font-size:12px; color:var(--muted); }
+  .note { font-size:12px; color:var(--muted); background:color-mix(in srgb, var(--orange) 10%, transparent);
+          border-radius:10px; padding:8px 10px; }
+  .dm { background:var(--bg); border-radius:10px; padding:8px 10px; white-space:pre-wrap; }
+  a { color:var(--blue); }
+  .error { color:var(--err); } .ok { color:var(--ok); }
+  #connectCard .who { display:flex; align-items:center; gap:10px; }
+  #connectCard img { width:40px; height:40px; border-radius:50%; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>💼 LinkedIn Autopilot <small id="who"></small></h1>
+    <a href="/">📸 Instagram</a>
+  </div>
+</header>
+
+<main>
+  <div class="col">
+    <section class="card" id="connectCard"></section>
+
+    <section class="card" id="composer" style="display:none">
+      <h2>✍️ Schedule a post</h2>
+      <form id="postForm" onsubmit="schedule(event)">
+        <label class="field">Post as <select name="author" id="author" onchange="toggleRuleBox()"></select></label>
+        <textarea name="text" rows="8" maxlength="3000" placeholder="What do you want to talk about? #hashtags work" oninput="count(this)"></textarea>
+        <div class="counter" id="counter">0 / 3000</div>
+        <label class="field">Images (optional, up to 20) <input type="file" name="images" accept="image/png,image/jpeg,image/gif" multiple></label>
+        <div class="row">
+          <label class="field">Publish at <input type="datetime-local" name="when" id="when"></label>
+          <label class="field" style="flex:0 0 auto"><input type="checkbox" name="now" onchange="when.disabled=this.checked"> Post right now</label>
+        </div>
+        <div class="box" id="ruleBox" style="display:none">
+          <label><input type="checkbox" name="auto_reply"> <b>Comment automation</b> <span class="muted">(company pages)</span></label>
+          <input type="text" name="keywords" placeholder="Keywords, comma separated. Empty = every comment">
+          <textarea name="comment_reply" rows="2" placeholder="Public reply, one per line (a random one is used). Empty = no public reply"></textarea>
+          <textarea name="dm" rows="2" placeholder="DM to send them (goes to your DM queue), e.g. Here's the guide 👉 https://..."></textarea>
+        </div>
+        <div class="row"><button id="scheduleBtn" style="flex:0 0 auto">Schedule post</button><span id="formMsg" class="muted"></span></div>
+      </form>
+    </section>
+
+    <section class="card" id="postsCard" style="display:none">
+      <h2>🗓️ Your posts <span class="muted">scheduled and published from here</span></h2>
+      <div id="posts"></div>
+    </section>
+
+    <section class="card" id="pagePostsCard" style="display:none">
+      <h2>💬 Page posts & comment rules <button class="secondary small" onclick="loadPagePosts()">↻</button></h2>
+      <div class="muted" style="margin-bottom:8px">Comments matching a keyword get your public reply and land in the DM queue. Checked every few minutes.</div>
+      <div id="pagePosts"></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card" id="queueCard" style="display:none">
+      <h2>📨 DM queue <span class="muted" id="queueCount"></span>
+        <label class="muted" style="margin-left:auto"><input type="checkbox" id="showDone" onchange="renderQueue()"> show done</label></h2>
+      <div class="note">LinkedIn doesn't let apps send DMs, so each match waits here. <b>Copy</b> the message,
+        <b>open the comment</b>, click their name → Message, paste, then <b>mark sent</b>.</div>
+      <div id="queue"></div>
+    </section>
+
+    <section class="card">
+      <h2>🟢 Activity</h2>
+      <div id="log" class="muted">Nothing yet.</div>
+    </section>
+  </div>
+</main>
+
+<script>
+let status = {}, queue = [];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = t => t ? new Date(t * 1000).toLocaleString([], {dateStyle: "medium", timeStyle: "short"}) : "";
+const ago = t => { const s = Date.now() / 1000 - t; return s < 60 ? "just now" : s < 3600 ? `${Math.floor(s/60)}m ago`
+                   : s < 86400 ? `${Math.floor(s/3600)}h ago` : `${Math.floor(s/86400)}d ago`; };
+const STATUS = {scheduled: ["#0a66c2", "scheduled"], publishing: ["#f59e0b", "publishing…"],
+                published: ["#16a34a", "published"], failed: ["#dc2626", "failed"]};
+
+function count(t) { document.getElementById("counter").textContent = `${t.value.length} / 3000`; }
+
+function toggleRuleBox() {
+  const a = status.authors.find(a => a.urn === document.getElementById("author").value);
+  document.getElementById("ruleBox").style.display = a && a.page && status.pages_enabled ? "grid" : "none";
+}
+
+function defaultWhen() {
+  const d = new Date(Date.now() + 60 * 60 * 1000); d.setMinutes(0, 0, 0);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+}
+
+async function loadStatus() {
+  status = await (await fetch("/api/linkedin/status")).json();
+  const c = document.getElementById("connectCard");
+  document.getElementById("who").textContent = status.name || "";
+  if (!status.configured) {
+    c.innerHTML = `<h2>🔌 Connect LinkedIn</h2><p class="muted">Add <code>LI_CLIENT_ID</code> and <code>LI_CLIENT_SECRET</code>
+      to your environment variables and redeploy. Steps are in the README under “LinkedIn”.</p>`;
+  } else if (!status.connected) {
+    c.innerHTML = `<h2>🔌 Connect LinkedIn</h2><p class="muted">Log in once so the app can post for you.</p>
+      <a href="/linkedin/connect"><button>Connect LinkedIn</button></a>`;
+  } else {
+    const days = Math.floor((status.expires_at - Date.now() / 1000) / 86400);
+    const expiry = status.can_refresh ? `<span class="ok">renews automatically</span>`
+      : days < 7 ? `<span class="error">login expires in ${days} day(s): reconnect so scheduled posts keep going</span>`
+      : `login valid for ${days} more days`;
+    c.innerHTML = `<div class="who">${status.picture ? `<img src="${esc(status.picture)}" alt="">` : ""}
+      <div style="margin-right:auto"><b>${esc(status.name)}</b><div class="muted">${expiry}
+      ${status.pages_enabled ? ` · pages: ${esc(status.authors.filter(a => a.page).map(a => a.name).join(", ") || "none found")}` : ""}</div></div>
+      <a href="/linkedin/connect"><button class="secondary small">Reconnect</button></a>
+      <button class="secondary small" onclick="disconnect()">Disconnect</button></div>`;
+    const sel = document.getElementById("author"), keep = sel.value;
+    sel.innerHTML = status.authors.map(a => `<option value="${esc(a.urn)}">${esc(a.name)}</option>`).join("");
+    if (keep) sel.value = keep;
+    toggleRuleBox();
+  }
+  for (const id of ["composer", "postsCard"]) document.getElementById(id).style.display = status.connected ? "block" : "none";
+  document.getElementById("pagePostsCard").style.display = status.connected && status.pages_enabled ? "block" : "none";
+  document.getElementById("queueCard").style.display = status.connected && status.pages_enabled ? "block" : "none";
+  const log = status.log || [];
+  document.getElementById("log").innerHTML = log.length ? log.map(l => `<div class="item">
+    <div><span class="badge" style="--c:${l.status === "ok" ? "#16a34a" : "#dc2626"}">${esc(l.kind)}</span>
+    <span class="muted">${ago(l.at)}</span></div><div class="${l.status === "ok" ? "" : "error"}">${esc(l.detail)}</div></div>`).join("")
+    : "Nothing yet.";
+}
+
+async function disconnect() {
+  if (!confirm("Disconnect LinkedIn? Scheduled posts stay, but won't publish until you reconnect.")) return;
+  await fetch("/api/linkedin/disconnect", {method: "POST"}); loadStatus();
+}
+
+async function schedule(e) {
+  e.preventDefault();
+  const f = e.target, btn = document.getElementById("scheduleBtn"), msg = document.getElementById("formMsg");
+  const fd = new FormData();
+  fd.append("author", f.author.value); fd.append("text", f.text.value);
+  for (const file of f.images.files) fd.append("images", file);
+  if (!f.now.checked) {
+    if (!f.when.value) return alert("Pick a date and time, or tick “Post right now”.");
+    const at = new Date(f.when.value).getTime() / 1000;
+    if (at < Date.now() / 1000 - 60) return alert("That time is in the past.");
+    fd.append("publish_at", at);
+  }
+  if (document.getElementById("ruleBox").style.display !== "none" && f.auto_reply.checked) {
+    fd.append("auto_reply", "1");
+    for (const k of ["keywords", "comment_reply", "dm"]) fd.append(k, f[k].value);
+  }
+  btn.disabled = true; msg.textContent = f.images.files.length ? "Uploading images…" : "Saving…";
+  try {
+    const r = await (await fetch("/api/linkedin/posts", {method: "POST", body: fd})).json();
+    if (r.error) { msg.innerHTML = `<span class="error">${esc(r.error)}</span>`; return; }
+    msg.innerHTML = r.status === "published" ? `<span class="ok">Posted ✅</span>`
+      : r.status === "failed" ? `<span class="error">LinkedIn refused it: ${esc(r.error)}</span>`
+      : `<span class="ok">Scheduled for ${fmt(r.publish_at)} ✅</span>`;
+    f.reset(); f.when.value = defaultWhen(); f.when.disabled = false; count(f.text);
+    loadPosts(); loadStatus();
+  } finally { btn.disabled = false; }
+}
+
+async function loadPosts() {
+  const posts = await (await fetch("/api/linkedin/posts")).json();
+  const name = urn => (status.authors.find(a => a.urn === urn) || {}).name || urn;
+  document.getElementById("posts").innerHTML = posts.length ? posts.map(p => {
+    const [c, label] = STATUS[p.status] || ["#5f6f82", p.status];
+    return `<div class="item">
+      <div class="row" style="justify-content:space-between"><div style="flex:1 1 auto">
+        <span class="badge" style="--c:${c}">${label}</span>
+        <b>${fmt(p.status === "published" ? p.published_at : p.publish_at)}</b>
+        <span class="muted">· ${esc(name(p.author))}${p.images.length ? ` · 🖼️ ${p.images.length}` : ""}${p.rule ? " · 💬 auto-reply" : ""}</span></div>
+        <div style="flex:0 0 auto" class="row">
+          ${p.status === "published" && p.post_urn ? `<a href="https://www.linkedin.com/feed/update/${esc(p.post_urn)}/" target="_blank">View ↗</a>` : ""}
+          ${p.status === "scheduled" ? `<button class="small" onclick="publishNow(this, '${p.id}')">Post now</button>` : ""}
+          ${p.status === "failed" ? `<button class="small" onclick="publishNow(this, '${p.id}')">Retry</button>` : ""}
+          ${p.status !== "published" && p.status !== "publishing" ? `<button class="secondary small" onclick="deletePost('${p.id}')">Delete</button>` : ""}
+        </div></div>
+      <div class="text">${esc(p.text)}</div>
+      ${p.error ? `<div class="error">${esc(p.error)}</div>` : ""}</div>`;
+  }).join("") : `<div class="muted">No posts yet. Schedule one above.</div>`;
+}
+
+async function publishNow(btn, id) {
+  btn.disabled = true;
+  await fetch(`/api/linkedin/posts/${id}/publish`, {method: "POST"});
+  loadPosts(); loadStatus();
+}
+
+async function deletePost(id) {
+  if (!confirm("Delete this post from the schedule?")) return;
+  await fetch(`/api/linkedin/posts/${id}`, {method: "DELETE"}); loadPosts();
+}
+
+async function loadPagePosts() {
+  const el = document.getElementById("pagePosts");
+  el.innerHTML = `<div class="muted">Loading…</div>`;
+  const r = await (await fetch("/api/linkedin/page-posts")).json();
+  if (r.error) { el.innerHTML = `<div class="error">${esc(r.error)}</div>`; return; }
+  window.pagePosts = r;
+  el.innerHTML = r.length ? r.map((p, i) => {
+    const rule = p.rule || {enabled: true, keywords: [], comment_reply: "", dm: ""};
+    return `<div class="item">
+      <div><b>${esc(p.page)}</b> <span class="muted">${p.at ? fmt(p.at / 1000) : ""}</span>
+        ${p.rule ? `<span class="badge" style="--c:${p.rule.enabled ? "#16a34a" : "#5f6f82"}">${p.rule.enabled ? "auto-reply on" : "paused"}</span>` : ""}
+        <a href="${esc(p.link)}" target="_blank">open ↗</a></div>
+      <div class="text">${esc(p.text)}</div>
+      <details><summary class="muted" style="cursor:pointer">⚙️ Comment rule</summary>
+        <form class="box" onsubmit="saveRule(event, ${i})">
+          <label><input type="checkbox" name="enabled" ${rule.enabled ? "checked" : ""}> Enabled</label>
+          <input type="text" name="keywords" value="${esc(rule.keywords.join(", "))}" placeholder="Keywords, comma separated. Empty = every comment">
+          <textarea name="comment_reply" rows="2" placeholder="Public reply, one per line">${esc(rule.comment_reply)}</textarea>
+          <textarea name="dm" rows="2" placeholder="DM for the queue">${esc(rule.dm)}</textarea>
+          <div class="row"><button style="flex:0 0 auto">Save rule</button>
+          ${p.rule ? `<button type="button" class="secondary" style="flex:0 0 auto" onclick="deleteRule(${i})">Remove</button>` : ""}</div>
+        </form></details></div>`;
+  }).join("") : `<div class="muted">No posts found on your pages.</div>`;
+}
+
+async function saveRule(e, i) {
+  e.preventDefault();
+  const f = e.target, p = window.pagePosts[i];
+  await fetch("/api/linkedin/rules", {method: "PUT", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({urn: p.urn, author: p.author, text: p.text, enabled: f.enabled.checked,
+      keywords: f.keywords.value.split(","), comment_reply: f.comment_reply.value, dm: f.dm.value})});
+  loadPagePosts();
+}
+
+async function deleteRule(i) {
+  await fetch(`/api/linkedin/rules?urn=${encodeURIComponent(window.pagePosts[i].urn)}`, {method: "DELETE"});
+  loadPagePosts();
+}
+
+async function loadQueue() { queue = await (await fetch("/api/linkedin/queue")).json(); renderQueue(); }
+
+function renderQueue() {
+  const showDone = document.getElementById("showDone").checked;
+  const pending = queue.filter(q => q.status === "pending").length;
+  document.getElementById("queueCount").textContent = pending ? `${pending} to send` : "all caught up";
+  const items = queue.filter(q => showDone || q.status === "pending");
+  document.getElementById("queue").innerHTML = items.length ? items.map(q => `<div class="item">
+    <div><span class="muted">${ago(q.at)}</span> ${q.status !== "pending" ? `<span class="badge" style="--c:#5f6f82">${q.status}</span>` : ""}</div>
+    <div>💬 “${esc(q.comment)}”</div>
+    ${q.replied ? `<div class="muted">Replied in public: ${esc(q.replied)}</div>` : ""}
+    <div class="dm">${esc(q.dm)}</div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="small" style="flex:0 0 auto" onclick="copyDm(this, '${q.id}')">📋 Copy</button>
+      <a href="${esc(q.link)}" target="_blank" style="flex:0 0 auto">Open comment ↗</a>
+      ${q.status === "pending"
+        ? `<button class="small" style="flex:0 0 auto" onclick="mark('${q.id}', 'sent')">✅ Sent</button>
+           <button class="secondary small" style="flex:0 0 auto" onclick="mark('${q.id}', 'skipped')">Skip</button>`
+        : `<button class="secondary small" style="flex:0 0 auto" onclick="mark('${q.id}', 'pending')">Undo</button>`}
+    </div></div>`).join("") : `<div class="muted" style="margin-top:8px">No one waiting for a DM.</div>`;
+}
+
+async function copyDm(btn, id) {
+  await navigator.clipboard.writeText(queue.find(q => q.id === id).dm);
+  btn.textContent = "Copied ✓"; setTimeout(() => btn.textContent = "📋 Copy", 1500);
+}
+
+async function mark(id, s) {
+  await fetch(`/api/linkedin/queue/${id}`, {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({status: s})});
+  loadQueue();
+}
+
+// While this page is open it also publishes due posts, so scheduling works even without a cron.
+async function tick() {
+  if (document.hidden || !status.connected) return;
+  const r = await (await fetch("/api/linkedin/tick", {method: "POST"})).json().catch(() => ({}));
+  if (r.published || r.comments) { loadPosts(); loadQueue(); loadStatus(); }
+}
+
+document.getElementById("when").value = defaultWhen();
+(async () => {
+  await loadStatus();
+  if (!status.connected) return;
+  loadPosts();
+  if (status.pages_enabled) { loadPagePosts(); loadQueue(); }
+  tick();
+  setInterval(tick, 60000);
+  setInterval(() => { if (!document.hidden) { loadStatus(); if (status.pages_enabled) loadQueue(); } }, 30000);
+})();
+</script>
+</body>
+</html>
