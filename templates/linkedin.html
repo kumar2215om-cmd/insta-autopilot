@@ -6,104 +6,206 @@
 <title>LinkedIn Autopilot</title>
 <style>
   :root {
-    --bg:#f3f6fa; --card:#fff; --text:#13202f; --muted:#5f6f82; --line:#e3e9f1;
-    --li: linear-gradient(120deg, #0a66c2 0%, #0b4f96 60%, #0d3b6e 100%);
-    --blue:#0a66c2; --green:#16a34a; --orange:#f59e0b; --err:#dc2626; --ok:#16a34a;
-    --shadow: 0 6px 24px rgba(10, 60, 120, .08);
+    --bg:#f2f5f9; --card:#fff; --text:#13202f; --muted:#5f6f82; --line:#e3e9f1; --soft:#f6f8fb;
+    --li: linear-gradient(125deg, #0a66c2 0%, #0b4f96 55%, #172554 100%);
+    --blue:#0a66c2; --violet:#7c3aed; --green:#16a34a; --orange:#f59e0b; --err:#dc2626; --ok:#16a34a;
+    --ai: linear-gradient(120deg, #7c3aed, #0a66c2);
+    --shadow: 0 1px 2px rgba(10,40,80,.04), 0 8px 28px rgba(10, 60, 120, .08);
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#0d131b; --card:#151d28; --text:#e9f0f8; --muted:#97a6b8; --line:#243142;
-            --shadow: 0 6px 24px rgba(0,0,0,.35); }
+    :root { --bg:#0b1118; --card:#131c27; --text:#e9f0f8; --muted:#97a6b8; --line:#223042; --soft:#0f1721;
+            --shadow: 0 8px 28px rgba(0,0,0,.4); }
   }
   * { box-sizing: border-box; }
   body { margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-  header { background:var(--li); color:#fff; padding:20px 16px; }
-  .top { max-width:1300px; margin:auto; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  a { color:var(--blue); }
+  header { background:var(--li); color:#fff; padding:22px 16px 70px; position:relative; overflow:hidden; }
+  header::after { content:""; position:absolute; width:420px; height:420px; right:-120px; top:-220px; border-radius:50%;
+                  background:radial-gradient(circle, rgba(255,255,255,.16), transparent 65%); }
+  .wrap { max-width:1300px; margin:auto; }
+  .top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; position:relative; z-index:1; }
   header h1 { font-size:22px; margin:0; margin-right:auto; letter-spacing:-.3px; }
-  header h1 small { font-weight:500; opacity:.85; font-size:14px; margin-left:6px; }
-  header a, header button.ghost { background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.4);
-             text-decoration:none; padding:8px 14px; border-radius:10px; font-weight:600; }
-  main { padding:20px 16px; display:grid; gap:20px; grid-template-columns: 3fr 2fr; max-width:1300px; margin:auto; align-items:start; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  header .ghost { background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.35);
+                  text-decoration:none; padding:8px 14px; border-radius:10px; font-weight:600; }
+  .accounts { display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; position:relative; z-index:1; }
+  .acct { display:flex; align-items:center; gap:8px; padding:6px 14px 6px 6px; border-radius:99px; cursor:pointer;
+          background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.25); font-weight:600; }
+  .acct.active { background:#fff; color:#0b3b70; border-color:#fff; }
+  .acct small { font-weight:500; opacity:.75; }
+  .av { width:28px; height:28px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700;
+        color:#fff; background:var(--c, #0a66c2); flex:none; object-fit:cover; }
+  .av.sq { border-radius:8px; }
+  .av.lg { width:44px; height:44px; font-size:16px; }
+
+  .stats { max-width:1300px; margin:-48px auto 0; padding:0 16px; display:grid; gap:12px; grid-template-columns:repeat(4, 1fr); position:relative; }
+  @media (max-width: 760px) { .stats { grid-template-columns:repeat(2, 1fr); } }
+  .stat { background:var(--card); border-radius:16px; padding:14px 16px; box-shadow:var(--shadow); border-top:4px solid var(--c); min-width:0; }
+  .stat b { display:block; font-size:22px; line-height:1.15; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .stat span { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+
+  main { padding:20px 16px 40px; display:grid; gap:20px; grid-template-columns: 3fr 2fr; max-width:1300px; margin:auto; align-items:start; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
   .col { display:grid; gap:20px; min-width:0; }
-  .card { background:var(--card); border-radius:16px; box-shadow:var(--shadow); border:1px solid var(--line); padding:16px; min-width:0;
-          overflow-wrap:anywhere; }
-  h2 { font-size:17px; margin:0 0 12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .card { background:var(--card); border-radius:18px; box-shadow:var(--shadow); border:1px solid var(--line); padding:18px; min-width:0; overflow-wrap:anywhere; }
+  h2 { font-size:17px; margin:0 0 14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  h3 { font-size:13px; margin:4px 0 0; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .muted { color:var(--muted); font-size:12px; font-weight:400; }
-  form { display:grid; gap:8px; }
-  label.field { font-size:12px; font-weight:600; color:var(--muted); }
+  form { display:grid; gap:10px; }
   input[type=text], input[type=datetime-local], textarea, select {
-    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--text); font:inherit; }
-  textarea:focus, input:focus, select:focus { outline:2px solid color-mix(in srgb, var(--blue) 45%, transparent); border-color:transparent; }
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--text); font:inherit; }
+  textarea { resize:vertical; }
+  textarea:focus, input:focus, select:focus { outline:2px solid color-mix(in srgb, var(--blue) 40%, transparent); border-color:transparent; }
   .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .row > * { flex:1 1 180px; }
-  button { padding:8px 14px; border:0; border-radius:10px; background:var(--blue); color:#fff; cursor:pointer; font:inherit; font-weight:600; }
+  button { padding:9px 15px; border:0; border-radius:11px; background:var(--blue); color:#fff; cursor:pointer; font:inherit; font-weight:600; }
   button:hover { filter:brightness(1.08); }
   button:disabled { opacity:.6; cursor:wait; }
   button.secondary { background:transparent; color:var(--muted); border:1px solid var(--line); }
-  button.small { padding:4px 10px; font-size:12px; }
-  .box { padding:12px; border-radius:12px; background:var(--bg); display:grid; gap:8px; }
-  .item { border-top:1px solid var(--line); padding:12px 0; display:grid; gap:6px; word-break:break-word; }
-  .item:first-of-type { border-top:0; }
-  .text { white-space:pre-wrap; overflow:hidden; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; }
-  .badge { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:600; color:var(--c);
-           background: color-mix(in srgb, var(--c) 14%, transparent); }
-  .counter { text-align:right; font-size:12px; color:var(--muted); }
-  .note { font-size:12px; color:var(--muted); background:color-mix(in srgb, var(--orange) 10%, transparent);
-          border-radius:10px; padding:8px 10px; }
-  .dm { background:var(--bg); border-radius:10px; padding:8px 10px; white-space:pre-wrap; }
-  a { color:var(--blue); }
+  button.small { padding:5px 11px; font-size:12px; }
+  button.ai { background:var(--ai); }
+  .badge { font-size:11px; padding:2px 9px; border-radius:99px; font-weight:600; color:var(--c);
+           background: color-mix(in srgb, var(--c) 14%, transparent); white-space:nowrap; }
+  .note { font-size:12px; color:var(--muted); background:color-mix(in srgb, var(--orange) 10%, transparent); border-radius:12px; padding:9px 11px; }
   .error { color:var(--err); } .ok { color:var(--ok); }
-  #connectCard .who { display:flex; align-items:center; gap:10px; }
-  #connectCard img { width:40px; height:40px; border-radius:50%; }
+
+  /* who to post as */
+  .pick { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:8px; }
+  .pick label { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:14px; border:1.5px solid var(--line);
+                cursor:pointer; background:var(--soft); }
+  .pick input { display:none; }
+  .pick label:has(input:checked) { border-color:var(--blue); background:color-mix(in srgb, var(--blue) 8%, var(--card)); }
+  .pick b { display:block; line-height:1.2; }
+
+  /* AI writer */
+  .aibox { border-radius:16px; padding:14px; display:grid; gap:10px;
+           background: linear-gradient(var(--card), var(--card)) padding-box, var(--ai) border-box; border:1.5px solid transparent; }
+  .aibox .title { font-weight:700; background:var(--ai); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chips label { padding:5px 11px; border-radius:99px; border:1px solid var(--line); cursor:pointer; font-size:13px; background:var(--soft); }
+  .chips input { display:none; }
+  .chips label:has(input:checked) { background:var(--violet); border-color:var(--violet); color:#fff; }
+  .options { display:grid; gap:10px; }
+  .option { border:1px solid var(--line); border-radius:14px; padding:12px; background:var(--soft); display:grid; gap:8px; }
+  .option .t { white-space:pre-wrap; max-height:220px; overflow:auto; }
+  .shimmer { height:90px; border-radius:14px; background:linear-gradient(90deg, var(--soft), var(--line), var(--soft));
+             background-size:200% 100%; animation: sh 1.2s infinite linear; }
+  @keyframes sh { to { background-position:-200% 0; } }
+
+  /* LinkedIn-style preview */
+  .preview { border:1px solid var(--line); border-radius:14px; padding:14px; background:var(--card); }
+  .preview .who { display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+  .preview .who b { display:block; line-height:1.2; }
+  .preview .body { white-space:pre-wrap; }
+  .preview .body.clamp { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .preview .more { color:var(--muted); cursor:pointer; font-size:13px; }
+  .preview .tag { color:var(--blue); font-weight:600; }
+  .imgs { display:grid; gap:4px; margin-top:10px; grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); }
+  .imgs img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; }
+  .counter { text-align:right; font-size:12px; color:var(--muted); margin-top:-6px; }
+  .quick { display:flex; gap:6px; flex-wrap:wrap; }
+  .box { padding:12px; border-radius:14px; background:var(--soft); display:grid; gap:8px; }
+
+  /* timeline */
+  .day { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:14px 0 6px; }
+  .day:first-child { margin-top:0; }
+  .post { display:grid; grid-template-columns:auto 1fr; gap:10px; padding:12px; border-radius:14px; border:1px solid var(--line);
+          margin-bottom:8px; background:var(--soft); }
+  .post .text { white-space:pre-wrap; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; margin:4px 0; }
+  .item { border-top:1px solid var(--line); padding:12px 0; display:grid; gap:6px; }
+  .item:first-of-type { border-top:0; }
+  .dm { background:var(--soft); border-radius:10px; padding:8px 10px; white-space:pre-wrap; }
+  .empty { text-align:center; color:var(--muted); padding:18px 8px; }
 </style>
 </head>
 <body>
 <header>
-  <div class="top">
-    <h1>💼 LinkedIn Autopilot <small id="who"></small></h1>
-    <a href="/">📸 Instagram</a>
+  <div class="wrap">
+    <div class="top">
+      <h1>💼 LinkedIn Autopilot</h1>
+      <a class="ghost" href="/">📸 Instagram</a>
+    </div>
+    <div class="accounts" id="accounts"></div>
   </div>
 </header>
+
+<section class="stats" id="stats" style="display:none">
+  <div class="stat" style="--c:#0a66c2"><span>Scheduled</span><b id="sScheduled">0</b></div>
+  <div class="stat" style="--c:#16a34a"><span>Posted (7 days)</span><b id="sPosted">0</b></div>
+  <div class="stat" style="--c:#7c3aed"><span>Next post</span><b id="sNext">—</b></div>
+  <div class="stat" style="--c:#f59e0b"><span>DMs to send</span><b id="sDms">0</b></div>
+</section>
 
 <main>
   <div class="col">
     <section class="card" id="connectCard"></section>
 
     <section class="card" id="composer" style="display:none">
-      <h2>✍️ Schedule a post</h2>
+      <h2>✍️ Create a post</h2>
       <form id="postForm" onsubmit="schedule(event)">
-        <label class="field">Post as <select name="author" id="author" onchange="toggleRuleBox()"></select></label>
-        <textarea name="text" rows="8" maxlength="3000" placeholder="What do you want to talk about? #hashtags work" oninput="count(this)"></textarea>
-        <div class="counter" id="counter">0 / 3000</div>
-        <label class="field">Images (optional, up to 20) <input type="file" name="images" accept="image/png,image/jpeg,image/gif" multiple></label>
-        <div class="row">
-          <label class="field">Publish at <input type="datetime-local" name="when" id="when"></label>
-          <label class="field" style="flex:0 0 auto"><input type="checkbox" name="now" onchange="when.disabled=this.checked"> Post right now</label>
+        <div class="pick" id="authorPick"></div>
+
+        <div class="aibox">
+          <div class="row"><span class="title">✨ AI caption writer</span>
+            <span class="muted" id="aiHint">Writes in the voice of the account you picked</span></div>
+          <textarea name="notes" rows="3" placeholder="What's this post about? Rough notes are fine, e.g. 'we hit 10k users, thank the team, lesson: ship small every week'"></textarea>
+          <div class="chips" id="tones"></div>
+          <div class="row">
+            <div class="chips" id="lengths"></div>
+            <input type="text" name="cta" placeholder="Call to action (optional), e.g. Comment GUIDE and I'll send it" style="flex:1 1 220px">
+          </div>
+          <div class="row">
+            <button type="button" class="ai" id="aiBtn" onclick="aiWrite(false)">✨ Write 3 options</button>
+            <button type="button" class="secondary" onclick="aiWrite(true)">Improve my draft</button>
+            <span class="muted" id="aiMsg"></span>
+          </div>
+          <div class="options" id="options"></div>
         </div>
+
+        <textarea name="text" id="text" rows="8" maxlength="3000" placeholder="Your post. Write it yourself, or pick an AI option above." oninput="updatePreview()"></textarea>
+        <div class="counter" id="counter">0 / 3000</div>
+        <label class="muted">Images (optional, up to 20) <input type="file" name="images" id="images" accept="image/png,image/jpeg,image/gif" multiple onchange="updatePreview()"></label>
+
+        <h3>Preview</h3>
+        <div class="preview" id="preview"></div>
+
+        <h3>When</h3>
+        <div class="quick" id="quick"></div>
+        <div class="row">
+          <input type="datetime-local" name="when" id="when" style="flex:1 1 220px">
+          <label class="muted"><input type="checkbox" name="now" id="now" onchange="when.disabled=this.checked"> Post right now</label>
+        </div>
+
         <div class="box" id="ruleBox" style="display:none">
-          <label><input type="checkbox" name="auto_reply"> <b>Comment automation</b> <span class="muted">(company pages)</span></label>
+          <label><input type="checkbox" name="auto_reply"> <b>Comment automation</b> <span class="muted">for this page post</span></label>
           <input type="text" name="keywords" placeholder="Keywords, comma separated. Empty = every comment">
           <textarea name="comment_reply" rows="2" placeholder="Public reply, one per line (a random one is used). Empty = no public reply"></textarea>
           <textarea name="dm" rows="2" placeholder="DM to send them (goes to your DM queue), e.g. Here's the guide 👉 https://..."></textarea>
         </div>
-        <div class="row"><button id="scheduleBtn" style="flex:0 0 auto">Schedule post</button><span id="formMsg" class="muted"></span></div>
+        <div class="row"><button id="scheduleBtn">Schedule post</button><span id="formMsg" class="muted"></span></div>
       </form>
     </section>
 
     <section class="card" id="postsCard" style="display:none">
-      <h2>🗓️ Your posts <span class="muted">scheduled and published from here</span></h2>
+      <h2>🗓️ Content calendar <span class="muted" id="calFor"></span></h2>
       <div id="posts"></div>
     </section>
 
     <section class="card" id="pagePostsCard" style="display:none">
       <h2>💬 Page posts & comment rules <button class="secondary small" onclick="loadPagePosts()">↻</button></h2>
-      <div class="muted" style="margin-bottom:8px">Comments matching a keyword get your public reply and land in the DM queue. Checked every few minutes.</div>
+      <div class="muted" style="margin-bottom:8px">Comments matching a keyword get your public reply and go into the DM queue. Checked every few minutes.</div>
       <div id="pagePosts"></div>
     </section>
   </div>
 
   <div class="col">
+    <section class="card" id="voiceCard" style="display:none">
+      <h2>🎙️ Voice <span class="muted" id="voiceFor"></span></h2>
+      <div class="muted" style="margin-bottom:8px">Tell the AI who this account is: what you do, who you talk to, words you use or avoid.</div>
+      <form onsubmit="saveVoice(event)">
+        <textarea name="voice" id="voice" rows="4"></textarea>
+        <div class="row"><button class="small">Save voice</button><span class="muted" id="voiceMsg"></span></div>
+      </form>
+    </section>
+
     <section class="card" id="queueCard" style="display:none">
       <h2>📨 DM queue <span class="muted" id="queueCount"></span>
         <label class="muted" style="margin-left:auto"><input type="checkbox" id="showDone" onchange="renderQueue()"> show done</label></h2>
@@ -120,55 +222,103 @@
 </main>
 
 <script>
-let status = {}, queue = [];
+let status = {authors: []}, queue = [], posts = [], voices = {}, active = "all";
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt = t => t ? new Date(t * 1000).toLocaleString([], {dateStyle: "medium", timeStyle: "short"}) : "";
+const time_ = t => new Date(t * 1000).toLocaleTimeString([], {timeStyle: "short"});
 const ago = t => { const s = Date.now() / 1000 - t; return s < 60 ? "just now" : s < 3600 ? `${Math.floor(s/60)}m ago`
                    : s < 86400 ? `${Math.floor(s/3600)}h ago` : `${Math.floor(s/86400)}d ago`; };
 const STATUS = {scheduled: ["#0a66c2", "scheduled"], publishing: ["#f59e0b", "publishing…"],
                 published: ["#16a34a", "published"], failed: ["#dc2626", "failed"]};
+const COLORS = ["#0a66c2", "#7c3aed", "#0d9488", "#db2777", "#ea580c"];
+const TONES = [["professional", "💼 Professional"], ["story", "📖 Story"], ["bold", "🔥 Bold"],
+               ["friendly", "😊 Friendly"], ["educational", "🎓 Tips"], ["announcement", "📣 News"]];
+const LENGTHS = [["short", "Short"], ["medium", "Medium"], ["long", "Long"]];
+const form = () => document.getElementById("postForm");
+const author = () => status.authors.find(a => a.urn === (form().author || {}).value) || status.authors[0];
+const nameOf = a => a ? a.name.replace(" (profile)", "") : "";
 
-function count(t) { document.getElementById("counter").textContent = `${t.value.length} / 3000`; }
-
-function toggleRuleBox() {
-  const a = status.authors.find(a => a.urn === document.getElementById("author").value);
-  document.getElementById("ruleBox").style.display = a && a.page && status.pages_enabled ? "grid" : "none";
+function avatar(a, cls = "") {
+  if (!a) return "";
+  if (!a.page && status.picture) return `<img class="av ${cls}" src="${esc(status.picture)}" alt="">`;
+  const i = status.authors.indexOf(a);
+  const initials = nameOf(a).split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return `<span class="av ${a.page ? "sq" : ""} ${cls}" style="--c:${COLORS[i % COLORS.length]}">${esc(initials)}</span>`;
 }
 
-function defaultWhen() {
-  const d = new Date(Date.now() + 60 * 60 * 1000); d.setMinutes(0, 0, 0);
-  const pad = n => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+function chips(id, name, items, checked) {
+  document.getElementById(id).innerHTML = items.map(([v, l]) =>
+    `<label><input type="radio" name="${name}" value="${v}" ${v === checked ? "checked" : ""}>${l}</label>`).join("");
+}
+
+// ---------- accounts ----------
+function renderAccounts() {
+  const list = [{urn: "all", name: "All accounts"}, ...status.authors];
+  document.getElementById("accounts").innerHTML = status.connected ? list.map(a => `
+    <div class="acct ${a.urn === active ? "active" : ""}" onclick="setActive('${esc(a.urn)}')">
+      ${a.urn === "all" ? `<span class="av" style="--c:rgba(255,255,255,.25)">✦</span>` : avatar(a)}
+      <span>${esc(nameOf(a))} ${a.urn === "all" ? "" : `<small>${a.page ? "Page" : "Profile"}</small>`}</span></div>`).join("") : "";
+}
+
+function setActive(urn) {
+  active = urn;
+  try { localStorage.setItem("li_active", urn); } catch (e) {}
+  if (urn !== "all") { const r = form().querySelector(`input[name=author][value="${CSS.escape(urn)}"]`); if (r) r.checked = true; }
+  renderAccounts(); onAuthorChange(); renderPosts(); renderStats();
+}
+
+function renderAuthorPick() {
+  const keep = (form().author || {}).value;
+  document.getElementById("authorPick").innerHTML = status.authors.map((a, i) => `
+    <label><input type="radio" name="author" value="${esc(a.urn)}" onchange="onAuthorChange()" ${i === 0 ? "checked" : ""}>
+      ${avatar(a, "lg")}<span><b>${esc(nameOf(a))}</b><span class="muted">${a.page ? "Company page · we" : "Your profile · I"}</span></span></label>`).join("");
+  const want = keep || (active !== "all" ? active : "");
+  const r = want && form().querySelector(`input[name=author][value="${CSS.escape(want)}"]`);
+  if (r) r.checked = true;
+}
+
+function onAuthorChange() {
+  const a = author();
+  document.getElementById("ruleBox").style.display = a && a.page && status.pages_enabled ? "grid" : "none";
+  document.getElementById("aiHint").textContent = a ? `Writes as ${nameOf(a)} (${a.page ? "“we”" : "“I”"})` : "";
+  const v = active === "all" ? a : status.authors.find(x => x.urn === active);
+  document.getElementById("voiceFor").textContent = v ? `for ${nameOf(v)}` : "";
+  document.getElementById("voice").value = v ? voices[v.urn] || "" : "";
+  document.getElementById("voice").dataset.urn = v ? v.urn : "";
+  document.getElementById("voice").placeholder = v && v.page
+    ? "e.g. We build AI tools for small shops. Audience: shop owners in India. Friendly, no jargon."
+    : "e.g. I'm a developer who builds AI automations. I share honest lessons, no hype. Audience: founders.";
+  updatePreview();
 }
 
 async function loadStatus() {
   status = await (await fetch("/api/linkedin/status")).json();
   const c = document.getElementById("connectCard");
-  document.getElementById("who").textContent = status.name || "";
   if (!status.configured) {
+    c.style.display = "block";
     c.innerHTML = `<h2>🔌 Connect LinkedIn</h2><p class="muted">Add <code>LI_CLIENT_ID</code> and <code>LI_CLIENT_SECRET</code>
       to your environment variables and redeploy. Steps are in the README under “LinkedIn”.</p>`;
   } else if (!status.connected) {
+    c.style.display = "block";
     c.innerHTML = `<h2>🔌 Connect LinkedIn</h2><p class="muted">Log in once so the app can post for you.</p>
       <a href="/linkedin/connect"><button>Connect LinkedIn</button></a>`;
   } else {
     const days = Math.floor((status.expires_at - Date.now() / 1000) / 86400);
-    const expiry = status.can_refresh ? `<span class="ok">renews automatically</span>`
+    const expiry = status.can_refresh ? `<span class="ok">login renews automatically</span>`
       : days < 7 ? `<span class="error">login expires in ${days} day(s): reconnect so scheduled posts keep going</span>`
       : `login valid for ${days} more days`;
-    c.innerHTML = `<div class="who">${status.picture ? `<img src="${esc(status.picture)}" alt="">` : ""}
-      <div style="margin-right:auto"><b>${esc(status.name)}</b><div class="muted">${expiry}
-      ${status.pages_enabled ? ` · pages: ${esc(status.authors.filter(a => a.page).map(a => a.name).join(", ") || "none found")}` : ""}</div></div>
+    c.innerHTML = `<div class="row">${avatar(status.authors[0], "lg")}
+      <div style="flex:1 1 160px"><b>${esc(status.name)}</b><div class="muted">${expiry}
+      ${status.pages_enabled ? "" : " · company pages off (LI_PAGES)"}${status.ai_ready ? "" : " · AI writer off (ANTHROPIC_API_KEY)"}</div></div>
       <a href="/linkedin/connect"><button class="secondary small">Reconnect</button></a>
       <button class="secondary small" onclick="disconnect()">Disconnect</button></div>`;
-    const sel = document.getElementById("author"), keep = sel.value;
-    sel.innerHTML = status.authors.map(a => `<option value="${esc(a.urn)}">${esc(a.name)}</option>`).join("");
-    if (keep) sel.value = keep;
-    toggleRuleBox();
+    if (!active || (active !== "all" && !status.authors.some(a => a.urn === active))) active = "all";
+    renderAuthorPick(); renderAccounts();
   }
-  for (const id of ["composer", "postsCard"]) document.getElementById(id).style.display = status.connected ? "block" : "none";
-  document.getElementById("pagePostsCard").style.display = status.connected && status.pages_enabled ? "block" : "none";
-  document.getElementById("queueCard").style.display = status.connected && status.pages_enabled ? "block" : "none";
+  for (const id of ["composer", "postsCard", "stats", "voiceCard"])
+    document.getElementById(id).style.display = status.connected ? (id === "stats" ? "grid" : "block") : "none";
+  for (const id of ["pagePostsCard", "queueCard"])
+    document.getElementById(id).style.display = status.connected && status.pages_enabled ? "block" : "none";
   const log = status.log || [];
   document.getElementById("log").innerHTML = log.length ? log.map(l => `<div class="item">
     <div><span class="badge" style="--c:${l.status === "ok" ? "#16a34a" : "#dc2626"}">${esc(l.kind)}</span>
@@ -181,11 +331,76 @@ async function disconnect() {
   await fetch("/api/linkedin/disconnect", {method: "POST"}); loadStatus();
 }
 
+// ---------- AI writer ----------
+async function aiWrite(improve) {
+  const f = form(), btn = document.getElementById("aiBtn"), msg = document.getElementById("aiMsg");
+  const out = document.getElementById("options");
+  if (improve && !f.text.value.trim()) return alert("Write a draft in the post box first, then click Improve.");
+  if (!improve && !f.notes.value.trim()) return alert("Write a few words about the post first.");
+  const fd = new FormData();
+  fd.append("author", author().urn); fd.append("notes", f.notes.value); fd.append("cta", f.cta.value);
+  fd.append("tone", f.tone.value); fd.append("length", f.length.value);
+  if (improve) fd.append("draft", f.text.value);
+  for (const file of [...f.images.files].slice(0, 3)) fd.append("images", file);
+  btn.disabled = true; msg.textContent = "Writing…";
+  out.innerHTML = `<div class="shimmer"></div><div class="shimmer"></div><div class="shimmer"></div>`;
+  try {
+    const r = await (await fetch("/api/linkedin/captions", {method: "POST", body: fd})).json();
+    if (r.error) { out.innerHTML = ""; msg.innerHTML = `<span class="error">${esc(r.error)}</span>`; return; }
+    msg.textContent = "Pick one, then edit it as you like.";
+    window.aiOptions = r.captions;
+    out.innerHTML = r.captions.map((c, i) => `<div class="option"><div class="t">${esc(c)}</div>
+      <div class="row"><button type="button" class="small" onclick="useOption(${i})">Use this</button>
+      <span class="muted">${c.length} characters</span></div></div>`).join("");
+  } catch (e) {
+    out.innerHTML = ""; msg.innerHTML = `<span class="error">Couldn't reach the server.</span>`;
+  } finally { btn.disabled = false; }
+}
+
+function useOption(i) {
+  const t = document.getElementById("text");
+  t.value = window.aiOptions[i]; updatePreview();
+  t.scrollIntoView({behavior: "smooth", block: "center"});
+}
+
+// ---------- preview ----------
+function updatePreview() {
+  const a = author(), text = document.getElementById("text").value;
+  document.getElementById("counter").textContent = `${text.length} / 3000`;
+  if (!a) return;
+  const body = esc(text || "Your post will appear here…").replace(/(^|\s)(#\w+)/g, '$1<span class="tag">$2</span>');
+  const long = text.split("\n").length > 3 || text.length > 210;
+  const files = [...document.getElementById("images").files].slice(0, 4);
+  document.getElementById("preview").innerHTML = `
+    <div class="who">${avatar(a, "lg")}<div><b>${esc(nameOf(a))}</b><span class="muted">${a.page ? "Company page" : "Your profile"} · now · 🌐</span></div></div>
+    <div class="body ${long ? "clamp" : ""}" id="pvBody">${body}</div>
+    ${long ? `<div class="more" onclick="pvBody.classList.toggle('clamp')">…see more</div>` : ""}
+    ${files.length ? `<div class="imgs">${files.map(f => `<img src="${URL.createObjectURL(f)}" alt="">`).join("")}</div>` : ""}`;
+}
+
+// ---------- scheduling ----------
+function localInput(d) {
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderQuick() {
+  const at = (days, h) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d; };
+  const nextWeekday = () => { let d = at(1, 9); while ([0, 6].includes(d.getDay())) d.setDate(d.getDate() + 1); return d; };
+  const opts = [["In 1 hour", (() => { const d = new Date(Date.now() + 3600e3); d.setSeconds(0, 0); return d; })()],
+                ["Tomorrow 9 AM", at(1, 9)], ["Tomorrow 6 PM", at(1, 18)], ["Next weekday 9 AM", nextWeekday()]];
+  window.quickOpts = opts.map(o => o[1]);
+  document.getElementById("quick").innerHTML = opts.map(([l], i) =>
+    `<button type="button" class="secondary small" onclick="pickQuick(${i})">${l}</button>`).join("");
+}
+function pickQuick(i) { const w = document.getElementById("when"); w.value = localInput(window.quickOpts[i]);
+                        w.disabled = false; document.getElementById("now").checked = false; }
+
 async function schedule(e) {
   e.preventDefault();
   const f = e.target, btn = document.getElementById("scheduleBtn"), msg = document.getElementById("formMsg");
   const fd = new FormData();
-  fd.append("author", f.author.value); fd.append("text", f.text.value);
+  fd.append("author", author().urn); fd.append("text", f.text.value);
   for (const file of f.images.files) fd.append("images", file);
   if (!f.now.checked) {
     if (!f.when.value) return alert("Pick a date and time, or tick “Post right now”.");
@@ -204,30 +419,68 @@ async function schedule(e) {
     msg.innerHTML = r.status === "published" ? `<span class="ok">Posted ✅</span>`
       : r.status === "failed" ? `<span class="error">LinkedIn refused it: ${esc(r.error)}</span>`
       : `<span class="ok">Scheduled for ${fmt(r.publish_at)} ✅</span>`;
-    f.reset(); f.when.value = defaultWhen(); f.when.disabled = false; count(f.text);
+    const keep = author().urn;
+    f.reset(); renderAuthorPick();
+    form().querySelector(`input[name=author][value="${CSS.escape(keep)}"]`).checked = true;
+    chips("tones", "tone", TONES, "professional"); chips("lengths", "length", LENGTHS, "medium");
+    document.getElementById("options").innerHTML = ""; document.getElementById("aiMsg").textContent = "";
+    f.when.value = localInput(window.quickOpts[1]); f.when.disabled = false; onAuthorChange();
     loadPosts(); loadStatus();
   } finally { btn.disabled = false; }
 }
 
-async function loadPosts() {
-  const posts = await (await fetch("/api/linkedin/posts")).json();
-  const name = urn => (status.authors.find(a => a.urn === urn) || {}).name || urn;
-  document.getElementById("posts").innerHTML = posts.length ? posts.map(p => {
-    const [c, label] = STATUS[p.status] || ["#5f6f82", p.status];
-    return `<div class="item">
-      <div class="row" style="justify-content:space-between"><div style="flex:1 1 auto">
-        <span class="badge" style="--c:${c}">${label}</span>
-        <b>${fmt(p.status === "published" ? p.published_at : p.publish_at)}</b>
-        <span class="muted">· ${esc(name(p.author))}${p.images.length ? ` · 🖼️ ${p.images.length}` : ""}${p.rule ? " · 💬 auto-reply" : ""}</span></div>
-        <div style="flex:0 0 auto" class="row">
-          ${p.status === "published" && p.post_urn ? `<a href="https://www.linkedin.com/feed/update/${esc(p.post_urn)}/" target="_blank">View ↗</a>` : ""}
-          ${p.status === "scheduled" ? `<button class="small" onclick="publishNow(this, '${p.id}')">Post now</button>` : ""}
-          ${p.status === "failed" ? `<button class="small" onclick="publishNow(this, '${p.id}')">Retry</button>` : ""}
-          ${p.status !== "published" && p.status !== "publishing" ? `<button class="secondary small" onclick="deletePost('${p.id}')">Delete</button>` : ""}
-        </div></div>
-      <div class="text">${esc(p.text)}</div>
-      ${p.error ? `<div class="error">${esc(p.error)}</div>` : ""}</div>`;
-  }).join("") : `<div class="muted">No posts yet. Schedule one above.</div>`;
+async function loadPosts() { posts = await (await fetch("/api/linkedin/posts")).json(); renderPosts(); renderStats(); }
+
+function visiblePosts() { return posts.filter(p => active === "all" || p.author === active); }
+
+function renderStats() {
+  const ps = visiblePosts(), now = Date.now() / 1000;
+  const upcoming = ps.filter(p => p.status === "scheduled").sort((a, b) => a.publish_at - b.publish_at);
+  document.getElementById("sScheduled").textContent = upcoming.length;
+  document.getElementById("sPosted").textContent = ps.filter(p => p.status === "published" && now - p.published_at < 7 * 86400).length;
+  document.getElementById("sNext").textContent = upcoming[0]
+    ? new Date(upcoming[0].publish_at * 1000).toLocaleString([], {weekday: "short", hour: "numeric", minute: "2-digit"}) : "—";
+  document.getElementById("sDms").textContent = queue.filter(q => q.status === "pending").length;
+}
+
+function dayLabel(t) {
+  const d = new Date(t * 1000), today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((new Date(d).setHours(0, 0, 0, 0) - today) / 86400e3);
+  return diff === 0 ? "Today" : diff === 1 ? "Tomorrow" : diff === -1 ? "Yesterday"
+    : d.toLocaleDateString([], {weekday: "long", month: "short", day: "numeric"});
+}
+
+function renderPosts() {
+  const a = status.authors.find(x => x.urn === active);
+  document.getElementById("calFor").textContent = a ? `· ${nameOf(a)}` : "· all accounts";
+  const ps = visiblePosts();
+  const when = p => p.status === "published" ? p.published_at : p.publish_at;
+  const upcoming = ps.filter(p => p.status !== "published").sort((x, y) => when(x) - when(y));
+  const done = ps.filter(p => p.status === "published").sort((x, y) => when(y) - when(x)).slice(0, 15);
+  const group = list => { let last = "", html = "";
+    for (const p of list) { const d = dayLabel(when(p)); if (d !== last) { html += `<div class="day">${d}</div>`; last = d; } html += postCard(p); }
+    return html; };
+  document.getElementById("posts").innerHTML = ps.length
+    ? (upcoming.length ? group(upcoming) : `<div class="empty">Nothing scheduled. Create a post above ✍️</div>`)
+      + (done.length ? `<h3 style="margin:18px 0 6px">Published</h3>` + group(done) : "")
+    : `<div class="empty">No posts yet. Create one above ✍️</div>`;
+}
+
+function postCard(p) {
+  const a = status.authors.find(x => x.urn === p.author) || {name: p.author};
+  const [c, label] = STATUS[p.status] || ["#5f6f82", p.status];
+  const t = p.status === "published" ? p.published_at : p.publish_at;
+  return `<div class="post">${avatar(a)}<div style="min-width:0">
+    <div class="row"><b>${time_(t)}</b><span class="badge" style="--c:${c}">${label}</span>
+      <span class="muted">${esc(nameOf(a))}${p.images.length ? ` · 🖼️ ${p.images.length}` : ""}${p.rule ? " · 💬 auto-reply" : ""}</span></div>
+    <div class="text">${esc(p.text)}</div>
+    ${p.error ? `<div class="error">${esc(p.error)}</div>` : ""}
+    <div class="row">
+      ${p.status === "published" && p.post_urn ? `<a href="https://www.linkedin.com/feed/update/${esc(p.post_urn)}/" target="_blank">View on LinkedIn ↗</a>` : ""}
+      ${p.status === "scheduled" ? `<button class="small" onclick="publishNow(this, '${p.id}')">Post now</button>` : ""}
+      ${p.status === "failed" ? `<button class="small" onclick="publishNow(this, '${p.id}')">Retry</button>` : ""}
+      ${p.status !== "published" && p.status !== "publishing" ? `<button class="secondary small" onclick="deletePost('${p.id}')">Delete</button>` : ""}
+    </div></div></div>`;
 }
 
 async function publishNow(btn, id) {
@@ -241,6 +494,20 @@ async function deletePost(id) {
   await fetch(`/api/linkedin/posts/${id}`, {method: "DELETE"}); loadPosts();
 }
 
+// ---------- voice ----------
+async function loadVoices() { voices = await (await fetch("/api/linkedin/voice")).json(); onAuthorChange(); }
+
+async function saveVoice(e) {
+  e.preventDefault();
+  const v = document.getElementById("voice");
+  if (!v.dataset.urn) return;
+  await fetch("/api/linkedin/voice", {method: "PUT", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({urn: v.dataset.urn, voice: v.value})});
+  voices[v.dataset.urn] = v.value.trim();
+  const m = document.getElementById("voiceMsg"); m.textContent = "Saved ✓"; setTimeout(() => m.textContent = "", 1500);
+}
+
+// ---------- page posts & comment rules ----------
 async function loadPagePosts() {
   const el = document.getElementById("pagePosts");
   el.innerHTML = `<div class="muted">Loading…</div>`;
@@ -253,17 +520,17 @@ async function loadPagePosts() {
       <div><b>${esc(p.page)}</b> <span class="muted">${p.at ? fmt(p.at / 1000) : ""}</span>
         ${p.rule ? `<span class="badge" style="--c:${p.rule.enabled ? "#16a34a" : "#5f6f82"}">${p.rule.enabled ? "auto-reply on" : "paused"}</span>` : ""}
         <a href="${esc(p.link)}" target="_blank">open ↗</a></div>
-      <div class="text">${esc(p.text)}</div>
+      <div class="post" style="display:block;margin:0"><div class="text">${esc(p.text)}</div></div>
       <details><summary class="muted" style="cursor:pointer">⚙️ Comment rule</summary>
         <form class="box" onsubmit="saveRule(event, ${i})">
           <label><input type="checkbox" name="enabled" ${rule.enabled ? "checked" : ""}> Enabled</label>
           <input type="text" name="keywords" value="${esc(rule.keywords.join(", "))}" placeholder="Keywords, comma separated. Empty = every comment">
           <textarea name="comment_reply" rows="2" placeholder="Public reply, one per line">${esc(rule.comment_reply)}</textarea>
           <textarea name="dm" rows="2" placeholder="DM for the queue">${esc(rule.dm)}</textarea>
-          <div class="row"><button style="flex:0 0 auto">Save rule</button>
-          ${p.rule ? `<button type="button" class="secondary" style="flex:0 0 auto" onclick="deleteRule(${i})">Remove</button>` : ""}</div>
+          <div class="row"><button>Save rule</button>
+          ${p.rule ? `<button type="button" class="secondary" onclick="deleteRule(${i})">Remove</button>` : ""}</div>
         </form></details></div>`;
-  }).join("") : `<div class="muted">No posts found on your pages.</div>`;
+  }).join("") : `<div class="empty">No posts found on your pages.</div>`;
 }
 
 async function saveRule(e, i) {
@@ -280,7 +547,8 @@ async function deleteRule(i) {
   loadPagePosts();
 }
 
-async function loadQueue() { queue = await (await fetch("/api/linkedin/queue")).json(); renderQueue(); }
+// ---------- DM queue ----------
+async function loadQueue() { queue = await (await fetch("/api/linkedin/queue")).json(); renderQueue(); renderStats(); }
 
 function renderQueue() {
   const showDone = document.getElementById("showDone").checked;
@@ -292,14 +560,14 @@ function renderQueue() {
     <div>💬 “${esc(q.comment)}”</div>
     ${q.replied ? `<div class="muted">Replied in public: ${esc(q.replied)}</div>` : ""}
     <div class="dm">${esc(q.dm)}</div>
-    <div class="row" style="justify-content:flex-start">
-      <button class="small" style="flex:0 0 auto" onclick="copyDm(this, '${q.id}')">📋 Copy</button>
-      <a href="${esc(q.link)}" target="_blank" style="flex:0 0 auto">Open comment ↗</a>
+    <div class="row">
+      <button class="small" onclick="copyDm(this, '${q.id}')">📋 Copy</button>
+      <a href="${esc(q.link)}" target="_blank">Open comment ↗</a>
       ${q.status === "pending"
-        ? `<button class="small" style="flex:0 0 auto" onclick="mark('${q.id}', 'sent')">✅ Sent</button>
-           <button class="secondary small" style="flex:0 0 auto" onclick="mark('${q.id}', 'skipped')">Skip</button>`
-        : `<button class="secondary small" style="flex:0 0 auto" onclick="mark('${q.id}', 'pending')">Undo</button>`}
-    </div></div>`).join("") : `<div class="muted" style="margin-top:8px">No one waiting for a DM.</div>`;
+        ? `<button class="small" onclick="mark('${q.id}', 'sent')">✅ Sent</button>
+           <button class="secondary small" onclick="mark('${q.id}', 'skipped')">Skip</button>`
+        : `<button class="secondary small" onclick="mark('${q.id}', 'pending')">Undo</button>`}
+    </div></div>`).join("") : `<div class="empty">No one waiting for a DM.</div>`;
 }
 
 async function copyDm(btn, id) {
@@ -316,15 +584,20 @@ async function mark(id, s) {
 // While this page is open it also publishes due posts, so scheduling works even without a cron.
 async function tick() {
   if (document.hidden || !status.connected) return;
-  const r = await (await fetch("/api/linkedin/tick", {method: "POST"})).json().catch(() => ({}));
+  const r = await fetch("/api/linkedin/tick", {method: "POST"}).then(r => r.json()).catch(() => ({}));
   if (r.published || r.comments) { loadPosts(); loadQueue(); loadStatus(); }
 }
 
-document.getElementById("when").value = defaultWhen();
+chips("tones", "tone", TONES, "professional");
+chips("lengths", "length", LENGTHS, "medium");
+renderQuick();
+document.getElementById("when").value = localInput(window.quickOpts[1]);
+try { active = localStorage.getItem("li_active") || "all"; } catch (e) {}
 (async () => {
   await loadStatus();
   if (!status.connected) return;
-  loadPosts();
+  setActive(active);
+  loadPosts(); loadVoices();
   if (status.pages_enabled) { loadPagePosts(); loadQueue(); }
   tick();
   setInterval(tick, 60000);

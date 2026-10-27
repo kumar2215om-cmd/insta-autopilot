@@ -142,6 +142,13 @@ Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pic
 
 ## LinkedIn: scheduled posts + comment automation
 Open **💼 LinkedIn** on the dashboard (`/linkedin`). It can:
+- **Manage your profile and company pages together:** switch accounts at the top to see each one's calendar,
+  scheduled and posted counts, next post, and its own AI voice.
+- **Write captions with AI (Claude):** type rough notes, pick a tone (professional, story, bold, friendly, tips,
+  news) and length, and get 3 ready posts with a hook, short paragraphs and hashtags. It writes "I" for your
+  profile and "we" for a page, looks at the images you attach, and can **improve your own draft**. Set a
+  **🎙️ Voice** per account (what you do, who you talk to) so every caption sounds like you. You see a
+  LinkedIn-style preview before scheduling.
 - **Schedule posts** (text, #hashtags, up to 20 images) to your **profile** or your **company pages**, or post right away.
 - On **company page** posts: watch comments for your keywords, **reply in public**, and put each person in a
   **DM queue** with your message ready. Click **📋 Copy**, then **Open comment**, click their name → Message,
@@ -159,7 +166,9 @@ profile** posts, so comment automation works on company page posts only.
    (both approved instantly). For company pages, also request **Community Management API**, which LinkedIn reviews.
 3. **Auth** tab: under *Authorized redirect URLs*, add `https://<your-domain>/linkedin/callback`
    (`http://localhost:8000/linkedin/callback` for local testing). Copy the **Client ID** and **Client Secret**.
-4. Add the env variables `LI_CLIENT_ID` and `LI_CLIENT_SECRET`, plus `LI_PAGES=1` once Community Management is
+4. For the AI caption writer, create an API key at https://platform.claude.com and add it as `ANTHROPIC_API_KEY`
+   (each set of 3 captions costs about one or two US cents).
+5. Add the env variables `LI_CLIENT_ID` and `LI_CLIENT_SECRET`, plus `LI_PAGES=1` once Community Management is
    approved. Redeploy, open `/linkedin` and click **Connect LinkedIn**. After turning on `LI_PAGES`,
    click **Reconnect** so your pages are added.
 

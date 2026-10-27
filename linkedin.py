@@ -10,6 +10,7 @@ LinkedIn's terms and gets accounts restricted, so this app does not do that.
 - Posting to a company page and reading/replying to its comments: "Community Management API"
   product (needs LinkedIn's approval). Set LI_PAGES=1 once it's approved.
 """
+import base64
 import hashlib
 import json
 import os
@@ -21,6 +22,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode
 
+import anthropic
 import requests
 from flask import Blueprint, abort, jsonify, redirect, render_template, request
 
@@ -35,6 +37,8 @@ REDIRECT_URI = _env("LI_REDIRECT_URI")  # optional; defaults to https://<this ho
 PAGES = _env("LI_PAGES") == "1"
 # Comments are polled (LinkedIn sends no comment webhooks to most apps), at most this often.
 POLL_SECONDS = int(_env("LI_POLL_SECONDS", "300"))
+# AI captions use Claude; needs ANTHROPIC_API_KEY.
+AI_MODEL = _env("LI_AI_MODEL", "claude-opus-5-5")
 
 SCOPES = "openid profile w_member_social"
 PAGE_SCOPES = " r_organization_social w_organization_social rw_organization_admin"
@@ -388,6 +392,83 @@ def tick():
     return out
 
 
+# ---------- AI captions ----------
+
+TONES = {
+    "professional": "clear, credible and confident, like a respected expert talking to peers",
+    "story": "a short personal story with a lesson: a hook, a moment of tension, then the takeaway",
+    "bold": "punchy and opinionated, with a scroll-stopping first line and short lines",
+    "friendly": "warm, conversational and humble, like talking to a friend over coffee",
+    "educational": "practical and skimmable: a promise in the first line, then numbered tips",
+    "announcement": "upbeat and concise news: what's new, why it matters, what to do next",
+}
+LENGTHS = {"short": "40-80 words", "medium": "100-180 words", "long": "200-300 words"}
+
+CAPTION_SCHEMA = {
+    "type": "object",
+    "properties": {"captions": {"type": "array", "items": {"type": "string"}}},
+    "required": ["captions"],
+    "additionalProperties": False,
+}
+
+
+def load_voices():
+    return _load("li_voice", {})
+
+
+def write_captions(*, author, notes, draft, tone, length, cta, images):
+    """Three LinkedIn caption options, written for a profile ("I") or a company page ("we")."""
+    a = next((a for a in authors() if a["urn"] == author), None)
+    if not a:
+        raise ValueError("Pick who to post as first.")
+    voice = load_voices().get(author, "").strip()
+    who = (f'the company page "{a["name"]}". Write as the brand ("we"), never as one person'
+           if a["page"] else f'{a["name"].replace(" (profile)", "")}\'s personal profile. Write in first person ("I")')
+    system = (
+        "You write LinkedIn posts that people stop scrolling for.\n"
+        f"You are writing for {who}.\n"
+        + (f"About this account, in their words: {voice}\n" if voice else "")
+        + "Rules:\n"
+        "- The first line is the hook: it must make people tap 'see more'. No clickbait or fake claims.\n"
+        "- Short paragraphs of 1-2 lines with blank lines between them. Plain text only: no markdown, "
+        "no bold or asterisks, no headings.\n"
+        "- At most 2 emojis, and only where they add something.\n"
+        "- End with 3-5 relevant hashtags on their own final line.\n"
+        "- Never invent facts, numbers, names or results that the notes don't give.\n"
+        "- Write in the same language as the notes.\n"
+        "Return exactly 3 different options, each a complete post ready to publish."
+    )
+    ask = [f"Tone: {TONES.get(tone, TONES['professional'])}.", f"Length: {LENGTHS.get(length, LENGTHS['medium'])}."]
+    if cta:
+        ask.append(f"End with this call to action before the hashtags: {cta}")
+    if draft:
+        ask.append(f"Improve this draft, keeping its meaning and facts:\n<draft>\n{draft}\n</draft>")
+    if notes:
+        ask.append(f"What the post is about:\n<notes>\n{notes}\n</notes>")
+    if images:
+        ask.append("The attached image(s) will be posted with it; refer to what they show where it helps.")
+    content = [{"type": "image", "source": {"type": "base64", "media_type": mt,
+                                            "data": base64.standard_b64encode(data).decode()}}
+               for mt, data in images]
+    content.append({"type": "text", "text": "\n\n".join(ask)})
+
+    client = anthropic.Anthropic()
+    response = client.beta.messages.create(
+        model=AI_MODEL,
+        max_tokens=16000,
+        system=system,
+        messages=[{"role": "user", "content": content}],
+        output_config={"effort": "medium", "format": {"type": "json_schema", "schema": CAPTION_SCHEMA}},
+        # If Claude's safety checks decline, the API retries on a fallback model in the same call.
+        betas=["server-side-fallback-2026-07-01"],
+        fallbacks="default",
+    )
+    if response.stop_reason == "refusal":
+        raise ValueError("Claude declined to write this one. Try rewording your notes.")
+    text = next((b.text for b in response.content if b.type == "text"), "")
+    return [c.strip()[:3000] for c in json.loads(text)["captions"] if c.strip()]
+
+
 # ---------- routes ----------
 
 @bp.get("/linkedin")
@@ -400,6 +481,7 @@ def status():
     auth = load_auth()
     return jsonify({
         "configured": bool(CLIENT_ID and CLIENT_SECRET), "pages_enabled": PAGES,
+        "ai_ready": bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")),
         "connected": bool(auth.get("access_token")), "name": auth.get("name", ""),
         "picture": auth.get("picture", ""), "expires_at": auth.get("expires_at"),
         "can_refresh": bool(auth.get("refresh_token")), "authors": authors(auth),
@@ -535,3 +617,43 @@ def cron():
                    and request.args.get("key") != key):
         abort(403)
     return jsonify(tick())
+
+
+@bp.post("/api/linkedin/captions")
+def api_captions():
+    f = request.form
+    if not (f.get("notes", "").strip() or f.get("draft", "").strip()):
+        return jsonify({"error": "Write a few words about the post (or a draft to improve) first."}), 400
+    images = [(fl.mimetype, fl.read()) for fl in request.files.getlist("images")[:3]
+              if fl.mimetype in ("image/png", "image/jpeg", "image/gif", "image/webp")]
+    images = [(mt, data) for mt, data in images if len(data) <= 5 * 1024 * 1024]
+    try:
+        captions = write_captions(author=f.get("author", ""), notes=f.get("notes", "").strip(),
+                                  draft=f.get("draft", "").strip(), tone=f.get("tone", ""),
+                                  length=f.get("length", ""), cta=f.get("cta", "").strip(), images=images)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except anthropic.AuthenticationError:
+        return jsonify({"error": "Set a valid ANTHROPIC_API_KEY to use the AI writer."}), 503
+    except anthropic.RateLimitError:
+        return jsonify({"error": "The AI writer is busy. Try again in a minute."}), 429
+    except anthropic.APIStatusError as e:
+        return jsonify({"error": f"AI writer error: {e.message}"}), 502
+    except anthropic.APIConnectionError:
+        return jsonify({"error": "Couldn't reach the AI writer. Check the server's internet connection."}), 502
+    return jsonify({"captions": captions})
+
+
+@bp.get("/api/linkedin/voice")
+def get_voice():
+    return jsonify(load_voices())
+
+
+@bp.put("/api/linkedin/voice")
+def put_voice():
+    d = request.get_json(force=True)
+    with _lock:
+        voices = load_voices()
+        voices[d["urn"]] = d.get("voice", "").strip()[:1500]
+        _save("li_voice", voices)
+    return "", 204
