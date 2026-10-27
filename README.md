@@ -167,7 +167,7 @@ profile** posts, so comment automation works on company page posts only.
 3. **Auth** tab: under *Authorized redirect URLs*, add `https://<your-domain>/linkedin/callback`
    (`http://localhost:8000/linkedin/callback` for local testing). Copy the **Client ID** and **Client Secret**.
 4. For the AI caption writer, create an API key at https://platform.claude.com and add it as `ANTHROPIC_API_KEY`
-   (each set of 3 captions costs about one or two US cents).
+   (each set of 3 captions costs a few US cents).
 5. Add the env variables `LI_CLIENT_ID` and `LI_CLIENT_SECRET`, plus `LI_PAGES=1` once Community Management is
    approved. Redeploy, open `/linkedin` and click **Connect LinkedIn**. After turning on `LI_PAGES`,
    click **Reconnect** so your pages are added.
