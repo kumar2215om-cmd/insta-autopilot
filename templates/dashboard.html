@@ -99,6 +99,19 @@
   #retryBtn { margin-left:auto; }
   .empty { text-align:center; padding:28px 10px; color:var(--muted); }
   .empty div { font-size:28px; margin-bottom:6px; }
+  /* Dashboard motion: KPI icons float, numbers count up and pop when they change, reels rise in on first load,
+     new activity slides in at the top, metric tiles lift on hover. */
+  .stat .ico { animation: a-bob 3.4s ease-in-out infinite; }
+  .stats > :nth-child(2) .ico { animation-delay:.5s; } .stats > :nth-child(3) .ico { animation-delay:1s; } .stats > :nth-child(4) .ico { animation-delay:1.5s; }
+  .stat:hover { transform: translateY(-3px); }
+  .stat b.bump { animation: a-pop .5s ease; color:var(--rose); transition: color 1.2s; }
+  #reels.intro .reel { animation: a-rise .55s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i, 0) * .08s); }
+  .reel:hover { box-shadow: 0 18px 44px rgba(60,40,20,.14); }
+  .chip { transition: transform .15s, border-color .15s; }
+  .chip:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--c) 40%, white); }
+  .log-item.fresh { animation: a-in .6s cubic-bezier(.2,.8,.2,1); }
+  .gbox { transition: transform .15s; } .gbox:hover { transform: translateY(-2px); }
+  details[open] > form { animation: a-rise .35s cubic-bezier(.2,.8,.2,1); }
 </style>
 </head>
 <body>
@@ -273,16 +286,17 @@ function render() {
   if (!stats) return;
   const a = stats.account;
   document.getElementById("username").textContent = "@" + a.username + " ·";
-  document.getElementById("followers").textContent = exact(a.followers_count);
+  countTo(document.getElementById("followers"), a.followers_count);
   renderGrowth(stats.growth || []);
-  document.getElementById("posts").textContent = exact(a.media_count);
-  document.getElementById("totalViews").textContent =
-    exact(stats.reels.reduce((s, r) => s + (r.insights.views || 0), 0));
+  countTo(document.getElementById("posts"), a.media_count);
+  countTo(document.getElementById("totalViews"), stats.reels.reduce((s, r) => s + (r.insights.views || 0), 0));
   document.getElementById("fetched").textContent = "updated " + new Date(stats.fetched_at).toLocaleTimeString();
   const open = new Set([...document.querySelectorAll("#reels details[open]")].map(d => d.dataset.id));
-  document.getElementById("reels").innerHTML = stats.reels.length ? stats.reels.map(r => {
+  const reelsEl = document.getElementById("reels");
+  if (!reelsEl.dataset.shown) { reelsEl.dataset.shown = 1; reelsEl.classList.add("intro"); setTimeout(() => reelsEl.classList.remove("intro"), 1500); }
+  reelsEl.innerHTML = stats.reels.length ? stats.reels.map((r, n) => {
     const i = r.insights;
-    return `<div class="card reel">
+    return `<div class="card reel" style="--i:${Math.min(n, 6)}">
       <a class="thumb" href="${esc(r.permalink)}" target="_blank"><img src="${esc(r.thumbnail_url)}" alt=""></a>
       <div>
         <p class="caption">${esc(r.caption) || "<span class=muted>(no caption)</span>"}</p>
@@ -369,14 +383,39 @@ async function retryFailed(btn) {
   }
 }
 
+let seenActivity = null;
+
+// Animate a KPI number from its current value to n; on later changes it also pops in rose for a moment.
+function countTo(el, n) {
+  if (n == null) { el.textContent = "–"; return; }
+  const from = el.dataset.v == null ? null : Number(el.dataset.v);
+  if (from === n) return;
+  el.dataset.v = n;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = exact(n); return; }
+  const start = from ?? 0, t0 = performance.now(), dur = from == null ? 900 : 600;
+  cancelAnimationFrame(el._raf);
+  const step = t => {
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = exact(Math.round(start + (n - start) * e));
+    if (k < 1) el._raf = requestAnimationFrame(step);
+  };
+  el._raf = requestAnimationFrame(step);
+  if (from != null) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); setTimeout(() => el.classList.remove("bump"), 1400); }
+}
+
 async function loadActivity() {
   const items = await (await fetch("/api/activity")).json();
-  document.getElementById("dmsSent").textContent =
-    items.filter(x => x.action === "dm" && x.status === "ok").length;
+  countTo(document.getElementById("dmsSent"), items.filter(x => x.action === "dm" && x.status === "ok").length);
   if (!items.length) return;
+  // Only items that weren't in the last refresh slide in (the list re-draws every 5 seconds).
+  const key = x => x.at + "|" + x.username + "|" + x.action + "|" + x.status;
+  const first = !seenActivity;
+  seenActivity ||= new Set();
   document.getElementById("activity").innerHTML = items.map(x => {
     const [icon, color] = x.status === "error" ? ["⚠️", "#dc2626"] : (LOOK[x.action] || ["•", "#64748b"]);
-    return `<div class="log-item" style="--c:${color}">
+    const fresh = !first && !seenActivity.has(key(x));
+    seenActivity.add(key(x));
+    return `<div class="log-item${fresh ? " fresh" : ""}" style="--c:${color}">
       <div class="dot">${icon}</div>
       <div style="min-width:0">
         <div>${x.username === "system" ? "<b>System</b>" : `<b>@${esc(x.username)}</b> ${/^(GET|FOLLOWED)\|/.test(x.comment) ? "<span class=muted>tapped button</span>" : `“${esc(x.comment)}”`}`}</div>

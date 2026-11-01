@@ -101,4 +101,32 @@
   .banner { display:none; margin:0 0 16px; padding:12px 16px; border-radius:14px; font-weight:500; border:1px solid; }
   .banner.err { background:#FFF1F1; border-color:#F7CFCF; color:#9B1C1C; }
   .banner.warn { background:#FFF7E8; border-color:#F6DDAE; color:#8A5300; }
+  /* ---------- Motion (same feel as the public pages). Off for reduced motion. ---------- */
+  .brand .mark { position:relative; isolation:isolate; background:none; }
+  .brand .mark::before { content:""; position:absolute; inset:0; border-radius:50%; z-index:-1; background:var(--ring); animation: a-spin 4s linear infinite; }
+  .brand small { animation: a-pulse 1.8s ease-in-out infinite; }
+  .nav a { animation: a-slide .45s cubic-bezier(.2,.8,.2,1) backwards; transition: background .15s, transform .15s; }
+  .nav a:nth-child(2) { animation-delay:.05s; } .nav a:nth-child(3) { animation-delay:.1s; }
+  .nav a:hover:not(.on) { transform: translateX(3px); }
+  .nav a.on .i { animation: a-bob 3s ease-in-out infinite; }
+  .side-foot .dotlive { animation: a-live 1.8s infinite; }
+  .topbar h1 span { display:inline-block; animation: a-wiggle 4s ease-in-out 1s infinite; }
+  .wrap > *, .layout > div > *, .stats > * { animation: a-rise .55s cubic-bezier(.2,.8,.2,1) backwards; }
+  .stats > :nth-child(2) { animation-delay:.06s; } .stats > :nth-child(3) { animation-delay:.12s; } .stats > :nth-child(4) { animation-delay:.18s; }
+  .card { transition: box-shadow .2s, transform .2s; }
+  button.primary, .btn-primary { position:relative; overflow:hidden; isolation:isolate; }
+  button.primary::after, .btn-primary::after { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+     background:linear-gradient(105deg, transparent 35%, rgba(255,255,255,.4) 50%, transparent 65%); transform:translateX(-120%); animation: a-sweep 3.5s ease-in-out infinite; }
+  button:active, .btn:active { transform: scale(.96); }
+  @keyframes a-spin { to { transform: rotate(360deg); } }
+  @keyframes a-pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.07); } }
+  @keyframes a-slide { from { opacity:0; transform:translateX(-12px); } }
+  @keyframes a-bob { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(-2px) rotate(-8deg); } }
+  @keyframes a-live { 0% { box-shadow:0 0 0 0 rgba(21,160,90,.5); } 70% { box-shadow:0 0 0 7px rgba(21,160,90,0); } 100% { box-shadow:0 0 0 0 rgba(21,160,90,0); } }
+  @keyframes a-wiggle { 0%,100% { transform:rotate(0); } 8% { transform:rotate(-4deg) scale(1.05); } 16% { transform:rotate(3deg); } 24% { transform:rotate(0); } }
+  @keyframes a-rise { from { opacity:0; transform:translateY(14px); } }
+  @keyframes a-sweep { 0%,35% { transform:translateX(-120%); } 75%,100% { transform:translateX(120%); } }
+  @keyframes a-pop { 0% { transform:scale(1); } 40% { transform:scale(1.12); } 100% { transform:scale(1); } }
+  @keyframes a-in { from { opacity:0; transform:translateY(-10px) scale(.97); background:var(--rose-soft); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
 </style>
