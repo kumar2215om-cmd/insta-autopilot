@@ -132,6 +132,8 @@ Commits (oldest → newest): `db7add4 c75bfb4 a9715ae 12140bb 099f5f7 733a2d7 e2
 
 **Make a new HTML guide:** the generator lives outside the repo at `/home/user/aiwithom/linkbio/_build/guidepage.py` (copy in the handoff zip under `tools/guide_builder/`). `page(kw, title1, title2, intro, sections)` with blocks `p, code, list, ol, tip, warn, cmds, table, repo, prompt, img, plugs`. Write the output to `freebies/guides/KEYWORD.html`, add a card to `index.html`, push. Theme + animations are applied automatically by the server.
 
+**Guides rebuilt from Notion / claude.ai PDFs:** every freebie now opens on our own site. Their sources live in `tools/guides_src/batch*.py` (one file per batch, written with `tools/guidepage.py` blocks); re-run a batch file from the repo root to regenerate its pages and re-point the `/free` cards. `tools/md2guide.py` converts a Markdown/Notion export directly. Keyword clashes: CLAUDE #12 = `CLAUDE_VIDEO.html`, CLAUDE #26 = `CLAUDE.html`; AUTO + OOTTO share `AUTO.html`. MOBILE (#60) was added as a new card.
+
 **Change colours/animation:** public link page → `templates/links.html`; /free → `freebies/index.html` (theme block + motion block at the end of `<style>`); guides → `freebies/theme.css`; admin → `templates/_admin_style.html` (+ page-specific `<style>` in `dashboard.html` / `links_edit.html`).
 
 ---
