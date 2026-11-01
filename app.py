@@ -1108,11 +1108,12 @@ def freebies_index():
     if added:
         n = max([it.get("n", 0) for it in data["items"]] + [0])
         data["items"] = [{"n": n + len(added) - i, "k": fb["k"], "t": fb["t"], "topic": fb["topic"],
-                          "e": fb["e"], "u": fb["u"]} for i, fb in enumerate(added)] + data["items"]
+                          "e": fb["e"], "u": fb["u"], "pin": True} for i, fb in enumerate(added)] + data["items"]
         data["topics"] = sorted(set(data["topics"]) | {fb["topic"] for fb in added})
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    # Never cached, so a freebie saved in the editor shows up on the next refresh.
     return Response(html[:start] + payload + html[end:], mimetype="text/html",
-                    headers={"Cache-Control": "public, max-age=60"})
+                    headers={"Cache-Control": "no-store"})
 
 
 UPLOAD_TYPES = {"pdf", "zip", "png", "jpg", "jpeg", "webp", "gif", "mp4", "txt", "md", "csv", "json"}

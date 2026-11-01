@@ -74,9 +74,10 @@ const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&qu
 function render(){
   const s=q.value.trim().toUpperCase();
   const list=D.items.filter(i=>(topic==='Sab'||i.topic===topic)&&(!s||i.k.includes(s)||i.t.toUpperCase().includes(s)));
-  if(s) list.sort((a,b)=>(b.k===s)-(a.k===s));
+  // Freebies added from the editor (pin) stay on top; an exact keyword match wins when searching.
+  list.sort((a,b)=>(s?(b.k===s)-(a.k===s):0)||((b.pin?1:0)-(a.pin?1:0)));
   grid.innerHTML=list.map((i,n)=>`<a class="card" href="${esc(i.u)}" target="_blank" rel="noopener">
-    <div class="thumb"><div class="kw"><small>COMMENT KEYWORD</small>${esc(i.k)}</div><div class="emo">${i.e}</div>${D.items.indexOf(i)<3?'<span class="new">NEW</span>':''}</div>
+    <div class="thumb"><div class="kw"><small>COMMENT KEYWORD</small>${esc(i.k)}</div><div class="emo">${i.e}</div>${(i.pin||D.items.indexOf(i)<3)?'<span class="new">NEW</span>':''}</div>
     <div class="body"><div class="t">${esc(i.t)}</div><div class="row"><span class="topic">${esc(i.topic)}</span><span class="open">Kholo →</span></div></div></a>`).join('');
   count.textContent=list.length+' freebies';
   empty.style.display=list.length?'none':'block';
