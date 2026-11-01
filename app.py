@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, abort, jsonify, redirect, render_template, request
+from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory
 
 load_dotenv()
 
@@ -943,8 +943,9 @@ def receive_webhook():
 
 @app.before_request
 def check_password():
-    # The link page and its click redirects are public; its editor (/links/edit) is not.
-    public = request.path in ("/links", "/links/") or request.path.startswith(("/webhook", "/cron/", "/go/"))
+    # The link page, its click redirects and the freebies are public; the editor (/links/edit) is not.
+    public = (request.path in ("/links", "/links/", "/free")
+              or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")))
     if not DASHBOARD_PASSWORD or public:
         return
     auth = request.authorization
@@ -1030,6 +1031,27 @@ def go(item_id):
                 pass  # never block the visitor over a counter
             return redirect(it["url"], code=302)
     abort(404)
+
+
+# ---------- freebies (static guides + downloadable kits, linked from comment-keyword DMs) ----------
+
+FREEBIES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "freebies")
+
+
+@app.get("/free")
+def freebies_root():
+    # Trailing slash so the page's relative links (guides/…, avatar.png) resolve under /free/.
+    qs = request.query_string.decode()
+    return redirect("/free/" + ("?" + qs if qs else ""), code=301)
+
+
+@app.get("/free/")
+@app.get("/free/<path:path>")
+def freebies(path="index.html"):
+    # send_from_directory rejects paths that escape FREEBIES_DIR.
+    resp = send_from_directory(FREEBIES_DIR, path)
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return resp
 
 
 @app.get("/links/edit")

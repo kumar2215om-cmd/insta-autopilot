@@ -111,6 +111,8 @@ Edit it at `/links/edit`, or with **🔗 Link page** on the dashboard (password 
 - click counts for every item (each tap goes through `/go/<id>`, which counts it and redirects)
 - a pulsing **Follow @you on Instagram** button under your bio
 
+**Freebies** live in `freebies/` and are served publicly at `/free/` (guides, PDFs and downloadable kits). The link page shows a "🎁 Free guides" button to it. Send someone straight to one guide with `/free/?k=KEYWORD` (pre-fills the search). To add a freebie: put the file in `freebies/guides/` and add one entry to the `const D=` list in `freebies/index.html`.
+
 Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pictures hosted elsewhere.
 
 ## Notes and limits
