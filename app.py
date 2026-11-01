@@ -1101,10 +1101,14 @@ def freebies_index():
     """The static freebies page, with the freebies added in the editor merged in on top (newest first)."""
     with open(os.path.join(FREEBIES_DIR, "index.html"), encoding="utf-8") as f:
         html = f.read()
+    page = load_linkpage()
+    # Same colour theme as the link page (chosen in the editor).
+    theme = page.get("theme") if page.get("theme") in THEMES else "studio"
+    html = html.replace('<body>\n<div class="wrap">', f'<body class="t-{theme}">\n<div class="wrap">', 1)
     start = html.index("const D=") + len("const D=")
     end = html.index(";\n", start)
     data = json.loads(html[start:end])
-    added = [fb for fb in load_linkpage().get("freebies", []) if fb.get("enabled", True)]
+    added = [fb for fb in page.get("freebies", []) if fb.get("enabled", True)]
     if added:
         n = max([it.get("n", 0) for it in data["items"]] + [0])
         data["items"] = [{"n": n + len(added) - i, "k": fb["k"], "t": fb["t"], "topic": fb["topic"],
