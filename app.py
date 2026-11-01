@@ -1100,6 +1100,20 @@ def freebies(path="index.html"):
     return resp
 
 
+# Reveals guide sections as they scroll into view (styles in freebies/theme.css). Sections already on screen show at once.
+GUIDE_REVEAL_JS = """<script>(function(){
+if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+document.documentElement.classList.add("gp-js");
+var els = [].slice.call(document.querySelectorAll("section, .end"));
+var io = new IntersectionObserver(function(es){es.forEach(function(e){
+  if (!e.isIntersecting) return;
+  // Reveal this one and everything above it (a jump link can skip sections in between).
+  els.forEach(function(el){ if (el.getBoundingClientRect().top <= e.boundingClientRect.top + 1) { el.classList.add("gp-in"); io.unobserve(el); } });
+});}, {threshold:0.08, rootMargin:"0px 0px -40px 0px"});
+els.forEach(function(el){io.observe(el);});
+})();</script>"""
+
+
 def themed_guide(path):
     """A guide page with the link page theme applied (theme.css + a t-THEME class on the body tag)."""
     full = os.path.realpath(os.path.join(FREEBIES_DIR, path))
@@ -1111,6 +1125,7 @@ def themed_guide(path):
     theme = page.get("theme") if page.get("theme") in THEMES else "studio"
     html = html.replace("</head>", '<link rel="stylesheet" href="../theme.css"></head>', 1)
     html = re.sub(r"<body>(?=\s*<main)", f'<body class="t-{theme}">', html, count=1)
+    html = html.replace("</body>", GUIDE_REVEAL_JS + "</body>", 1)
     return Response(html, mimetype="text/html", headers={"Cache-Control": "no-store"})
 
 

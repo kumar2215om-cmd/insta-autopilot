@@ -45,3 +45,47 @@ body[class^="t-"] main > h2{color:var(--hl)}
 body[class^="t-"] main > table{background:var(--card);color:var(--card-ink)}
 body[class^="t-"] main > table td,body[class^="t-"] main > table th{border-bottom-color:var(--card-line)}
 body[class^="t-"] main > p code,body[class^="t-"] main > pre,body[class^="t-"] main > ul code{background:var(--card);color:var(--card-ink)}
+
+/* ---------- Motion for guide pages (same feel as /free and the link page). Off for reduced motion. ---------- */
+.top img{animation:gp-pop .6s cubic-bezier(.3,1.6,.5,1) backwards}
+.pill{display:inline-block;animation:gp-pulse 1.6s ease-in-out infinite}
+h1{animation:gp-rise .6s cubic-bezier(.2,.8,.2,1) .05s backwards}
+h1 span{display:inline-block;animation:gp-rise .6s cubic-bezier(.2,.8,.2,1) .15s backwards,gp-wiggle 4s ease-in-out 1.2s infinite}
+.intro{animation:gp-rise .6s cubic-bezier(.2,.8,.2,1) .25s backwards}
+.nav a{display:inline-block;animation:gp-chip .45s cubic-bezier(.3,1.5,.5,1) backwards;transition:transform .15s,background .15s,color .15s}
+.nav a:nth-child(1){animation-delay:.3s}.nav a:nth-child(2){animation-delay:.36s}.nav a:nth-child(3){animation-delay:.42s}
+.nav a:nth-child(4){animation-delay:.48s}.nav a:nth-child(5){animation-delay:.54s}.nav a:nth-child(6){animation-delay:.6s}
+.nav a:nth-child(n+7){animation-delay:.66s}
+@media (hover:hover){.nav a:hover{transform:translateY(-2px);background:var(--rose,#FF2D95)!important;color:#fff!important}}
+/* Sections slide up as they scroll into view (the page script adds .gp-js; without it everything just shows) */
+.gp-js section,.gp-js .end{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
+.gp-js section.gp-in,.gp-js .end.gp-in{opacity:1;transform:none}
+section .stag{display:inline-block}
+section.gp-in .stag{animation:gp-chip .45s cubic-bezier(.3,1.5,.5,1) .2s backwards}
+.tip,.warn{transition:transform .2s}
+section.gp-in .tip,section.gp-in .warn{animation:gp-slide .5s cubic-bezier(.2,.8,.2,1) .25s backwards}
+.warn{position:relative}
+.cp{transition:transform .15s,filter .15s}.cp:hover{transform:scale(1.08);filter:brightness(1.1)}.cp:active{transform:scale(.92)}
+.repo,.plug,.cmd{transition:transform .15s,box-shadow .15s}
+@media (hover:hover){.repo:hover,.plug:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(60,40,20,.14)}.cmd:hover{transform:translateX(4px)}}
+.rlogo{animation:gp-bob 3.2s ease-in-out infinite}
+figure img{transition:transform .3s}@media (hover:hover){figure img:hover{transform:scale(1.02)}}
+/* "Kaam aaya?" end card: breathing glow, sweeping light on the Follow button */
+.end{position:relative;overflow:hidden}
+.end{animation:gp-glow 2.6s ease-in-out infinite}
+.end a{position:relative;overflow:hidden;isolation:isolate;animation:gp-beat 2.2s ease-in-out infinite}
+.end a::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);transform:translateX(-120%);animation:gp-sweep 3s ease-in-out infinite}
+.back{display:inline-block;transition:transform .15s}@media (hover:hover){.back:hover{transform:translateX(-4px)}}
+/* Simple guide layout (e.g. CHAT): headings and tables rise in */
+main > h1 + p,main > h2,main > table{animation:gp-rise .6s cubic-bezier(.2,.8,.2,1) .2s backwards}
+@keyframes gp-pop{from{transform:scale(.4) rotate(-20deg);opacity:0}}
+@keyframes gp-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes gp-rise{from{opacity:0;transform:translateY(16px)}}
+@keyframes gp-wiggle{0%,100%{transform:rotate(0)}8%{transform:rotate(-3deg) scale(1.04)}16%{transform:rotate(2deg)}24%{transform:rotate(0)}}
+@keyframes gp-chip{from{opacity:0;transform:translateY(8px) scale(.85)}}
+@keyframes gp-slide{from{opacity:0;transform:translateX(-14px)}}
+@keyframes gp-bob{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-3px) rotate(-6deg)}}
+@keyframes gp-glow{0%,100%{box-shadow:0 0 0 0 rgba(255,45,149,0)}50%{box-shadow:0 0 0 6px rgba(255,45,149,.18)}}
+@keyframes gp-beat{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes gp-sweep{0%,35%{transform:translateX(-120%)}75%,100%{transform:translateX(120%)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.gp-js section,.gp-js .end{opacity:1;transform:none}}
