@@ -128,6 +128,8 @@ Commits (oldest → newest): `db7add4 c75bfb4 a9715ae 12140bb 099f5f7 733a2d7 e2
 
 **Add a freebie (no code):** `/links/edit` → 🎁 Freebies → ＋ Add freebie → keyword, title, topic, emoji → ⬆️ Upload file (≤ 4 MB) or paste a link → **💾 Save page** → check with the 🎁 Freebies preview tab. DM link to use in auto-DMs: `https://insta-autopilot-ten.vercel.app/free?k=KEYWORD`.
 
+**Write a new freebie guide on the site (no Notion):** `/links/edit` → 🎁 Freebies → ＋ Add freebie → keyword + title → open **📝 Write the guide here** → ✨ Start with template (or the toolbar: Section, Tip, Warning, Prompt box, Code box, Steps, Table, Image) → **👀 Preview** → **💾 Save page**. It goes live at `/free/g/KEYWORD` and the card links there automatically. Syntax: first line = intro, `## Heading` = new card, `> 💡 …` tip, `> ⚠️ …` warning, ```` ```prompt ```` pink copy box, ```` ```terminal ```` code box. Stored as `body` (Markdown, ≤ 60k chars) on the freebie in Redis; rendered by `render_editor_guide()` → `tools/md2guide.py:md_to_page` (raw HTML is escaped). Needs the `markdown` package (requirements.txt).
+
 **Add a built-in freebie (code):** edit the `const D={"items":[…],"topics":[…]}` JSON in `freebies/index.html` (keep it on one line ending with `;\n`, give it the next `n`), put the file in `freebies/guides/`, push.
 
 **Make a new HTML guide:** the generator lives outside the repo at `/home/user/aiwithom/linkbio/_build/guidepage.py` (copy in the handoff zip under `tools/guide_builder/`). `page(kw, title1, title2, intro, sections)` with blocks `p, code, list, ol, tip, warn, cmds, table, repo, prompt, img, plugs`. Write the output to `freebies/guides/KEYWORD.html`, add a card to `index.html`, push. Theme + animations are applied automatically by the server.

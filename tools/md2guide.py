@@ -23,11 +23,23 @@ def clean_notion(md):
     md = re.sub(r"^(Created|Last edited|Tags|Status|Property)[^\n]*:\s.*$", "", md, flags=re.M)  # page properties
     return md
 
+def _code_block(m):
+    lang, code = (m.group(1) or "").strip(), m.group(2)
+    if lang == "prompt":   # ```prompt → pink prompt box
+        return f'<div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Copy karo</div><pre>{code}</pre></div>'
+    label = f'<div class="lbl">{html.escape(lang.replace("-", " "))}</div>' if lang else ""
+    return f'<div class="code"><button class="cp" onclick="cp(this)">copy</button>{label}<pre>{code}</pre></div>'
+
+def _quote(m):
+    inner = re.sub(r"</?p>", "", m.group(1)).strip()
+    if inner.startswith(("⚠", "!")):   # > ⚠️ text  → warning box
+        return f'<div class="warn">{inner.lstrip("!⚠️ ").strip()}</div>'
+    return f'<div class="tip">{inner}</div>'
+
 def body_html(md, img_map):
     out = markdown.markdown(md, extensions=["tables", "fenced_code", "sane_lists"])
-    out = re.sub(r"<pre><code(?: class=\"[^\"]*\")?>(.*?)</code></pre>",
-                 lambda m: f'<div class="code"><button class="cp" onclick="cp(this)">copy</button><pre>{m.group(1)}</pre></div>', out, flags=re.S)
-    out = re.sub(r"<blockquote>\s*(.*?)\s*</blockquote>", lambda m: f'<div class="tip">{re.sub(r"</?p>", "", m.group(1))}</div>', out, flags=re.S)
+    out = re.sub(r'<pre><code(?: class="language-([^"]*)")?>(.*?)</code></pre>', _code_block, out, flags=re.S)
+    out = re.sub(r"<blockquote>\s*(.*?)\s*</blockquote>", _quote, out, flags=re.S)
     out = out.replace("<ol>", '<ol class="num">')
     out = re.sub(r'<img alt="([^"]*)" src="([^"]+)"',
                  lambda m: f'<figure><img loading="lazy" src="{img_map.get(urllib.parse.unquote(m.group(2)), m.group(2))}" alt="{m.group(1)}"', out)
@@ -39,25 +51,29 @@ def split_title(t):
     if ":" in t: a, b = t.split(":", 1); return a.strip() + ":", b.strip()
     w = t.split(); return (" ".join(w[:-2]), " ".join(w[-2:])) if len(w) > 3 else ("", t)
 
-def convert(md_path, kw, credit=None):
-    kw = kw.upper()
-    md = clean_notion(open(md_path, encoding="utf-8").read())
-    # images: copy local files next to the .md into img/KW/
-    img_map, src_dir = {}, os.path.dirname(os.path.abspath(md_path))
-    for ref in set(re.findall(r"!\[[^\]]*\]\(([^)]+)\)", md)):
-        local = os.path.join(src_dir, urllib.parse.unquote(ref))
-        if not ref.startswith("http") and os.path.isfile(local):
-            dest = os.path.join(GUIDES, "img", kw); os.makedirs(dest, exist_ok=True)
-            name = re.sub(r"[^\w.-]", "-", os.path.basename(local))
-            shutil.copy(local, os.path.join(dest, name)); img_map[urllib.parse.unquote(ref)] = f"img/{kw}/{name}"
+def escape_raw_html(md):
+    """Show raw HTML typed in the editor as text (outside ``` code blocks), so guides can't inject markup."""
+    out, fenced = [], False
+    for line in md.split("\n"):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+        out.append(line if fenced else line.replace("<", "&lt;"))
+    return "\n".join(out)
+
+def md_to_page(md, kw, title=None, img_map=None, credit=None):
+    """Markdown → full guide page HTML. Used by this CLI and by the editor's on-site guides (/free/g/KEY)."""
+    kw = kw.upper(); img_map = img_map or {}
     m = re.search(r"^#\s+(.+)$", md, re.M)
-    title = m.group(1).strip() if m else kw.title()
+    if m and not title:
+        title = m.group(1).strip()
     rest = md[m.end():] if m else md
+    title = title or kw.title()
     parts = re.split(r"^##\s+(.+)$", rest, flags=re.M)
     lead = parts[0].strip()
     intro_par = re.split(r"\n\s*\n", lead, maxsplit=1)
-    intro = re.sub(r"[*_`]", "", intro_par[0]).strip() if lead else ""
-    lead_rest = intro_par[1] if len(intro_par) > 1 else ""
+    simple_intro = lead and not re.match(r"^\s*([>`|#*\-]|\d+\.|!\[)", intro_par[0])
+    intro = re.sub(r"[*_`]", "", intro_par[0]).strip() if simple_intro else ""
+    lead_rest = (intro_par[1] if len(intro_par) > 1 else "") if simple_intro else lead
     sections = []
     if lead_rest.strip():
         sections.append(("Shuruaat", "Pehle ye jaano", [("raw", body_html(lead_rest, img_map))]))
@@ -70,7 +86,20 @@ def convert(md_path, kw, credit=None):
     if not sections:
         sections = [("Guide", html.escape(title), [("raw", body_html(rest, img_map))])]
     t1, t2 = split_title(title)
-    out = page(kw, t1, t2, intro or title, sections, credit=credit)
+    return page(kw, t1, t2, intro or title, sections, credit=credit)
+
+def convert(md_path, kw, credit=None):
+    kw = kw.upper()
+    md = clean_notion(open(md_path, encoding="utf-8").read())
+    # images: copy local files next to the .md into img/KW/
+    img_map, src_dir = {}, os.path.dirname(os.path.abspath(md_path))
+    for ref in set(re.findall(r"!\[[^\]]*\]\(([^)]+)\)", md)):
+        local = os.path.join(src_dir, urllib.parse.unquote(ref))
+        if not ref.startswith("http") and os.path.isfile(local):
+            dest = os.path.join(GUIDES, "img", kw); os.makedirs(dest, exist_ok=True)
+            name = re.sub(r"[^\w.-]", "-", os.path.basename(local))
+            shutil.copy(local, os.path.join(dest, name)); img_map[urllib.parse.unquote(ref)] = f"img/{kw}/{name}"
+    out = md_to_page(md, kw, img_map=img_map, credit=credit)
     path = os.path.join(GUIDES, f"{kw}.html")
     open(path, "w", encoding="utf-8").write(out)
     return path

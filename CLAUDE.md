@@ -9,6 +9,7 @@ Full handoff (routes, data shapes, env var names, Blob uploads, design system, t
   shared admin look in `templates/_admin_style.html` + `_admin_nav.html`.
 - `freebies/index.html`: public `/free` page; its data is the one-line JSON `const D={...};` (keep it one line ending `;\n`).
 - `freebies/theme.css`: theme + motion for guide pages. `freebies/guides/`: guides, PDFs, kit zips.
+- New freebie guides are written in the editor (📝 box) and served at `/free/g/KEYWORD` from Redis via `tools/md2guide.py`; older ones were rebuilt from PDFs in `tools/guides_src/`.
 
 ## Rules
 - Look: cream/rose "freebies style" (bg #F1EADC, ink #1C1A17, rose #FF2D95, cerulean #007BA7; Inter 900 + Anton). One editor theme setting drives /links, /free and guides; `studio` is the default.

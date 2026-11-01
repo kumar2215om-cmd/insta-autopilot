@@ -8,6 +8,7 @@ import json
 import os
 import random
 import re
+import sys
 import sqlite3
 import threading
 import time
@@ -57,6 +58,7 @@ BLOB_STORE_ID = os.environ.get("BLOB_STORE_ID", "").strip().removeprefix("store_
     BLOB_TOKEN.split("_")[3] if BLOB_TOKEN.count("_") >= 4 else "")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 UPLOAD_MAX_MB = 4  # Vercel functions reject request bodies over 4.5 MB
+GUIDE_MAX_CHARS = 60000  # a freebie guide written in the editor (Markdown)
 
 REEL_METRICS = "views,reach,likes,comments,shares,saved,total_interactions"
 
@@ -317,8 +319,13 @@ def clean_linkpage(data):
     freebies = []
     for fb in data.get("freebies", [])[:200]:
         url = (fb.get("u") or "").strip()
-        url = url if url.startswith(("/free/uploads/", "/free/f/")) and ".." not in url else safe_url(url)
         keyword = "".join(ch for ch in (fb.get("k") or "").upper() if ch.isalnum())[:24]
+        body = (fb.get("body") or "").replace("\r\n", "\n")[:GUIDE_MAX_CHARS]
+        if body.strip() and (not url or url.startswith("/free/g/")):
+            url = f"/free/g/{keyword}"  # guide written in the editor, served by our site
+        elif url.startswith("/free/g/"):
+            url = ""                     # guide text was removed: no page to link to any more
+        url = url if url.startswith(("/free/uploads/", "/free/f/", "/free/g/")) and ".." not in url else safe_url(url)
         if not keyword or not (fb.get("t") or "").strip() or not url:
             continue
         freebies.append({
@@ -328,6 +335,7 @@ def clean_linkpage(data):
             "topic": (fb.get("topic") or "").strip()[:40] or "Free tools",
             "e": (fb.get("e") or "").strip()[:8] or "🎁",
             "u": url,
+            "body": body if body.strip() else "",
             "enabled": fb.get("enabled", True) is not False,
         })
     return {
@@ -1094,6 +1102,8 @@ def freebies(path="index.html"):
         return serve_private_blob(path[2:])
     if path.startswith("guides/") and path.endswith(".html"):
         return themed_guide(path)
+    if path.startswith("g/"):  # guides written in the editor (no Notion needed)
+        return editor_guide(path[2:].strip("/"))
     # send_from_directory rejects paths that escape FREEBIES_DIR.
     resp = send_from_directory(FREEBIES_DIR, path)
     resp.headers["Cache-Control"] = "public, max-age=300"
@@ -1121,12 +1131,31 @@ def themed_guide(path):
         abort(404)
     with open(full, encoding="utf-8") as f:
         html = f.read()
-    page = load_linkpage()
+    return Response(apply_guide_theme(html, load_linkpage()), mimetype="text/html", headers={"Cache-Control": "no-store"})
+
+
+def apply_guide_theme(html, page, extra_head=""):
+    """Link theme.css, add the editor's theme class and the scroll-reveal script to a guide page."""
     theme = page.get("theme") if page.get("theme") in THEMES else "studio"
-    html = html.replace("</head>", '<link rel="stylesheet" href="../theme.css"></head>', 1)
+    html = html.replace("</head>", f'{extra_head}<link rel="stylesheet" href="../theme.css"></head>', 1)
     html = re.sub(r"<body>(?=\s*<main)", f'<body class="t-{theme}">', html, count=1)
-    html = html.replace("</body>", GUIDE_REVEAL_JS + "</body>", 1)
-    return Response(html, mimetype="text/html", headers={"Cache-Control": "no-store"})
+    return html.replace("</body>", GUIDE_REVEAL_JS + "</body>", 1)
+
+
+def render_editor_guide(keyword, title, body):
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+    from md2guide import escape_raw_html, md_to_page  # needs the "markdown" package (requirements.txt)
+    return md_to_page(escape_raw_html(body), keyword, title=title)
+
+
+def editor_guide(key):
+    key = key.upper()
+    page = load_linkpage()
+    fb = next((f for f in page.get("freebies", []) if f.get("k") == key and f.get("body") and f.get("enabled", True)), None)
+    if not fb:
+        abort(404)
+    html = render_editor_guide(fb["k"], fb["t"], fb["body"])
+    return Response(apply_guide_theme(html, page), mimetype="text/html", headers={"Cache-Control": "no-store"})
 
 
 def freebies_index():
@@ -1176,6 +1205,16 @@ def serve_private_blob(pathname):
     return Response(r.content, mimetype=r.headers.get("content-type", "application/octet-stream"),
                     headers={"Cache-Control": "public, max-age=3600",
                              "Content-Disposition": f'inline; filename="{name}"'})
+
+
+@app.post("/api/freebies/preview")
+def api_preview_guide():
+    data = request.get_json(silent=True) or {}
+    keyword = "".join(ch for ch in (data.get("k") or "").upper() if ch.isalnum())[:24] or "PREVIEW"
+    html = render_editor_guide(keyword, (data.get("t") or "").strip()[:120] or keyword.title(),
+                               (data.get("body") or "")[:GUIDE_MAX_CHARS])
+    # <base> so ../theme.css and ../avatar.png resolve when the preview opens in a new tab
+    return Response(apply_guide_theme(html, load_linkpage(), extra_head='<base href="/free/g/">'), mimetype="text/html")
 
 
 @app.post("/api/freebies/upload")

@@ -60,6 +60,18 @@
   .linkrow button { margin-bottom:12px; padding:10px 14px; }
   .dmlink { font-family: ui-monospace, Menlo, monospace; font-size:11.5px; }
   .fb-msg { font-size:12.5px; margin:-4px 0 10px; } .fb-msg:empty { display:none; }
+  details.guide { margin:2px 0 12px; border:2px solid var(--line); border-radius:14px; background:#fff; }
+  details.guide > summary { cursor:pointer; list-style:none; padding:11px 14px; font-weight:800; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  details.guide > summary::-webkit-details-marker { display:none; }
+  details.guide > summary::after { content:"▾"; margin-left:auto; transition:transform .2s; }
+  details.guide[open] > summary::after { transform:rotate(180deg); }
+  details.guide .live { font-size:11.5px; font-weight:800; color:#0F7A44; background:#E3F6EC; border-radius:99px; padding:2px 9px; }
+  .gbody { padding:0 14px 14px; }
+  .gtools { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .gtools button { padding:6px 10px; font-size:12.5px; border-radius:9px; }
+  .gbody textarea { font:13.5px/1.55 ui-monospace, Menlo, Consolas, monospace; min-height:260px; }
+  .ghelp { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.6; }
+  .ghelp code { background:var(--panel); border-radius:5px; padding:1px 5px; }
   .fb-msg.err { color:var(--err); } .fb-msg.ok { color:var(--green); }
   .empty { text-align:center; padding:22px; border:1.5px dashed var(--line2); border-radius:16px; color:var(--muted); margin-bottom:12px; }
 
@@ -246,11 +258,34 @@ function freebieHtml(fb, i) {
       <div><label>Emoji</label><input type="text" value="${esc(fb.e)}" placeholder="🎁" maxlength="8" ${set("e")}></div>
     </div>
     <div class="linkrow">
-      <div><label>Link (or upload a file →)</label><input type="text" id="fb-url-${i}" value="${esc(fb.u)}" placeholder="https://… or upload" ${set("u")}></div>
+      <div><label>Link (or upload a file →, or write the guide below ↓)</label><input type="text" id="fb-url-${i}" value="${esc(fb.u)}" placeholder="https://… or upload" ${set("u")}></div>
       <button class="secondary upload" onclick="$('fb-file-${i}').click()">⬆️ Upload file</button>
       <input type="file" id="fb-file-${i}" hidden accept=".pdf,.zip,.png,.jpg,.jpeg,.webp,.gif,.mp4,.txt,.md,.csv,.json" onchange="uploadFreebie(${i}, this)">
     </div>
     <div class="fb-msg" id="fb-msg-${i}"></div>
+    <details class="guide" ${fb.body ? "open" : ""}>
+      <summary>📝 Write the guide here <span class="hint" style="font-weight:600">(no Notion needed)</span>
+        ${fb.body && fb.k ? `<span class="live">live at /free/g/${esc(fb.k.toUpperCase())}</span>` : ""}</summary>
+      <div class="gbody">
+        <div class="gtools">
+          ${fb.body ? "" : `<button class="primary" onclick="guideTemplate(${i})">✨ Start with template</button>`}
+          <button class="secondary" onclick="insertMd(${i}, '\\n## Section heading\\n')">＋ Section</button>
+          <button class="secondary" onclick="insertMd(${i}, '\\n> 💡 Tip text\\n')">💡 Tip</button>
+          <button class="secondary" onclick="insertMd(${i}, '\\n> ⚠️ Warning text\\n')">⚠️ Warning</button>
+          <button class="secondary" onclick="insertMd(${i}, '\\n\x60\x60\x60prompt\\nPaste the prompt here\\n\x60\x60\x60\\n')">🩷 Prompt box</button>
+          <button class="secondary" onclick="insertMd(${i}, '\\n\x60\x60\x60terminal\\ncommand here\\n\x60\x60\x60\\n')">⌨️ Code box</button>
+          <button class="secondary" onclick="insertMd(${i}, '\\n1. First step\\n2. Second step\\n')">1. Steps</button>
+          <button class="secondary" onclick="insertMd(${i}, '\\n| Column | Column |\\n|---|---|\\n| text | text |\\n')">▦ Table</button>
+          <button class="secondary" onclick="$('fb-img-${i}').click()">🖼️ Image</button>
+          <input type="file" id="fb-img-${i}" hidden accept=".png,.jpg,.jpeg,.webp,.gif" onchange="guideImage(${i}, this)">
+          <button class="primary" style="margin-left:auto" onclick="previewGuide(${i})">👀 Preview</button>
+        </div>
+        <textarea id="fb-body-${i}" rows="14" placeholder="Write your guide here. Tap ✨ Start with template to begin." oninput="page.freebies[${i}].body=this.value">${esc(fb.body || "")}</textarea>
+        <div class="ghelp">First line = short intro · <code>## Heading</code> = new card · <code>&gt; 💡 text</code> = tip · <code>&gt; ⚠️ text</code> = warning ·
+          <code>\x60\x60\x60prompt</code> = pink copy box · <code>\x60\x60\x60terminal</code> = code box · <code>**bold**</code> · <code>[text](https://link)</code>.
+          Save page → the guide goes live and this freebie's link becomes <b>/free/g/KEYWORD</b>.</div>
+      </div>
+    </details>
     <div class="tools">
       <label><input type="checkbox" ${fb.enabled !== false ? "checked" : ""} onchange="page.freebies[${i}].enabled=this.checked; renderFreebies()"> Visible</label>
       <button class="secondary" onclick="moveFb(${i}, -1)" ${i === 0 ? "disabled" : ""}>↑</button>
@@ -281,6 +316,63 @@ function moveFb(i, d) {
   page.freebies.splice(i + d, 0, fb);
   renderFreebies();
 }
+const GUIDE_TEMPLATE = `Ek line mein batao is guide se kya milega.
+
+> ⚠️ Honest note: jo cheez verify nahi hai ya paid hai, yahan saaf likho.
+
+## Step 1 · Setup
+1. Pehla step
+2. Doosra step
+
+\`\`\`terminal
+command yahan
+\`\`\`
+
+## Step 2 · Ready-made prompt
+\`\`\`prompt
+Yahan apna prompt paste karo. [brackets] mein jo bharna hai.
+\`\`\`
+
+> 💡 Tip: ek chhoti useful baat.
+
+## Checklist
+- Ye kiya
+- Wo kiya
+`;
+function guideTemplate(i) {
+  const ta = $("fb-body-" + i);
+  if (ta.value.trim() && !confirm("Replace what you wrote with the template?")) return;
+  ta.value = GUIDE_TEMPLATE; page.freebies[i].body = ta.value; ta.focus();
+}
+function insertMd(i, text) {
+  const ta = $("fb-body-" + i), a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a;
+  ta.value = ta.value.slice(0, a) + text + ta.value.slice(b);
+  ta.selectionStart = ta.selectionEnd = a + text.length; ta.focus();
+  page.freebies[i].body = ta.value;
+}
+async function guideImage(i, input) {
+  const file = input.files[0]; if (!file) return;
+  const msg = $("fb-msg-" + i); msg.className = "fb-msg"; msg.textContent = "Uploading image…";
+  const form = new FormData(); form.append("file", file);
+  try {
+    const r = await fetch("/api/freebies/upload", {method: "POST", body: form});
+    const data = await r.json().catch(() => ({error: "Upload failed (" + r.status + ")"}));
+    if (!r.ok || !data.url) throw new Error(data.error || "Upload failed");
+    insertMd(i, `\n![${file.name.replace(/\.[^.]+$/, "")}](${data.url})\n`);
+    msg.className = "fb-msg ok"; msg.textContent = "Image added to the guide ✓";
+  } catch (e) { msg.className = "fb-msg err"; msg.textContent = e.message; }
+  input.value = "";
+}
+async function previewGuide(i) {
+  const fb = page.freebies[i];
+  const w = window.open("", "_blank");
+  const r = await fetch("/api/freebies/preview", {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({k: fb.k, t: fb.t, body: $("fb-body-" + i).value})});
+  const html = await r.text();
+  if (!w) return alert("Allow pop-ups to see the preview.");
+  w.document.open(); w.document.write(html); w.document.close();
+}
+
 async function uploadFreebie(i, input) {
   const file = input.files[0]; if (!file) return;
   const msg = $("fb-msg-" + i);
@@ -300,7 +392,7 @@ async function save() {
   page.name = $("name").value; page.bio = $("bio").value; page.avatar = $("avatar").value;
   page.socials = Object.fromEntries(SOCIALS.map(k => [k, $("s-" + k).value]));
   const skipped = page.items.filter(it => !it.title.trim() || !it.url.trim()).length
-    + page.freebies.filter(fb => !(fb.k || "").trim() || !(fb.t || "").trim() || !(fb.u || "").trim()).length;
+    + page.freebies.filter(fb => !(fb.k || "").trim() || !(fb.t || "").trim() || !((fb.u || "").trim() || (fb.body || "").trim())).length;
   const r = await fetch("/api/linkpage", {method: "PUT", headers: {"Content-Type": "application/json"},
                                           body: JSON.stringify(page)});
   page = await r.json();
