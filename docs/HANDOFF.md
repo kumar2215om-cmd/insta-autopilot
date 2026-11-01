@@ -4,7 +4,7 @@ Owner: Om · Instagram **@aiwith.om** ("AI Tools & Tips Daily", Hinglish).
 Scope of this handoff: the **Insta Autopilot web app**: admin dashboard, link-in-bio page + editor, `/free` freebies page, guide pages, uploads, themes and animations.
 **Not included:** reel making/editing (the Remotion studio in `/home/user/aiwithom/template`). That has its own v3 handoff.
 
-Last updated: 1 Nov 2026 · last commit `4f282f7` on `main`.
+Last updated: 1 Nov 2026 (v2) · see `git log` for the latest commit.
 
 ---
 
@@ -119,6 +119,12 @@ One setting (editor → Profile → Theme) drives **all public pages**: `/links`
 7. **Uploaded freebies always first** on /free (pinned, NEW tag), `/free/` never cached.
 8. **Animations** on link page (Follow, freebies card, products, links, socials, avatar), /free, guides, dashboard + editor.
 9. **Theme follows everywhere**: /free and all guide pages use the editor's theme.
+
+10. **CLAUDE.md** in the repo root so every new Claude Code session understands the app (points here).
+11. **All freebies moved onto our site:** the 37 cards that opened Notion / claude.ai were rebuilt from their PDFs as FACTORY-style guides (`tools/guides_src/batch1–8*.py`). Every card on `/free` now opens `/free/guides/…`. New card **MOBILE** (#60). Related guides cross-link (SENIOR → CODING → TOKENS, FIX ↔ SAFE, FIX → RULES → CONTRACT).
+12. **Wide tables** on guide pages scroll inside their card on phones (no sideways page scroll).
+13. **Write freebie guides in the editor:** 📝 box on each freebie card (template, toolbar, image upload, preview) → live at `/free/g/KEYWORD`. No Notion needed for future freebies.
+14. Outside the repo (in the handoff zip, `instagram_profile_kit/`): highlight covers, About me / Freebies / Tips / Tutorials / Reviews / Collab / Results / AI Tools highlight stories, profile mockup and copy-ready bio.
 
 Commits (oldest → newest): `db7add4 c75bfb4 a9715ae 12140bb 099f5f7 733a2d7 e24c992 afe0633 a31c821 e753f50 47c4b70 56720d9 c8e1afa 59b0094 141875f c229b62 d7587f0 eff74db b6e395c 4f282f7`.
 
