@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 from dotenv import load_dotenv
-from flask import Flask, abort, jsonify, redirect, render_template, request, send_from_directory
+from flask import Flask, Response, abort, jsonify, redirect, render_template, request, send_from_directory
 
 load_dotenv()
 
@@ -50,10 +50,15 @@ ACCOUNT_CACHE_SECONDS = int(os.environ.get("ACCOUNT_CACHE_SECONDS", "120"))
 # Serverless hosts (Vercel) have no lasting disk: store data in Upstash Redis when it's configured.
 REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
 REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
+# Freebie file uploads: Vercel Blob when connected (Vercel → Storage → Blob adds this token), else local disk.
+BLOB_TOKEN = secret("BLOB_READ_WRITE_TOKEN")
+UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+UPLOAD_MAX_MB = 4  # Vercel functions reject request bodies over 4.5 MB
 
 REEL_METRICS = "views,reach,likes,comments,shares,saved,total_interactions"
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = (UPLOAD_MAX_MB + 1) * 1024 * 1024
 _db_lock = threading.RLock()  # re-entrant: counter_add holds it while calling kv_set
 _stats_cache = {"at": 0, "data": None}
 
@@ -266,6 +271,7 @@ def load_linkpage():
     page.setdefault("theme", "sunset")
     page.setdefault("socials", {})
     page.setdefault("items", [])
+    page.setdefault("freebies", [])
     return page
 
 
@@ -305,6 +311,22 @@ def clean_linkpage(data):
             "enabled": it.get("enabled", True) is not False,
         })
     socials = {k: (data.get("socials", {}).get(k) or "").strip()[:200] for k in SOCIALS}
+    freebies = []
+    for fb in data.get("freebies", [])[:200]:
+        url = (fb.get("u") or "").strip()
+        url = url if url.startswith("/free/uploads/") and ".." not in url else safe_url(url)
+        keyword = "".join(ch for ch in (fb.get("k") or "").upper() if ch.isalnum())[:24]
+        if not keyword or not (fb.get("t") or "").strip() or not url:
+            continue
+        freebies.append({
+            "id": "".join(ch for ch in str(fb.get("id") or os.urandom(4).hex()) if ch.isalnum())[:16],
+            "k": keyword,
+            "t": fb["t"].strip()[:120],
+            "topic": (fb.get("topic") or "").strip()[:40] or "Free tools",
+            "e": (fb.get("e") or "").strip()[:8] or "🎁",
+            "u": url,
+            "enabled": fb.get("enabled", True) is not False,
+        })
     return {
         "name": (data.get("name") or "").strip()[:80],
         "bio": (data.get("bio") or "").strip()[:300],
@@ -312,6 +334,7 @@ def clean_linkpage(data):
         "theme": data.get("theme") if data.get("theme") in THEMES else "sunset",
         "socials": socials,
         "items": items,
+        "freebies": freebies,
     }
 
 
@@ -1048,10 +1071,65 @@ def freebies_root():
 @app.get("/free/")
 @app.get("/free/<path:path>")
 def freebies(path="index.html"):
+    if path == "index.html":
+        return freebies_index()
+    if path.startswith("uploads/"):  # files uploaded from the editor when Vercel Blob isn't connected
+        return send_from_directory(UPLOAD_DIR, path[len("uploads/"):])
     # send_from_directory rejects paths that escape FREEBIES_DIR.
     resp = send_from_directory(FREEBIES_DIR, path)
     resp.headers["Cache-Control"] = "public, max-age=300"
     return resp
+
+
+def freebies_index():
+    """The static freebies page, with the freebies added in the editor merged in on top (newest first)."""
+    with open(os.path.join(FREEBIES_DIR, "index.html"), encoding="utf-8") as f:
+        html = f.read()
+    start = html.index("const D=") + len("const D=")
+    end = html.index(";\n", start)
+    data = json.loads(html[start:end])
+    added = [fb for fb in load_linkpage().get("freebies", []) if fb.get("enabled", True)]
+    if added:
+        n = max([it.get("n", 0) for it in data["items"]] + [0])
+        data["items"] = [{"n": n + len(added) - i, "k": fb["k"], "t": fb["t"], "topic": fb["topic"],
+                          "e": fb["e"], "u": fb["u"]} for i, fb in enumerate(added)] + data["items"]
+        data["topics"] = sorted(set(data["topics"]) | {fb["topic"] for fb in added})
+    payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+    return Response(html[:start] + payload + html[end:], mimetype="text/html",
+                    headers={"Cache-Control": "public, max-age=60"})
+
+
+UPLOAD_TYPES = {"pdf", "zip", "png", "jpg", "jpeg", "webp", "gif", "mp4", "txt", "md", "csv", "json"}
+
+
+@app.post("/api/freebies/upload")
+def api_upload_freebie():
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"error": "No file chosen"}), 400
+    name = "".join(ch if ch.isalnum() or ch in "._-" else "-" for ch in os.path.basename(f.filename))[-80:].lstrip(".-")
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    if ext not in UPLOAD_TYPES:
+        return jsonify({"error": f"File type .{ext or '?'} not allowed. Use: " + ", ".join(sorted(UPLOAD_TYPES))}), 400
+    data = f.read()
+    if len(data) > UPLOAD_MAX_MB * 1024 * 1024:
+        return jsonify({"error": f"File is over {UPLOAD_MAX_MB} MB. Upload it to Google Drive and paste the link instead."}), 400
+    if BLOB_TOKEN:
+        r = requests.put("https://blob.vercel-storage.com/", params={"pathname": f"freebies/{name}"}, data=data,
+                         headers={"authorization": f"Bearer {BLOB_TOKEN}", "x-api-version": "9",
+                                  "x-add-random-suffix": "1",
+                                  "x-content-type": f.mimetype or "application/octet-stream"}, timeout=60)
+        if not r.ok:
+            return jsonify({"error": f"Vercel Blob upload failed ({r.status_code}): {r.text[:200]}"}), 502
+        return jsonify({"url": r.json()["url"]})
+    if SERVERLESS:
+        return jsonify({"error": "Uploads need Vercel Blob: Vercel → your project → Storage → Create → Blob → "
+                                 "Connect, then redeploy. (Or paste a Google Drive link instead.)"}), 400
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    stored = f"{os.urandom(4).hex()}-{name}"
+    with open(os.path.join(UPLOAD_DIR, stored), "wb") as out:
+        out.write(data)
+    return jsonify({"url": f"/free/uploads/{stored}"})
 
 
 @app.get("/links/edit")

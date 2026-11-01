@@ -61,6 +61,14 @@
   .phone iframe { width:100%; height:100%; border:0; }
   .hint { font-size:12px; color:var(--muted); }
   .url { font-family: ui-monospace, Menlo, monospace; font-size:12px; word-break:break-all; }
+  .pill.free { background:#dcfce7; color:#15803d; }
+  .grid4 { display:grid; grid-template-columns: 1.1fr 2fr 1.2fr .6fr; gap:0 10px; }
+  @media (max-width: 700px) { .grid4 { grid-template-columns: 1fr 1fr; } }
+  .linkrow { display:flex; gap:8px; align-items:end; }
+  .linkrow > div { flex:1; }
+  .upload { white-space:nowrap; }
+  .fb-msg { font-size:12px; margin-top:4px; }
+  .fb-msg.err { color:var(--err); } .fb-msg.ok { color:var(--green); }
 </style>
 </head>
 <body>
@@ -111,6 +119,15 @@
       </div>
       <p class="hint">Products show an image, price and a "Get it" button. ⭐ Featured items glow so they stand out.
         For images, paste an image link (for example from Google Drive set to public, Imgur or your website).</p>
+    </div>
+
+    <div class="card">
+      <h2>🎁 Freebies <span class="hint" style="font-weight:400">(show on your <a href="/free/" target="_blank">/free</a> page)</span></h2>
+      <div id="freebies"></div>
+      <div class="add"><button onclick="addFreebie()">＋ Add freebie</button></div>
+      <p class="hint">Keyword = the comment word from your reel (e.g. CHAT). Upload a PDF / zip / image, or paste any link
+        (Notion, Google Drive, YouTube). Newest freebies show first. Send people straight to one with the DM link shown on each freebie.
+        Press <b>Save page</b> after adding.</p>
     </div>
 
     <div class="savebar">
@@ -184,14 +201,74 @@ function move(i, d) {
   renderItems();
 }
 
+
+const TOPICS = ["Free tools", "Claude skills", "Claude makes reels", "Claude automation", "AI video", "AI editing", "Money", "Ootto / Instagram", "Claude growth"];
+function freebieHtml(fb, i) {
+  const set = (k) => `oninput="page.freebies[${i}].${k}=this.value"`;
+  const dm = location.origin + "/free?k=" + encodeURIComponent((fb.k || "").toUpperCase());
+  return `<div class="item ${fb.enabled === false ? "off" : ""}">
+    <div class="item-head"><span class="pill free">FREEBIE</span><b>${esc(fb.k ? fb.k.toUpperCase() : "") || "(no keyword)"}</b>
+      <span class="clicks">${fb.k ? `DM link: <span class="url">${esc(dm)}</span>` : ""}</span></div>
+    <div class="grid4">
+      <div><label>Keyword</label><input type="text" value="${esc(fb.k)}" placeholder="CHAT" maxlength="24" ${set("k")} onchange="renderFreebies()"></div>
+      <div><label>Title</label><input type="text" value="${esc(fb.t)}" placeholder="ChatLLM: all AI models for $10" maxlength="120" ${set("t")}></div>
+      <div><label>Topic</label><input type="text" list="topics" value="${esc(fb.topic)}" placeholder="Free tools" maxlength="40" ${set("topic")}></div>
+      <div><label>Emoji</label><input type="text" value="${esc(fb.e)}" placeholder="🎁" maxlength="8" ${set("e")}></div>
+    </div>
+    <div class="linkrow">
+      <div><label>Link (or upload a file →)</label><input type="text" id="fb-url-${i}" value="${esc(fb.u)}" placeholder="https://… or upload" ${set("u")}></div>
+      <button class="secondary upload" onclick="$('fb-file-${i}').click()">⬆️ Upload file</button>
+      <input type="file" id="fb-file-${i}" hidden accept=".pdf,.zip,.png,.jpg,.jpeg,.webp,.gif,.mp4,.txt,.md,.csv,.json" onchange="uploadFreebie(${i}, this)">
+    </div>
+    <div class="fb-msg" id="fb-msg-${i}"></div>
+    <div class="tools">
+      <label><input type="checkbox" ${fb.enabled !== false ? "checked" : ""} onchange="page.freebies[${i}].enabled=this.checked; renderFreebies()"> Visible</label>
+      <button class="secondary" onclick="moveFb(${i}, -1)" ${i === 0 ? "disabled" : ""}>↑</button>
+      <button class="secondary" onclick="moveFb(${i}, 1)" ${i === page.freebies.length - 1 ? "disabled" : ""}>↓</button>
+      ${fb.u ? `<a class="hint" href="${esc(fb.u)}" target="_blank">open ↗</a>` : ""}
+      <button class="danger" onclick="if (confirm('Delete this freebie?')) { page.freebies.splice(${i}, 1); renderFreebies(); }">Delete</button>
+    </div>
+  </div>`;
+}
+function renderFreebies() {
+  $("freebies").innerHTML = page.freebies.length ? page.freebies.map(freebieHtml).join("")
+    : `<p class="hint">No freebies added here yet (the built-in ones on /free stay). Add one below 👇</p>`;
+}
+function addFreebie() {
+  page.freebies.unshift({id: Math.random().toString(36).slice(2, 10), k: "", t: "", topic: "Free tools", e: "🎁", u: "", enabled: true});
+  renderFreebies();
+  const first = $("freebies").querySelector("input[type=text]");
+  first && first.focus();
+}
+function moveFb(i, d) {
+  const [fb] = page.freebies.splice(i, 1);
+  page.freebies.splice(i + d, 0, fb);
+  renderFreebies();
+}
+async function uploadFreebie(i, input) {
+  const file = input.files[0]; if (!file) return;
+  const msg = $("fb-msg-" + i);
+  msg.className = "fb-msg"; msg.textContent = "Uploading " + file.name + "…";
+  const form = new FormData(); form.append("file", file);
+  try {
+    const r = await fetch("/api/freebies/upload", {method: "POST", body: form});
+    const data = await r.json().catch(() => ({error: "Upload failed (" + r.status + ")"}));
+    if (!r.ok || !data.url) throw new Error(data.error || "Upload failed");
+    page.freebies[i].u = data.url; $("fb-url-" + i).value = data.url;
+    msg.className = "fb-msg ok"; msg.textContent = "Uploaded ✓ Now press Save page.";
+  } catch (e) { msg.className = "fb-msg err"; msg.textContent = e.message; }
+  input.value = "";
+}
+
 async function save() {
   page.name = $("name").value; page.bio = $("bio").value; page.avatar = $("avatar").value;
   page.socials = Object.fromEntries(SOCIALS.map(k => [k, $("s-" + k).value]));
-  const skipped = page.items.filter(it => !it.title.trim() || !it.url.trim()).length;
+  const skipped = page.items.filter(it => !it.title.trim() || !it.url.trim()).length
+    + page.freebies.filter(fb => !(fb.k || "").trim() || !(fb.t || "").trim() || !(fb.u || "").trim()).length;
   const r = await fetch("/api/linkpage", {method: "PUT", headers: {"Content-Type": "application/json"},
                                           body: JSON.stringify(page)});
   page = await r.json();
-  renderItems();
+  renderItems(); renderFreebies();
   $("status").textContent = "Saved ✓" + (skipped ? ` (${skipped} item(s) without a title or link were left out)` : "");
   setTimeout(() => $("status").textContent = "", 4000);
   $("preview").src = "/links?" + Date.now();
@@ -205,7 +282,9 @@ async function save() {
   $("name").placeholder = data.profile.name || data.profile.username || "Your name";
   for (const k of SOCIALS) $("s-" + k).value = page.socials[k] || "";
   if (!page.socials.instagram && data.profile.username) $("s-instagram").value = data.profile.username;
-  renderThemes(); renderItems();
+  page.freebies = page.freebies || [];
+  $("topics") || document.body.insertAdjacentHTML("beforeend", `<datalist id="topics">${TOPICS.map(t => `<option value="${t}">`).join("")}</datalist>`);
+  renderThemes(); renderItems(); renderFreebies();
 })();
 </script>
 </body>
