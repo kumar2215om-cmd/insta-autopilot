@@ -1,0 +1,60 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EDIT · ChatGPT video editing: skill + setup | aiwith.om</title><meta name="description" content="ChatGPT aapki raw clips aur images se ek edited short video banane ki koshish karta hai: pauses aur filler words cut, captions, zooms aur 9:16 export.">
+<link rel="icon" href="../avatar.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F1EADC;--ink:#1C1A17;--rose:#FF2D95;--cer:#007BA7;--mute:#8C8780;--line:#E7E0D4;--sh:0 18px 40px rgba(60,40,20,.13)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:500 15.5px/1.6 Inter,'Noto Sans Devanagari',system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}a{color:var(--rose)}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top img{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:var(--sh)}
+.pill{font:800 11px Inter;color:#fff;background:var(--rose);border-radius:20px;padding:3px 10px;text-decoration:none}.pill.c{background:var(--cer)}
+h1{font-size:36px;line-height:1.05;letter-spacing:-1px;margin:14px 0 8px;font-weight:900}h1 span{color:var(--rose)}
+.intro{color:#4A4540;font-weight:600}.back{font-weight:800;text-decoration:none;font-size:14px}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.nav a{text-decoration:none;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:20px;padding:4px 11px;font:800 12px Inter}
+section{background:#fff;border-radius:22px;padding:20px;margin:16px 0;box-shadow:var(--sh)}
+.stag{display:inline-block;font:800 11px Inter;letter-spacing:1px;text-transform:uppercase;color:var(--cer);background:rgba(0,123,167,.09);border-radius:20px;padding:3px 10px}
+h2{font-size:23px;line-height:1.2;margin:8px 0 10px;font-weight:900}
+code{font:500 .9em 'JetBrains Mono',monospace;background:#F6F2EC;border-radius:6px;padding:1px 6px}
+.code{position:relative;background:#1C1A17;border-radius:14px;padding:12px 14px;margin:12px 0}.code pre{margin:6px 0 0;color:#F3EDE3;font:500 13px/1.55 'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-word}
+.code .lbl{font:800 10px Inter;letter-spacing:1px;text-transform:uppercase;color:#B5A893}.cp{position:absolute;right:10px;top:10px;border:0;background:var(--rose);color:#fff;font:800 11px Inter;border-radius:8px;padding:4px 10px;cursor:pointer}
+.prompt{background:#FFF7FB;border:2px solid #FFD0E6}.prompt pre{color:var(--ink)}.prompt .lbl{color:var(--rose)}
+.tip,.warn{border-radius:12px;padding:10px 13px;margin:12px 0;font-weight:600;font-size:14px}.tip{background:#EAF6FB;border-left:4px solid var(--cer)}.warn{background:#FFF0F6;border-left:4px solid var(--rose)}
+.cmds{display:grid;gap:8px}.cmd{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:9px 11px}.cmd code{flex:none;font-weight:700;color:var(--rose);background:#FFF0F6}.cmd span{font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--cer);border-bottom:2px solid var(--line);padding:7px}td{border-bottom:1px solid #F1ECE3;padding:7px;vertical-align:top}
+.repo{display:flex;gap:12px;text-decoration:none;color:var(--ink);border:2px solid var(--line);border-radius:16px;padding:13px;margin:10px 0}.rlogo{flex:none;width:46px;height:46px;border-radius:12px;background:#1C1A17;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+.rurl{font:500 12px 'JetBrains Mono',monospace;color:var(--cer)}.rdesc{font-size:13.5px;margin-top:4px}.badges span{display:inline-block;margin:6px 6px 0 0;font:800 11px Inter;border:1.5px solid var(--line);border-radius:8px;padding:2px 7px}
+ol.num{padding-left:20px}ol.num li,ul li{margin:5px 0}
+.plugs{display:grid;gap:10px}.plug{border:1.5px solid var(--line);border-radius:14px;padding:11px 13px}.ph{display:flex;justify-content:space-between;align-items:center;gap:8px}.ph b{font-size:16px}.lic{font:800 10px Inter;border:1.5px solid var(--line);border-radius:8px;padding:1px 7px;color:var(--mute);white-space:nowrap}.pd{font-size:14px;margin-top:3px}.code.sm{padding:8px 12px;margin:8px 0 4px}.code.sm pre{margin:0;font-size:12px;padding-right:56px}.w{display:inline-block;margin:4px 6px 0 0;font:800 11px Inter;color:#B4235F;background:#FFF0F6;border-radius:8px;padding:2px 8px}
+figure{margin:12px 0}figure img{width:100%;border-radius:14px;display:block}figcaption{font-size:12.5px;color:var(--mute);margin-top:6px;text-align:center}
+.credit{font-size:12.5px;color:var(--mute);text-align:center;margin-top:20px}
+.end{text-align:center;background:var(--ink);color:#fff;border-radius:20px;padding:20px;margin-top:20px}.end a{display:inline-block;margin-top:10px;background:var(--rose);color:#fff;text-decoration:none;font-weight:900;border-radius:12px;padding:10px 18px}
+</style></head><body><main>
+<a class="back" href="../index.html">← Saare freebies</a>
+<div class="top" style="margin-top:12px"><img src="../avatar.png" alt=""><b>@aiwith.om</b><span class="pill">freebie · comment EDIT</span></div>
+<h1>ChatGPT video editing: <span>skill + setup</span></h1><p class="intro">ChatGPT aapki raw clips aur images se ek edited short video banane ki koshish karta hai: pauses aur filler words cut, captions, zooms aur 9:16 export.</p>
+<div class="nav"><a href="#s0">Pehle padho</a><a href="#s1">Skill</a><a href="#s2">7 steps</a><a href="#s3">Changes</a></div><section id="s0"><span class="stag">Pehle padho</span><h2>Kya hoga, kya nahi</h2><p>Is setup se ChatGPT aapki raw clips aur images se ek edited short video banane ki koshish karta hai: pauses aur filler words cut, captions, zooms aur 9:16 export. Iske liye ChatGPT ka wo plan chahiye jisme <b>file upload aur code/data analysis tool</b> chalta ho.</p><div class="warn">⚠️ Sach: ChatGPT ka editing simple cuts, captions aur trims ke liye achha hai; heavy motion graphics ya perfect sync ki guarantee nahi hai. Pehle ek chhoti clip (30–60 sec) se test karo, phir lambi videos do.</div></section><section id="s1"><span class="stag">Skill</span><h2>Video editing skill (SKILL.md)</h2><p>Neeche ka poora text copy karke ek file banao <b>SKILL.md</b>. Har baar video edit karwate waqt ise upload karo, ya ChatGPT Project ke instructions mein paste kar do.</p><div class="code"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">SKILL.md</div><pre>name: video-editing
+description: Meri raw clips ko short-form vertical video (Reels/Shorts) mein edit karo, mere style mein.
+
+## Input
+- Clips (mp4/mov), images (png/jpg), optional voiceover (mp3/wav)
+- STYLE.md (agar ho) — reference videos se seekhe gaye style rules. Ye rules sabse upar.
+
+## Edit rules
+1. Har pause &gt; 0.3 sec aur filler words (umm, aaa, matlab, like) cut karo.
+2. Pehle 2 second mein sabse strong line ya visual rakho (hook).
+3. Captions: bold, 2-3 words at a time, centre se thoda neeche, safe area ke andar. Keyword ek accent colour mein.
+4. Har important line pe 110% punch-in zoom, 0.2 sec ease.
+5. Har 2-3 sec mein visual change: cut, zoom, B-roll ya image.
+6. Background music voice se 18-20 dB neeche; voice hamesha clear.
+7. Loudness approx -14 LUFS.
+8. End pe 1.5 sec CTA card (jo text main bataun).
+
+## Output
+- 1080x1920, 30 fps, H.264 mp4, file name: final_cut.mp4
+- Saath mein ek short edit log: kya cut kiya, kitne captions, total length.
+
+## Process
+- Pehle plan batao (cut list + timeline), meri &quot;ok&quot; ke baad render karo.
+- Kuch possible na ho (jaise koi effect), to saaf bata do aur closest option do.</pre></div></section><section id="s2"><span class="stag">7 steps</span><h2>7 steps</h2><ol class="num"><li><b>ChatGPT kholo.</b> Best hai ek naya Project banao (jaise &quot;Reels Editing&quot;), taaki style aur skill har chat mein yaad rahe.</li><li><b>References daalo.</b> 2–3 pasandida videos ke links do aur neeche wala STYLE prompt bhejo.</li><li><b>Skill add karo.</b> Upar wala SKILL.md file upload karo, ya Project instructions mein paste karo.</li><li><b>Footage taiyaar karo.</b> Clips (sabse achhe takes), images, aur agar ho to voiceover. AI visuals chahiye to kisi image/video tool se bana ke saath rakho.</li><li><b>Sab upload karo.</b> Clips, images, STYLE.md aur SKILL.md ek hi message mein.</li><li><b>Prompt bhejo</b> (neeche wala edit prompt).</li><li><b>Wait karo aur check karo.</b> Time file size par depend karta hai. Edit log padho, video dekho, phir changes maango.</li></ol><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Step 2 · STYLE prompt</div><pre>In videos ka editing style study karo: [links]. Cut speed, caption style, zooms, transitions, music level aur pacing ke rules nikalo, aur unhe STYLE.md file mein do jo main save kar saku.</pre></div><div class="tip">💡 Agar ChatGPT Instagram links na khol paaye, to videos download karke upload karo, ya ek connector (jaise Ootto) try karo. STYLE.md download karke rakh lo; ye sirf pehli baar karna hai.</div><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Step 6 · Edit prompt</div><pre>Meri video-editing skill aur STYLE.md follow karke in clips ko ek 30-45 second ki reel mein edit karo. Hook: [pehli line]. CTA card: &quot;Comment EDIT&quot;. Pehle cut list dikhao, phir render karo.</pre></div></section><section id="s3"><span class="stag">Changes</span><h2>Changes maangne ke prompts</h2><ul><li>&quot;Intro 2 second chhota karo, pehli line seedha shuru ho.&quot;</li><li>&quot;Captions bade karo aur keyword green mein.&quot;</li><li>&quot;Beech ke 5 second slow lag rahe hain, wahan B-roll daalo.&quot;</li><li>&quot;Music thoda kam karo, voice aur clear.&quot;</li><li>&quot;Same edit 1:1 square mein bhi export karo.&quot;</li></ul><div class="tip">💡 <b>Ek baar mein ek change maango;</b> 3–4 changes ek saath dene se galti badhti hai. Achha result mile to bolo &quot;ye style STYLE.md mein update kar do&quot;, agli video aur better aayegi. Final export khud phone pe dekh ke check karo: captions safe area mein hain, audio sync sahi hai.</div></section>
+<div class="end"><b style="font-size:18px">Kaam aaya? 🙌</b><br>Aise hi free AI tools &amp; guides ke liye follow karo<br><a href="https://www.instagram.com/aiwith.om/" target="_blank" rel="noopener">Follow @aiwith.om</a></div>
+</main><script>function cp(b){const t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(()=>{b.textContent='copied ✓';setTimeout(()=>b.textContent='copy',1500)})}</script></body></html>

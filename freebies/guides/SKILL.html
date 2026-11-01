@@ -1,0 +1,61 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SKILL · Instagram agent skill for Claude | aiwith.om</title><meta name="description" content="Ek Claude skill jo Claude ko aapka Instagram content manager bana deti hai: posts, comment replies, profile audit, weekly plan, aur virality analysis.">
+<link rel="icon" href="../avatar.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F1EADC;--ink:#1C1A17;--rose:#FF2D95;--cer:#007BA7;--mute:#8C8780;--line:#E7E0D4;--sh:0 18px 40px rgba(60,40,20,.13)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:500 15.5px/1.6 Inter,'Noto Sans Devanagari',system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}a{color:var(--rose)}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top img{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:var(--sh)}
+.pill{font:800 11px Inter;color:#fff;background:var(--rose);border-radius:20px;padding:3px 10px;text-decoration:none}.pill.c{background:var(--cer)}
+h1{font-size:36px;line-height:1.05;letter-spacing:-1px;margin:14px 0 8px;font-weight:900}h1 span{color:var(--rose)}
+.intro{color:#4A4540;font-weight:600}.back{font-weight:800;text-decoration:none;font-size:14px}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.nav a{text-decoration:none;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:20px;padding:4px 11px;font:800 12px Inter}
+section{background:#fff;border-radius:22px;padding:20px;margin:16px 0;box-shadow:var(--sh)}
+.stag{display:inline-block;font:800 11px Inter;letter-spacing:1px;text-transform:uppercase;color:var(--cer);background:rgba(0,123,167,.09);border-radius:20px;padding:3px 10px}
+h2{font-size:23px;line-height:1.2;margin:8px 0 10px;font-weight:900}
+code{font:500 .9em 'JetBrains Mono',monospace;background:#F6F2EC;border-radius:6px;padding:1px 6px}
+.code{position:relative;background:#1C1A17;border-radius:14px;padding:12px 14px;margin:12px 0}.code pre{margin:6px 0 0;color:#F3EDE3;font:500 13px/1.55 'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-word}
+.code .lbl{font:800 10px Inter;letter-spacing:1px;text-transform:uppercase;color:#B5A893}.cp{position:absolute;right:10px;top:10px;border:0;background:var(--rose);color:#fff;font:800 11px Inter;border-radius:8px;padding:4px 10px;cursor:pointer}
+.prompt{background:#FFF7FB;border:2px solid #FFD0E6}.prompt pre{color:var(--ink)}.prompt .lbl{color:var(--rose)}
+.tip,.warn{border-radius:12px;padding:10px 13px;margin:12px 0;font-weight:600;font-size:14px}.tip{background:#EAF6FB;border-left:4px solid var(--cer)}.warn{background:#FFF0F6;border-left:4px solid var(--rose)}
+.cmds{display:grid;gap:8px}.cmd{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:9px 11px}.cmd code{flex:none;font-weight:700;color:var(--rose);background:#FFF0F6}.cmd span{font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--cer);border-bottom:2px solid var(--line);padding:7px}td{border-bottom:1px solid #F1ECE3;padding:7px;vertical-align:top}
+.repo{display:flex;gap:12px;text-decoration:none;color:var(--ink);border:2px solid var(--line);border-radius:16px;padding:13px;margin:10px 0}.rlogo{flex:none;width:46px;height:46px;border-radius:12px;background:#1C1A17;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+.rurl{font:500 12px 'JetBrains Mono',monospace;color:var(--cer)}.rdesc{font-size:13.5px;margin-top:4px}.badges span{display:inline-block;margin:6px 6px 0 0;font:800 11px Inter;border:1.5px solid var(--line);border-radius:8px;padding:2px 7px}
+ol.num{padding-left:20px}ol.num li,ul li{margin:5px 0}
+.plugs{display:grid;gap:10px}.plug{border:1.5px solid var(--line);border-radius:14px;padding:11px 13px}.ph{display:flex;justify-content:space-between;align-items:center;gap:8px}.ph b{font-size:16px}.lic{font:800 10px Inter;border:1.5px solid var(--line);border-radius:8px;padding:1px 7px;color:var(--mute);white-space:nowrap}.pd{font-size:14px;margin-top:3px}.code.sm{padding:8px 12px;margin:8px 0 4px}.code.sm pre{margin:0;font-size:12px;padding-right:56px}.w{display:inline-block;margin:4px 6px 0 0;font:800 11px Inter;color:#B4235F;background:#FFF0F6;border-radius:8px;padding:2px 8px}
+figure{margin:12px 0}figure img{width:100%;border-radius:14px;display:block}figcaption{font-size:12.5px;color:var(--mute);margin-top:6px;text-align:center}
+.credit{font-size:12.5px;color:var(--mute);text-align:center;margin-top:20px}
+.end{text-align:center;background:var(--ink);color:#fff;border-radius:20px;padding:20px;margin-top:20px}.end a{display:inline-block;margin-top:10px;background:var(--rose);color:#fff;text-decoration:none;font-weight:900;border-radius:12px;padding:10px 18px}
+</style></head><body><main>
+<a class="back" href="../index.html">← Saare freebies</a>
+<div class="top" style="margin-top:12px"><img src="../avatar.png" alt=""><b>@aiwith.om</b><span class="pill">freebie · comment SKILL</span></div>
+<h1>Instagram agent skill <span>for Claude</span></h1><p class="intro">Ek Claude skill jo Claude ko aapka Instagram content manager bana deti hai: posts, comment replies, profile audit, weekly plan, aur virality analysis.</p>
+<div class="nav"><a href="#s0">Pehle padho</a><a href="#s1">SKILL.md</a><a href="#s2">Install</a><a href="#s3">Use</a></div><section id="s0"><span class="stag">Pehle padho</span><h2>Ye skill kya karti hai</h2><p>Ye ek Claude skill hai jo Claude ko aapka Instagram content manager bana deti hai: posts likhna, comment replies draft karna, profile audit, weekly plan, aur sabse important, <b>virality analysis</b> jo niche ki best reels se winning scripts banata hai.</p><div class="warn">⚠️ Sach: skill akele Instagram pe post ya reply nahi karti; wo drafts aur plans banati hai jo aap khud post karte ho. Seedha Instagram data padhne ya post karne ke liye ek connector chahiye (jaise Ootto). Bina connector ke, aap reels ke links, screenshots ya insights paste karke bhi isse use kar sakte ho.</div></section><section id="s1"><span class="stag">SKILL.md</span><h2>SKILL.md (copy karo)</h2><p>Neeche ka text ek folder <b>instagram-agent</b> mein <b>SKILL.md</b> naam se save karo.</p><div class="code"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">instagram-agent/SKILL.md</div><pre>---
+name: instagram-agent
+description: Instagram content manager. Use when the user asks to write posts or reels, reply to comments, audit or optimise their profile, plan a week of content, analyse competitors, or find what is going viral in their niche and turn it into scripts.
+---
+# Instagram Agent
+Pehle user se (ek baar) ye poochho aur yaad rakho: niche, audience, language (Hinglish/Hindi/English), tone, goal (followers / leads / sales), posting frequency.
+
+## Jobs
+1. Post writer: reel script (hook 0-3s, 3-5 beats, CTA), carousel (8-10 slides), caption + 5-10 hashtags.
+2. Hook lab: har idea ke 5 hooks; curiosity, number, contrarian, result, mistake angles.
+3. Comment replies: user ke pasted comments ke liye short, warm replies; sawaal ka seedha jawab; spam/abuse ko &quot;skip&quot; mark karo.
+4. DM drafts: comment-keyword DMs aur FAQ replies (send khud mat karo, sirf draft).
+5. Profile audit: name field keywords, bio (kaun, kya value, CTA), link, highlights, pinned posts. Score /10 + exact rewrites.
+6. Weekly planner: 7 din, format mix (reels/carousels/stories), topic, hook, CTA, best time.
+7. Monthly calendar: 30 din, content pillars ke hisaab se.
+8. Competitor scan: diye gaye accounts ke top posts ka hook, format, length, posting pattern.
+9. VIRALITY (most important): niche ke outlier reels (account average se 3-5x) lo; har ek ka WHY nikalo: hook type, format, topic angle, length, pacing, CTA. Phir user ke liye 3 winning scripts banao jo wahi patterns use karein but original hon.
+10. Repurpose: ek reel ko carousel, story aur thread mein badlo.
+11. Weekly review: user ke insights (reach, saves, shares, follows) padh ke batao kya chala, kya nahi, agle hafte kya badlein.
+
+## Rules
+- Kabhi kisi ka content copy mat karo; patterns lo, words apne.
+- Har output table ya numbered list mein.
+- Kuch bhi post/send karne se pehle user ka &quot;yes&quot; lo.
+- Unverified claims (income, results) mat likho.</pre></div></section><section id="s2"><span class="stag">Install</span><h2>Claude mein install kaise karein</h2><ol class="num"><li>Upar ka text copy karke ek folder <b>instagram-agent</b> banao, usme <b>SKILL.md</b> file save karo.</li><li>Folder ko zip karo (<b>instagram-agent.zip</b>).</li><li>claude.ai kholo, <b>Customize</b> (ya Settings) mein <b>Skills</b> section pe jao.</li><li><b>Upload skill / Add skill</b> dabao aur zip upload karo. Skill ko on karo.</li><li>Naya chat kholo aur likho: &quot;instagram-agent skill use karke mera profile audit karo&quot;. Claude pehle aapka niche aur audience poochega.</li></ol><div class="tip">💡 Skills ka option aur menu ka naam Claude ke plan aur version ke hisaab se thoda alag ho sakta hai. Skills option na mile to SKILL.md ka text ek <b>Project ke instructions</b> mein paste karke bhi same kaam ho jaata hai.</div></section><section id="s3"><span class="stag">Use</span><h2>Kaise use karein (example commands)</h2><table><tr><th>Job</th><th>Claude ko bolo</th></tr><tr><td><b>Virality</b></td><td>&quot;Ye 5 viral reels hain [links/screenshots]. Inka WHY nikalo aur mere liye 3 winning scripts banao.&quot;</td></tr><tr><td><b>Post writer</b></td><td>&quot;Kal ke liye ek 45 sec reel script do: topic [X], Hinglish.&quot;</td></tr><tr><td><b>Hook lab</b></td><td>&quot;Is idea ke 5 hooks do: [idea].&quot;</td></tr><tr><td><b>Comment replies</b></td><td>&quot;Ye comments hain [paste]. Har ek ka short reply draft karo.&quot;</td></tr><tr><td><b>Profile audit</b></td><td>&quot;Mera bio, name aur highlights ye hain [paste]. Audit karo aur rewrite do.&quot;</td></tr><tr><td><b>Weekly plan</b></td><td>&quot;Agle 7 din ka content plan do.&quot;</td></tr><tr><td><b>Weekly review</b></td><td>&quot;Is hafte ke insights ye hain [paste]. Kya chala, kya badlein?&quot;</td></tr></table><div class="tip">💡 <b>Virality job se shuru karo,</b> wahi sabse zyada value deta hai. Har hafte 15 minute review aur ek naya virality round.</div></section>
+<div class="end"><b style="font-size:18px">Kaam aaya? 🙌</b><br>Aise hi free AI tools &amp; guides ke liye follow karo<br><a href="https://www.instagram.com/aiwith.om/" target="_blank" rel="noopener">Follow @aiwith.om</a></div>
+</main><script>function cp(b){const t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(()=>{b.textContent='copied ✓';setTimeout(()=>b.textContent='copy',1500)})}</script></body></html>
