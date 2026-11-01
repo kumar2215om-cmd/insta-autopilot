@@ -89,3 +89,8 @@ main > h1 + p,main > h2,main > table{animation:gp-rise .6s cubic-bezier(.2,.8,.2
 @keyframes gp-beat{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 @keyframes gp-sweep{0%,35%{transform:translateX(-120%)}75%,100%{transform:translateX(120%)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.gp-js section,.gp-js .end{opacity:1;transform:none}}
+
+/* Wide tables scroll sideways inside their card on phones instead of pushing the whole page sideways */
+section table,main > table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+section td,section th{min-width:96px}
+section td a{word-break:break-word}
