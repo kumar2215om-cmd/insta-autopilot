@@ -106,8 +106,23 @@
   @keyframes zoom { from { transform:scale(1); } to { transform:scale(1.07); } }
   @keyframes beat { 0%, 100% { transform:scale(1); box-shadow:0 0 0 0 color-mix(in srgb, var(--rose) 45%, transparent); }
                     50% { transform:scale(1.06); box-shadow:0 0 0 6px color-mix(in srgb, var(--rose) 0%, transparent); } }
+  /* Link cards: slide in one after another, then stay quiet: a light shine, the letter tile tilting, the arrow nudging.
+     Featured links keep their rose ring and get the breathing glow. */
+  .link { position:relative; overflow:hidden; opacity:0; animation: rise .55s cubic-bezier(.2,.8,.2,1) forwards; animation-delay:calc(var(--i) * .08s + .2s); }
+  .link::after { content:""; position:absolute; inset:0; pointer-events:none;
+                 background:linear-gradient(110deg, transparent 40%, color-mix(in srgb, var(--rose) 12%, transparent) 50%, transparent 60%);
+                 transform:translateX(-120%); animation: sweep 5s ease-in-out infinite; animation-delay:calc(var(--d) + 2s); }
+  .link .ico { animation: tilt 4s ease-in-out infinite; animation-delay:var(--d); }
+  .link .open { display:inline-block; animation: nudge 1.8s ease-in-out infinite; animation-delay:var(--d); }
+  .link.featured { animation: rise .55s cubic-bezier(.2,.8,.2,1) forwards, ringf 2.8s ease-in-out infinite;
+                   animation-delay:calc(var(--i) * .08s + .2s), var(--d); }
+  @media (hover:hover) { .link:hover .ico { animation-play-state:paused; transform:rotate(-8deg) scale(1.08); } .link:hover .open { transform:translateX(5px); } }
+  @keyframes rise { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  @keyframes tilt { 0%, 100% { transform:rotate(0); } 20% { transform:rotate(-7deg) translateY(-2px); } 40% { transform:rotate(5deg); } 55% { transform:rotate(0); } }
+  @keyframes ringf { 0%, 100% { box-shadow:0 0 0 3px var(--rose), 0 18px 40px rgba(60,40,20,.14); }
+                     50% { box-shadow:0 0 0 3px var(--rose), 0 0 0 9px color-mix(in srgb, var(--rose) 18%, transparent), 0 18px 44px rgba(60,40,20,.16); } }
   @media (prefers-reduced-motion: reduce) { .follow, .follow::after, .follow svg, .freecard, .freecard *, .freecard .thumb::after,
-    .prod, .prod *, .prod .thumb::after { animation:none !important; } .spark { display:none; } }
+    .prod, .prod *, .prod .thumb::after, .link, .link *, .link::after { animation:none !important; } .link { opacity:1; } .spark { display:none; } }
 
   .label { font-size:12px; font-weight:800; letter-spacing:2px; color:var(--mute); margin:22px 2px 10px; text-transform:uppercase; }
   .grid { display:grid; gap:14px; }
@@ -198,7 +213,7 @@
             <div class="row">{% if it.price and it.image %}<span class="price">{{ it.price if not it.price[0].isdigit() else "₹" ~ it.price }}</span>{% else %}<span class="topic">Instant access</span>{% endif %}<span class="open">Get it →</span></div></div>
         </a>
       {% else %}
-        <a class="card shadow link {{ 'featured' if it.featured }}" href="/go/{{ it.id }}" rel="noopener">
+        <a class="card shadow link {{ 'featured' if it.featured }}" href="/go/{{ it.id }}" rel="noopener" style="--d:{{ '%.1f' % (loop.index0 * 0.5) }}s; --i:{{ loop.index0 }}">
           <span class="ico">{{ (it.title or "?")[0] | upper }}</span>
           <div class="txt"><div class="t">{% if it.featured %}⭐ {% endif %}{{ it.title }}</div>{% if it.subtitle %}<div class="s">{{ it.subtitle }}</div>{% endif %}</div>
           <span class="open">→</span>
