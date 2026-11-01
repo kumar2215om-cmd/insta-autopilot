@@ -50,6 +50,40 @@ h1{font-size:34px;line-height:1.05;letter-spacing:-1px;margin:18px 0 6px;font-we
 .empty{display:none;text-align:center;background:#fff;border-radius:18px;padding:26px 18px;box-shadow:var(--shadow);font-weight:700}
 .empty b{color:var(--rose)}
 footer{text-align:center;margin-top:30px;font-size:14px;font-weight:700;color:var(--mute)}footer a{color:var(--rose);text-decoration:none;font-weight:900}
+
+/* ---------- Motion (same feel as the link page). Everything is off for visitors who prefer reduced motion. ---------- */
+.av{position:relative;isolation:isolate;background:none;animation:avin .6s cubic-bezier(.3,1.6,.5,1) backwards}
+.av::before{content:"";position:absolute;inset:0;border-radius:50%;z-index:-1;background:conic-gradient(var(--rose),#F5B83D,var(--cer),var(--rose));animation:spin 4s linear infinite}
+.av::after{content:"";position:absolute;inset:0;border-radius:50%;z-index:-2;animation:ripple 2.4s ease-out infinite}
+.tag{animation:pop 1.6s ease-in-out infinite}
+h1 span{display:inline-block;animation:hl 3.5s ease-in-out infinite}
+.note{animation:rise .6s cubic-bezier(.2,.8,.2,1) .15s backwards}
+.follow{position:relative;overflow:hidden;isolation:isolate;animation:glow 2.4s ease-in-out infinite;transition:transform .15s}
+.follow:active{transform:scale(.97)}
+.follow::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(255,45,149,.55) 50%,transparent 65%);transform:translateX(-120%);animation:sweep 3s ease-in-out infinite}
+.chip{animation:chipin .45s cubic-bezier(.3,1.5,.5,1) backwards;animation-delay:calc(var(--i,0)*.05s + .2s);transition:transform .15s,background .15s,border-color .15s,color .15s}
+.chip:active{transform:scale(.94)}
+.search input{transition:border-color .15s,box-shadow .15s}.search input:focus{box-shadow:0 0 0 5px rgba(255,45,149,.14)}
+.grid.intro .card{animation:rise .55s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i)*.07s + .1s)}
+.thumb::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.7) 50%,transparent 60%);transform:translateX(-120%);animation:sweep 5s ease-in-out infinite;animation-delay:calc(var(--i)*.4s + 1.5s)}
+.emo{animation:bob 3s ease-in-out infinite;animation-delay:calc(var(--i)*.3s)}
+.new{animation:pop 1.4s ease-in-out infinite}
+.open{display:inline-block;animation:nudge 1.8s ease-in-out infinite;animation-delay:calc(var(--i)*.2s)}
+.card.match{animation:ring 2.4s ease-in-out infinite}
+@media (hover:hover){.card:hover{transform:translateY(-3px)}.card:hover .emo{animation-play-state:paused;transform:rotate(-6deg) scale(1.1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ripple{0%{box-shadow:0 0 0 0 rgba(255,45,149,.5)}100%{box-shadow:0 0 0 12px rgba(255,45,149,0)}}
+@keyframes avin{from{transform:scale(.4) rotate(-20deg);opacity:0}}
+@keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+@keyframes hl{0%,100%{transform:rotate(0)}10%{transform:rotate(-3deg) scale(1.04)}20%{transform:rotate(2deg)}30%{transform:rotate(0)}}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,45,149,.45),0 10px 24px rgba(28,26,23,.18);transform:scale(1)}50%{box-shadow:0 0 0 8px rgba(255,45,149,0),0 14px 30px rgba(28,26,23,.22);transform:scale(1.02)}}
+@keyframes sweep{0%,35%{transform:translateX(-120%)}75%,100%{transform:translateX(120%)}}
+@keyframes chipin{from{opacity:0;transform:translateY(8px) scale(.85)}}
+@keyframes bob{0%,100%{transform:rotate(6deg) translateY(0)}40%{transform:rotate(6deg) translateY(-5px)}55%{transform:rotate(-3deg) translateY(-5px)}65%{transform:rotate(10deg) translateY(-3px)}75%{transform:rotate(6deg) translateY(0)}}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
+@keyframes ring{0%,100%{box-shadow:0 0 0 3px var(--rose),0 18px 40px rgba(60,40,20,.14)}50%{box-shadow:0 0 0 3px var(--rose),0 0 0 9px rgba(255,45,149,.18),0 18px 44px rgba(60,40,20,.16)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -70,21 +104,22 @@ const D={"items": [{"n": 59, "k": "FACTORY", "t": "Claude Code se viral 2D reels
 const grid=document.getElementById('grid'),q=document.getElementById('q'),chips=document.getElementById('chips'),count=document.getElementById('count'),empty=document.getElementById('empty');
 let topic='Sab';
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-['Sab',...D.topics].forEach(t=>{const b=document.createElement('button');b.className='chip'+(t==='Sab'?' on':'');b.textContent=t;b.onclick=()=>{topic=t;[...chips.children].forEach(c=>c.classList.toggle('on',c===b));render()};chips.appendChild(b)});
+['Sab',...D.topics].forEach((t,ci)=>{const b=document.createElement('button');b.className='chip'+(t==='Sab'?' on':'');b.style.setProperty('--i',ci);b.textContent=t;b.onclick=()=>{topic=t;[...chips.children].forEach(c=>c.classList.toggle('on',c===b));intro();render()};chips.appendChild(b)});
 function render(){
   const s=q.value.trim().toUpperCase();
   const list=D.items.filter(i=>(topic==='Sab'||i.topic===topic)&&(!s||i.k.includes(s)||i.t.toUpperCase().includes(s)));
   // Freebies added from the editor (pin) stay on top; an exact keyword match wins when searching.
   list.sort((a,b)=>(s?(b.k===s)-(a.k===s):0)||((b.pin?1:0)-(a.pin?1:0)));
-  grid.innerHTML=list.map((i,n)=>`<a class="card" href="${esc(i.u)}" target="_blank" rel="noopener">
+  grid.innerHTML=list.map((i,n)=>`<a class="card${s&&i.k===s?' match':''}" style="--i:${Math.min(n,8)}" href="${esc(i.u)}" target="_blank" rel="noopener">
     <div class="thumb"><div class="kw"><small>COMMENT KEYWORD</small>${esc(i.k)}</div><div class="emo">${i.e}</div>${(i.pin||D.items.indexOf(i)<3)?'<span class="new">NEW</span>':''}</div>
     <div class="body"><div class="t">${esc(i.t)}</div><div class="row"><span class="topic">${esc(i.topic)}</span><span class="open">Kholo →</span></div></div></a>`).join('');
   count.textContent=list.length+' freebies';
   empty.style.display=list.length?'none':'block';
 }
+function intro(){grid.classList.remove('intro');void grid.offsetWidth;grid.classList.add('intro');clearTimeout(intro.t);intro.t=setTimeout(()=>grid.classList.remove('intro'),1400)}
 q.addEventListener('input',render);
 const p=new URLSearchParams(location.search).get('k'); if(p){q.value=p.toUpperCase()}
-render();
+intro();render();
 </script>
 </body>
 </html>
