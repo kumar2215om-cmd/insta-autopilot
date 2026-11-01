@@ -121,8 +121,20 @@
   @keyframes tilt { 0%, 100% { transform:rotate(0); } 20% { transform:rotate(-7deg) translateY(-2px); } 40% { transform:rotate(5deg); } 55% { transform:rotate(0); } }
   @keyframes ringf { 0%, 100% { box-shadow:0 0 0 3px var(--rose), 0 18px 40px rgba(60,40,20,.14); }
                      50% { box-shadow:0 0 0 3px var(--rose), 0 0 0 9px color-mix(in srgb, var(--rose) 18%, transparent), 0 18px 44px rgba(60,40,20,.16); } }
+  /* Social chips: pop in one by one, then each icon does a small bounce in turn (a wave across the row).
+     On hover/tap the chip lifts and takes its platform colour. */
+  .socials a { animation: chipin .45s cubic-bezier(.3,1.5,.5,1) backwards; animation-delay:calc(var(--i) * .07s + .1s);
+               transition: transform .15s, background .15s, color .15s, border-color .15s; }
+  .socials a svg { animation: hop 4.2s ease-in-out infinite; animation-delay:calc(var(--i) * .35s + 1s); }
+  .socials a:active { transform: scale(.94); }
+  @media (hover:hover) { .socials a:hover { transform: translateY(-3px); color:#fff; border-color:transparent; background:var(--brand, var(--rose)); } }
+  .s-instagram { --brand: linear-gradient(110deg,#4f5bd5,#962fbf,#d62976,#fa7e1e); } .s-youtube { --brand:#FF0000; }
+  .s-whatsapp { --brand:#25D366; } .s-email { --brand:var(--cer); } .s-x { --brand:#111; } .s-website { --brand:var(--rose); }
+  @keyframes chipin { from { opacity:0; transform:translateY(8px) scale(.85); } to { opacity:1; transform:none; } }
+  @keyframes hop { 0%, 12%, 100% { transform:none; } 4% { transform:translateY(-4px) rotate(-10deg); } 8% { transform:translateY(0) rotate(6deg); } }
   @media (prefers-reduced-motion: reduce) { .follow, .follow::after, .follow svg, .freecard, .freecard *, .freecard .thumb::after,
-    .prod, .prod *, .prod .thumb::after, .link, .link *, .link::after { animation:none !important; } .link { opacity:1; } .spark { display:none; } }
+    .prod, .prod *, .prod .thumb::after, .link, .link *, .link::after, .socials a, .socials svg { animation:none !important; }
+    .link, .socials a { opacity:1; } .spark { display:none; } }
 
   .label { font-size:12px; font-weight:800; letter-spacing:2px; color:var(--mute); margin:22px 2px 10px; text-transform:uppercase; }
   .grid { display:grid; gap:14px; }
@@ -187,7 +199,7 @@
   {% if page.bio %}<p class="bio">{{ page.bio }}</p>{% endif %}
 
   {% if socials %}
-    <nav class="socials">{% for key, label, url in socials %}<a href="{{ url }}" target="_blank" rel="noopener">{{ icons[key] | safe }}{{ label }}</a>{% endfor %}</nav>
+    <nav class="socials">{% for key, label, url in socials %}<a class="s-{{ key }}" href="{{ url }}" target="_blank" rel="noopener" style="--i:{{ loop.index0 }}">{{ icons[key] | safe }}{{ label }}</a>{% endfor %}</nav>
   {% endif %}
   {% if username %}
     <a class="follow" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">{{ icons["instagram"] | safe }} Follow @{{ username }}</a>
