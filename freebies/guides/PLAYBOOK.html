@@ -1,0 +1,55 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PLAYBOOK · AI delegation: 1 agent + playbooks | aiwith.om</title><meta name="description" content="Thanks for commenting PLAYBOOK! Stop building a new agent for every task. Run one agent and give it a playbook for each job. Every prompt included.">
+<link rel="icon" href="../avatar.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F1EADC;--ink:#1C1A17;--rose:#FF2D95;--cer:#007BA7;--mute:#8C8780;--line:#E7E0D4;--sh:0 18px 40px rgba(60,40,20,.13)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:500 15.5px/1.6 Inter,'Noto Sans Devanagari',system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}a{color:var(--rose)}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top img{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:var(--sh)}
+.pill{font:800 11px Inter;color:#fff;background:var(--rose);border-radius:20px;padding:3px 10px;text-decoration:none}.pill.c{background:var(--cer)}
+h1{font-size:36px;line-height:1.05;letter-spacing:-1px;margin:14px 0 8px;font-weight:900}h1 span{color:var(--rose)}
+.intro{color:#4A4540;font-weight:600}.back{font-weight:800;text-decoration:none;font-size:14px}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.nav a{text-decoration:none;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:20px;padding:4px 11px;font:800 12px Inter}
+section{background:#fff;border-radius:22px;padding:20px;margin:16px 0;box-shadow:var(--sh)}
+.stag{display:inline-block;font:800 11px Inter;letter-spacing:1px;text-transform:uppercase;color:var(--cer);background:rgba(0,123,167,.09);border-radius:20px;padding:3px 10px}
+h2{font-size:23px;line-height:1.2;margin:8px 0 10px;font-weight:900}
+code{font:500 .9em 'JetBrains Mono',monospace;background:#F6F2EC;border-radius:6px;padding:1px 6px}
+.code{position:relative;background:#1C1A17;border-radius:14px;padding:12px 14px;margin:12px 0}.code pre{margin:6px 0 0;color:#F3EDE3;font:500 13px/1.55 'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-word}
+.code .lbl{font:800 10px Inter;letter-spacing:1px;text-transform:uppercase;color:#B5A893}.cp{position:absolute;right:10px;top:10px;border:0;background:var(--rose);color:#fff;font:800 11px Inter;border-radius:8px;padding:4px 10px;cursor:pointer}
+.prompt{background:#FFF7FB;border:2px solid #FFD0E6}.prompt pre{color:var(--ink)}.prompt .lbl{color:var(--rose)}
+.tip,.warn{border-radius:12px;padding:10px 13px;margin:12px 0;font-weight:600;font-size:14px}.tip{background:#EAF6FB;border-left:4px solid var(--cer)}.warn{background:#FFF0F6;border-left:4px solid var(--rose)}
+.cmds{display:grid;gap:8px}.cmd{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:9px 11px}.cmd code{flex:none;font-weight:700;color:var(--rose);background:#FFF0F6}.cmd span{font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--cer);border-bottom:2px solid var(--line);padding:7px}td{border-bottom:1px solid #F1ECE3;padding:7px;vertical-align:top}
+.repo{display:flex;gap:12px;text-decoration:none;color:var(--ink);border:2px solid var(--line);border-radius:16px;padding:13px;margin:10px 0}.rlogo{flex:none;width:46px;height:46px;border-radius:12px;background:#1C1A17;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+.rurl{font:500 12px 'JetBrains Mono',monospace;color:var(--cer)}.rdesc{font-size:13.5px;margin-top:4px}.badges span{display:inline-block;margin:6px 6px 0 0;font:800 11px Inter;border:1.5px solid var(--line);border-radius:8px;padding:2px 7px}
+ol.num{padding-left:20px}ol.num li,ul li{margin:5px 0}
+.plugs{display:grid;gap:10px}.plug{border:1.5px solid var(--line);border-radius:14px;padding:11px 13px}.ph{display:flex;justify-content:space-between;align-items:center;gap:8px}.ph b{font-size:16px}.lic{font:800 10px Inter;border:1.5px solid var(--line);border-radius:8px;padding:1px 7px;color:var(--mute);white-space:nowrap}.pd{font-size:14px;margin-top:3px}.code.sm{padding:8px 12px;margin:8px 0 4px}.code.sm pre{margin:0;font-size:12px;padding-right:56px}.w{display:inline-block;margin:4px 6px 0 0;font:800 11px Inter;color:#B4235F;background:#FFF0F6;border-radius:8px;padding:2px 8px}
+figure{margin:12px 0}figure img{width:100%;border-radius:14px;display:block}figcaption{font-size:12.5px;color:var(--mute);margin-top:6px;text-align:center}
+.credit{font-size:12.5px;color:var(--mute);text-align:center;margin-top:20px}
+.end{text-align:center;background:var(--ink);color:#fff;border-radius:20px;padding:20px;margin-top:20px}.end a{display:inline-block;margin-top:10px;background:var(--rose);color:#fff;text-decoration:none;font-weight:900;border-radius:12px;padding:10px 18px}
+</style></head><body><main>
+<a class="back" href="../index.html">← Saare freebies</a>
+<div class="top" style="margin-top:12px"><img src="../avatar.png" alt=""><b>@aiwith.om</b><span class="pill">freebie · comment PLAYBOOK</span></div>
+<h1>AI delegation: <span>1 agent + playbooks</span></h1><p class="intro">Thanks for commenting PLAYBOOK! Stop building a new agent for every task. Run one agent and give it a playbook for each job. Every prompt included.</p>
+<div class="nav"><a href="#s0">The idea</a><a href="#s1">Setup</a><a href="#s2">01 · Interview</a><a href="#s3">02 · Toolbox</a><a href="#s4">03 · Proof</a><a href="#s5">04 · Fix loop</a></div><section id="s0"><span class="stag">The idea</span><h2>One agent, many playbooks</h2><p>This works best in <b>Claude (Projects)</b>, and also works in ChatGPT (Projects or custom GPTs). The idea: stop building a new agent for every task. Run one agent and give it a <b>playbook</b> for each job.</p><p>Anthropic engineers made the same point in their talk <b>&quot;Don&#x27;t build agents, build skills instead&quot;</b>. A playbook is basically a skill: written instructions plus files the AI loads when it does that job.</p></section><section id="s1"><span class="stag">Setup</span><h2>Setup (one time)</h2><p>In Claude, create a Project called <b>&quot;My Delegation&quot;</b> with three parts:</p><ul><li><b>PLAYBOOKS:</b> one file per job (e.g. <code>weekly-report.md</code>)</li><li><b>TOOLBOX:</b> approved scripts, templates, docs and examples</li><li><b>Project instructions:</b> the master prompt below</li></ul><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Master prompt</div><pre>You are my delegate. Before any task:
+1. Find the matching playbook and follow it exactly.
+2. Use files from the toolbox instead of creating new versions.
+3. Before you show me anything, check your work against the playbook&#x27;s DONE MEANS checklist and tell me which checks passed.
+If no playbook exists for a task, say so and offer to interview me to create one.</pre></div></section><section id="s2"><span class="stag">01 · Interview</span><h2>Turn your work into a playbook</h2><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Interview prompt</div><pre>Interview me about how I do &lt;task&gt; until you could do it without me.
+Ask one question at a time: the goal, who it&#x27;s for, the inputs, the steps, the format, the rules, common mistakes, and who signs it off.
+When you have enough, say &quot;READY&quot;.</pre></div><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Then</div><pre>Turn everything I told you into a playbook file:
+# &lt;Task name&gt;
+Goal:
+Inputs:
+Steps (numbered):
+Rules (always / never):
+Toolbox files to use:
+DONE MEANS (checklist):
+Keep it under one page.
+Save it in PLAYBOOKS.</pre></div></section><section id="s3"><span class="stag">02 · Toolbox</span><h2>Never make the same thing twice</h2><p>Every time you approve an output (a script, a template, an email or a report), save it to the toolbox and link it in the playbook as a rule.</p><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Toolbox prompt</div><pre>This output is approved. Turn it into a reusable template (replace specifics with {placeholders}).
+Then add a rule to the &lt;task&gt; playbook: &quot;Always start from toolbox/&lt;file&gt;&quot;.</pre></div></section><section id="s4"><span class="stag">03 · Proof</span><h2>The &quot;done&quot; checklist</h2><p>Hardly anyone does this, and it&#x27;s the step that makes the agent reliable.</p><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Checklist prompt</div><pre>Write a DONE MEANS checklist for &lt;task&gt;: 4–6 checks that are specific and verifiable (no &quot;looks good&quot;).
+Add it to the playbook. From now on, review your own work against it before you hand anything over, and show me pass/fail for each check.</pre></div><p><b>Example for a weekly report:</b></p><ul><li>Matches the brief</li><li>Built from the toolbox template</li><li>Every number double-checked against the source</li><li>Ready to send as is</li></ul></section><section id="s5"><span class="stag">04 · Fix loop</span><h2>The fix loop</h2><p>When the agent messes up, don&#x27;t correct it in the chat, because the chat is forgotten next time. <b>Fix the playbook instead:</b></p><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Fix prompt</div><pre>That was wrong because &lt;reason&gt;.
+Update the &lt;task&gt; playbook so this can&#x27;t happen again (add a step, a rule or a check). Show me the diff.</pre></div><div class="tip">💡 <b>Playbook → run → check → fix playbook.</b> That&#x27;s the whole loop. Each fix makes every future run better.</div><p><b>Starter playbook ideas:</b> weekly report · client emails · reel scripts · meeting notes to action items · invoice follow-ups · social captions · research summaries.</p></section>
+<div class="end"><b style="font-size:18px">Kaam aaya? 🙌</b><br>Aise hi free AI tools &amp; guides ke liye follow karo<br><a href="https://www.instagram.com/aiwith.om/" target="_blank" rel="noopener">Follow @aiwith.om</a></div>
+</main><script>function cp(b){const t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(()=>{b.textContent='copied ✓';setTimeout(()=>b.textContent='copy',1500)})}</script></body></html>
