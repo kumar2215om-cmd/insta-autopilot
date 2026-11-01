@@ -3,151 +3,180 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Link Page Editor</title>
+<title>Link page · Autopilot</title>
+{% set active = "links" %}
+{% include "_admin_style.html" %}
 <style>
-  :root {
-    --bg:#f7f4fb; --card:#fff; --text:#1d1530; --muted:#6f6886; --line:#ece6f5;
-    --ig: linear-gradient(120deg, #4f5bd5 0%, #962fbf 30%, #d62976 60%, #fa7e1e 85%, #feda75 100%);
-    --pink:#d62976; --green:#16a34a; --err:#dc2626; --shadow: 0 6px 24px rgba(80, 40, 140, .08);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#120f1a; --card:#1c1727; --text:#f1ecfa; --muted:#a59cba; --line:#2d2540;
-            --shadow: 0 6px 24px rgba(0,0,0,.35); }
-  }
-  * { box-sizing: border-box; }
-  body { margin:0; font:14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-  header { background:var(--ig); color:#fff; padding:16px; }
-  .top { max-width:1300px; margin:auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  header h1 { font-size:20px; margin:0; margin-right:auto; }
-  header a { color:#fff; font-weight:600; text-decoration:none; padding:7px 12px; border-radius:10px;
-             background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.45); }
-  main { max-width:1300px; margin:auto; padding:16px; display:grid; gap:20px; grid-template-columns: 1fr 400px; align-items:start; }
-  @media (max-width: 960px) { main { grid-template-columns: 1fr; } .preview { display:none; } }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:16px; margin-bottom:16px; }
-  h2 { font-size:16px; margin:0 0 12px; }
-  label { display:block; font-size:12px; font-weight:600; color:var(--muted); margin:8px 0 4px; }
-  input[type=text], textarea, select { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:10px;
-          background:var(--bg); color:var(--text); font:inherit; }
-  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:0 12px; }
-  @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
-  .themes { display:flex; gap:10px; flex-wrap:wrap; }
-  .swatch { width:64px; height:44px; border-radius:12px; cursor:pointer; border:3px solid transparent;
-            display:grid; place-items:end center; font-size:10px; font-weight:700; padding-bottom:3px; color:#fff;
-            text-shadow:0 1px 3px rgba(0,0,0,.5); }
-  .swatch.on { border-color: var(--pink); }
+  .layout { display:grid; gap:26px; grid-template-columns: minmax(0, 1fr) 380px; align-items:start; }
+  @media (max-width: 1080px) { .layout { grid-template-columns: minmax(0, 1fr); } .preview { display:none; } }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; position:sticky; top:74px; z-index:5; padding:6px;
+          background:rgba(251,248,243,.9); backdrop-filter:blur(10px); border:1px solid var(--line); border-radius:14px; width:max-content; max-width:100%; }
+  @media (max-width: 900px) { .tabs { top:0; } }
+  .tabs a { text-decoration:none; color:#4A443D; font-weight:600; font-size:13px; padding:7px 12px; border-radius:10px; }
+  .tabs a:hover { background:var(--card); box-shadow:var(--sh-sm); }
+  section.block { margin-bottom:20px; scroll-margin-top:140px; }
+  .card-h p { flex-basis:100%; margin:2px 0 0; }
+  .field { margin-bottom:12px; } .field label { display:block; margin-bottom:6px; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:0 14px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+  .grid2 > div, .grid4 > div, .linkrow > div { margin-bottom:12px; }
+  .grid2 label, .grid4 label, .linkrow label { display:block; margin-bottom:6px; }
+
+  .share { display:flex; align-items:center; gap:12px; padding:16px 20px; flex-wrap:wrap;
+           background: linear-gradient(120deg, #fff 0%, #FFF4FA 100%); }
+  .share .ico { width:42px; height:42px; border-radius:12px; background:var(--grad); display:grid; place-items:center; font-size:20px; }
+  .url { font-family: ui-monospace, Menlo, monospace; font-size:13px; word-break:break-all; color:var(--text); font-weight:600; }
+
+  .themes { display:flex; gap:12px; flex-wrap:wrap; }
+  .swatch { width:84px; height:58px; border-radius:14px; cursor:pointer; border:2px solid var(--line); outline:3px solid transparent; outline-offset:2px;
+            display:grid; place-items:end center; font-size:11px; font-weight:700; padding-bottom:5px; color:#fff; text-transform:capitalize;
+            text-shadow:0 1px 3px rgba(0,0,0,.4); transition: transform .12s; }
+  .swatch:hover { transform: translateY(-2px); }
+  .swatch.on { outline-color: var(--rose); }
   .sw-sunset { background:linear-gradient(160deg,#4f5bd5,#d62976,#feda75); }
   .sw-midnight { background:radial-gradient(circle at 20% 0%,#3b1d6e,#120f1a); }
   .sw-ocean { background:linear-gradient(170deg,#0ea5e9,#065f46); }
   .sw-candy { background:linear-gradient(170deg,#fde2f3,#c7d2fe); color:#3b1f4a; text-shadow:none; }
-  .sw-mono { background:#fafafa; color:#111; text-shadow:none; border-color:var(--line); }
-  .swatch.on.sw-mono { border-color: var(--pink); }
-  .item { border:1px solid var(--line); border-radius:14px; padding:12px; margin-bottom:10px; background:var(--bg); }
+  .sw-mono { background:#fafafa; color:#111; text-shadow:none; }
+
+  .item { border:1px solid var(--line); border-radius:16px; padding:14px 16px 12px; margin-bottom:12px; background:var(--panel); transition: box-shadow .15s; }
+  .item:hover { box-shadow:var(--sh); background:#fff; }
   .item.off { opacity:.55; }
-  .item-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .pill { font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; }
-  .pill.link { background:#dbeafe; color:#1d4ed8; } .pill.product { background:#fce7f3; color:#be185d; }
-  .clicks { font-size:12px; color:var(--muted); margin-left:auto; }
-  .tools { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; align-items:center; }
-  .tools label { display:inline-flex; gap:5px; align-items:center; margin:0 8px 0 0; color:var(--text); font-weight:500; }
-  button { padding:8px 14px; border:0; border-radius:10px; background:var(--ig); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
-  button.secondary { background:transparent; color:var(--muted); border:1px solid var(--line); padding:5px 10px; }
-  button.danger { background:transparent; color:var(--err); border:1px solid var(--line); padding:5px 10px; }
-  .add { display:flex; gap:8px; flex-wrap:wrap; }
-  .savebar { position:sticky; bottom:0; padding:12px 0; background:linear-gradient(transparent, var(--bg) 35%); display:flex; gap:10px; align-items:center; }
-  .savebar button { padding:12px 22px; font-size:15px; }
-  #status { color:var(--green); font-weight:600; }
-  .preview { position:sticky; top:16px; }
-  .phone { border:10px solid #1d1530; border-radius:36px; overflow:hidden; height:760px; box-shadow:var(--shadow); background:#fff; }
-  .phone iframe { width:100%; height:100%; border:0; }
-  .hint { font-size:12px; color:var(--muted); }
-  .url { font-family: ui-monospace, Menlo, monospace; font-size:12px; word-break:break-all; }
-  .pill.free { background:#dcfce7; color:#15803d; }
-  .grid4 { display:grid; grid-template-columns: 1.1fr 2fr 1.2fr .6fr; gap:0 10px; }
+  .item-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  .item-head b { font-size:15px; }
+  .pill { font-size:10.5px; font-weight:800; letter-spacing:.05em; padding:3px 9px; border-radius:99px; }
+  .pill.link { background:#E4F2FB; color:#0A6FA8; } .pill.product { background:var(--rose-soft); color:var(--rose-ink); }
+  .pill.free { background:#E3F6EC; color:#0F7A44; }
+  .clicks { font-size:12px; color:var(--muted); margin-left:auto; background:#fff; border:1px solid var(--line); border-radius:99px; padding:3px 10px; }
+  .tools { display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding-top:10px; border-top:1px dashed var(--line2); }
+  .tools label { display:inline-flex; gap:6px; align-items:center; margin:0 10px 0 0; color:var(--text); font-weight:500; }
+  .tools button { padding:6px 10px; font-size:12.5px; border-radius:9px; }
+  .tools .spacer { margin-left:auto; }
+  .add { display:flex; gap:8px; flex-wrap:wrap; margin:4px 0 10px; }
+  .grid4 { display:grid; grid-template-columns: 1.1fr 2fr 1.2fr .6fr; gap:0 12px; }
   @media (max-width: 700px) { .grid4 { grid-template-columns: 1fr 1fr; } }
-  .linkrow { display:flex; gap:8px; align-items:end; }
-  .linkrow > div { flex:1; }
-  .upload { white-space:nowrap; }
-  .fb-msg { font-size:12px; margin-top:4px; }
+  .linkrow { display:flex; gap:8px; align-items:end; } .linkrow > div { flex:1; }
+  .linkrow button { margin-bottom:12px; padding:10px 14px; }
+  .dmlink { font-family: ui-monospace, Menlo, monospace; font-size:11.5px; }
+  .fb-msg { font-size:12.5px; margin:-4px 0 10px; } .fb-msg:empty { display:none; }
   .fb-msg.err { color:var(--err); } .fb-msg.ok { color:var(--green); }
+  .empty { text-align:center; padding:22px; border:1.5px dashed var(--line2); border-radius:16px; color:var(--muted); margin-bottom:12px; }
+
+  .savebar { position:sticky; bottom:16px; z-index:6; display:flex; gap:12px; align-items:center; padding:10px 10px 10px 18px;
+             background:rgba(28,26,23,.94); color:#fff; border-radius:16px; box-shadow:0 14px 40px rgba(28,26,23,.25); backdrop-filter:blur(8px); }
+  .savebar .t { margin-right:auto; font-size:13px; color:#D8D1C6; }
+  #status, #status2 { color:#7EE2A8; font-weight:600; font-size:13px; }
+
+  .preview { position:sticky; top:86px; }
+  .seg { display:flex; padding:4px; background:#EFE8DC; border-radius:12px; margin:0 auto 14px; width:max-content; }
+  .seg button { background:transparent; color:#5C564E; border:0; box-shadow:none; padding:7px 14px; font-size:13px; }
+  .seg button:hover { transform:none; box-shadow:none; }
+  .seg button.on { background:#fff; color:var(--text); box-shadow:var(--sh-sm); }
+  .phone { border:9px solid #1C1A17; border-radius:42px; overflow:hidden; height:min(740px, calc(100vh - 210px)); box-shadow:0 30px 60px rgba(60,40,20,.18);
+           background:#fff; position:relative; }
+  .phone::before { content:""; position:absolute; top:8px; left:50%; transform:translateX(-50%); width:90px; height:22px; border-radius:99px; background:#1C1A17; z-index:2; }
+  .phone iframe { width:100%; height:100%; border:0; }
+  .preview .hint { text-align:center; margin-top:10px; }
 </style>
 </head>
 <body>
-<header>
-  <div class="top">
-    <h1>🔗 Link Page</h1>
-    <a href="/links" target="_blank">↗ Open my page</a>
-    <a href="/">← Dashboard</a>
-  </div>
-</header>
-<main>
-  <section>
-    <div class="card">
-      <h2>Your page link: put this in your Instagram bio</h2>
-      <div class="url" id="publicUrl"></div>
-      <button class="secondary" style="margin-top:8px" onclick="navigator.clipboard.writeText(publicUrl.textContent); this.textContent='Copied ✓'">Copy link</button>
+{% include "_admin_nav.html" %}
+<div class="app">
+  <div class="topbar"><div class="topbar-in">
+    <div class="grow"><h1>Link page</h1><div class="sub">Your link-in-bio and freebies page · changes go live when you save</div></div>
+    <a class="btn btn-ghost" href="/links" target="_blank">↗ Open page</a>
+    <button class="primary" onclick="save()">💾 Save page</button>
+  </div></div>
+  <div class="wrap">
+  <div class="layout">
+  <div>
+    <nav class="tabs">
+      <a href="#sec-profile">👤 Profile</a><a href="#sec-socials">🌐 Socials</a>
+      <a href="#sec-links">🛍️ Links &amp; products</a><a href="#sec-freebies">🎁 Freebies</a>
+    </nav>
+
+    <div class="card share" style="margin-bottom:20px">
+      <div class="ico">🔗</div>
+      <div style="flex:1;min-width:200px"><div class="muted">Put this link in your Instagram bio</div><div class="url" id="publicUrl"></div></div>
+      <button class="secondary" onclick="navigator.clipboard.writeText(publicUrl.textContent); this.textContent='Copied ✓'">Copy link</button>
     </div>
 
-    <div class="card">
-      <h2>👤 Profile</h2>
-      <div class="grid2">
-        <div><label>Name</label><input type="text" id="name" maxlength="80"></div>
-        <div><label>Photo URL (leave empty to use your Instagram photo)</label><input type="text" id="avatar"></div>
+    <section class="card block" id="sec-profile">
+      <div class="card-h"><h2>👤 Profile</h2><p class="muted">How you appear at the top of your page.</p></div>
+      <div class="card-b">
+        <div class="grid2">
+          <div><label>Name</label><input type="text" id="name" maxlength="80"></div>
+          <div><label>Photo URL <span class="muted">(empty = your Instagram photo)</span></label><input type="text" id="avatar"></div>
+        </div>
+        <div class="field"><label>Bio</label><textarea id="bio" rows="2" maxlength="300"></textarea></div>
+        <label style="display:block;margin-bottom:8px">Theme</label>
+        <div class="themes" id="themes"></div>
       </div>
-      <label>Bio</label><textarea id="bio" rows="2" maxlength="300"></textarea>
-      <label>Theme</label>
-      <div class="themes" id="themes"></div>
-    </div>
+    </section>
 
-    <div class="card">
-      <h2>🌐 Social links</h2>
-      <div class="grid2">
+    <section class="card block" id="sec-socials">
+      <div class="card-h"><h2>🌐 Social links</h2><p class="muted">Shown as icons under your name. Leave empty to hide.</p></div>
+      <div class="card-b"><div class="grid2">
         <div><label>Instagram (username)</label><input type="text" id="s-instagram" placeholder="aiwith.om"></div>
         <div><label>YouTube (handle or link)</label><input type="text" id="s-youtube"></div>
         <div><label>WhatsApp (number with country code)</label><input type="text" id="s-whatsapp" placeholder="919876543210"></div>
         <div><label>Email</label><input type="text" id="s-email"></div>
         <div><label>X / Twitter (username)</label><input type="text" id="s-x"></div>
         <div><label>Website</label><input type="text" id="s-website"></div>
-      </div>
-    </div>
+      </div></div>
+    </section>
 
-    <div class="card">
-      <h2>🛍️ Links & products</h2>
-      <div id="items"></div>
-      <div class="add">
-        <button onclick="addItem('link')">＋ Add link</button>
-        <button onclick="addItem('product')">＋ Add product</button>
+    <section class="card block" id="sec-links">
+      <div class="card-h"><h2>🛍️ Links &amp; products</h2>
+        <p class="muted">Products show an image, price and a “Get it” button. ⭐ Featured items glow so they stand out.</p></div>
+      <div class="card-b">
+        <div id="items"></div>
+        <div class="add">
+          <button class="secondary" onclick="addItem('link')">＋ Add link</button>
+          <button class="secondary" onclick="addItem('product')">＋ Add product</button>
+        </div>
+        <p class="hint" style="margin:0">For product images, paste an image link (Google Drive set to public, Imgur or your website).</p>
       </div>
-      <p class="hint">Products show an image, price and a "Get it" button. ⭐ Featured items glow so they stand out.
-        For images, paste an image link (for example from Google Drive set to public, Imgur or your website).</p>
-    </div>
+    </section>
 
-    <div class="card">
-      <h2>🎁 Freebies <span class="hint" style="font-weight:400">(show on your <a href="/free/" target="_blank">/free</a> page)</span></h2>
-      <div id="freebies"></div>
-      <div class="add"><button onclick="addFreebie()">＋ Add freebie</button></div>
-      <p class="hint">Keyword = the comment word from your reel (e.g. CHAT). Upload a PDF / zip / image, or paste any link
-        (Notion, Google Drive, YouTube). Newest freebies show first. Send people straight to one with the DM link shown on each freebie.
-        Press <b>Save page</b> after adding.</p>
-    </div>
+    <section class="card block" id="sec-freebies">
+      <div class="card-h"><h2>🎁 Freebies</h2>
+        <p class="muted">Shown on your <a href="/free/" target="_blank">/free</a> page, newest first. Keyword = the comment word from your reel (e.g. CHAT).</p></div>
+      <div class="card-b">
+        <div class="add"><button class="secondary" onclick="addFreebie()">＋ Add freebie</button></div>
+        <div id="freebies"></div>
+        <p class="hint" style="margin:0">Upload a PDF / zip / image (up to 4 MB) or paste any link (Notion, Google Drive, YouTube).
+          Use the DM link on each freebie in your auto-DM. Press <b>Save page</b> after adding.</p>
+      </div>
+    </section>
 
     <div class="savebar">
-      <button onclick="save()">💾 Save page</button>
-      <span id="status"></span>
+      <span class="t">Changes are saved when you press Save · <span id="status"></span></span>
+      <button class="primary" onclick="save()">💾 Save page</button>
     </div>
-  </section>
+  </div>
 
   <aside class="preview">
+    <div class="seg"><button class="on" id="pv-links" onclick="showPreview('links')">📱 Link page</button>
+      <button id="pv-free" onclick="showPreview('free')">🎁 Freebies</button></div>
     <div class="phone"><iframe id="preview" src="/links"></iframe></div>
-    <p class="hint" style="text-align:center">Live preview (updates when you save)</p>
+    <p class="hint">Live preview · updates when you save</p>
   </aside>
-</main>
+  </div>
+  </div>
+</div>
 
 <script>
 const THEMES = {{ themes | tojson }};
 const SOCIALS = ["instagram", "youtube", "whatsapp", "email", "x", "website"];
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let page, clicks = {};
+let page, clicks = {}, pv = "links";
+function showPreview(which) {
+  pv = which;
+  $("pv-links").classList.toggle("on", which === "links"); $("pv-free").classList.toggle("on", which === "free");
+  $("preview").src = (which === "free" ? "/free/?" : "/links?") + Date.now();
+}
 
 function renderThemes() {
   $("themes").innerHTML = THEMES.map(t =>
@@ -177,14 +206,14 @@ function itemHtml(it, i) {
       <button class="secondary" onclick="move(${i}, 1)" ${i === page.items.length - 1 ? "disabled" : ""}>↓</button>
       <button class="secondary" onclick="page.items[${i}].type = page.items[${i}].type === 'product' ? 'link' : 'product'; renderItems()">
         Make ${it.type === "product" ? "link" : "product"}</button>
-      <button class="danger" onclick="if (confirm('Delete this item?')) { page.items.splice(${i}, 1); renderItems(); }">Delete</button>
+      <button class="danger spacer" onclick="if (confirm('Delete this item?')) { page.items.splice(${i}, 1); renderItems(); }">Delete</button>
     </div>
   </div>`;
 }
 
 function renderItems() {
   $("items").innerHTML = page.items.length ? page.items.map(itemHtml).join("")
-    : `<p class="hint">No links yet. Add your first one below 👇</p>`;
+    : `<div class="empty">No links yet. Add your first one below 👇</div>`;
 }
 
 function addItem(type) {
@@ -207,10 +236,10 @@ function freebieHtml(fb, i) {
   const set = (k) => `oninput="page.freebies[${i}].${k}=this.value"`;
   const dm = location.origin + "/free?k=" + encodeURIComponent((fb.k || "").toUpperCase());
   return `<div class="item ${fb.enabled === false ? "off" : ""}">
-    <div class="item-head"><span class="pill free">FREEBIE</span><b>${esc(fb.k ? fb.k.toUpperCase() : "") || "(no keyword)"}</b>
-      <span class="clicks">${fb.k ? `DM link: <span class="url">${esc(dm)}</span>` : ""}</span></div>
+    <div class="item-head"><span class="pill free">FREEBIE</span><b id="fb-k-${i}">${esc(fb.k ? fb.k.toUpperCase() : "") || "(no keyword)"}</b>
+      <span class="clicks" id="fb-dm-${i}" ${fb.k ? "" : "hidden"}>DM link: <span class="dmlink">${esc(dm)}</span></span></div>
     <div class="grid4">
-      <div><label>Keyword</label><input type="text" value="${esc(fb.k)}" placeholder="CHAT" maxlength="24" ${set("k")} onchange="renderFreebies()"></div>
+      <div><label>Keyword</label><input type="text" value="${esc(fb.k)}" placeholder="CHAT" maxlength="24" oninput="page.freebies[${i}].k=this.value; fbHead(${i})"></div>
       <div><label>Title</label><input type="text" value="${esc(fb.t)}" placeholder="ChatLLM: all AI models for $10" maxlength="120" ${set("t")}></div>
       <div><label>Topic</label><input type="text" list="topics" value="${esc(fb.topic)}" placeholder="Free tools" maxlength="40" ${set("topic")}></div>
       <div><label>Emoji</label><input type="text" value="${esc(fb.e)}" placeholder="🎁" maxlength="8" ${set("e")}></div>
@@ -225,14 +254,20 @@ function freebieHtml(fb, i) {
       <label><input type="checkbox" ${fb.enabled !== false ? "checked" : ""} onchange="page.freebies[${i}].enabled=this.checked; renderFreebies()"> Visible</label>
       <button class="secondary" onclick="moveFb(${i}, -1)" ${i === 0 ? "disabled" : ""}>↑</button>
       <button class="secondary" onclick="moveFb(${i}, 1)" ${i === page.freebies.length - 1 ? "disabled" : ""}>↓</button>
-      ${fb.u ? `<a class="hint" href="${esc(fb.u)}" target="_blank">open ↗</a>` : ""}
-      <button class="danger" onclick="if (confirm('Delete this freebie?')) { page.freebies.splice(${i}, 1); renderFreebies(); }">Delete</button>
+      ${fb.u ? `<a class="btn btn-ghost sm" href="${esc(fb.u)}" target="_blank">Open file ↗</a>` : ""}
+      <button class="danger spacer" onclick="if (confirm('Delete this freebie?')) { page.freebies.splice(${i}, 1); renderFreebies(); }">Delete</button>
     </div>
   </div>`;
 }
+function fbHead(i) {  // update the card title + DM link without re-drawing the inputs (keeps focus and typing)
+  const k = (page.freebies[i].k || "").trim().toUpperCase();
+  $("fb-k-" + i).textContent = k || "(no keyword)";
+  $("fb-dm-" + i).hidden = !k;
+  $("fb-dm-" + i).querySelector(".dmlink").textContent = location.origin + "/free?k=" + encodeURIComponent(k);
+}
 function renderFreebies() {
   $("freebies").innerHTML = page.freebies.length ? page.freebies.map(freebieHtml).join("")
-    : `<p class="hint">No freebies added here yet (the built-in ones on /free stay). Add one below 👇</p>`;
+    : `<div class="empty">No freebies added here yet (the built-in ones on /free stay). Click ＋ Add freebie 👆</div>`;
 }
 function addFreebie() {
   page.freebies.unshift({id: Math.random().toString(36).slice(2, 10), k: "", t: "", topic: "Free tools", e: "🎁", u: "", enabled: true});
@@ -255,7 +290,7 @@ async function uploadFreebie(i, input) {
     const data = await r.json().catch(() => ({error: "Upload failed (" + r.status + ")"}));
     if (!r.ok || !data.url) throw new Error(data.error || "Upload failed");
     page.freebies[i].u = data.url; $("fb-url-" + i).value = data.url;
-    msg.className = "fb-msg ok"; msg.textContent = "Uploaded ✓ Now press Save page.";
+    msg.className = "fb-msg ok"; msg.textContent = "Uploaded ✓ Now press Save page, then check the 🎁 Freebies preview.";
   } catch (e) { msg.className = "fb-msg err"; msg.textContent = e.message; }
   input.value = "";
 }
@@ -271,7 +306,7 @@ async function save() {
   renderItems(); renderFreebies();
   $("status").textContent = "Saved ✓" + (skipped ? ` (${skipped} item(s) without a title or link were left out)` : "");
   setTimeout(() => $("status").textContent = "", 4000);
-  $("preview").src = "/links?" + Date.now();
+  showPreview(pv);
 }
 
 (async () => {
