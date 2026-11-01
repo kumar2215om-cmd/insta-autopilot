@@ -73,7 +73,26 @@
                     50% { box-shadow:0 0 0 8px color-mix(in srgb, var(--rose) 0%, transparent), 0 14px 30px rgba(28,26,23,.22); transform:scale(1.02); } }
   @keyframes sweep { 0%, 35% { transform:translateX(-120%); } 75%, 100% { transform:translateX(120%); } }
   @keyframes wiggle { 0%, 70%, 100% { transform:rotate(0); } 76% { transform:rotate(-14deg); } 82% { transform:rotate(12deg); } 88% { transform:rotate(-6deg); } 94% { transform:rotate(3deg); } }
-  @media (prefers-reduced-motion: reduce) { .follow, .follow::after, .follow svg { animation:none; } }
+  /* Freebies card: rose ring that breathes, gift that bobs and shakes, sparkles, pulsing count, nudging arrow */
+  .freecard { position:relative; animation: ring 2.8s ease-in-out infinite; }
+  .freecard .thumb::after { content:""; position:absolute; inset:0; pointer-events:none;
+                            background:linear-gradient(110deg, transparent 40%, rgba(255,255,255,.75) 50%, transparent 60%);
+                            transform:translateX(-120%); animation: sweep 3.6s ease-in-out infinite 1s; }
+  .freecard .emo { animation: gift 2.8s ease-in-out infinite; }
+  .freecard .new { animation: pop 1.4s ease-in-out infinite; }
+  .freecard .open { display:inline-block; }
+  .freecard .open { animation: nudge 1.6s ease-in-out infinite; }
+  .spark { position:absolute; color:var(--rose); font-size:14px; opacity:0; pointer-events:none; animation: twinkle 2.4s ease-in-out infinite; }
+  .spark.s1 { right:92px; top:16px; } .spark.s2 { right:10px; top:84px; font-size:11px; color:var(--cer); animation-delay:.8s; }
+  .spark.s3 { right:128px; top:58px; font-size:10px; color:#F5B83D; animation-delay:1.6s; }
+  @keyframes ring { 0%, 100% { box-shadow:0 0 0 0 color-mix(in srgb, var(--rose) 0%, transparent), 0 18px 40px rgba(60,40,20,.14); }
+                    50% { box-shadow:0 0 0 3px color-mix(in srgb, var(--rose) 55%, transparent), 0 18px 44px color-mix(in srgb, var(--rose) 22%, transparent); } }
+  @keyframes gift { 0%, 100% { transform:rotate(6deg) translateY(0); } 40% { transform:rotate(6deg) translateY(-6px); }
+                    55% { transform:rotate(-4deg) translateY(-6px); } 62% { transform:rotate(12deg) translateY(-4px); } 70% { transform:rotate(6deg) translateY(0); } }
+  @keyframes pop { 0%, 100% { transform:scale(1); } 50% { transform:scale(1.12); } }
+  @keyframes nudge { 0%, 100% { transform:translateX(0); } 50% { transform:translateX(4px); } }
+  @keyframes twinkle { 0%, 100% { opacity:0; transform:scale(.4) rotate(0); } 50% { opacity:1; transform:scale(1.2) rotate(45deg); } }
+  @media (prefers-reduced-motion: reduce) { .follow, .follow::after, .follow svg, .freecard, .freecard *, .freecard .thumb::after { animation:none !important; } .spark { display:none; } }
 
   .label { font-size:12px; font-weight:800; letter-spacing:2px; color:var(--mute); margin:22px 2px 10px; text-transform:uppercase; }
   .grid { display:grid; gap:14px; }
@@ -144,8 +163,9 @@
     <a class="follow" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">{{ icons["instagram"] | safe }} Follow @{{ username }}</a>
   {% endif %}
 
-  <a class="card shadow" href="/free/">
-    <div class="thumb"><div class="kw"><small>FREE FOR YOU</small>FREEBIES</div><div class="emo">🎁</div>
+  <a class="card shadow freecard" href="/free/">
+    <div class="thumb"><span class="spark s1">✦</span><span class="spark s2">✦</span><span class="spark s3">✦</span>
+      <div class="kw"><small>FREE FOR YOU</small>FREEBIES</div><div class="emo">🎁</div>
       {% if freebies %}<span class="new">{{ freebies }} FREE</span>{% endif %}</div>
     <div class="body"><div class="t">Saare free guides &amp; kits, ek jagah</div>
       <div class="row"><span class="topic">No DM needed</span><span class="open">Open →</span></div></div>
