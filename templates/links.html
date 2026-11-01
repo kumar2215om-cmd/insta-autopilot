@@ -92,7 +92,22 @@
   @keyframes pop { 0%, 100% { transform:scale(1); } 50% { transform:scale(1.12); } }
   @keyframes nudge { 0%, 100% { transform:translateX(0); } 50% { transform:translateX(4px); } }
   @keyframes twinkle { 0%, 100% { opacity:0; transform:scale(.4) rotate(0); } 50% { opacity:1; transform:scale(1.2) rotate(45deg); } }
-  @media (prefers-reduced-motion: reduce) { .follow, .follow::after, .follow svg, .freecard, .freecard *, .freecard .thumb::after { animation:none !important; } .spark { display:none; } }
+  /* Product cards: calmer than the freebies card. Swinging bag, shine sweep, slow image zoom, pulsing "Get it";
+     featured ones also get the breathing rose ring. --d staggers each card so they don't move in sync. */
+  .prod .thumb::after { content:""; position:absolute; inset:0; pointer-events:none;
+                        background:linear-gradient(110deg, transparent 40%, rgba(255,255,255,.6) 50%, transparent 60%);
+                        transform:translateX(-120%); animation: sweep 4.5s ease-in-out infinite; animation-delay:calc(var(--d) + 1.5s); }
+  .prod .emo { animation: swing 3.2s ease-in-out infinite; animation-delay:var(--d); transform-origin:50% 0; }
+  .prod .thumb.img img { animation: zoom 9s ease-in-out infinite alternate; }
+  .prod .open { display:inline-block; animation: beat 2.2s ease-in-out infinite; animation-delay:var(--d); }
+  .prod.featured { animation: ring 2.8s ease-in-out infinite; animation-delay:var(--d); }
+  .prod .thumb.img .new { animation: pop 1.4s ease-in-out infinite; }
+  @keyframes swing { 0%, 100% { transform:rotate(6deg); } 25% { transform:rotate(-8deg) translateY(-3px); } 50% { transform:rotate(10deg); } 75% { transform:rotate(-2deg); } }
+  @keyframes zoom { from { transform:scale(1); } to { transform:scale(1.07); } }
+  @keyframes beat { 0%, 100% { transform:scale(1); box-shadow:0 0 0 0 color-mix(in srgb, var(--rose) 45%, transparent); }
+                    50% { transform:scale(1.06); box-shadow:0 0 0 6px color-mix(in srgb, var(--rose) 0%, transparent); } }
+  @media (prefers-reduced-motion: reduce) { .follow, .follow::after, .follow svg, .freecard, .freecard *, .freecard .thumb::after,
+    .prod, .prod *, .prod .thumb::after { animation:none !important; } .spark { display:none; } }
 
   .label { font-size:12px; font-weight:800; letter-spacing:2px; color:var(--mute); margin:22px 2px 10px; text-transform:uppercase; }
   .grid { display:grid; gap:14px; }
@@ -175,8 +190,8 @@
   <main class="grid">
     {% for it in items %}
       {% if it.type == "product" %}
-        <a class="card shadow" href="/go/{{ it.id }}" rel="noopener">
-          {% if it.image %}<div class="thumb img"><img src="{{ it.image }}" alt="" loading="lazy">{% if it.featured %}<span class="new">⭐ FEATURED</span>{% endif %}</div>
+        <a class="card shadow prod {{ 'featured' if it.featured }}" href="/go/{{ it.id }}" rel="noopener" style="--d:{{ '%.1f' % (loop.index0 * 0.6) }}s">
+          {% if it.image %}<div class="thumb img"><img src="{{ it.image }}" alt="" loading="lazy" onerror="this.parentElement.remove()">{% if it.featured %}<span class="new">⭐ FEATURED</span>{% endif %}</div>
           {% else %}<div class="thumb"><div class="kw"><small>{{ "⭐ FEATURED" if it.featured else "PRODUCT" }}</small>{{ (it.price if not it.price[0].isdigit() else "₹" ~ it.price) if it.price else "GET IT" }}</div><div class="emo">🛍️</div></div>{% endif %}
           <div class="body"><div class="t">{{ it.title }}</div>
             {% if it.subtitle %}<div class="s">{{ it.subtitle }}</div>{% endif %}
