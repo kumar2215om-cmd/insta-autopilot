@@ -62,6 +62,18 @@
   .follow { display:flex; align-items:center; justify-content:center; gap:9px; margin:14px 0 12px; background:var(--btn); color:var(--btn-ink);
             text-decoration:none; font-weight:900; font-size:16px; border-radius:14px; padding:14px; }
   .follow svg { width:19px; height:19px; }
+  /* Follow button: soft rose glow pulse, a light sweep across it, and a little icon wiggle */
+  .follow { position:relative; overflow:hidden; isolation:isolate; animation: glow 2.4s ease-in-out infinite; transition: transform .15s; }
+  .follow:active { transform: scale(.97); }
+  .follow::after { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+                   background:linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--rose) 55%, transparent) 50%, transparent 65%);
+                   transform:translateX(-120%); animation: sweep 3s ease-in-out infinite; }
+  .follow svg { animation: wiggle 3s ease-in-out infinite; transform-origin: 50% 60%; }
+  @keyframes glow { 0%, 100% { box-shadow:0 0 0 0 color-mix(in srgb, var(--rose) 45%, transparent), 0 10px 24px rgba(28,26,23,.18); transform:scale(1); }
+                    50% { box-shadow:0 0 0 8px color-mix(in srgb, var(--rose) 0%, transparent), 0 14px 30px rgba(28,26,23,.22); transform:scale(1.02); } }
+  @keyframes sweep { 0%, 35% { transform:translateX(-120%); } 75%, 100% { transform:translateX(120%); } }
+  @keyframes wiggle { 0%, 70%, 100% { transform:rotate(0); } 76% { transform:rotate(-14deg); } 82% { transform:rotate(12deg); } 88% { transform:rotate(-6deg); } 94% { transform:rotate(3deg); } }
+  @media (prefers-reduced-motion: reduce) { .follow, .follow::after, .follow svg { animation:none; } }
 
   .label { font-size:12px; font-weight:800; letter-spacing:2px; color:var(--mute); margin:22px 2px 10px; text-transform:uppercase; }
   .grid { display:grid; gap:14px; }
