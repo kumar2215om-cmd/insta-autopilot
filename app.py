@@ -7,6 +7,7 @@ import hmac
 import json
 import os
 import random
+import re
 import sqlite3
 import threading
 import time
@@ -1091,10 +1092,26 @@ def freebies(path="index.html"):
         return send_from_directory(UPLOAD_DIR, path[len("uploads/"):])
     if path.startswith("f/"):  # files in a private Vercel Blob store, streamed through the app
         return serve_private_blob(path[2:])
+    if path.startswith("guides/") and path.endswith(".html"):
+        return themed_guide(path)
     # send_from_directory rejects paths that escape FREEBIES_DIR.
     resp = send_from_directory(FREEBIES_DIR, path)
     resp.headers["Cache-Control"] = "public, max-age=300"
     return resp
+
+
+def themed_guide(path):
+    """A guide page with the link page theme applied (theme.css + a t-THEME class on the body tag)."""
+    full = os.path.realpath(os.path.join(FREEBIES_DIR, path))
+    if not full.startswith(os.path.realpath(FREEBIES_DIR) + os.sep) or not os.path.isfile(full):
+        abort(404)
+    with open(full, encoding="utf-8") as f:
+        html = f.read()
+    page = load_linkpage()
+    theme = page.get("theme") if page.get("theme") in THEMES else "studio"
+    html = html.replace("</head>", '<link rel="stylesheet" href="../theme.css"></head>', 1)
+    html = re.sub(r"<body>(?=\s*<main)", f'<body class="t-{theme}">', html, count=1)
+    return Response(html, mimetype="text/html", headers={"Cache-Control": "no-store"})
 
 
 def freebies_index():

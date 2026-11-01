@@ -1,0 +1,47 @@
+/* Theme colours for the guide pages. The server links this file and adds class t-THEME to the body tag,
+   using the theme chosen in the link page editor. "studio" keeps the original cream look. */
+body.t-studio{--bg:#F1EADC;--ink:#1C1A17;--mute:#8C8780;--line:#E7E0D4;--card:#fff;--card-ink:#1C1A17;--card-mute:#6F675D;--card-line:#E7E0D4;--soft:#F6F2EC;--rose:#FF2D95;--cer:#007BA7;--hl:#FF2D95;--btn:#1C1A17;--btn-ink:#fff}
+body.t-sunset{--bg:linear-gradient(165deg,#4f5bd5,#962fbf 35%,#d62976 65%,#fa7e1e 90%,#feda75);--ink:#fff;--mute:rgba(255,255,255,.85);--line:rgba(255,255,255,.4);--card:#fff;--card-ink:#1d1530;--card-mute:#6b6080;--card-line:#EFE6F2;--soft:#F7F1FA;--rose:#d62976;--cer:#4f5bd5;--hl:#FFE27A;--btn:#fff;--btn-ink:#1d1530}
+body.t-midnight{--bg:radial-gradient(circle at 20% 0%,#3b1d6e,#120f1a 60%);--ink:#f1ecfa;--mute:#b8afcf;--line:#2d2540;--card:#1f1930;--card-ink:#f1ecfa;--card-mute:#b8afcf;--card-line:#2d2540;--soft:#2a2140;--rose:#f472b6;--cer:#a78bfa;--hl:#f9a8d4;--btn:#f1ecfa;--btn-ink:#120f1a;--sh:0 18px 40px rgba(0,0,0,.35)}
+body.t-ocean{--bg:linear-gradient(170deg,#0ea5e9,#0d9488 60%,#065f46);--ink:#fff;--mute:rgba(255,255,255,.86);--line:rgba(255,255,255,.4);--card:#fff;--card-ink:#0f2a33;--card-mute:#5b7480;--card-line:#E3EEF0;--soft:#EEF8FA;--rose:#0891b2;--cer:#0d9488;--hl:#BBF7D0;--btn:#fff;--btn-ink:#0f2a33}
+body.t-candy{--bg:linear-gradient(170deg,#fde2f3,#e9d5ff 55%,#c7d2fe);--ink:#3b1f4a;--mute:#6b4f7a;--line:rgba(59,31,74,.12);--card:#fff;--card-ink:#3b1f4a;--card-mute:#7d6889;--card-line:#F0E6F3;--soft:#F8F2FA;--rose:#db2777;--cer:#7c3aed;--hl:#db2777;--btn:#3b1f4a;--btn-ink:#fff}
+body.t-mono{--bg:#fafafa;--ink:#111;--mute:#666;--line:#e5e5e5;--card:#fff;--card-ink:#111;--card-mute:#666;--card-line:#eee;--soft:#f4f4f4;--rose:#111;--cer:#555;--hl:#111;--btn:#111;--btn-ink:#fff}
+
+html{background:#F1EADC}
+body[class^="t-"]{background:var(--bg);background-attachment:fixed;color:var(--ink);min-height:100vh}
+body[class^="t-"] a{color:var(--rose)}
+/* Page header (on the background) */
+body[class^="t-"] .back{color:var(--ink)}
+body[class^="t-"] h1{color:var(--ink)}
+body[class^="t-"] h1 span{color:var(--hl)}
+body[class^="t-"] .intro,body[class^="t-"] .credit{color:var(--mute)}
+body[class^="t-"] .top img{border-color:var(--card)}
+body[class^="t-"] .pill{background:var(--rose);color:#fff}
+body[class^="t-"] .pill.c{background:var(--cer)}
+body[class^="t-"] .nav a{background:var(--card);color:var(--card-ink);border-color:var(--card-line)}
+/* Cards */
+body[class^="t-"] section{background:var(--card);color:var(--card-ink)}
+body[class^="t-"] .stag{color:var(--cer);background:color-mix(in srgb,var(--cer) 10%,transparent)}
+body[class^="t-"] section h2{color:var(--card-ink)}
+body[class^="t-"] code{background:var(--soft);color:var(--card-ink)}
+body[class^="t-"] .code code,body[class^="t-"] .code pre{background:none}
+body[class^="t-"] .prompt{background:color-mix(in srgb,var(--rose) 7%,var(--card));border-color:color-mix(in srgb,var(--rose) 25%,var(--card))}
+body[class^="t-"] .prompt pre{color:var(--card-ink)}body[class^="t-"] .prompt .lbl{color:var(--rose)}
+body[class^="t-"] .cp{background:var(--rose)}
+body[class^="t-"] .tip{background:color-mix(in srgb,var(--cer) 10%,var(--card));border-left-color:var(--cer);color:var(--card-ink)}
+body[class^="t-"] .warn{background:color-mix(in srgb,var(--rose) 9%,var(--card));border-left-color:var(--rose);color:var(--card-ink)}
+body[class^="t-"] .cmd{border-color:var(--card-line)}
+body[class^="t-"] .cmd code{color:var(--rose);background:color-mix(in srgb,var(--rose) 9%,var(--card))}
+body[class^="t-"] th{color:var(--cer);border-bottom-color:var(--card-line)}
+body[class^="t-"] td{border-bottom-color:var(--card-line)}
+body[class^="t-"] .repo,body[class^="t-"] .plug{color:var(--card-ink);border-color:var(--card-line)}
+body[class^="t-"] .rurl{color:var(--cer)}
+body[class^="t-"] .badges span,body[class^="t-"] .lic{border-color:var(--card-line);color:var(--card-mute)}
+body[class^="t-"] figcaption{color:var(--card-mute)}
+body[class^="t-"] .end{background:var(--btn);color:var(--btn-ink)}
+body[class^="t-"] .end a{background:var(--rose);color:#fff}
+/* Simple guide layout (tables + code directly on the page, e.g. CHAT) */
+body[class^="t-"] main > h2{color:var(--hl)}
+body[class^="t-"] main > table{background:var(--card);color:var(--card-ink)}
+body[class^="t-"] main > table td,body[class^="t-"] main > table th{border-bottom-color:var(--card-line)}
+body[class^="t-"] main > p code,body[class^="t-"] main > pre,body[class^="t-"] main > ul code{background:var(--card);color:var(--card-ink)}
