@@ -1,0 +1,49 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SAFE · One Claude prompt to fix 5 cost &amp; security traps | aiwith.om</title><meta name="description" content="Thanks for commenting SAFE! Paste this into Claude Code inside your app&#x27;s repo. Part 1 (age gate, fonts, session replay, email, renewals, DMCA) is in ">
+<link rel="icon" href="../avatar.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F1EADC;--ink:#1C1A17;--rose:#FF2D95;--cer:#007BA7;--mute:#8C8780;--line:#E7E0D4;--sh:0 18px 40px rgba(60,40,20,.13)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:500 15.5px/1.6 Inter,'Noto Sans Devanagari',system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}a{color:var(--rose)}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top img{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:var(--sh)}
+.pill{font:800 11px Inter;color:#fff;background:var(--rose);border-radius:20px;padding:3px 10px;text-decoration:none}.pill.c{background:var(--cer)}
+h1{font-size:36px;line-height:1.05;letter-spacing:-1px;margin:14px 0 8px;font-weight:900}h1 span{color:var(--rose)}
+.intro{color:#4A4540;font-weight:600}.back{font-weight:800;text-decoration:none;font-size:14px}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.nav a{text-decoration:none;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:20px;padding:4px 11px;font:800 12px Inter}
+section{background:#fff;border-radius:22px;padding:20px;margin:16px 0;box-shadow:var(--sh)}
+.stag{display:inline-block;font:800 11px Inter;letter-spacing:1px;text-transform:uppercase;color:var(--cer);background:rgba(0,123,167,.09);border-radius:20px;padding:3px 10px}
+h2{font-size:23px;line-height:1.2;margin:8px 0 10px;font-weight:900}
+code{font:500 .9em 'JetBrains Mono',monospace;background:#F6F2EC;border-radius:6px;padding:1px 6px}
+.code{position:relative;background:#1C1A17;border-radius:14px;padding:12px 14px;margin:12px 0}.code pre{margin:6px 0 0;color:#F3EDE3;font:500 13px/1.55 'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-word}
+.code .lbl{font:800 10px Inter;letter-spacing:1px;text-transform:uppercase;color:#B5A893}.cp{position:absolute;right:10px;top:10px;border:0;background:var(--rose);color:#fff;font:800 11px Inter;border-radius:8px;padding:4px 10px;cursor:pointer}
+.prompt{background:#FFF7FB;border:2px solid #FFD0E6}.prompt pre{color:var(--ink)}.prompt .lbl{color:var(--rose)}
+.tip,.warn{border-radius:12px;padding:10px 13px;margin:12px 0;font-weight:600;font-size:14px}.tip{background:#EAF6FB;border-left:4px solid var(--cer)}.warn{background:#FFF0F6;border-left:4px solid var(--rose)}
+.cmds{display:grid;gap:8px}.cmd{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:12px;padding:9px 11px}.cmd code{flex:none;font-weight:700;color:var(--rose);background:#FFF0F6}.cmd span{font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}th{text-align:left;color:var(--cer);border-bottom:2px solid var(--line);padding:7px}td{border-bottom:1px solid #F1ECE3;padding:7px;vertical-align:top}
+.repo{display:flex;gap:12px;text-decoration:none;color:var(--ink);border:2px solid var(--line);border-radius:16px;padding:13px;margin:10px 0}.rlogo{flex:none;width:46px;height:46px;border-radius:12px;background:#1C1A17;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+.rurl{font:500 12px 'JetBrains Mono',monospace;color:var(--cer)}.rdesc{font-size:13.5px;margin-top:4px}.badges span{display:inline-block;margin:6px 6px 0 0;font:800 11px Inter;border:1.5px solid var(--line);border-radius:8px;padding:2px 7px}
+ol.num{padding-left:20px}ol.num li,ul li{margin:5px 0}
+.plugs{display:grid;gap:10px}.plug{border:1.5px solid var(--line);border-radius:14px;padding:11px 13px}.ph{display:flex;justify-content:space-between;align-items:center;gap:8px}.ph b{font-size:16px}.lic{font:800 10px Inter;border:1.5px solid var(--line);border-radius:8px;padding:1px 7px;color:var(--mute);white-space:nowrap}.pd{font-size:14px;margin-top:3px}.code.sm{padding:8px 12px;margin:8px 0 4px}.code.sm pre{margin:0;font-size:12px;padding-right:56px}.w{display:inline-block;margin:4px 6px 0 0;font:800 11px Inter;color:#B4235F;background:#FFF0F6;border-radius:8px;padding:2px 8px}
+figure{margin:12px 0}figure img{width:100%;border-radius:14px;display:block}figcaption{font-size:12.5px;color:var(--mute);margin-top:6px;text-align:center}
+.credit{font-size:12.5px;color:var(--mute);text-align:center;margin-top:20px}
+.end{text-align:center;background:var(--ink);color:#fff;border-radius:20px;padding:20px;margin-top:20px}.end a{display:inline-block;margin-top:10px;background:var(--rose);color:#fff;text-decoration:none;font-weight:900;border-radius:12px;padding:10px 18px}
+</style></head><body><main>
+<a class="back" href="../index.html">← Saare freebies</a>
+<div class="top" style="margin-top:12px"><img src="../avatar.png" alt=""><b>@aiwith.om</b><span class="pill">freebie · comment SAFE</span></div>
+<h1>One Claude prompt to fix <span>5 cost &amp; security traps</span></h1><p class="intro">Thanks for commenting SAFE! Paste this into Claude Code inside your app&#x27;s repo. Part 1 (age gate, fonts, session replay, email, renewals, DMCA) is in the FIX guide.</p>
+<div class="nav"><a href="#s0">Before you start</a><a href="#s1">The prompt</a><a href="#s2">Manual</a><a href="#s3">Self-check</a></div><section id="s0"><span class="stag">Before you start</span><h2>Not legal advice</h2><div class="warn">⚠️ <b>Not legal advice.</b> The figures come from real cases and legal maximums (mostly US). Test changes on a staging environment first.</div><div class="tip">💡 Part 1 is the <a href="FIX.html">FIX guide</a>.</div></section><section id="s1"><span class="stag">The prompt</span><h2>The prompt</h2><div class="code prompt"><button class="cp" onclick="cp(this)">copy</button><div class="lbl">Paste into Claude Code</div><pre>Audit this app for 5 cost and security risks. For each: find where it applies, explain the risk in one line, implement the fix, and list manual steps I must do in dashboards.
+
+1. TRAFFIC / BILL SHOCK: Protect against DDoS and bandwidth spikes. Put the site behind a CDN/WAF (e.g. Cloudflare), add rate limiting on API routes, cache static assets, and tell me exactly which hosting setting enables spend caps or alerts (and which ones only alert).
+
+2. ACCESSIBILITY: Make the whole site keyboard-usable (visible focus, logical tab order, no keyboard traps), add meaningful alt text to all images, add labels to form inputs, check color contrast, and add an accessibility statement page. Run an automated check (axe / Lighthouse) and fix the issues.
+
+3. SUPABASE SECURITY: Find every table. Enable Row Level Security on ALL of them and write least-privilege policies (users can only read and write their own rows). Make sure the service_role key is never in client code (only the anon key). List any table that is still publicly readable.
+
+4. SMS / TCPA: Find any code that sends SMS or WhatsApp marketing. Require explicit opt-in (unchecked checkbox plus consent text and a timestamp stored in the DB), support STOP / opt-out, and block sends to anyone without recorded consent.
+
+5. RUNAWAY FUNCTIONS: Find cloud functions, triggers, webhooks or cron jobs that could call themselves or loop (e.g. a function that updates the same record that triggers it). Add recursion guards, idempotency checks, max-retry limits and timeouts, and set max instances / concurrency limits. Tell me how to set a hard budget cap or kill switch on my cloud provider.
+
+At the end, give a table: item | status (fixed / manual) | files changed | manual steps.</pre></div></section><section id="s2"><span class="stag">Manual</span><h2>Manual steps the code can&#x27;t do</h2><ul><li>Enable spend limits on your host or cloud. Note that budget alerts only notify: set max instances or a hard cap where available.</li><li>In Supabase, open <b>Advisors → Security</b> and fix every warning.</li><li>Put your domain behind <b>Cloudflare</b> (free plan) for DDoS protection.</li><li>Re-test with a keyboard only (Tab / Shift+Tab / Enter).</li></ul></section><section id="s3"><span class="stag">Self-check</span><h2>60-second self-check</h2><ul><li>Supabase: does any table show <b>RLS disabled</b>? Fix it.</li><li>Open your site and press <b>Tab</b> repeatedly. Can you reach every button?</li><li>Search your code for <code>service_role</code>. It must never be in frontend code.</li></ul><p>Idea credit: @adilet.fndr.</p></section>
+<div class="end"><b style="font-size:18px">Kaam aaya? 🙌</b><br>Aise hi free AI tools &amp; guides ke liye follow karo<br><a href="https://www.instagram.com/aiwith.om/" target="_blank" rel="noopener">Follow @aiwith.om</a></div>
+</main><script>function cp(b){const t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(()=>{b.textContent='copied ✓';setTimeout(()=>b.textContent='copy',1500)})}</script></body></html>
