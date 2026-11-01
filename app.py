@@ -52,6 +52,8 @@ REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_
 REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
 # Freebie file uploads: Vercel Blob when connected (Vercel → Storage → Blob adds this token), else local disk.
 BLOB_TOKEN = secret("BLOB_READ_WRITE_TOKEN")
+BLOB_STORE_ID = os.environ.get("BLOB_STORE_ID", "").strip().removeprefix("store_") or (
+    BLOB_TOKEN.split("_")[3] if BLOB_TOKEN.count("_") >= 4 else "")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 UPLOAD_MAX_MB = 4  # Vercel functions reject request bodies over 4.5 MB
 
@@ -314,7 +316,7 @@ def clean_linkpage(data):
     freebies = []
     for fb in data.get("freebies", [])[:200]:
         url = (fb.get("u") or "").strip()
-        url = url if url.startswith("/free/uploads/") and ".." not in url else safe_url(url)
+        url = url if url.startswith(("/free/uploads/", "/free/f/")) and ".." not in url else safe_url(url)
         keyword = "".join(ch for ch in (fb.get("k") or "").upper() if ch.isalnum())[:24]
         if not keyword or not (fb.get("t") or "").strip() or not url:
             continue
@@ -1075,6 +1077,8 @@ def freebies(path="index.html"):
         return freebies_index()
     if path.startswith("uploads/"):  # files uploaded from the editor when Vercel Blob isn't connected
         return send_from_directory(UPLOAD_DIR, path[len("uploads/"):])
+    if path.startswith("f/"):  # files in a private Vercel Blob store, streamed through the app
+        return serve_private_blob(path[2:])
     # send_from_directory rejects paths that escape FREEBIES_DIR.
     resp = send_from_directory(FREEBIES_DIR, path)
     resp.headers["Cache-Control"] = "public, max-age=300"
@@ -1102,6 +1106,29 @@ def freebies_index():
 UPLOAD_TYPES = {"pdf", "zip", "png", "jpg", "jpeg", "webp", "gif", "mp4", "txt", "md", "csv", "json"}
 
 
+def blob_auth_token():
+    """Read-write token if one was added, else the per-request Vercel OIDC token (Blob stores connected without a token)."""
+    if BLOB_TOKEN:
+        return BLOB_TOKEN
+    if not BLOB_STORE_ID:
+        return ""
+    return (request.headers.get("x-vercel-oidc-token") or os.environ.get("VERCEL_OIDC_TOKEN", "")).strip()
+
+
+def serve_private_blob(pathname):
+    token = blob_auth_token()
+    if not (token and BLOB_STORE_ID) or ".." in pathname or not pathname.startswith("freebies/"):
+        abort(404)
+    r = requests.get(f"https://{BLOB_STORE_ID}.private.blob.vercel-storage.com/{pathname}",
+                     headers={"authorization": f"Bearer {token}"}, timeout=30)
+    if not r.ok:
+        abort(404)
+    name = pathname.rsplit("/", 1)[-1]
+    return Response(r.content, mimetype=r.headers.get("content-type", "application/octet-stream"),
+                    headers={"Cache-Control": "public, max-age=3600",
+                             "Content-Disposition": f'inline; filename="{name}"'})
+
+
 @app.post("/api/freebies/upload")
 def api_upload_freebie():
     f = request.files.get("file")
@@ -1114,14 +1141,23 @@ def api_upload_freebie():
     data = f.read()
     if len(data) > UPLOAD_MAX_MB * 1024 * 1024:
         return jsonify({"error": f"File is over {UPLOAD_MAX_MB} MB. Upload it to Google Drive and paste the link instead."}), 400
-    if BLOB_TOKEN:
-        r = requests.put("https://blob.vercel-storage.com/", params={"pathname": f"freebies/{name}"}, data=data,
-                         headers={"authorization": f"Bearer {BLOB_TOKEN}", "x-api-version": "9",
-                                  "x-add-random-suffix": "1",
-                                  "x-content-type": f.mimetype or "application/octet-stream"}, timeout=60)
+    token = blob_auth_token()
+    if token and BLOB_STORE_ID:
+        r = None
+        for access in ("public", "private"):  # the store's access type decides which one it accepts
+            r = requests.put("https://vercel.com/api/blob/", params={"pathname": f"freebies/{name}"}, data=data,
+                             headers={"authorization": f"Bearer {token}", "x-api-version": "13",
+                                      "x-vercel-blob-store-id": BLOB_STORE_ID, "x-vercel-blob-access": access,
+                                      "x-add-random-suffix": "1",
+                                      "x-content-type": f.mimetype or "application/octet-stream"}, timeout=60)
+            if r.ok:
+                break
         if not r.ok:
             return jsonify({"error": f"Vercel Blob upload failed ({r.status_code}): {r.text[:200]}"}), 502
-        return jsonify({"url": r.json()["url"]})
+        blob = r.json()
+        if ".private.blob." in blob["url"]:
+            return jsonify({"url": "/free/f/" + blob["pathname"]})
+        return jsonify({"url": blob["url"]})
     if SERVERLESS:
         return jsonify({"error": "Uploads need Vercel Blob: Vercel → your project → Storage → Create → Blob → "
                                  "Connect, then redeploy. (Or paste a Google Drive link instead.)"}), 400

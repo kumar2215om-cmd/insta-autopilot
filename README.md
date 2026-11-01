@@ -111,7 +111,7 @@ Edit it at `/links/edit`, or with **🔗 Link page** on the dashboard (password 
 - click counts for every item (each tap goes through `/go/<id>`, which counts it and redirects)
 - a pulsing **Follow @you on Instagram** button under your bio
 
-**Freebies** live in `freebies/` and are served publicly at `/free/` (guides, PDFs and downloadable kits). The link page shows a "🎁 Free guides" button to it. Send someone straight to one guide with `/free/?k=KEYWORD` (pre-fills the search). To add a freebie without code: **🎁 Freebies** in `/links/edit` → keyword, title, then **Upload file** (PDF, zip, image… up to 4 MB) or paste a link → **Save page**. Uploads on Vercel need a Blob store: Vercel → project → Storage → Create → Blob → Connect (adds `BLOB_READ_WRITE_TOKEN`), then redeploy. Built-in freebies live in `freebies/`.
+**Freebies** live in `freebies/` and are served publicly at `/free/` (guides, PDFs and downloadable kits). The link page shows a "🎁 Free guides" button to it. Send someone straight to one guide with `/free/?k=KEYWORD` (pre-fills the search). To add a freebie without code: **🎁 Freebies** in `/links/edit` → keyword, title, then **Upload file** (PDF, zip, image… up to 4 MB) or paste a link → **Save page**. Uploads on Vercel need a Blob store: Vercel → project → Storage → Create → Blob → Connect, then redeploy. Public or private stores both work (private files are streamed through `/free/f/…`); auth uses `BLOB_READ_WRITE_TOKEN` if set, else Vercel OIDC with `BLOB_STORE_ID`. Built-in freebies live in `freebies/`.
 
 Only `http(s)`, `mailto:` and `tel:` links are accepted. Images are links to pictures hosted elsewhere.
 
