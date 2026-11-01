@@ -253,7 +253,7 @@ def load_rules():
 
 # ---------- link-in-bio page ----------
 
-THEMES = ["sunset", "midnight", "ocean", "candy", "mono"]
+THEMES = ["studio", "sunset", "midnight", "ocean", "candy", "mono"]
 SOCIALS = ["instagram", "youtube", "whatsapp", "email", "x", "website"]
 
 
@@ -270,7 +270,7 @@ def load_linkpage():
     page.setdefault("name", "")
     page.setdefault("bio", "")
     page.setdefault("avatar", "")
-    page.setdefault("theme", "sunset")
+    page.setdefault("theme", "studio")
     page.setdefault("socials", {})
     page.setdefault("items", [])
     page.setdefault("freebies", [])
@@ -333,7 +333,7 @@ def clean_linkpage(data):
         "name": (data.get("name") or "").strip()[:80],
         "bio": (data.get("bio") or "").strip()[:300],
         "avatar": safe_url(data.get("avatar")),
-        "theme": data.get("theme") if data.get("theme") in THEMES else "sunset",
+        "theme": data.get("theme") if data.get("theme") in THEMES else "studio",
         "socials": socials,
         "items": items,
         "freebies": freebies,
@@ -386,7 +386,7 @@ def instagram_profile():
     """Name/photo from Instagram for the link page, cached for an hour; {} if unavailable."""
     if time.time() - _profile_cache["at"] > 3600:
         try:
-            _profile_cache["data"] = ig_get("me", fields="username,name,profile_picture_url")
+            _profile_cache["data"] = ig_get("me", fields="username,name,profile_picture_url,followers_count")
         except Exception:
             pass  # keep the last good one (or none); the page still renders
         _profile_cache["at"] = time.time()
@@ -1043,7 +1043,19 @@ def link_page():
         "links.html", page=page, items=items, socials=social_links(page["socials"]),
         name=page["name"] or ig.get("name") or ig.get("username", ""),
         avatar=page["avatar"] or ig.get("profile_picture_url", ""),
-        username=ig.get("username", ""))
+        username=ig.get("username", ""), followers=ig.get("followers_count"), freebies=freebies_count(page))
+
+
+def freebies_count(page):
+    """How many freebies /free shows (built-in + visible editor ones), for the link page banner."""
+    try:
+        with open(os.path.join(FREEBIES_DIR, "index.html"), encoding="utf-8") as f:
+            html = f.read()
+        start = html.index("const D=") + len("const D=")
+        builtin = len(json.loads(html[start:html.index(";\n", start)])["items"])
+    except (OSError, ValueError, KeyError):
+        builtin = 0
+    return builtin + sum(1 for fb in page.get("freebies", []) if fb.get("enabled", True))
 
 
 @app.get("/go/<item_id>")
