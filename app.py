@@ -1248,12 +1248,12 @@ def course_promo_card(page):
     when = f' {escape(live.get("name") or "Batch 1")} live' + (f' · {escape(live["start"])} se.' if live.get("start") else ".") if live.get("enabled") else ""
     price = escape(c.get("price") or "")
     return (
-        '<section class="cpromo" style="border:3px solid var(--rose,#FF2D95)">'
-        '<span class="stag" style="color:var(--rose,#FF2D95);background:rgba(255,45,149,.1)">🎓 Course</span>'
-        '<h2 style="margin:10px 0 6px">Ye sab ek system mein seekhna hai?</h2>'
-        '<p style="margin:0;opacity:.8;font-weight:600;line-height:1.5">Claude se Instagram grow karo: niche, 30 din ka plan, reels bina camera, '
+        '<section class="cpromo" style="background:#1C1A17;color:#fff;border:0">'
+        '<span class="stag" style="color:#FF8CC6;background:rgba(255,45,149,.18)">🎓 Course</span>'
+        '<h2 style="margin:10px 0 6px;color:#fff">Ye sab ek system mein seekhna hai?</h2>'
+        '<p style="margin:0;color:rgba(255,255,255,.78);font-weight:600;line-height:1.5"><b style="color:#FF8CC6">Claude se Instagram grow karo:</b> niche, 30 din ka plan, reels bina camera, '
         f'comment → DM machine aur weekly growth loop. 8 modules · 32 lessons · 6 bonuses.{when}</p>'
-        '<a href="/course" style="display:inline-block;margin-top:12px;background:var(--rose,#FF2D95);color:#fff;text-decoration:none;'
+        '<a href="/course" style="display:inline-block;margin-top:12px;background:#FF2D95;color:#fff;text-decoration:none;'
         f'font-weight:900;border-radius:30px;padding:11px 18px">{"₹" + price + " · " if price else ""}Course dekho →</a></section>')
 
 
