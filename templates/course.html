@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{{ c.TITLE }} · course by @{{ username }}</title>
 <meta name="description" content="{{ c.SUBTITLE }}">
-<meta property="og:title" content="{{ c.TITLE }}: 0 → 21K system">
+<meta property="og:title" content="{{ c.OG_TITLE|default(c.TITLE ~ ': 0 → 21K system') }}">
 <meta property="og:description" content="{{ c.SUBTITLE }}">
-<meta property="og:image" content="{{ request.host_url }}free/course.jpg">
+<meta property="og:image" content="{{ request.host_url }}{{ c.COVER|default('free/course.jpg') }}">
 <meta name="twitter:card" content="summary_large_image">
 {% if avatar %}<link rel="icon" href="{{ avatar }}">{% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,10 +53,10 @@
   h1 { font-size:clamp(38px, 8vw, 62px); line-height:1.02; letter-spacing:-2px; margin:10px 0 12px; font-weight:900; }
   h1 span { color:var(--hl, var(--rose)); display:inline-block; }
   .sub { color:var(--mute); font-weight:600; font-size:17px; line-height:1.5; margin:0; }
-  .proof { display:flex; align-items:center; gap:18px; margin-top:22px; background:var(--card); color:var(--card-ink); border-radius:24px; padding:18px 22px; }
+  .proof { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; margin-top:22px; background:var(--card); color:var(--card-ink); border-radius:24px; padding:18px 22px; }
   .proof .big { font:400 54px/1 Anton,Inter; letter-spacing:1px; white-space:nowrap; }
   .proof .big b { color:var(--rose); font-weight:400; }
-  .proof .t { font-weight:800; font-size:15px; line-height:1.35; }
+  .proof .t { flex:1; min-width:150px; font-weight:800; font-size:15px; line-height:1.35; }
   .proof .t small { display:block; color:var(--card-mute); font-weight:600; font-size:13px; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
   .chip { background:var(--card); color:var(--card-ink); border:2px solid var(--line); border-radius:30px; padding:7px 13px; font:800 13px Inter; }
@@ -160,7 +160,7 @@
 {% set off = (((course.mrp|int) - (course.price|int)) * 100 / (course.mrp|int))|round|int if (course.mrp|int) > (course.price|int) > 0 else 0 %}
 {% macro buybtn(cls="") -%}
   {% if has_url %}<a class="btn {{ cls }}" href="{{ course.url }}" rel="noopener">Join now →</a>
-  {% else %}<a class="btn soon {{ cls }}" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">Coming soon · DM COURSE</a>{% endif %}
+  {% else %}<a class="btn soon {{ cls }}" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">Coming soon · DM {{ c.KEYWORD|default('COURSE') }}</a>{% endif %}
 {%- endmacro %}
 <div class="wrap">
   <div class="top">
@@ -171,18 +171,18 @@
   </div>
 
   <section class="hero">
-    <div class="kicker">{% if live.enabled %}{{ live.name }} · live classes + video course{% else %}Hinglish video course{% endif %}</div>
-    <h1>Claude se Instagram <span>grow karo</span></h1>
+    <div class="kicker">{% if live.enabled %}{{ live.name }} · live classes + video course{% else %}{{ c.KICKER|default('Hinglish video course') }}{% endif %}</div>
+    <h1>{{ c.H1_A|default('Claude se Instagram') }} <span>{{ c.H1_B|default('grow karo') }}</span></h1>
     <p class="sub">{{ c.SUBTITLE }}</p>
-    <div class="proof shadow"><div class="big">0 → <b>21K</b></div><div class="t">Mera real result, 33 posts mein<small>System milega, guarantee nahi. Honest course.</small></div></div>
+    <div class="proof shadow"><div class="big">{{ c.PROOF_A|default('0 →') }} <b>{{ c.PROOF_B|default('21K') }}</b></div><div class="t">{{ c.PROOF_T|default('Mera real result, 33 posts mein') }}<small>{{ c.PROOF_S|default('System milega, guarantee nahi. Honest course.') }}</small></div></div>
     <div class="chips">{% for n, l in c.STATS %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
     <div class="buy shadow">
       <span class="price">₹{{ course.price }}</span>
       {% if off %}<span class="mrp">₹{{ course.mrp }}</span><span class="off">{{ off }}% off · launch price</span>{% endif %}
       {{ buybtn() }}
-      <div class="note">{% if has_url %}Secure checkout on SuperProfile · course aur workbook wahin milenge{% else %}Course jaldi aa raha hai. Instagram pe "COURSE" DM karo, launch pe sabse pehle link milega.{% endif %}</div>
+      <div class="note">{% if c.PRICE_NOTE is defined %}{{ c.PRICE_NOTE }} · {% endif %}{% if has_url %}Secure checkout on SuperProfile · course aur workbook wahin milenge{% else %}Course jaldi aa raha hai. Instagram pe "{{ c.KEYWORD|default('COURSE') }}" DM karo, launch pe sabse pehle link milega.{% endif %}</div>
     </div>
-    <img class="cover shadow rv" src="/free/course.jpg" alt="Claude se Instagram grow karo: course cover" onerror="this.remove()">
+    <img class="cover shadow rv" src="/{{ c.COVER|default('free/course.jpg') }}" alt="{{ c.TITLE }}: course cover" onerror="this.remove()">
   </section>
 
   {% if live.enabled and sessions %}
@@ -206,7 +206,7 @@
   <h2 class="rv">Poora <span>curriculum</span></h2>
   {% for code, name, badge, lessons in c.MODULES %}
   <details class="mod shadow rv" {% if loop.first %}open{% endif %}>
-    <summary><span class="mn">{{ loop.index0 }}</span><span class="mt"><b>{{ name }}</b><small>{{ code }} · {{ lessons|length }} lessons</small></span>{% if badge %}<span class="free">{{ badge }}</span>{% endif %}</summary>
+    <summary><span class="mn">{{ "★" if code.startswith("Bonus") else loop.index0 }}</span><span class="mt"><b>{{ name }}</b><small>{{ code }} · {{ lessons|length }} lesson{{ "s" if lessons|length != 1 }}</small></span>{% if badge %}<span class="free">{{ badge }}</span>{% endif %}</summary>
     <ol>{% for l in lessons %}<li>{{ l }}</li>{% endfor %}</ol>
   </details>
   {% endfor %}
@@ -224,7 +224,7 @@
     <div class="card shadow rv"><b>✅ Tumhare liye hai agar</b><ul>{% for x in c.FOR %}<li><span>•</span><span>{{ x }}</span></li>{% endfor %}</ul></div>
     <div class="card shadow rv"><b>❌ Tumhare liye nahi hai agar</b><ul>{% for x in c.NOT_FOR %}<li><span>•</span><span>{{ x }}</span></li>{% endfor %}</ul></div>
   </div>
-  <div class="warn rv">⚠️ Honest baat: ye followers ki guarantee nahi hai. Ye wo system hai jo maine use kiya. Results tumhare niche, consistency aur content pe depend karenge.</div>
+  <div class="warn rv">⚠️ {{ c.HONEST|default('Honest baat: ye followers ki guarantee nahi hai. Ye wo system hai jo maine use kiya. Results tumhare niche, consistency aur content pe depend karenge.') }}</div>
 
   <h2 class="rv">Kaun <span>sikha raha hai</span></h2>
   <div class="card shadow rv about">
@@ -237,7 +237,7 @@
 
   <div class="final rv">
     <h2>Ready ho?</h2>
-    <p>Profile se auto-DMs tak, poora system. ₹{{ course.price }}{% if off %} (launch price){% endif %}.</p>
+    <p>{{ c.FINAL|default('Profile se auto-DMs tak, poora system.') }} ₹{{ course.price }}{% if off %} (launch price){% endif %}.</p>
     {{ buybtn() }}
     <p style="margin-top:14px;font-size:13.5px">Koi sawaal? <a href="mailto:kumarom1315@gmail.com" style="color:var(--rose);font-weight:900">kumarom1315@gmail.com</a> ya Instagram DM <b>@{{ username }}</b></p>
   </div>

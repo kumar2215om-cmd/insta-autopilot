@@ -993,7 +993,7 @@ def receive_webhook():
 @app.before_request
 def check_password():
     # The link page, its click redirects and the freebies are public; the editor (/links/edit) is not.
-    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/", "/terms", "/refund-policy", "/privacy-policy", "/contact") or (request.path == "/" and on_custom_domain())
+    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/", "/terms", "/refund-policy", "/privacy-policy", "/contact", "/digital-products", "/digital-products/") or (request.path == "/" and on_custom_domain())
               or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")))
     if not DASHBOARD_PASSWORD or public:
         return
@@ -1121,6 +1121,24 @@ def course_page():
         else:
             sessions = [("", t) for t in course_data.LIVE_SESSIONS]
     return render_template("course.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
+                           avatar=page["avatar"] or ig.get("profile_picture_url", ""),
+                           username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
+
+
+@app.get("/digital-products")
+@app.get("/digital-products/")
+def course2_page():
+    import course2_data
+    page = load_linkpage()
+    course = {**course2_data.DEFAULTS, **(page.get("course2") or {})}
+    if not course.get("enabled", True):
+        abort(404)
+    url = course.get("url") or ""
+    if "superprofile.bio/course/" in url and "checkout=" not in url:
+        url += ("&" if "?" in url else "?") + "checkout=true"
+    course["url"] = url
+    ig = instagram_profile()
+    return render_template("course.html", page=page, course=course, c=course2_data, live={"enabled": False}, sessions=[],
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
 
