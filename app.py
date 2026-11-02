@@ -993,7 +993,7 @@ def receive_webhook():
 @app.before_request
 def check_password():
     # The link page, its click redirects and the freebies are public; the editor (/links/edit) is not.
-    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/", "/terms", "/refund-policy", "/privacy-policy", "/contact", "/digital-products", "/digital-products/") or (request.path == "/" and on_custom_domain())
+    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/", "/terms", "/refund-policy", "/privacy-policy", "/contact", "/digital-products", "/digital-products/", "/courses", "/courses/") or (request.path == "/" and on_custom_domain())
               or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")))
     if not DASHBOARD_PASSWORD or public:
         return
@@ -1099,8 +1099,15 @@ def freebies_count(page):
 @app.get("/course")
 @app.get("/course/")
 def course_page():
-    import course_data
+    import course_data, course2_data
     page = load_linkpage()
+    course2 = course2_settings(page)
+    if request.args.get("c") == "2" and course2.get("enabled", True):
+        ig = instagram_profile()
+        return render_template("course.html", page=page, course=course2, c=course2_data, live={"enabled": False}, sessions=[],
+                               tab=2, c2=course2_data, course2=course2,
+                               avatar=page["avatar"] or ig.get("profile_picture_url", ""),
+                               username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
     course = page.get("course") or clean_course({})
     if not course.get("enabled", True):
         abort(404)
@@ -1121,26 +1128,55 @@ def course_page():
         else:
             sessions = [("", t) for t in course_data.LIVE_SESSIONS]
     return render_template("course.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
+                           tab=1, c2=course2_data if course2.get("enabled", True) else None, course2=course2,
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
+                           username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
+
+
+def course2_settings(page):
+    import course2_data
+    course = {**course2_data.DEFAULTS, **(page.get("course2") or {})}
+    url = course.get("url") or ""
+    if "superprofile.bio/course/" in url and "checkout=" not in url:
+        url += ("&" if "?" in url else "?") + "checkout=true"
+    course["url"] = url
+    return course
+
+
+@app.get("/courses")
+@app.get("/courses/")
+def courses_page():
+    import course_data, course2_data
+    page = load_linkpage()
+    c1 = page.get("course") or clean_course({})
+    c2 = course2_settings(page)
+    ig = instagram_profile()
+
+    def off(c):
+        mrp, price = str(c.get("mrp") or ""), str(c.get("price") or "")
+        if mrp.isdigit() and price.isdigit() and int(mrp) > int(price) > 0:
+            return round((int(mrp) - int(price)) * 100 / int(mrp))
+        return 0
+
+    cards = []
+    if c1.get("enabled", True):
+        live = c1.get("live") or {}
+        cards.append({"n": 1, "href": "/course", "cover": "free/course.jpg", "title": course_data.TITLE, "sub": course_data.SUBTITLE,
+                      "stats": course_data.STATS, "price": c1["price"], "mrp": c1.get("mrp"), "off": off(c1),
+                      "badge": (live.get("name") or "Batch 1") + " · live" if live.get("enabled") else "Available",
+                      "note": "", "ready": bool(c1.get("url"))})
+    if c2.get("enabled", True):
+        cards.append({"n": 2, "href": "/course?c=2", "cover": course2_data.COVER, "title": course2_data.TITLE, "sub": course2_data.SUBTITLE,
+                      "stats": course2_data.STATS, "price": c2["price"], "mrp": c2.get("mrp"), "off": off(c2),
+                      "badge": "New" if c2.get("url") else "Coming soon", "note": course2_data.PRICE_NOTE, "ready": bool(c2.get("url"))})
+    return render_template("courses.html", page=page, cards=cards, avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
 
 
 @app.get("/digital-products")
 @app.get("/digital-products/")
 def course2_page():
-    import course2_data
-    page = load_linkpage()
-    course = {**course2_data.DEFAULTS, **(page.get("course2") or {})}
-    if not course.get("enabled", True):
-        abort(404)
-    url = course.get("url") or ""
-    if "superprofile.bio/course/" in url and "checkout=" not in url:
-        url += ("&" if "?" in url else "?") + "checkout=true"
-    course["url"] = url
-    ig = instagram_profile()
-    return render_template("course.html", page=page, course=course, c=course2_data, live={"enabled": False}, sessions=[],
-                           avatar=page["avatar"] or ig.get("profile_picture_url", ""),
-                           username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
+    return redirect("/course?c=2", code=302)
 
 
 LEGAL_NAV = [("terms", "Terms"), ("refund-policy", "Refund"), ("privacy-policy", "Privacy"), ("contact", "Contact")]

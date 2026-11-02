@@ -46,7 +46,7 @@
   .handle { font-weight:900; font-size:16px; text-decoration:none; }
   .tag { display:inline-block; font-size:11px; font-weight:800; color:#fff; background:var(--rose); border-radius:20px; padding:2px 9px; margin-top:3px; }
   .tag.c { background:var(--cer); }
-  .back { margin-left:auto; font-weight:800; font-size:13px; text-decoration:none; background:var(--card); color:var(--card-ink); border:2px solid var(--line); border-radius:30px; padding:7px 13px; }
+  .back { white-space:nowrap; flex:none; margin-left:auto; font-weight:800; font-size:13px; text-decoration:none; background:var(--card); color:var(--card-ink); border:2px solid var(--line); border-radius:30px; padding:7px 13px; }
 
   .hero { margin-top:26px; }
   .kicker { font:800 12px Inter; letter-spacing:3px; color:var(--cer); text-transform:uppercase; }
@@ -152,6 +152,19 @@
   .live .perks { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-top:14px; }
   @media (max-width:560px) { .live .perks { grid-template-columns:1fr; } }
   .live .perks div { background:color-mix(in srgb, var(--rose) 7%, var(--card)); border-radius:14px; padding:10px 12px; font-weight:700; font-size:13.5px; line-height:1.4; }
+  .tabs { display:flex; gap:8px; margin-top:16px; background:var(--card); border:2px solid var(--line); border-radius:40px; padding:5px; }
+  .tabs a { flex:1; text-align:center; text-decoration:none; font:800 13.5px/1.25 Inter; color:var(--card-ink); border-radius:30px; padding:9px 8px; }
+  .tabs a small { display:block; font-weight:700; font-size:11px; color:var(--card-mute); }
+  .tabs a.on { background:var(--rose); color:#fff; }
+  .tabs a.on small { color:rgba(255,255,255,.85); }
+  .next { display:grid; grid-template-columns:200px 1fr; gap:16px; align-items:center; background:var(--card); color:var(--card-ink); border-radius:24px; padding:16px; margin-top:12px; text-decoration:none; border:3px solid var(--cer); }
+  @media (max-width:560px) { .next { grid-template-columns:1fr; } }
+  .next img { width:100%; border-radius:14px; display:block; }
+  .next .k { font:800 11px Inter; letter-spacing:2.5px; color:var(--cer); text-transform:uppercase; }
+  .next b { display:block; font-size:20px; font-weight:900; line-height:1.15; margin-top:4px; }
+  .next p { margin:6px 0 0; color:var(--card-mute); font-weight:600; font-size:14px; line-height:1.45; }
+  .next .go { display:inline-block; margin-top:10px; background:var(--btn); color:var(--btn-ink); border-radius:30px; padding:9px 16px; font-weight:900; font-size:14px; }
+  @media (max-width:420px) { .top { gap:8px; } .top .back { font-size:12px; padding:6px 10px; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } .rv { opacity:1; transform:none; } }
 </style>
 </head>
@@ -167,7 +180,8 @@
     <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">{{ username[0]|upper }}</div>{% endif %}</div>
     <div><a class="handle" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">@{{ username }}</a><br>
       <span class="tag">course</span> {% if followers %}<span class="tag c">{{ "{:,}".format(followers) if followers < 10000 else ("%.1fK" % (followers / 1000)).replace(".0K", "K") }} followers</span>{% endif %}</div>
-    <a class="back" href="/links">← Links</a>
+    {% if c2 %}<a class="back" href="/courses" style="margin-left:auto;background:var(--rose);color:#fff;border-color:var(--rose)">🎓 Courses</a>{% endif %}
+    <a class="back" href="/links" {% if c2 %}style="margin-left:0"{% endif %}>← Links</a>
   </div>
 
   <section class="hero">
@@ -234,6 +248,16 @@
 
   <h2 class="rv">Sawaal <span>jawab</span></h2>
   {% for q, a in c.FAQ %}<details class="faq shadow rv"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
+
+  {% if c2 and tab == 1 %}
+  <h2 class="rv">Iske baad: <span>Course 2</span></h2>
+  <a class="next shadow rv" href="/course?c=2">
+    <img src="/{{ c2.COVER }}" alt="{{ c2.TITLE }}" onerror="this.remove()">
+    <span><span class="k">Course 2 · ₹{{ course2.price }}</span><b>{{ c2.TITLE }}</b>
+      <p>Page grow ho gaya? Ab usse kamao: idea se pehli sale tak. Course 1 (Batch 1) students ko coupon se ₹499.</p>
+      <span class="go">Course 2 dekho →</span></span>
+  </a>
+  {% endif %}
 
   <div class="final rv">
     <h2>Ready ho?</h2>
