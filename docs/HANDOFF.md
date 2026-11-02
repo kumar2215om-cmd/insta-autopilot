@@ -15,7 +15,8 @@ Last updated: 1 Nov 2026 (v2) · see `git log` for the latest commit.
 | Live app | https://insta-autopilot-ten.vercel.app |
 | Public link page (put in IG bio) | https://insta-autopilot-ten.vercel.app/links |
 | Freebies page | https://insta-autopilot-ten.vercel.app/free/ (deep link: `/free?k=KEYWORD`) |
-| Admin dashboard (password) | https://insta-autopilot-ten.vercel.app/ |
+| Admin dashboard (password) | https://insta-autopilot-ten.vercel.app/ (also `/admin` on every domain) |
+| Custom domain | **advocmedia.in**: `/` redirects to `/links`; dashboard at `advocmedia.in/admin` (see `on_custom_domain()`) |
 | Link page editor (password) | https://insta-autopilot-ten.vercel.app/links/edit |
 | GitHub repo | `kumar2215om-cmd/insta-autopilot` (branch `main`) |
 | Hosting | Vercel project `insta-autopilot` (team "om", Hobby). **Every push to `main` auto-deploys** (~1 min). |

@@ -978,7 +978,7 @@ def receive_webhook():
 @app.before_request
 def check_password():
     # The link page, its click redirects and the freebies are public; the editor (/links/edit) is not.
-    public = (request.path in ("/links", "/links/", "/free")
+    public = (request.path in ("/links", "/links/", "/free") or (request.path == "/" and on_custom_domain())
               or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")))
     if not DASHBOARD_PASSWORD or public:
         return
@@ -1037,7 +1037,21 @@ def cron_refresh_token():
         return jsonify({"error": str(e)}), 502
 
 
+def on_custom_domain():
+    """True on a custom domain like advocmedia.in (not *.vercel.app or local testing)."""
+    host = request.host.split(":")[0].lower()
+    return not (host.endswith(".vercel.app") or host in ("localhost", "127.0.0.1"))
+
+
 @app.get("/")
+def home():
+    # On the brand domain the home page is the public link page; the dashboard lives at /admin.
+    if on_custom_domain():
+        return redirect("/links", code=302)
+    return render_template("dashboard.html")
+
+
+@app.get("/admin")
 def dashboard():
     return render_template("dashboard.html")
 
