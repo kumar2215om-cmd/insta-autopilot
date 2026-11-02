@@ -105,7 +105,7 @@
   <div>
     <nav class="tabs">
       <a href="#sec-profile">👤 Profile</a><a href="#sec-socials">🌐 Socials</a>
-      <a href="#sec-links">🛍️ Links &amp; products</a><a href="#sec-freebies">🎁 Freebies</a>
+      <a href="#sec-links">🛍️ Links &amp; products</a><a href="#sec-freebies">🎁 Freebies</a><a href="#sec-course">🎓 Course</a>
     </nav>
 
     <div class="card share" style="margin-bottom:20px">
@@ -160,6 +160,25 @@
         <div id="freebies"></div>
         <p class="hint" style="margin:0">Upload a PDF / zip / image (up to 4 MB) or paste any link (Notion, Google Drive, YouTube).
           Use the DM link on each freebie in your auto-DM. Press <b>Save page</b> after adding.</p>
+      </div>
+    </section>
+
+    <section class="card block" id="sec-course">
+      <div class="card-h"><h2>🎓 Course page</h2>
+        <p class="muted">Your course sales page at <a href="/course" target="_blank">/course</a>. Payment happens on SuperProfile: paste the course checkout link here.</p></div>
+      <div class="card-b">
+        <div class="grid2">
+          <div><label>SuperProfile course link <span class="muted">(empty = "Coming soon")</span></label><input type="text" id="c-url" placeholder="https://superprofile.bio/…"></div>
+          <div class="grid2" style="gap:0 10px">
+            <div><label>Price (₹)</label><input type="text" id="c-price" placeholder="499" inputmode="numeric"></div>
+            <div><label>Full price (₹, shown crossed out)</label><input type="text" id="c-mrp" placeholder="999" inputmode="numeric"></div>
+          </div>
+        </div>
+        <div class="tools">
+          <label><input type="checkbox" id="c-enabled"> Course page live</label>
+          <a class="btn btn-ghost sm spacer" href="/course" target="_blank">Open course page ↗</a>
+        </div>
+        <p class="hint" style="margin:10px 0 0">Tip: point your link page product and your <b>COURSE</b> auto-DM to <code>advocmedia.in/course</code>, so people see the full curriculum before paying.</p>
       </div>
     </section>
 
@@ -391,6 +410,7 @@ async function uploadFreebie(i, input) {
 async function save() {
   page.name = $("name").value; page.bio = $("bio").value; page.avatar = $("avatar").value;
   page.socials = Object.fromEntries(SOCIALS.map(k => [k, $("s-" + k).value]));
+  page.course = {url: $("c-url").value, price: $("c-price").value, mrp: $("c-mrp").value, enabled: $("c-enabled").checked};
   const skipped = page.items.filter(it => !it.title.trim() || !it.url.trim()).length
     + page.freebies.filter(fb => !(fb.k || "").trim() || !(fb.t || "").trim() || !((fb.u || "").trim() || (fb.body || "").trim())).length;
   const r = await fetch("/api/linkpage", {method: "PUT", headers: {"Content-Type": "application/json"},
@@ -411,6 +431,9 @@ async function save() {
   for (const k of SOCIALS) $("s-" + k).value = page.socials[k] || "";
   if (!page.socials.instagram && data.profile.username) $("s-instagram").value = data.profile.username;
   page.freebies = page.freebies || [];
+  page.course = page.course || {enabled: true, url: "", price: "499", mrp: "999"};
+  $("c-url").value = page.course.url || ""; $("c-price").value = page.course.price || ""; $("c-mrp").value = page.course.mrp || "";
+  $("c-enabled").checked = page.course.enabled !== false;
   $("topics") || document.body.insertAdjacentHTML("beforeend", `<datalist id="topics">${TOPICS.map(t => `<option value="${t}">`).join("")}</datalist>`);
   renderThemes(); renderItems(); renderFreebies();
 })();

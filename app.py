@@ -277,6 +277,7 @@ def load_linkpage():
     page.setdefault("socials", {})
     page.setdefault("items", [])
     page.setdefault("freebies", [])
+    page.setdefault("course", clean_course({}))
     return page
 
 
@@ -346,7 +347,15 @@ def clean_linkpage(data):
         "socials": socials,
         "items": items,
         "freebies": freebies,
+        "course": clean_course(data.get("course") or {}),
     }
+
+
+def clean_course(c):
+    """Settings for the /course sales page (buy link on SuperProfile, prices in rupees)."""
+    digits = lambda v: "".join(ch for ch in str(v or "") if ch.isdigit())[:6]
+    return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
+            "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999"}
 
 
 def social_links(socials):
@@ -978,7 +987,7 @@ def receive_webhook():
 @app.before_request
 def check_password():
     # The link page, its click redirects and the freebies are public; the editor (/links/edit) is not.
-    public = (request.path in ("/links", "/links/", "/free") or (request.path == "/" and on_custom_domain())
+    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/") or (request.path == "/" and on_custom_domain())
               or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")))
     if not DASHBOARD_PASSWORD or public:
         return
@@ -1079,6 +1088,20 @@ def freebies_count(page):
     except (OSError, ValueError, KeyError):
         builtin = 0
     return builtin + sum(1 for fb in page.get("freebies", []) if fb.get("enabled", True))
+
+
+@app.get("/course")
+@app.get("/course/")
+def course_page():
+    import course_data
+    page = load_linkpage()
+    course = page.get("course") or clean_course({})
+    if not course.get("enabled", True):
+        abort(404)
+    ig = instagram_profile()
+    return render_template("course.html", page=page, course=course, c=course_data,
+                           avatar=page["avatar"] or ig.get("profile_picture_url", ""),
+                           username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
 
 
 @app.get("/go/<item_id>")
