@@ -354,8 +354,14 @@ def clean_linkpage(data):
 def clean_course(c):
     """Settings for the /course sales page (buy link on SuperProfile, prices in rupees)."""
     digits = lambda v: "".join(ch for ch in str(v or "") if ch.isdigit())[:6]
+    lv = c.get("live") if isinstance(c.get("live"), dict) else {}
+    text = lambda v, n: " ".join(str(v or "").split())[:n]
+    schedule = [text(line, 120) for line in str(lv.get("schedule") or "").splitlines() if line.strip()][:12]
+    live = {"enabled": lv.get("enabled") is True, "name": text(lv.get("name"), 40) or "Batch 1",
+            "start": text(lv.get("start"), 60), "time": text(lv.get("time"), 80),
+            "seats": digits(lv.get("seats"))[:4], "schedule": "\n".join(schedule)}
     return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
-            "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999"}
+            "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live}
 
 
 def social_links(socials):
@@ -1099,7 +1105,17 @@ def course_page():
     if not course.get("enabled", True):
         abort(404)
     ig = instagram_profile()
-    return render_template("course.html", page=page, course=course, c=course_data,
+    live = course.get("live") or {}
+    sessions = []
+    if live.get("enabled"):
+        lines = [l for l in (live.get("schedule") or "").splitlines() if l.strip()]
+        if lines:  # "Sat 15 Nov · 7 PM | Welcome + niche"  (date part optional)
+            for l in lines:
+                when, _, topic = l.partition("|")
+                sessions.append((when.strip(), topic.strip()) if topic.strip() else ("", when.strip()))
+        else:
+            sessions = [("", t) for t in course_data.LIVE_SESSIONS]
+    return render_template("course.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
 

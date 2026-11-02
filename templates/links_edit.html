@@ -174,6 +174,17 @@
             <div><label>Full price (₹, shown crossed out)</label><input type="text" id="c-mrp" placeholder="999" inputmode="numeric"></div>
           </div>
         </div>
+        <div class="live-box" style="margin-top:14px;border-top:1.5px dashed var(--line, #E7E0D4);padding-top:12px">
+          <label style="font-weight:800"><input type="checkbox" id="l-enabled"> 🔴 Show a live batch section on /course</label>
+          <div class="grid2" style="margin-top:8px">
+            <div><label>Batch name</label><input type="text" id="l-name" placeholder="Batch 1" maxlength="40"></div>
+            <div><label>Starts <span class="muted">(e.g. Sat 15 Nov)</span></label><input type="text" id="l-start" placeholder="Sat 15 Nov" maxlength="60"></div>
+            <div><label>Class time <span class="muted">(e.g. Sat &amp; Sun · 7–8:15 PM IST)</span></label><input type="text" id="l-time" placeholder="Sat & Sun · 7–8:15 PM IST" maxlength="80"></div>
+            <div><label>Seats <span class="muted">(optional, only if it's a real limit)</span></label><input type="text" id="l-seats" placeholder="" inputmode="numeric"></div>
+          </div>
+          <label>Schedule <span class="muted">(one class per line: <code>date · time | topic</code>. Empty = the 8 default topics, dates "soon")</span></label>
+          <textarea id="l-schedule" rows="5" placeholder="Sat 15 Nov · 7 PM | Welcome + niche chuno&#10;Sun 16 Nov · 7 PM | Profile, highlights, link in bio"></textarea>
+        </div>
         <div class="tools">
           <label><input type="checkbox" id="c-enabled"> Course page live</label>
           <a class="btn btn-ghost sm spacer" href="/course" target="_blank">Open course page ↗</a>
@@ -410,7 +421,9 @@ async function uploadFreebie(i, input) {
 async function save() {
   page.name = $("name").value; page.bio = $("bio").value; page.avatar = $("avatar").value;
   page.socials = Object.fromEntries(SOCIALS.map(k => [k, $("s-" + k).value]));
-  page.course = {url: $("c-url").value, price: $("c-price").value, mrp: $("c-mrp").value, enabled: $("c-enabled").checked};
+  page.course = {url: $("c-url").value, price: $("c-price").value, mrp: $("c-mrp").value, enabled: $("c-enabled").checked,
+                 live: {enabled: $("l-enabled").checked, name: $("l-name").value, start: $("l-start").value, time: $("l-time").value,
+                        seats: $("l-seats").value, schedule: $("l-schedule").value}};
   const skipped = page.items.filter(it => !it.title.trim() || !it.url.trim()).length
     + page.freebies.filter(fb => !(fb.k || "").trim() || !(fb.t || "").trim() || !((fb.u || "").trim() || (fb.body || "").trim())).length;
   const r = await fetch("/api/linkpage", {method: "PUT", headers: {"Content-Type": "application/json"},
@@ -434,6 +447,9 @@ async function save() {
   page.course = page.course || {enabled: true, url: "", price: "499", mrp: "999"};
   $("c-url").value = page.course.url || ""; $("c-price").value = page.course.price || ""; $("c-mrp").value = page.course.mrp || "";
   $("c-enabled").checked = page.course.enabled !== false;
+  const lv = page.course.live || {};
+  $("l-enabled").checked = !!lv.enabled; $("l-name").value = lv.name || ""; $("l-start").value = lv.start || "";
+  $("l-time").value = lv.time || ""; $("l-seats").value = lv.seats || ""; $("l-schedule").value = lv.schedule || "";
   $("topics") || document.body.insertAdjacentHTML("beforeend", `<datalist id="topics">${TOPICS.map(t => `<option value="${t}">`).join("")}</datalist>`);
   renderThemes(); renderItems(); renderFreebies();
 })();

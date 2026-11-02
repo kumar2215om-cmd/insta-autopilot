@@ -135,6 +135,23 @@
   @keyframes spin { to { transform:rotate(360deg); } }
   @keyframes glow { 0%,100% { box-shadow:0 0 0 0 color-mix(in srgb, var(--rose) 45%, transparent); } 50% { box-shadow:0 0 0 9px color-mix(in srgb, var(--rose) 0%, transparent); } }
   @keyframes sweep { 0%,35% { transform:translateX(-120%); } 75%,100% { transform:translateX(120%); } }
+  .live { margin-top:46px; background:var(--card); color:var(--card-ink); border-radius:24px; padding:22px 20px; border:3px solid var(--rose); position:relative; }
+  .live .lt { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .live h2 { margin:0; }
+  .live .dot { width:12px; height:12px; border-radius:50%; background:#E5484D; box-shadow:0 0 0 0 rgba(229,72,77,.5); animation:pulse 1.6s infinite; flex:none; }
+  @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(229,72,77,.5); } 70% { box-shadow:0 0 0 10px rgba(229,72,77,0); } 100% { box-shadow:0 0 0 0 rgba(229,72,77,0); } }
+  .live .meta { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 4px; }
+  .live .meta span { background:color-mix(in srgb, var(--cer) 10%, var(--card)); color:var(--card-ink); border-radius:30px; padding:6px 12px; font:800 13px Inter; }
+  .live .meta span.seat { background:var(--rose); color:#fff; }
+  .live p.lp { margin:10px 0 0; color:var(--card-mute); font-weight:600; font-size:14.5px; line-height:1.5; }
+  .live ol { list-style:none; margin:14px 0 0; padding:0; counter-reset:s; }
+  .live li { counter-increment:s; display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-top:1.5px solid var(--line); }
+  .live li::before { content:counter(s); flex:none; width:30px; height:30px; border-radius:10px; display:grid; place-items:center; font:900 14px Inter; color:#fff; background:var(--cer); }
+  .live li b { display:block; font-size:15px; font-weight:800; line-height:1.35; }
+  .live li small { display:block; font:800 12px Inter; color:var(--rose); letter-spacing:.3px; margin-bottom:2px; }
+  .live .perks { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-top:14px; }
+  @media (max-width:560px) { .live .perks { grid-template-columns:1fr; } }
+  .live .perks div { background:color-mix(in srgb, var(--rose) 7%, var(--card)); border-radius:14px; padding:10px 12px; font-weight:700; font-size:13.5px; line-height:1.4; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } .rv { opacity:1; transform:none; } }
 </style>
 </head>
@@ -154,7 +171,7 @@
   </div>
 
   <section class="hero">
-    <div class="kicker">Hinglish video course</div>
+    <div class="kicker">{% if live.enabled %}{{ live.name }} · live classes + video course{% else %}Hinglish video course{% endif %}</div>
     <h1>Claude se Instagram <span>grow karo</span></h1>
     <p class="sub">{{ c.SUBTITLE }}</p>
     <div class="proof shadow"><div class="big">0 → <b>21K</b></div><div class="t">Mera real result, 33 posts mein<small>System milega, guarantee nahi. Honest course.</small></div></div>
@@ -167,6 +184,21 @@
     </div>
     <img class="cover shadow rv" src="/free/course.jpg" alt="Claude se Instagram grow karo: course cover" onerror="this.remove()">
   </section>
+
+  {% if live.enabled and sessions %}
+  <section class="live shadow rv" id="live">
+    <div class="lt"><span class="dot" aria-hidden="true"></span><h2>{{ live.name }} · <span>live classes</span></h2></div>
+    <div class="meta">
+      <span>🎥 {{ sessions|length }} live classes</span>
+      {% if live.start %}<span>📅 Starts {{ live.start }}</span>{% endif %}
+      {% if live.time %}<span>🕖 {{ live.time }}</span>{% endif %}
+      {% if live.seats %}<span class="seat">Sirf {{ live.seats }} seats</span>{% endif %}
+    </div>
+    <p class="lp">Is batch mein main har module live sikhaunga, screen pe, step by step. Har class ke end mein Q&amp;A. Class miss ho gayi? Koi baat nahi: har class record hogi aur recording course mein add ho jaayegi. Class ka join link payment ke baad SuperProfile student dashboard mein milega.</p>
+    <ol>{% for when, topic in sessions %}<li><span>{% if when %}<small>{{ when }}</small>{% else %}<small>Date jaldi announce hogi</small>{% endif %}<b>{{ topic }}</b></span></li>{% endfor %}</ol>
+    <div class="perks"><div>🔴 Live Q&amp;A: apne page ke sawaal seedha poocho</div><div>📼 Har class ki recording course mein</div><div>📘 Workbook + 6 bonuses pehle din se</div></div>
+  </section>
+  {% endif %}
 
   <h2 class="rv">Kya <span>seekhoge</span></h2>
   <div class="grid">{% for e, t, d in c.OUTCOMES %}<div class="card shadow rv"><div class="e">{{ e }}</div><b>{{ t }}</b><p>{{ d }}</p></div>{% endfor %}</div>

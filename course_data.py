@@ -36,6 +36,12 @@ MODULES = [
         "Affiliate links", "Digital products", "Brand collabs"]),
 ]
 
+# Default live-batch plan (shown when the editor's schedule box is empty). One class per line.
+LIVE_SESSIONS = ["Welcome + niche chuno (0.1–1.1)", "Profile, highlights, link in bio + outliers (1.2–2.1)",
+                 "30-day calendar, hook lab, keywords, script (2.2–3.1)", "Voiceover, CapCut edit, Claude Code reels (3.2–3.4)",
+                 "Quality checklist, covers, DM machine setup (3.5–4.2)", "Follow-gate, safety, automation, freebie ideas (4.3–5.1)",
+                 "Guide page, insights, flop diagnosis, weekly routine (5.2–6.3)", "Playbooks + monetize honestly + wrap-up (6.4–7.3)"]
+
 FOR = ["Creators, freelancers aur small businesses jo AI se Instagram grow karna chahte hain",
        "Jinhe editing ya coding nahi aati (Path A no-code hai)", "Jo hafte mein 3–4 reels post karne ko ready hain"]
 NOT_FOR = ["\"Follower hack\" dhoondne wale", "Jo post kiye bina results chahte hain"]
