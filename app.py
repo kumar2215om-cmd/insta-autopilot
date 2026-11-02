@@ -1215,11 +1215,37 @@ def themed_guide(path):
     return Response(apply_guide_theme(html, load_linkpage()), mimetype="text/html", headers={"Cache-Control": "no-store"})
 
 
+def course_banner(page):
+    """Small 'new course' bar for the freebies page and guides; shown only once the course has a buy link."""
+    import course_data
+    from markupsafe import escape
+    c = page.get("course") or {}
+    if c.get("enabled", True) is False or not c.get("url"):
+        return ""
+    live = c.get("live") or {}
+    when = (f' · {escape(live.get("name") or "Batch 1")} live' + (f' · {escape(live["start"])} se' if live.get("start") else "")) if live.get("enabled") else ""
+    price = escape(c.get("price") or "")
+    return (
+        '<div class="cbn" id="cbn"><style>'
+        '.cbn{position:relative;z-index:50;margin:12px auto 0;max-width:760px;width:calc(100% - 32px);box-sizing:border-box;display:flex;align-items:center;gap:12px;'
+        'background:#1C1A17;color:#fff;border-radius:18px;padding:10px 12px 10px 16px;font:700 13.5px/1.35 Inter,system-ui,sans-serif;box-shadow:0 12px 28px rgba(60,40,20,.18)}'
+        '.cbn a.cbn-go{margin-left:auto;flex:none;background:#FF2D95;color:#fff;text-decoration:none;font-weight:900;border-radius:30px;padding:8px 14px;white-space:nowrap}'
+        '.cbn b{color:#FF8CC6}.cbn button{flex:none;background:none;border:0;color:#bbb;font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}'
+        '@media (max-width:420px){.cbn{font-size:12.5px}.cbn a.cbn-go{padding:7px 11px}}</style>'
+        f'<span>🎓 <b>Naya course:</b> {escape(course_data.TITLE)}{when}</span>'
+        f'<a class="cbn-go" href="/course">{"₹" + price + " · " if price else ""}Dekho →</a>'
+        '<button type="button" aria-label="Hide" onclick="try{sessionStorage.setItem(\'cbn\',\'1\')}catch(e){}this.parentNode.remove()">×</button>'
+        '<script>try{if(sessionStorage.getItem("cbn"))document.getElementById("cbn").remove()}catch(e){}</script></div>')
+
+
 def apply_guide_theme(html, page, extra_head=""):
     """Link theme.css, add the editor's theme class and the scroll-reveal script to a guide page."""
     theme = page.get("theme") if page.get("theme") in THEMES else "studio"
     html = html.replace("</head>", f'{extra_head}<link rel="stylesheet" href="../theme.css"></head>', 1)
     html = re.sub(r"<body>(?=\s*<main)", f'<body class="t-{theme}">', html, count=1)
+    banner = course_banner(page)
+    if banner:
+        html = re.sub(r"(<body[^>]*>)", lambda m: m.group(1) + banner, html, count=1)
     return html.replace("</body>", GUIDE_REVEAL_JS + "</body>", 1)
 
 
@@ -1246,7 +1272,7 @@ def freebies_index():
     page = load_linkpage()
     # Same colour theme as the link page (chosen in the editor).
     theme = page.get("theme") if page.get("theme") in THEMES else "studio"
-    html = html.replace('<body>\n<div class="wrap">', f'<body class="t-{theme}">\n<div class="wrap">', 1)
+    html = html.replace('<body>\n<div class="wrap">', f'<body class="t-{theme}">\n{course_banner(page)}<div class="wrap">', 1)
     start = html.index("const D=") + len("const D=")
     end = html.index(";\n", start)
     data = json.loads(html[start:end])
