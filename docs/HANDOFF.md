@@ -4,7 +4,9 @@ Owner: Om · Instagram **@aiwith.om** ("AI Tools & Tips Daily", Hinglish).
 Scope of this handoff: the **Insta Autopilot web app**: admin dashboard, link-in-bio page + editor, `/free` freebies page, guide pages, uploads, themes and animations.
 **Not included:** reel making/editing (the Remotion studio in `/home/user/aiwithom/template`). That has its own v3 handoff.
 
-Last updated: 1 Nov 2026 (v2) · see `git log` for the latest commit.
+Last updated: **2 Nov 2026 (v3)** · latest commit on `main`: see `git log` (v3 work = course, policy pages, freebie→course promo, PDF import).
+
+> **v3 quick summary:** advocmedia.in is the main domain · `/course` sells Course 1 (SuperProfile checkout, direct `?checkout=true`) with an optional live-batch section · `/terms` `/refund-policy` `/privacy-policy` `/contact` · course banner + black course card injected into `/free` and every guide · PDF/TXT/MD upload on a freebie fills the 📝 guide box · Course 2 page + `/courses` hub are **parked on branch `course2-page`** (not on main).
 
 ---
 
@@ -12,12 +14,14 @@ Last updated: 1 Nov 2026 (v2) · see `git log` for the latest commit.
 
 | What | Where |
 |---|---|
-| Live app | https://insta-autopilot-ten.vercel.app |
+| Live app | **https://www.advocmedia.in** (also https://insta-autopilot-ten.vercel.app) |
 | Public link page (put in IG bio) | https://insta-autopilot-ten.vercel.app/links |
 | Freebies page | https://insta-autopilot-ten.vercel.app/free/ (deep link: `/free?k=KEYWORD`) |
 | Admin dashboard (password) | https://insta-autopilot-ten.vercel.app/ (also `/admin` on every domain) |
 | Switch old links | Dashboard card "🔗 Switch links" (`/api/switch-domain`, GET = count, POST = replace `insta-autopilot-ten.vercel.app` → `PUBLIC_HOST`, default `www.advocmedia.in`) in auto-DM rules + link page |
-| Course sales page | `/course` (public): `templates/course.html` + text in `course_data.py`; buy link / price / on-off in `/links/edit` → 🎓 Course page (stored as `course` on the link page). Payment + lessons on SuperProfile. |
+| Course sales page | **`advocmedia.in/course`** (public): `templates/course.html` + text in `course_data.py`; buy link / price / MRP / on-off + **live batch** (name, start, time, seats, schedule) in `/links/edit` → 🎓 Course page (stored as `course` on the link page). Join now → `superprofile.bio/course/instagram-growth-claude?checkout=true` (the `?checkout=true` is added by the server). |
+| Policy pages | `/terms`, `/refund-policy`, `/privacy-policy`, `/contact` (public): text in `legal_data.py`, template `templates/legal.html`. Contact email: kumarom1315@gmail.com |
+| SuperProfile course | https://superprofile.bio/course/instagram-growth-claude · ₹499 (₹999 struck) · 6 months access · Batch 1 live on Zoom Sat & Sun 9–10 PM IST, 14 Nov – 6 Dec 2026 |
 | Custom domain | **advocmedia.in**: `/` redirects to `/links`; dashboard at `advocmedia.in/admin` (see `on_custom_domain()`) |
 | Link page editor (password) | https://insta-autopilot-ten.vercel.app/links/edit |
 | GitHub repo | `kumar2215om-cmd/insta-autopilot` (branch `main`) |
@@ -47,7 +51,15 @@ vercel.json                Crons only (token refresh Mon 03:00, retry failed DMs
 README.md, .env.example    Setup notes; env var names
 ```
 
-### Routes added/changed today
+### Routes added in v3
+| Route | Auth | What |
+|---|---|---|
+| `GET /course` | public | Course 1 sales page. Shows "Coming soon · DM COURSE" until a SuperProfile link is saved; live section when `course.live.enabled` |
+| `GET /terms` `/refund-policy` `/privacy-policy` `/contact` | public | `legal_page()` → `legal.html`, data in `legal_data.py` (email auto-linked) |
+| `POST /api/freebies/import` | password | .pdf/.txt/.md → Markdown for the guide box (`tools/doc2md.py`, needs `pypdf`). Nothing stored |
+| (injected) | — | `course_banner(page)` (black top bar) on `/free/` and guides; `course_promo_card(page)` (black card) after the middle `</section>` of every guide. Both only when `course.url` is set; they read price + live start from the editor |
+
+### Routes added/changed in v2
 | Route | Auth | What |
 |---|---|---|
 | `GET /free` | public | 301 → `/free/` (keeps query string) |
@@ -69,6 +81,13 @@ Link page (`load_linkpage()` / `clean_linkpage()`), stored in Redis (or `linkpag
  "items":[{"id":"a1","type":"product|link","title":"","url":"","subtitle":"","price":"149","image":"","featured":true,"enabled":true}],
  "freebies":[{"id":"x","k":"CHAT","t":"Title","topic":"Free tools","e":"🎁","u":"/free/f/freebies/file-abc.pdf","enabled":true}]}
 ```
+Course settings on the link page (`clean_course()`):
+```json
+"course":{"enabled":true,"url":"https://superprofile.bio/course/instagram-growth-claude","price":"499","mrp":"999",
+          "live":{"enabled":true,"name":"Batch 1","start":"Sat 14 Nov","time":"Sat & Sun · 9–10 PM IST","seats":"",
+                  "schedule":"Sat 14 Nov · 9 PM | Welcome + niche chuno (0.1–1.1)\n…"}}
+```
+`schedule`: one class per line, `when | topic` (≤ 12 lines). Empty schedule → the 8 default topics in `course_data.LIVE_SESSIONS` with "Date jaldi announce hogi".
 - Freebie keyword `k`: uppercase A–Z0–9, ≤ 24 chars. `u` must be an https link or start with `/free/uploads/` or `/free/f/`.
 - Items/freebies missing title/link are dropped on save (the editor tells you how many).
 - `theme` ∈ `studio` (default) · `sunset` · `midnight` · `ocean` · `candy` · `mono`.
@@ -131,6 +150,19 @@ One setting (editor → Profile → Theme) drives **all public pages**: `/links`
 
 Commits (oldest → newest): `db7add4 c75bfb4 a9715ae 12140bb 099f5f7 733a2d7 e24c992 afe0633 a31c821 e753f50 47c4b70 56720d9 c8e1afa 59b0094 141875f c229b62 d7587f0 eff74db b6e395c 4f282f7`.
 
+### v3 (2 Nov 2026, in order)
+15. **Custom domain advocmedia.in** live (GoDaddy → Vercel); `/api/switch-domain` card used to move all links/DMs.
+16. **Course 1 "Claude se Instagram grow karo"**: `/course` sales page (outcomes, curriculum, 6 bonuses, for/not-for, FAQ), link-page product, COURSE auto-DM rule, SuperProfile course set up (modules 0–7 + 🎁 Bonuses, live classes, policies).
+17. **Live batch section** (editor fields + red-dot card with the class list) for Batch 1.
+18. **Direct checkout:** Join now skips SuperProfile's own sales page (`?checkout=true`), same tab.
+19. **Mobile fixes:** proof card stacks, full-width Join now.
+20. **Policy pages** + footer links on `/course` and `/links`; email on the course page.
+21. **Freebies → course:** top banner on `/free` + guides, black course card between guide sections (automatic for every future editor guide).
+22. **PDF/TXT/MD upload → guide box** (`tools/doc2md.py`): headings → cards, bullets/steps, footers/page numbers removed; the PDF is also uploaded and linked at the end.
+23. Parked on **`course2-page`** (not merged): Course 2 "AI se Digital Products banao aur becho" (`course2_data.py`, ₹799, BATCH1 coupon ₹499 for Course 1 students), `/course?c=2`, `/digital-products` → redirect, **`/courses` hub** + "🎓 Courses" header button, `freebies/course2.jpg`. Merge when Om confirms access period + keyword (PRODUCT).
+
+Course material (outside the repo, in `_course/` and the v3 handoff zip): workbook, 6 bonuses, 3 launch reels, 9 stories, promotion plan, copy bank, Day 1–8 recording scripts, SuperProfile setup guide, `Course1_Promo_Kit.zip` (public promo) and `Course1_Course_Kit.zip` (private, paying students only).
+
 ---
 
 ## 6. How to… (common tasks)
@@ -144,6 +176,12 @@ Commits (oldest → newest): `db7add4 c75bfb4 a9715ae 12140bb 099f5f7 733a2d7 e2
 **Make a new HTML guide:** the generator lives outside the repo at `/home/user/aiwithom/linkbio/_build/guidepage.py` (copy in the handoff zip under `tools/guide_builder/`). `page(kw, title1, title2, intro, sections)` with blocks `p, code, list, ol, tip, warn, cmds, table, repo, prompt, img, plugs`. Write the output to `freebies/guides/KEYWORD.html`, add a card to `index.html`, push. Theme + animations are applied automatically by the server.
 
 **Guides rebuilt from Notion / claude.ai PDFs:** every freebie now opens on our own site. Their sources live in `tools/guides_src/batch*.py` (one file per batch, written with `tools/guidepage.py` blocks); re-run a batch file from the repo root to regenerate its pages and re-point the `/free` cards. `tools/md2guide.py` converts a Markdown/Notion export directly. Keyword clashes: CLAUDE #12 = `CLAUDE_VIDEO.html`, CLAUDE #26 = `CLAUDE.html`; AUTO + OOTTO share `AUTO.html`. MOBILE (#60) was added as a new card.
+
+**Turn a PDF/TXT into a guide:** `/links/edit` → 🎁 Freebies → ＋ Add → keyword → ⬆️ Upload file (.pdf/.txt/.md) → text lands in 📝 guide box → fix headings/tables → 👀 Preview → Save. Scanned (image-only) PDFs can't be read.
+
+**Course page settings:** `/links/edit` → 🎓 Course page: SuperProfile link (empty = "Coming soon"), price, MRP, "Course page live", 🔴 live batch fields. Page text (title, outcomes, modules, bonuses, FAQ) is in `course_data.py`; policy text in `legal_data.py`.
+
+**After Batch 1:** untick the live batch box (page goes back to "video course"). Update `legal_data.py` Terms (live class dates) if you run Batch 2.
 
 **Change colours/animation:** public link page → `templates/links.html`; /free → `freebies/index.html` (theme block + motion block at the end of `<style>`); guides → `freebies/theme.css`; admin → `templates/_admin_style.html` (+ page-specific `<style>` in `dashboard.html` / `links_edit.html`).
 
@@ -169,7 +207,15 @@ D=$(mktemp -d); DATA_DIR=$D DASHBOARD_PASSWORD= python3 -c "import app; app.app.
 - Vercel function body limit 4.5 MB → uploads capped at 4 MB (bigger files: paste a Google Drive link).
 - Browser cache was why a saved freebie "didn't show": `/free/` and guides are now `no-store`.
 
+- `pkill -f "port=505x"` inside a Bash call also kills that same shell (the pattern matches its own command line): use a fresh port instead of pkill.
+- Ports 5060/5061 are "unsafe" in Chromium (SIP): Playwright refuses them; use 5070+.
+- Course page template is shared with Course 2 on the branch via `c.X|default(...)` fields: keep defaults when editing Course 1 text.
+
 ## 9. Open items / reminders
+- Before 14 Nov: Zoom **Pro** (free plan cuts at 40 min) and set the recurring meeting to 1 hr; SuperProfile profile photo + name; text-free cover on SuperProfile; save live batch "Starts: Sat 14 Nov" in the editor.
+- Refund policy on the site (`legal_data.py`) is the strict version: make sure it matches SuperProfile's refund text.
+- After each live class: upload recordings to the module, delete its 🔴 placeholder lesson.
+- Course 2: merge `course2-page` when ready; add a Course 2 section to the editor (`page.course2`); SuperProfile listing ₹799 + `BATCH1` coupon.
 - Point SuperProfile / auto-DM messages at `insta-autopilot-ten.vercel.app/free?k=KEYWORD`.
 - Older guide links (#1–38, outside this app) need their public access checked.
 - Notion connector isn't connected (was blocked in the sandbox).
