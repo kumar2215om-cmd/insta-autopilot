@@ -993,7 +993,7 @@ def receive_webhook():
 @app.before_request
 def check_password():
     # The link page, its click redirects and the freebies are public; the editor (/links/edit) is not.
-    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/") or (request.path == "/" and on_custom_domain())
+    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/", "/terms", "/refund-policy", "/privacy-policy", "/contact") or (request.path == "/" and on_custom_domain())
               or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")))
     if not DASHBOARD_PASSWORD or public:
         return
@@ -1123,6 +1123,29 @@ def course_page():
     return render_template("course.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
+
+
+LEGAL_NAV = [("terms", "Terms"), ("refund-policy", "Refund"), ("privacy-policy", "Privacy"), ("contact", "Contact")]
+
+
+@app.get("/terms")
+@app.get("/refund-policy")
+@app.get("/privacy-policy")
+@app.get("/contact")
+def legal_page():
+    import legal_data
+    slug = request.path.strip("/")
+    title, summary, sections = legal_data.PAGES[slug]
+    from markupsafe import Markup, escape
+    mail = Markup('<a href="mailto:{0}">{0}</a>').format(legal_data.EMAIL)
+    sections = [(h, [l if l.startswith("• ") or l == legal_data.EMAIL else escape(l).replace(escape(legal_data.EMAIL), mail)
+                     for l in lines]) for h, lines in sections]
+    page = load_linkpage()
+    ig = instagram_profile()
+    return render_template("legal.html", slug=slug, title=title, summary=summary, sections=sections, nav=LEGAL_NAV,
+                           updated=legal_data.UPDATED, email=legal_data.EMAIL, owner=legal_data.OWNER, year=legal_data.UPDATED[-4:],
+                           theme=page["theme"], avatar=page["avatar"] or ig.get("profile_picture_url", ""),
+                           username=ig.get("username", "") or "aiwith.om")
 
 
 @app.get("/go/<item_id>")

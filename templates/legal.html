@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ title }} · @{{ username }}</title>
+<meta name="description" content="{{ summary }}">
+{% if avatar %}<link rel="icon" href="{{ avatar }}">{% endif %}
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* Same themes as the link page (chosen in /links/edit). */
+  .t-studio   { --bg:#F1EADC; --ink:#1C1A17; --mute:#8C8780; --card:#fff; --card-ink:#1C1A17; --card-mute:#8C8780; --line:#E7E0D4;
+                --rose:#FF2D95; --cer:#007BA7; --btn:#1C1A17; --btn-ink:#fff; --thumb:linear-gradient(135deg,#FFF7FB,#F2FAFD); }
+  .t-sunset   { --bg:linear-gradient(165deg,#4f5bd5,#962fbf 35%,#d62976 65%,#fa7e1e 90%,#feda75); --ink:#fff; --mute:rgba(255,255,255,.82);
+                --card:#fff; --card-ink:#1d1530; --card-mute:#7a6f8a; --line:rgba(255,255,255,.35); --rose:#d62976; --cer:#4f5bd5;
+                --btn:#fff; --btn-ink:#1d1530; --hl:#FFE27A; --thumb:linear-gradient(135deg,#FFF1F8,#F3F0FF); }
+  .t-midnight { --bg:radial-gradient(circle at 20% 0%,#3b1d6e,#120f1a 60%); --ink:#f1ecfa; --mute:#b8afcf; --card:#1f1930; --card-ink:#f1ecfa;
+                --card-mute:#a59cba; --line:#2d2540; --rose:#f472b6; --cer:#a78bfa; --btn:#f1ecfa; --btn-ink:#120f1a; --hl:#f9a8d4;
+                --thumb:linear-gradient(135deg,#2a2140,#1f2a3a); }
+  .t-ocean    { --bg:linear-gradient(170deg,#0ea5e9,#0d9488 60%,#065f46); --ink:#fff; --mute:rgba(255,255,255,.85); --card:#fff;
+                --card-ink:#0f2a33; --card-mute:#5b7480; --line:rgba(255,255,255,.35); --rose:#0891b2; --cer:#0d9488;
+                --btn:#fff; --btn-ink:#0f2a33; --hl:#BBF7D0; --thumb:linear-gradient(135deg,#ECFBFF,#EFFCF6); }
+  .t-candy    { --bg:linear-gradient(170deg,#fde2f3,#e9d5ff 55%,#c7d2fe); --ink:#3b1f4a; --mute:#6b4f7a; --card:#fff; --card-ink:#3b1f4a;
+                --card-mute:#7d6889; --line:rgba(59,31,74,.12); --rose:#db2777; --cer:#7c3aed; --btn:#3b1f4a; --btn-ink:#fff;
+                --thumb:linear-gradient(135deg,#FFF1F8,#F4F0FF); }
+  .t-mono     { --bg:#fafafa; --ink:#111; --mute:#666; --card:#fff; --card-ink:#111; --card-mute:#777; --line:#e5e5e5;
+                --rose:#111; --cer:#555; --btn:#111; --btn-ink:#fff; --thumb:linear-gradient(135deg,#f6f6f6,#efefef); }
+
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { background:var(--bg); background-attachment:fixed; color:var(--ink); font-family:Inter,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; }
+  .wrap { max-width:720px; margin:0 auto; padding:22px 16px 60px; }
+  .top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .top a { font-weight:800; font-size:13px; text-decoration:none; background:var(--card); color:var(--card-ink); border:2px solid var(--line); border-radius:30px; padding:7px 13px; }
+  .top a.on { background:var(--rose); color:#fff; border-color:var(--rose); }
+  h1 { font-size:clamp(30px, 7vw, 44px); line-height:1.05; letter-spacing:-1.2px; margin:26px 0 6px; font-weight:900; }
+  .upd { color:var(--mute); font-weight:700; font-size:13px; }
+  .sum { margin-top:16px; background:var(--card); color:var(--card-ink); border-left:5px solid var(--rose); border-radius:16px; padding:14px 16px; font-weight:700; line-height:1.5; box-shadow:0 12px 28px rgba(60,40,20,.10); }
+  .sum b { color:var(--rose); }
+  .card { margin-top:12px; background:var(--card); color:var(--card-ink); border-radius:20px; padding:18px 18px 16px; box-shadow:0 12px 28px rgba(60,40,20,.10); }
+  .card h2 { margin:0 0 6px; font-size:17px; font-weight:900; }
+  .card p { margin:6px 0 0; color:var(--card-mute); font-weight:600; font-size:14.5px; line-height:1.55; }
+  .card p.b { padding-left:14px; text-indent:-12px; }
+  .card a { color:var(--rose); font-weight:800; }
+  .mail { display:inline-block; margin-top:6px; background:var(--btn); color:var(--btn-ink) !important; text-decoration:none; border-radius:30px; padding:10px 18px; font-weight:900; }
+  footer { text-align:center; margin-top:26px; font-size:13px; font-weight:700; color:var(--mute); line-height:1.9; }
+  footer a { color:var(--rose); text-decoration:none; font-weight:900; }
+</style>
+</head>
+<body class="t-{{ theme }}">
+<div class="wrap">
+  <nav class="top">
+    <a href="/course">← Course</a>
+    {% for s, label in nav %}<a href="/{{ s }}" {% if s == slug %}class="on"{% endif %}>{{ label }}</a>{% endfor %}
+  </nav>
+  <h1>{{ title }}</h1>
+  <div class="upd">Last updated: {{ updated }}</div>
+  <div class="sum"><b>Short mein:</b> {{ summary }}</div>
+  {% for heading, lines in sections %}
+  <section class="card"><h2>{{ heading }}</h2>
+    {% for l in lines %}{% if l.startswith("• ") %}<p class="b">{{ l }}</p>{% elif l == email %}<p><a class="mail" href="mailto:{{ email }}">✉️ {{ email }}</a></p>{% else %}<p>{{ l }}</p>{% endif %}{% endfor %}
+  </section>
+  {% endfor %}
+  <footer><a href="/course">Course</a> · <a href="/links">Links</a> · <a href="/free/">Free guides</a><br>© {{ year }} {{ owner }}</footer>
+</div>
+</body>
+</html>

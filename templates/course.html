@@ -239,8 +239,9 @@
     <h2>Ready ho?</h2>
     <p>Profile se auto-DMs tak, poora system. ₹{{ course.price }}{% if off %} (launch price){% endif %}.</p>
     {{ buybtn() }}
+    <p style="margin-top:14px;font-size:13.5px">Koi sawaal? <a href="mailto:kumarom1315@gmail.com" style="color:var(--rose);font-weight:900">kumarom1315@gmail.com</a> ya Instagram DM <b>@{{ username }}</b></p>
   </div>
-  <footer>Free guides bhi hain: <a href="/free/">advocmedia.in/free</a> · <a href="/links">All links</a></footer>
+  <footer>Free guides bhi hain: <a href="/free/">advocmedia.in/free</a> · <a href="/links">All links</a><br><a href="/terms">Terms</a> · <a href="/refund-policy">Refund policy</a> · <a href="/privacy-policy">Privacy</a> · <a href="/contact">Contact</a></footer>
 </div>
 
 <div class="bar" id="bar"><span class="price">₹{{ course.price }}</span>{% if off %}<span class="mrp">₹{{ course.mrp }}</span>{% endif %}<span style="margin-left:auto"></span>{{ buybtn() }}</div>
