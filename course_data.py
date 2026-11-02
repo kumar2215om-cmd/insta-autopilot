@@ -56,5 +56,6 @@ BONUSES = [
 FAQ = [("Kya Claude Pro zaroori hai?", "Nahi. Zyaadatar lessons free plan pe chalte hain. Long sessions aur Claude Code (Path B reels) ke liye paid plan chahiye."),
        ("Coding aani chahiye?", "Nahi. Path A (CapCut) mein zero coding. Path B optional hai."),
        ("Course kis language mein hai?", "Hinglish."),
+       ("Access kitne time ke liye hai?", "Purchase ke din se 6 mahine tak: saare videos, workbook aur bonuses. Bonus files download karke hamesha ke liye rakh sakte ho."),
        ("Course kahan milega?", "Payment ke baad course SuperProfile pe khulta hai: videos, workbook, saare bonuses aur resources wahin."),
        ("Kya followers guaranteed hain?", "Nahi. Koi bhi honest course ye promise nahi kar sakta. System milega; kaam tumhe karna hai.")]
