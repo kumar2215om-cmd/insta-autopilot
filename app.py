@@ -1105,6 +1105,11 @@ def course_page():
     if not course.get("enabled", True):
         abort(404)
     ig = instagram_profile()
+    url = course.get("url") or ""
+    if "superprofile.bio/course/" in url and "checkout=" not in url:
+        # skip SuperProfile's own sales page: open the payment form straight away
+        url += ("&" if "?" in url else "?") + "checkout=true"
+    course = {**course, "url": url}
     live = course.get("live") or {}
     sessions = []
     if live.get("enabled"):

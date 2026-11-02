@@ -159,7 +159,7 @@
 {% set has_url = course.url %}
 {% set off = (((course.mrp|int) - (course.price|int)) * 100 / (course.mrp|int))|round|int if (course.mrp|int) > (course.price|int) > 0 else 0 %}
 {% macro buybtn(cls="") -%}
-  {% if has_url %}<a class="btn {{ cls }}" href="{{ course.url }}" target="_blank" rel="noopener">Join now →</a>
+  {% if has_url %}<a class="btn {{ cls }}" href="{{ course.url }}" rel="noopener">Join now →</a>
   {% else %}<a class="btn soon {{ cls }}" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">Coming soon · DM COURSE</a>{% endif %}
 {%- endmacro %}
 <div class="wrap">
