@@ -16,6 +16,7 @@ Last updated: 1 Nov 2026 (v2) · see `git log` for the latest commit.
 | Public link page (put in IG bio) | https://insta-autopilot-ten.vercel.app/links |
 | Freebies page | https://insta-autopilot-ten.vercel.app/free/ (deep link: `/free?k=KEYWORD`) |
 | Admin dashboard (password) | https://insta-autopilot-ten.vercel.app/ (also `/admin` on every domain) |
+| Switch old links | Dashboard card "🔗 Switch links" (`/api/switch-domain`, GET = count, POST = replace `insta-autopilot-ten.vercel.app` → `PUBLIC_HOST`, default `www.advocmedia.in`) in auto-DM rules + link page |
 | Custom domain | **advocmedia.in**: `/` redirects to `/links`; dashboard at `advocmedia.in/admin` (see `on_custom_domain()`) |
 | Link page editor (password) | https://insta-autopilot-ten.vercel.app/links/edit |
 | GitHub repo | `kumar2215om-cmd/insta-autopilot` (branch `main`) |

@@ -141,6 +141,13 @@
             <p class="muted" style="margin:10px 0 0">“From automation” = people who followed after the “Follow me first” DM and then got the link.</p>
           </div>
         </div>
+        <div class="card" id="domainCard" style="display:none;margin-bottom:22px;border-left:4px solid var(--rose)">
+          <div class="card-b" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="flex:1;min-width:240px"><b>🔗 Switch links to <span id="newHost">advocmedia.in</span></b>
+              <div class="muted" id="domainMsg"></div></div>
+            <button class="primary" id="domainBtn" onclick="switchDomain(this)">Update links</button>
+          </div>
+        </div>
         <div class="section-h"><h2>🎞️ Your reels</h2><span class="muted">Each reel can have its own comment → DM rule</span></div>
         <div class="card reel fallback">
           <details>
@@ -318,6 +325,26 @@ function render() {
   }).join("") : `<div class="card empty"><div>🎬</div>No reels found on this account.</div>`;
 }
 
+async function checkDomain() {
+  try {
+    const d = await (await fetch("/api/switch-domain")).json();
+    const total = (d.rules || 0) + (d.links || 0);
+    document.getElementById("domainCard").style.display = total ? "block" : "none";
+    document.getElementById("newHost").textContent = d.new;
+    document.getElementById("domainMsg").textContent =
+      `${d.rules} link(s) in your auto-DM rules and ${d.links} on your link page still use ${d.old}. One click changes them to ${d.new}.`;
+  } catch (e) {}
+}
+async function switchDomain(btn) {
+  if (!confirm("Change every " + "insta-autopilot-ten.vercel.app link in your auto-DM rules and link page to the new domain?")) return;
+  btn.disabled = true; btn.textContent = "Updating…";
+  try {
+    const d = await (await fetch("/api/switch-domain", {method: "POST"})).json();
+    alert(`Done ✓ Updated ${d.rules} link(s) in auto-DM rules and ${d.links} on the link page.`);
+    await loadRules(); render(); checkDomain();
+  } finally { btn.disabled = false; btn.textContent = "Update links"; }
+}
+
 async function loadRules() { rules = await (await fetch("/api/rules")).json(); rules.reels ||= {}; }
 
 async function refreshNow(btn) {
@@ -428,7 +455,7 @@ async function loadActivity() {
 
 (async () => {
   await loadRules(); render();
-  loadStats(); loadActivity(); loadRetryCount();
+  loadStats(); loadActivity(); loadRetryCount(); checkDomain();
   // Poll only while the tab is visible; catch up immediately when it comes back.
   const every = (fn, ms) => setInterval(() => { if (!document.hidden) fn(); }, ms);
   every(loadStats, 60000);

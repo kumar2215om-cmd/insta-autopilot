@@ -1355,6 +1355,41 @@ def api_get_rules():
     return jsonify(load_rules())
 
 
+OLD_HOST = "insta-autopilot-ten.vercel.app"
+NEW_HOST = os.environ.get("PUBLIC_HOST", "www.advocmedia.in")
+
+
+def _swap_host(value, apply):
+    """Count (and optionally replace) the old app address inside a text field."""
+    if not isinstance(value, str) or OLD_HOST not in value:
+        return value, 0
+    return (value.replace(OLD_HOST, NEW_HOST) if apply else value), value.count(OLD_HOST)
+
+
+def switch_domain(apply):
+    rules, page, found = load_rules(), load_linkpage(), {"rules": 0, "links": 0}
+    for rule in rules.get("reels", {}).values():
+        for key, val in list(rule.items()):
+            rule[key], n = _swap_host(val, apply); found["rules"] += n
+    for group in ("items", "freebies"):
+        for item in page.get(group, []):
+            for key in ("url", "u", "image"):
+                if key in item:
+                    item[key], n = _swap_host(item[key], apply); found["links"] += n
+    if apply and found["rules"]:
+        save_rules(rules)
+    if apply and found["links"]:
+        save_linkpage(page)
+    return found
+
+
+@app.route("/api/switch-domain", methods=["GET", "POST"])
+def api_switch_domain():
+    """GET: how many auto-DM / link page links still use the old vercel.app address. POST: replace them."""
+    found = switch_domain(apply=request.method == "POST")
+    return jsonify({**found, "old": OLD_HOST, "new": NEW_HOST, "applied": request.method == "POST"})
+
+
 @app.put("/api/rules/<media_id>")
 def api_put_rule(media_id):
     data = request.get_json(force=True)
