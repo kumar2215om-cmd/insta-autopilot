@@ -1175,6 +1175,13 @@ def freebies_index():
         data["items"] = [{"n": n + len(added) - i, "k": fb["k"], "t": fb["t"], "topic": fb["topic"],
                           "e": fb["e"], "u": fb["u"], "pin": True} for i, fb in enumerate(added)] + data["items"]
         data["topics"] = sorted(set(data["topics"]) | {fb["topic"] for fb in added})
+    # Share-preview tags use the domain the page was opened on (vercel.app or a custom domain like advocmedia.in).
+    origin = request.host_url.rstrip("/")
+    if request.headers.get("X-Forwarded-Proto") == "https":
+        origin = origin.replace("http://", "https://", 1)
+    html = html.replace("https://insta-autopilot-ten.vercel.app", origin)
+    start = html.index("const D=") + len("const D=")
+    end = html.index(";\n", start)
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     # Never cached, so a freebie saved in the editor shows up on the next refresh.
     return Response(html[:start] + payload + html[end:], mimetype="text/html",
