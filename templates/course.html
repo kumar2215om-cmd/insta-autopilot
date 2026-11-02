@@ -113,6 +113,15 @@
   footer { text-align:center; margin-top:28px; font-size:13px; font-weight:700; color:var(--mute); }
   footer a { color:var(--rose); text-decoration:none; font-weight:900; }
 
+  .bonus { position:relative; background:var(--card); color:var(--card-ink); border-radius:20px; padding:18px 18px 16px; overflow:hidden; }
+  .bonus .no { position:absolute; top:14px; right:14px; font:800 10.5px Inter; letter-spacing:2px; color:#fff; background:var(--rose); border-radius:20px; padding:3px 9px; }
+  .bonus .e { width:52px; height:52px; border-radius:15px; display:grid; place-items:center; font-size:28px; background:var(--thumb, #F6F2EC); margin-bottom:10px; transform:rotate(-4deg); }
+  .bonus b { display:block; font-size:17px; font-weight:900; line-height:1.25; padding-right:70px; }
+  .bonus .k { display:inline-block; margin-top:4px; font:800 11px Inter; letter-spacing:1.5px; text-transform:uppercase; color:var(--cer); }
+  .bonus p { margin:6px 0 0; color:var(--card-mute); font-weight:600; font-size:14px; line-height:1.45; }
+  .bonus-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .bonus-head .pill { font:800 12px Inter; color:#fff; background:var(--cer); border-radius:20px; padding:4px 11px; }
+  @media (hover:hover) { .bonus:hover .e { transform:rotate(4deg) scale(1.06); transition:transform .25s; } }
   /* Sticky buy bar on phones */
   .bar { position:fixed; left:0; right:0; bottom:0; z-index:20; display:none; align-items:center; gap:12px; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
          background:var(--card); color:var(--card-ink); box-shadow:0 -10px 30px rgba(60,40,20,.15); transform:translateY(110%); transition:transform .3s; }
@@ -172,6 +181,11 @@
 
   <h2 class="rv">Saath mein <span>kya milega</span></h2>
   <div class="grid">{% for e, t, d in c.INCLUDED %}<div class="card shadow rv"><div class="e">{{ e }}</div><b>{{ t }}</b><p>{{ d }}</p></div>{% endfor %}</div>
+
+  {% if c.BONUSES %}
+  <div class="bonus-head rv"><h2 style="margin-bottom:14px">🎁 Bonuses <span>free with course</span></h2></div>
+  <div class="grid">{% for e, t, k, d in c.BONUSES %}<div class="bonus shadow rv"><span class="no">BONUS {{ loop.index }}</span><div class="e">{{ e }}</div><b>{{ t }}</b><span class="k">{{ k }}</span><p>{{ d }}</p></div>{% endfor %}</div>
+  {% endif %}
 
   <h2 class="rv">Kiske <span>liye hai</span></h2>
   <div class="two">

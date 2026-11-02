@@ -4,7 +4,7 @@ TITLE = "Claude se Instagram grow karo"
 SUBTITLE = ("Wahi system jisse maine @aiwith.om ko 0 se 21K tak pahunchaya, 33 posts mein. "
             "Profile, content plan, Claude se reels, comment → DM machine aur weekly growth loop. Hinglish mein, step by step.")
 
-STATS = [("8", "modules"), ("32", "lessons"), ("~4.5h", "video"), ("1", "workbook PDF")]
+STATS = [("8", "modules"), ("32", "lessons"), ("~4.5h", "video"), ("6", "bonuses")]
 
 OUTCOMES = [
     ("🧠", "Claude = tumhara strategist", "Ek Project jo tumhara brand yaad rakhta hai aur har plan table mein deta hai."),
@@ -44,8 +44,17 @@ INCLUDED = [("🎥", "32 video lessons", "Screen pe step by step, Hinglish mein"
             ("📘", "Student workbook (PDF)", "Har lesson ka copy-ready Claude prompt, templates aur checklists"),
             ("🧩", "Templates", "Calendar, outlier log, DM messages, export checklist")]
 
+BONUSES = [
+    ("📕", "Viral Reels Playbook", "ebook", "3-second rule, 7 reel structures beat-by-beat, 50 hook templates, retention tricks, CTA patterns aur viral checklist."),
+    ("🧠", "Claude Prompt Vault", "52 prompts", "Research, ideas, scripts, captions, repurpose, DMs aur analytics: har kaam ka copy-ready prompt."),
+    ("💡", "100 Reel Idea Formulas", "ebook", "Fill-in-the-blank ideas, 10 categories, kisi bhi niche ke liye. Ideas kabhi khatam nahi honge."),
+    ("💬", "DM + Comment Script Pack", "ebook", "15 comment replies, keyword DM flow, FAQ, sales aur collab replies, negative comments ka jawab."),
+    ("🎬", "Reel Studio Kit + 3 kits", "files", "Mera Remotion reel project + Caption Sync, Motion aur Character kits: Claude Code ke saath seedha use karo."),
+    ("👤", "Profile + Highlights Kit", "files", "Highlight covers, About me / Freebies / Tips / Reviews / Collab story templates aur copy-ready bio."),
+]
+
 FAQ = [("Kya Claude Pro zaroori hai?", "Nahi. Zyaadatar lessons free plan pe chalte hain. Long sessions aur Claude Code (Path B reels) ke liye paid plan chahiye."),
        ("Coding aani chahiye?", "Nahi. Path A (CapCut) mein zero coding. Path B optional hai."),
        ("Course kis language mein hai?", "Hinglish."),
-       ("Course kahan milega?", "Payment ke baad course SuperProfile pe khulta hai: videos, workbook aur saare resources wahin."),
+       ("Course kahan milega?", "Payment ke baad course SuperProfile pe khulta hai: videos, workbook, saare bonuses aur resources wahin."),
        ("Kya followers guaranteed hain?", "Nahi. Koi bhi honest course ye promise nahi kar sakta. System milega; kaam tumhe karna hai.")]
