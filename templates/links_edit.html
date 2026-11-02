@@ -288,7 +288,7 @@ function freebieHtml(fb, i) {
       <div><label>Emoji</label><input type="text" value="${esc(fb.e)}" placeholder="🎁" maxlength="8" ${set("e")}></div>
     </div>
     <div class="linkrow">
-      <div><label>Link (or upload a file →, or write the guide below ↓)</label><input type="text" id="fb-url-${i}" value="${esc(fb.u)}" placeholder="https://… or upload" ${set("u")}></div>
+      <div><label>Link (or upload a file →, or write the guide below ↓) <span class="muted">· PDF/TXT upload → guide box mein khud aa jaata hai</span></label><input type="text" id="fb-url-${i}" value="${esc(fb.u)}" placeholder="https://… or upload" ${set("u")}></div>
       <button class="secondary upload" onclick="$('fb-file-${i}').click()">⬆️ Upload file</button>
       <input type="file" id="fb-file-${i}" hidden accept=".pdf,.zip,.png,.jpg,.jpeg,.webp,.gif,.mp4,.txt,.md,.csv,.json" onchange="uploadFreebie(${i}, this)">
     </div>
@@ -405,6 +405,7 @@ async function previewGuide(i) {
 
 async function uploadFreebie(i, input) {
   const file = input.files[0]; if (!file) return;
+  if (/\.(pdf|txt|md)$/i.test(file.name)) return importToGuide(i, input, file);
   const msg = $("fb-msg-" + i);
   msg.className = "fb-msg"; msg.textContent = "Uploading " + file.name + "…";
   const form = new FormData(); form.append("file", file);
@@ -414,6 +415,38 @@ async function uploadFreebie(i, input) {
     if (!r.ok || !data.url) throw new Error(data.error || "Upload failed");
     page.freebies[i].u = data.url; $("fb-url-" + i).value = data.url;
     msg.className = "fb-msg ok"; msg.textContent = "Uploaded ✓ Now press Save page, then check the 🎁 Freebies preview.";
+  } catch (e) { msg.className = "fb-msg err"; msg.textContent = e.message; }
+  input.value = "";
+}
+
+// PDF / TXT / MD → text goes into the 📝 guide box (themed page + course card). PDFs are also kept as a download link.
+async function importToGuide(i, input, file) {
+  const msg = $("fb-msg-" + i), fb = page.freebies[i];
+  const ta = $("fb-body-" + i);
+  if (ta && ta.value.trim() && !confirm("Guide box mein pehle se text hai. Isko file ke text se replace karein?")) { input.value = ""; return; }
+  msg.className = "fb-msg"; msg.textContent = "Reading " + file.name + "…";
+  try {
+    const form = new FormData(); form.append("file", file);
+    const r = await fetch("/api/freebies/import", {method: "POST", body: form});
+    const data = await r.json().catch(() => ({error: "Import failed (" + r.status + ")"}));
+    if (!r.ok || !data.body) throw new Error(data.error || "Import failed");
+    let body = data.body, note = "";
+    if (/\.pdf$/i.test(file.name)) {  // keep the original PDF too, linked at the end of the guide
+      try {
+        const up = new FormData(); up.append("file", file);
+        const u = await fetch("/api/freebies/upload", {method: "POST", body: up});
+        const ud = await u.json().catch(() => ({}));
+        if (u.ok && ud.url) body += `\n\n## Download\n\n[📥 Original PDF download karo](${ud.url})\n`;
+        else note = " (PDF download link add nahi hua: " + (ud.error || "upload failed") + ")";
+      } catch (e) { note = " (PDF download link add nahi hua)"; }
+    }
+    fb.body = body; fb.u = "";
+    if (!fb.t) fb.t = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+    renderFreebies();
+    const box = $("fb-body-" + i); if (box) { box.closest("details").open = true; box.scrollIntoView({block: "center"}); }
+    const m2 = $("fb-msg-" + i);
+    m2.className = "fb-msg ok";
+    m2.textContent = "✓ " + file.name + " guide box mein aa gaya. Headings check karo, 👀 Preview dekho, phir Save page." + note;
   } catch (e) { msg.className = "fb-msg err"; msg.textContent = e.message; }
   input.value = "";
 }

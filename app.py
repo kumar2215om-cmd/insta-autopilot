@@ -1395,6 +1395,26 @@ def api_upload_freebie():
     return jsonify({"url": f"/free/uploads/{stored}"})
 
 
+@app.post("/api/freebies/import")
+def api_import_freebie():
+    """A .pdf / .txt / .md file → Markdown for the editor's guide box (nothing is stored)."""
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"error": "No file chosen"}), 400
+    data = f.read()
+    if len(data) > UPLOAD_MAX_MB * 1024 * 1024:
+        return jsonify({"error": f"File is over {UPLOAD_MAX_MB} MB."}), 400
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+    from doc2md import file_to_md
+    try:
+        body = file_to_md(f.filename, data, GUIDE_MAX_CHARS)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception:
+        return jsonify({"error": "Couldn't read this file. Try a .txt, or copy-paste the text into the guide box."}), 400
+    return jsonify({"body": body})
+
+
 @app.get("/links/edit")
 def link_page_editor():
     return render_template("links_edit.html", themes=THEMES)
