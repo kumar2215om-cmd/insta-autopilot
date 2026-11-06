@@ -1,7 +1,9 @@
 """Content for the public course sales page (/course). Edit the text here; price + buy link are set in /links/edit."""
 
 TITLE = "Claude se Instagram grow karo"
-SUBTITLE = ("Wahi system jisse maine @aiwith.om ko 0 se 21K tak pahunchaya, 33 posts mein. "
+# {F} = live follower count from Instagram (e.g. "23.6K"); FOLLOWERS_FALLBACK is used if Instagram is unreachable.
+FOLLOWERS_FALLBACK = "23.6K"
+SUBTITLE = ("Wahi system jisse maine @aiwith.om ko 0 se {F} tak pahunchaya, 33 posts mein. "
             "Profile, content plan, Claude se reels, comment → DM machine aur weekly growth loop. Hinglish mein, step by step.")
 
 STATS = [("8", "modules"), ("32", "lessons"), ("~4.5h", "video"), ("6", "bonuses")]
@@ -17,7 +19,7 @@ OUTCOMES = [
 
 MODULES = [
     ("Module 0", "Welcome", "Free preview", [
-        "Mera safar: 0 → 21K, 33 posts mein", "Tools aur kharcha", "Claude ko apna \"brain\" banao"]),
+        "Mera safar: 0 → {F}, 33 posts mein", "Tools aur kharcha", "Claude ko apna \"brain\" banao"]),
     ("Module 1", "Niche + profile that converts", None, [
         "Niche chuno jo tum 100 reels tak bol sako (free preview)", "Name field, bio, link", "Highlights jo trust banate hain", "Link in bio + freebies page"]),
     ("Module 2", "Content plan with Claude", None, [

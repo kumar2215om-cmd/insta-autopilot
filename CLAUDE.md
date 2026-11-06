@@ -4,7 +4,8 @@ Om's (@aiwith.om) Instagram automation app + link-in-bio site. Flask on Vercel; 
 Full handoff (routes, data shapes, env var names, Blob uploads, design system, themes, animations, gotchas): **docs/HANDOFF.md**. Read it before changing anything.
 
 ## Map
-- `app.py`: everything server-side: IG webhook comment→DM automation, `/api/*`, `/links`, `/free`, guides, uploads.
+- `app.py`: everything server-side: IG webhook comment→DM automation, `/api/*`, `/links`, `/free`, guides, uploads, `/course`, policy pages, course banner/card injected into guides, PDF→guide import.
+- `course_data.py` (Course 1 page text), `legal_data.py` (terms/refund/privacy/contact), `tools/doc2md.py` (PDF/TXT → guide Markdown). Course 2 + `/courses` hub live on branch `course2-page` (not merged).
 - `templates/dashboard.html` (admin overview), `templates/links_edit.html` (link page editor), `templates/links.html` (public link page),
   shared admin look in `templates/_admin_style.html` + `_admin_nav.html`.
 - `freebies/index.html`: public `/free` page; its data is the one-line JSON `const D={...};` (keep it one line ending `;\n`).

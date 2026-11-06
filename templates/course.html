@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{{ c.TITLE }} · course by @{{ username }}</title>
-<meta name="description" content="{{ c.SUBTITLE }}">
-<meta property="og:title" content="{{ c.OG_TITLE|default(c.TITLE ~ ': 0 → 21K system') }}">
-<meta property="og:description" content="{{ c.SUBTITLE }}">
+<meta name="description" content="{{ c.SUBTITLE|replace("{F}", fk) }}">
+<meta property="og:title" content="{{ c.OG_TITLE|default(c.TITLE ~ ': 0 → ' ~ fk ~ ' system') }}">
+<meta property="og:description" content="{{ c.SUBTITLE|replace("{F}", fk) }}">
 <meta property="og:image" content="{{ request.host_url }}{{ c.COVER|default('free/course.jpg') }}">
 <meta name="twitter:card" content="summary_large_image">
 {% if avatar %}<link rel="icon" href="{{ avatar }}">{% endif %}
@@ -73,6 +73,15 @@
   .btn.soon { background:var(--btn); color:var(--btn-ink); animation:none; }
   .btn.soon::after { display:none; }
   .note { font-size:12.5px; color:var(--card-mute); font-weight:600; flex-basis:100%; margin-top:-4px; }
+  @media (max-width:560px) {
+    .proof { flex-direction:column; align-items:flex-start; gap:8px; padding:18px 20px; }
+    .proof .big { font-size:58px; }
+    .proof .t { font-size:16px; }
+    .proof .t small { font-size:13.5px; margin-top:2px; }
+    .buy { gap:10px 12px; }
+    .buy .btn { flex-basis:100%; justify-content:center; margin:4px 0 0; padding:16px 20px; font-size:18px; }
+    .buy .note { margin-top:0; text-align:center; }
+  }
 
   .cover { width:100%; display:block; border-radius:24px; margin-top:22px; }
   h2 { font-size:clamp(26px, 5vw, 34px); line-height:1.1; letter-spacing:-1px; margin:46px 0 14px; font-weight:900; }
@@ -179,7 +188,7 @@
   <div class="top">
     <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">{{ username[0]|upper }}</div>{% endif %}</div>
     <div><a class="handle" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">@{{ username }}</a><br>
-      <span class="tag">course</span> {% if followers %}<span class="tag c">{{ "{:,}".format(followers) if followers < 10000 else ("%.1fK" % (followers / 1000)).replace(".0K", "K") }} followers</span>{% endif %}</div>
+      <span class="tag">course</span> {% if followers %}<span class="tag c">{{ fk }} followers</span>{% endif %}</div>
     {% if c2 %}<a class="back" href="/courses" style="margin-left:auto;background:var(--rose);color:#fff;border-color:var(--rose)">🎓 Courses</a>{% endif %}
     <a class="back" href="/links" {% if c2 %}style="margin-left:0"{% endif %}>← Links</a>
   </div>
@@ -187,8 +196,8 @@
   <section class="hero">
     <div class="kicker">{% if live.enabled %}{{ live.name }} · live classes + video course{% else %}{{ c.KICKER|default('Hinglish video course') }}{% endif %}</div>
     <h1>{{ c.H1_A|default('Claude se Instagram') }} <span>{{ c.H1_B|default('grow karo') }}</span></h1>
-    <p class="sub">{{ c.SUBTITLE }}</p>
-    <div class="proof shadow"><div class="big">{{ c.PROOF_A|default('0 →') }} <b>{{ c.PROOF_B|default('21K') }}</b></div><div class="t">{{ c.PROOF_T|default('Mera real result, 33 posts mein') }}<small>{{ c.PROOF_S|default('System milega, guarantee nahi. Honest course.') }}</small></div></div>
+    <p class="sub">{{ c.SUBTITLE|replace("{F}", fk) }}</p>
+    <div class="proof shadow"><div class="big">{{ c.PROOF_A|default('0 →') }} <b>{{ c.PROOF_B|default(fk) }}</b></div><div class="t">{{ c.PROOF_T|default('Mera real result, 33 posts mein') }}<small>{{ c.PROOF_S|default('System milega, guarantee nahi. Honest course.') }}</small></div></div>
     <div class="chips">{% for n, l in c.STATS %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
     <div class="buy shadow">
       <span class="price">₹{{ course.price }}</span>
@@ -221,7 +230,7 @@
   {% for code, name, badge, lessons in c.MODULES %}
   <details class="mod shadow rv" {% if loop.first %}open{% endif %}>
     <summary><span class="mn">{{ "★" if code.startswith("Bonus") else loop.index0 }}</span><span class="mt"><b>{{ name }}</b><small>{{ code }} · {{ lessons|length }} lesson{{ "s" if lessons|length != 1 }}</small></span>{% if badge %}<span class="free">{{ badge }}</span>{% endif %}</summary>
-    <ol>{% for l in lessons %}<li>{{ l }}</li>{% endfor %}</ol>
+    <ol>{% for l in lessons %}<li>{{ l|replace("{F}", fk) }}</li>{% endfor %}</ol>
   </details>
   {% endfor %}
 
@@ -243,7 +252,7 @@
   <h2 class="rv">Kaun <span>sikha raha hai</span></h2>
   <div class="card shadow rv about">
     <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">{{ username[0]|upper }}</div>{% endif %}</div>
-    <div><b>Om · @{{ username }}</b><p>Simplifying AI for everyone. Founder @advocmedia, building Likholabs. Zero se {% if followers %}{{ ("%.1fK" % (followers / 1000)).replace(".0K", "K") }}{% else %}21K+{% endif %} followers tak, Claude ke saath, Hinglish mein.</p></div>
+    <div><b>Om · @{{ username }}</b><p>Simplifying AI for everyone. Founder @advocmedia, building Likholabs. Zero se {{ fk }} followers tak, Claude ke saath, Hinglish mein.</p></div>
   </div>
 
   <h2 class="rv">Sawaal <span>jawab</span></h2>
