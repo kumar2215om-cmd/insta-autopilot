@@ -1,8 +1,8 @@
 """Content for the public course sales page (/course). Edit the text here; price + buy link are set in /links/edit."""
 
 TITLE = "Claude se Instagram grow karo"
-# {F} = live follower count from Instagram (e.g. "23.6K"); FOLLOWERS_FALLBACK is used if Instagram is unreachable.
-FOLLOWERS_FALLBACK = "23.6K"
+# {F} = live follower count from Instagram (e.g. "24K"); FOLLOWERS_FALLBACK is used if Instagram is unreachable.
+FOLLOWERS_FALLBACK = "24K"
 SUBTITLE = ("Wahi system jisse maine @aiwith.om ko 0 se {F} tak pahunchaya, 33 posts mein. "
             "Profile, content plan, Claude se reels, comment → DM machine aur weekly growth loop. Hinglish mein, step by step.")
 
