@@ -9,6 +9,7 @@ SUBTITLE = ("Idea se pehli sale tak ka poora system: kya banana hai, Claude se k
             "Instagram launch. Wahi process jisse maine apna prompt bundle aur course banaya aur becha. Hinglish mein, step by step.")
 PROOF_A = "Idea →"
 PROOF_B = "Sale"
+PROOF_C = ""
 PROOF_T = "Real case study: mera prompt bundle, start to finish"
 PROOF_S = "Process milega, income ki guarantee nahi. Honest course."
 COVER = "free/course2.jpg"
