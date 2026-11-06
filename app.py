@@ -1139,6 +1139,9 @@ def followers_short(n, fallback=""):
     return f"{n // 100_000 / 10:.1f}M".replace(".0M", "M")
 
 
+app.jinja_env.filters["kfollowers"] = followers_short  # {{ followers|kfollowers }} -> "24K"
+
+
 LEGAL_NAV = [("terms", "Terms"), ("refund-policy", "Refund"), ("privacy-policy", "Privacy"), ("contact", "Contact")]
 
 
