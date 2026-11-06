@@ -1127,7 +1127,7 @@ def course_page():
 
 
 def followers_short(n, fallback=""):
-    """23,642 -> "23.6K" (rounded down so the page never overstates); fallback when the count is unknown."""
+    """Whole thousands, rounded half up: 23,499 -> "23K", 23,500 -> "24K"; fallback when the count is unknown."""
     try:
         n = int(n)
     except (TypeError, ValueError):
@@ -1135,7 +1135,7 @@ def followers_short(n, fallback=""):
     if n < 10000:
         return f"{n:,}"
     if n < 1_000_000:
-        return f"{n // 100 / 10:.1f}K".replace(".0K", "K")
+        return f"{(n + 500) // 1000}K" if n < 999_500 else "1M"
     return f"{n // 100_000 / 10:.1f}M".replace(".0M", "M")
 
 
