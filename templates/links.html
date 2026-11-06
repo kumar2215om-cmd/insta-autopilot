@@ -194,7 +194,7 @@
 } %}
 
 {% set nm = name or username or "" %}
-{% set fcount = ("{:,}".format(followers) if followers < 10000 else ("%.1fK" % (followers / 1000)).replace(".0K", "K")) if followers else "" %}
+{% set fcount = followers|kfollowers if followers else "" %}
 <div class="wrap">
   <div class="top">
     <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">{{ (nm or "?")[0] | upper }}</div>{% endif %}</div>
