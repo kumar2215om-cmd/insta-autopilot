@@ -1148,7 +1148,9 @@ def followers_short(n, fallback=""):
     return f"{n // 100_000 / 10:.1f}M".replace(".0M", "M")
 
 
-<<<<<<< HEAD
+app.jinja_env.filters["kfollowers"] = followers_short  # {{ followers|kfollowers }} -> "24K"
+
+
 def course2_settings(page):
     import course2_data
     course = {**course2_data.DEFAULTS, **(page.get("course2") or {})}
@@ -1194,9 +1196,6 @@ def courses_page():
 @app.get("/digital-products/")
 def course2_page():
     return redirect("/course?c=2", code=302)
-=======
-app.jinja_env.filters["kfollowers"] = followers_short  # {{ followers|kfollowers }} -> "24K"
->>>>>>> main
 
 
 LEGAL_NAV = [("terms", "Terms"), ("refund-policy", "Refund"), ("privacy-policy", "Privacy"), ("contact", "Contact")]
