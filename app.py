@@ -1150,6 +1150,23 @@ def followers_short(n, fallback=""):
 
 app.jinja_env.filters["kfollowers"] = followers_short  # {{ followers|kfollowers }} -> "24K"
 
+_asset_v_cache = {}
+
+
+def asset_v(rel):
+    """Short content hash of a file in freebies/, e.g. asset_v("course.jpg") -> "3f9a1c2b".
+    Added as ?v=… to share images so WhatsApp/Instagram fetch the new picture after it changes."""
+    if rel not in _asset_v_cache:
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "freebies", rel), "rb") as f:
+                _asset_v_cache[rel] = hashlib.md5(f.read()).hexdigest()[:8]
+        except OSError:
+            _asset_v_cache[rel] = ""
+    return _asset_v_cache[rel]
+
+
+app.jinja_env.globals["asset_v"] = asset_v
+
 
 def course2_settings(page):
     import course2_data
