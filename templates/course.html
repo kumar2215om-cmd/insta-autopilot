@@ -75,7 +75,7 @@
   .note { font-size:12.5px; color:var(--card-mute); font-weight:600; flex-basis:100%; margin-top:-4px; }
   @media (max-width:560px) {
     .proof { flex-direction:column; align-items:flex-start; gap:8px; padding:18px 20px; }
-    .proof .big { font-size:58px; }
+    .proof .big { font-size:min(58px, 11.5vw); }
     .proof .t { font-size:16px; }
     .proof .t small { font-size:13.5px; margin-top:2px; }
     .buy { gap:10px 12px; }
@@ -183,7 +183,7 @@
     <div class="kicker">{% if live.enabled %}{{ live.name }} · live classes + video course{% else %}Hinglish video course{% endif %}</div>
     <h1>Claude se Instagram <span>grow karo</span></h1>
     <p class="sub">{{ c.SUBTITLE|replace("{F}", fk) }}</p>
-    <div class="proof shadow"><div class="big">0 → <b>{{ fk }}</b></div><div class="t">Mera real result, 33 posts mein<small>System milega, guarantee nahi. Honest course.</small></div></div>
+    <div class="proof shadow"><div class="big">Zero se <b>{{ fk }}</b> tak</div><div class="t">Mera real Instagram safar, step by step is course mein<small>System milega, guarantee nahi. Honest course.</small></div></div>
     <div class="chips">{% for n, l in c.STATS %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
     <div class="buy shadow">
       <span class="price">₹{{ course.price }}</span>
