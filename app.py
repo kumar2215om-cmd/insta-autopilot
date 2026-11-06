@@ -1122,7 +1122,21 @@ def course_page():
             sessions = [("", t) for t in course_data.LIVE_SESSIONS]
     return render_template("course.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
-                           username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
+                           username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"),
+                           fk=followers_short(ig.get("followers_count"), course_data.FOLLOWERS_FALLBACK))
+
+
+def followers_short(n, fallback=""):
+    """23,642 -> "23.6K" (rounded down so the page never overstates); fallback when the count is unknown."""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return fallback
+    if n < 10000:
+        return f"{n:,}"
+    if n < 1_000_000:
+        return f"{n // 100 / 10:.1f}K".replace(".0K", "K")
+    return f"{n // 100_000 / 10:.1f}M".replace(".0M", "M")
 
 
 LEGAL_NAV = [("terms", "Terms"), ("refund-policy", "Refund"), ("privacy-policy", "Privacy"), ("contact", "Contact")]
