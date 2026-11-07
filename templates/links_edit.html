@@ -43,6 +43,21 @@
   .item { border:1px solid var(--line); border-radius:16px; padding:14px 16px 12px; margin-bottom:12px; background:var(--panel); transition: box-shadow .15s; }
   .item:hover { box-shadow:var(--sh); background:#fff; }
   .item.off { opacity:.55; }
+  .fbx .item-head { cursor:pointer; margin-bottom:0; }
+  .fbx.open .item-head { margin-bottom:12px; }
+  .fbx .fb-sum { display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 220px; color:var(--mute,#8C8780); font-weight:600; font-size:13.5px; }
+  .fbx .fb-sum .t { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink,#1C1A17); }
+  .fbx .fb-sum > span:not(.t) { white-space:nowrap; flex:none; }
+  .fbx .fb-sum .t { min-width:40px; }
+  @media (max-width:1100px) { .fbx .fb-sum .tp { display:none; } }
+  .fbx .fb-e { font-size:18px; }
+  .fbx .tagx { font-size:11px; font-weight:800; border-radius:99px; padding:2px 9px; white-space:nowrap; }
+  .fbx .tagx.live { color:#0F7A44; background:#E3F6EC; }
+  .fbx .tagx.hid { color:#8C8780; background:#EFEAE1; }
+  .fbx .tagx.new { color:#fff; background:#FF2D95; }
+  .fbx .tog { margin-left:auto; }
+  .fbx:not(.open) .fb-body, .fbx:not(.open) .clicks, .fbx.open .fb-sum { display:none; }
+  .fbbar { display:flex; gap:8px; align-items:center; margin:0 0 10px; font-size:13px; font-weight:700; color:var(--mute,#8C8780); }
   .item-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
   .item-head b { font-size:15px; }
   .pill { font-size:10.5px; font-weight:900; letter-spacing:1.5px; padding:3px 9px; border-radius:99px; }
@@ -299,9 +314,16 @@ const TOPICS = ["Free tools", "Claude skills", "Claude makes reels", "Claude aut
 function freebieHtml(fb, i) {
   const set = (k) => `oninput="page.freebies[${i}].${k}=this.value"`;
   const dm = location.origin + "/free?k=" + encodeURIComponent((fb.k || "").toUpperCase());
-  return `<div class="item ${fb.enabled === false ? "off" : ""}">
-    <div class="item-head"><span class="pill free">FREEBIE</span><b id="fb-k-${i}">${esc(fb.k ? fb.k.toUpperCase() : "") || "(no keyword)"}</b>
-      <span class="clicks" id="fb-dm-${i}" ${fb.k ? "" : "hidden"}>DM link: <span class="dmlink">${esc(dm)}</span></span></div>
+  const open = openFb.has(fbKey(fb, i));
+  return `<div class="item fbx ${open ? "open" : ""} ${fb.enabled === false ? "off" : ""}" id="fb-card-${i}">
+    <div class="item-head" onclick="if (!event.target.closest('button,a,input')) toggleFb(${i})"><span class="pill free">FREEBIE</span><b id="fb-k-${i}">${esc(fb.k ? fb.k.toUpperCase() : "") || "(no keyword)"}</b>
+      <span class="fb-sum"><span class="fb-e">${esc(fb.e || "🎁")}</span><span class="t">${esc(fb.t || "(no title)")}</span>
+        ${fb.topic ? `<span class="tp">· ${esc(fb.topic)}</span>` : ""}
+        ${fb.enabled === false ? `<span class="tagx hid">hidden</span>` : fb.body && fb.k ? `<span class="tagx live">guide live</span>` : ""}
+        ${fb._new ? `<span class="tagx new">not saved</span>` : ""}</span>
+      <span class="clicks" id="fb-dm-${i}" ${fb.k ? "" : "hidden"}>DM link: <span class="dmlink">${esc(dm)}</span></span>
+      <button class="secondary sm tog" id="fb-tog-${i}" onclick="toggleFb(${i})">${open ? "▴ Close" : "✏️ Edit"}</button></div>
+    <div class="fb-body">
     <div class="grid4">
       <div><label>Keyword</label><input type="text" value="${esc(fb.k)}" placeholder="CHAT" maxlength="24" oninput="page.freebies[${i}].k=this.value; fbHead(${i})"></div>
       <div><label>Title</label><input type="text" value="${esc(fb.t)}" placeholder="ChatLLM: all AI models for $10" maxlength="120" ${set("t")}></div>
@@ -344,7 +366,21 @@ function freebieHtml(fb, i) {
       ${fb.u ? `<a class="btn btn-ghost sm" href="${esc(fb.u)}" target="_blank">Open file ↗</a>` : ""}
       <button class="danger spacer" onclick="if (confirm('Delete this freebie?')) { page.freebies.splice(${i}, 1); renderFreebies(); }">Delete</button>
     </div>
+    </div>
   </div>`;
+}
+// Saved freebies stay folded to one line; ✏️ Edit opens one. Toggling only flips a class (no re-draw, typing is kept).
+const openFb = new Set();
+function fbKey(fb, i) { return fb.id || "i" + i; }
+function toggleFb(i) {
+  const k = fbKey(page.freebies[i], i), card = $("fb-card-" + i);
+  openFb.has(k) ? openFb.delete(k) : openFb.add(k);
+  card.classList.toggle("open", openFb.has(k));
+  $("fb-tog-" + i).textContent = openFb.has(k) ? "▴ Close" : "✏️ Edit";
+}
+function foldAllFb(open) {
+  page.freebies.forEach((fb, i) => open ? openFb.add(fbKey(fb, i)) : openFb.delete(fbKey(fb, i)));
+  renderFreebies();
 }
 function fbHead(i) {  // update the card title + DM link without re-drawing the inputs (keeps focus and typing)
   const k = (page.freebies[i].k || "").trim().toUpperCase();
@@ -353,11 +389,15 @@ function fbHead(i) {  // update the card title + DM link without re-drawing the 
   $("fb-dm-" + i).querySelector(".dmlink").textContent = location.origin + "/free?k=" + encodeURIComponent(k);
 }
 function renderFreebies() {
-  $("freebies").innerHTML = page.freebies.length ? page.freebies.map(freebieHtml).join("")
+  $("freebies").innerHTML = page.freebies.length ? `<div class="fbbar">${page.freebies.length} freebie${page.freebies.length === 1 ? "" : "s"} · tap one to edit
+      <button class="secondary sm" style="margin-left:auto" onclick="foldAllFb(true)">Open all</button><button class="secondary sm" onclick="foldAllFb(false)">Close all</button></div>`
+      + page.freebies.map(freebieHtml).join("")
     : `<div class="empty">No freebies added here yet (the built-in ones on /free stay). Click ＋ Add freebie 👆</div>`;
 }
 function addFreebie() {
-  page.freebies.unshift({id: Math.random().toString(36).slice(2, 10), k: "", t: "", topic: "Free tools", e: "🎁", u: "", enabled: true});
+  const id = Math.random().toString(36).slice(2, 10);
+  page.freebies.unshift({id, k: "", t: "", topic: "Free tools", e: "🎁", u: "", enabled: true, _new: true});
+  openFb.add(id);
   renderFreebies();
   const first = $("freebies").querySelector("input[type=text]");
   first && first.focus();
@@ -485,6 +525,7 @@ async function save() {
   const r = await fetch("/api/linkpage", {method: "PUT", headers: {"Content-Type": "application/json"},
                                           body: JSON.stringify(page)});
   page = await r.json();
+  openFb.clear();
   renderItems(); renderFreebies();
   $("status").textContent = "Saved ✓" + (skipped ? ` (${skipped} item(s) without a title or link were left out)` : "");
   setTimeout(() => $("status").textContent = "", 4000);
