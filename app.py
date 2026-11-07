@@ -1174,7 +1174,7 @@ def home_page():
                            freebies=featured_freebies(page), freebie_total=freebies_count(page),
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"),
-                           email=legal_data.EMAIL)
+                           email=legal_data.EMAIL, pixel=c1.get("pixel", ""))
 
 
 @app.get("/admin")

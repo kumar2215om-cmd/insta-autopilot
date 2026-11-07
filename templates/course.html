@@ -181,22 +181,7 @@
   .bar .count b { font-size:14px; }
   @media (max-width:420px) { .bar .count .lbl { display:none; } }
 </style>
-{% if pixel %}
-<!-- Meta Pixel: page view, course view and Join now taps (InitiateCheckout) -->
-<script>
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '{{ pixel }}');
-fbq('track', 'PageView');
-fbq('track', 'ViewContent', {content_name: {{ c.TITLE|tojson }}, content_type: 'product', value: {{ course.price|int }}, currency: 'INR'});
-document.addEventListener('click', function (e) {
-  var a = e.target.closest && e.target.closest('a[href*="superprofile.bio"]');
-  if (a) fbq('track', 'InitiateCheckout', {content_name: {{ c.TITLE|tojson }}, value: {{ course.price|int }}, currency: 'INR'});
-}, true);
-</script>
-<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ pixel }}&ev=PageView&noscript=1"></noscript>
-{% endif %}
+{% set pixel_product = {"name": c.TITLE, "price": course.price} %}{% include "_pixel.html" %}
 </head>
 <body class="t-{{ page.theme }}">
 {% set has_url = course.url %}

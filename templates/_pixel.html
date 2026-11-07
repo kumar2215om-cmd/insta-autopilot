@@ -1,0 +1,18 @@
+{# Meta Pixel. Needs `pixel` (ID). Optional `pixel_product` = {"name": ..., "price": ...} for ViewContent + InitiateCheckout on SuperProfile taps. #}
+{% if pixel %}
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '{{ pixel }}');
+fbq('track', 'PageView');
+{% if pixel_product %}
+fbq('track', 'ViewContent', {content_name: {{ pixel_product.name|tojson }}, content_type: 'product', value: {{ pixel_product.price|int }}, currency: 'INR'});
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a[href*="superprofile.bio"]');
+  if (a) fbq('track', 'InitiateCheckout', {content_name: {{ pixel_product.name|tojson }}, value: {{ pixel_product.price|int }}, currency: 'INR'});
+}, true);
+{% endif %}
+</script>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ pixel }}&ev=PageView&noscript=1"></noscript>
+{% endif %}
