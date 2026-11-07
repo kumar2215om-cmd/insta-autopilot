@@ -4,14 +4,15 @@ UPDATED = "7 November 2026"
 EMAIL = "kumarom1315@gmail.com"
 OWNER = "Om Kumar (@aiwith.om)"
 
-# slug: (title, Hinglish one-line summary, [(heading, [paragraphs or "• bullet" lines])])
+# slug: (title, one-line summary, [(heading, [paragraphs or "• bullet" lines])])
 PAGES = {
-    "terms": ("Terms & Conditions", "Course sirf tumhare personal use ke liye hai, 6 mahine ka access, aur followers ya income ki koi guarantee nahi.", [
-        ("Who we are", [f"This website (advocmedia.in) and the course \"Claude se Instagram grow karo\" are run by {OWNER}. "
+    "terms": ("Terms & Conditions", "The course is for your personal use, with 6 months of access, and there is no guarantee of followers or income.", [
+        ("Who we are", [f"This website (advocmedia.in) and the course \"Grow on Instagram with Claude\" (on SuperProfile: \"Claude se Instagram grow karo\") are run by {OWNER}. "
                         f"Questions: {EMAIL}."]),
         ("The course", [
             "• The course is sold and delivered through SuperProfile. Payment, invoice and course access happen on SuperProfile.",
             "• Access lasts 6 months from the date of purchase. Bonus files you download are yours to keep for personal use.",
+            "• The video lessons and live classes are taught in Hinglish (a mix of Hindi and English). This website is in English; please make sure you're comfortable with Hinglish before you buy.",
             "• Batch 1 includes live classes on Zoom (Sat & Sun, 9–10 PM IST, 14 Nov – 6 Dec 2026). Classes are recorded and the recordings are added to the course. "
             "If you attend, your name or chat messages may appear in the recording; you can keep your camera off and we blur or cut other students' faces and names before uploading.",
             "• If a live class has to move, we announce the new time in the course and by email before the class."]),
@@ -27,7 +28,7 @@ PAGES = {
                                         "When you comment a keyword on our Instagram reels, our automation replies and sends you the guide link in your DMs."]),
         ("Changes", ["We may update these terms. The date at the top shows the latest version."]),
     ]),
-    "refund-policy": ("Refund Policy", "Digital course hai, isliye access milne ke baad refund nahi hota. Access ya payment ki koi problem ho, to email karo, 48 ghante mein solve karenge.", [
+    "refund-policy": ("Refund Policy", "It's a digital course, so there are no refunds once access is given. If there's a problem with access or payment, email us and we'll sort it out within 48 hours.", [
         ("Digital product", ["The course, workbook and bonuses are digital and available immediately after payment, so we don't offer refunds once access is given."]),
         ("When we will help", [
             "• You paid but did not get access: email us and we'll fix it, or refund you if we can't.",
@@ -36,7 +37,7 @@ PAGES = {
         ("How to ask", [f"Email {EMAIL} (or DM @aiwith.om on Instagram) with your name, the email you used at checkout and your payment ID. "
                         "We reply within 48 hours. Approved refunds go back to your original payment method; banks usually take 5–7 working days."]),
     ]),
-    "privacy-policy": ("Privacy Policy", "Hum sirf wahi data rakhte hain jo course aur DMs ke liye zaroori hai, aur kisi ko bechte ya share nahi karte.", [
+    "privacy-policy": ("Privacy Policy", "We keep only the data we need for the course and DMs, and we never sell or share it.", [
         ("What we collect", [
             "• Course buyers: name, email, phone number and Instagram username you enter at checkout (collected by SuperProfile).",
             "• Instagram automation: when you comment a keyword on our reels or message our account, we receive your Instagram username, "
@@ -50,7 +51,7 @@ PAGES = {
                                  "Automation activity is kept only for a short recent history."]),
         ("Your choices", [f"You can ask us to show, correct or delete your data: email {EMAIL}. You can stop DMs anytime by not commenting keywords, or by blocking or messaging the account."]),
     ]),
-    "contact": ("Contact", "Course, payment, live class ya collab: kisi bhi baat ke liye email ya Instagram DM karo.", [
+    "contact": ("Contact", "Course, payment, live classes or collabs: email us or DM on Instagram about anything.", [
         ("Email", [f"{EMAIL}", "We reply within 48 hours (usually faster)."]),
         ("Instagram", ["DM @aiwith.om. Students: start your message with \"STUDENT\" so we see it first.", "Brands: DM \"COLLAB\" or email us."]),
         ("Course help", ["Payment done but no access? Send the email you used at checkout and your payment ID, and we'll sort it out."]),

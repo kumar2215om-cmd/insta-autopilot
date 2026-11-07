@@ -57,7 +57,7 @@
   </nav>
   <h1>{{ title }}</h1>
   <div class="upd">Last updated: {{ updated }}</div>
-  <div class="sum"><b>Short mein:</b> {{ summary }}</div>
+  <div class="sum"><b>In short:</b> {{ summary }}</div>
   {% for heading, lines in sections %}
   <section class="card"><h2>{{ heading }}</h2>
     {% for l in lines %}{% if l.startswith("• ") %}<p class="b">{{ l }}</p>{% elif l == email %}<p><a class="mail" href="mailto:{{ email }}">✉️ {{ email }}</a></p>{% else %}<p>{{ l }}</p>{% endif %}{% endfor %}
