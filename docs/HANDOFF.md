@@ -165,6 +165,12 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 
 ---
 
+### v4 (6–7 Nov 2026)
+24. **Live follower count** everywhere on course pages (`followers_short()` / `|kfollowers`: whole thousands, rounded half up, e.g. 23,642 → 24K; fallback `course_data.FOLLOWERS_FALLBACK`). Proof card "Zero se 24K tak"; "33 posts" removed.
+25. **New course cover** `freebies/course.jpg` (source `tools/cover/course_cover.html`); `og:image` carries `?v=<hash>` (`asset_v()`) so WhatsApp/IG refetch it.
+26. **Home page live** at advocmedia.in (`templates/home.html`, `home_page()`, also `/home`): nav, hero + stats, Batch 1 strip, all courses, 3 steps, 6 newest freebies, about, footer. `/` on the custom domain no longer redirects to `/links`.
+27. **Course 2 merged** (`course2-page` → main): `/course?c=2`, `/courses`, `/digital-products` → redirect. Shows "Coming soon · DM PRODUCT" until a link is saved (no editor fields yet: `course2_data.DEFAULTS`).
+
 ## 6. How to… (common tasks)
 
 **Add a freebie (no code):** `/links/edit` → 🎁 Freebies → ＋ Add freebie → keyword, title, topic, emoji → ⬆️ Upload file (≤ 4 MB) or paste a link → **💾 Save page** → check with the 🎁 Freebies preview tab. DM link to use in auto-DMs: `https://insta-autopilot-ten.vercel.app/free?k=KEYWORD`.
