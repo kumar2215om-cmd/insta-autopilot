@@ -46,6 +46,12 @@
   /* Reels */
   .reel { padding:16px; display:grid; grid-template-columns: 92px minmax(0, 1fr); gap:18px; margin-bottom:14px; }
   .reel.fallback { display:block; border-style:dashed; border-color:var(--line2); background:var(--panel); box-shadow:none; }
+  .kwbox { margin-bottom:22px; }
+  .kwbox details { border:1.5px solid var(--line2); border-radius:14px; background:#fff; padding:2px 14px; margin-bottom:10px; }
+  .kwbox details > summary { padding:10px 0; }
+  .kwbox .kw { font:900 14px Inter, sans-serif; letter-spacing:.5px; }
+  .kwadd { display:flex; gap:8px; flex-wrap:wrap; }
+  .kwadd input { flex:1 1 200px; margin:0; }
   .thumb { position:relative; display:block; border-radius:14px; overflow:hidden; align-self:start; box-shadow:var(--sh); }
   .thumb img { display:block; width:92px; height:164px; object-fit:cover; background:var(--line); transition: transform .3s; }
   .thumb:hover img { transform: scale(1.05); }
@@ -148,6 +154,14 @@
             <button class="primary" id="domainBtn" onclick="switchDomain(this)">Update links</button>
           </div>
         </div>
+        <div class="section-h"><h2>🔑 Keyword rules</h2><span class="muted">Not tied to a reel: answer DMs like "PRODUCT", and comments on any reel</span></div>
+        <div class="card reel fallback kwbox">
+          <p class="muted" style="margin:0 0 10px">For words people DM you (e.g. the Course 2 page says <b>DM PRODUCT</b>) or comment on any reel.
+            A reel's own rule always wins; the ALL-reels rule is used only if no keyword rule matches.</p>
+          <div id="kwRules"></div>
+          <div class="kwadd"><input type="text" id="kwNew" placeholder="New keyword, e.g. PRODUCT" maxlength="24"
+            onkeydown="if (event.key === 'Enter') addKwRule()"><button class="primary" type="button" onclick="addKwRule()">＋ Add keyword rule</button></div>
+        </div>
         <div class="section-h"><h2>🎞️ Your reels</h2><span class="muted">Each reel can have its own comment → DM rule</span></div>
         <div class="card reel fallback">
           <details>
@@ -195,11 +209,13 @@ function ruleForm(id) {
   // A new fallback rule starts unticked: with empty keywords it would answer every comment on every reel.
   const r = {enabled: id !== "*", keywords: [], comment_reply: "", opening_dm: "", button_text: "",
              require_follow: true, follow_dm: "", followed_button_text: "", dm: "",
-             ...(rules.reels[id] || {})};
+             ...(kwDrafts[id] || {}), ...(rules.reels[id] || {})};
+  const kw = id.startsWith("kw:");
   return `<form onsubmit="saveRule(event, '${id}')">
     <label class="toggle"><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> Rule enabled</label>
+    ${kw ? `<label class="toggle"><input type="checkbox" name="comments" ${r.comments !== false ? "checked" : ""}> Also reply to these words in comments on any reel <span class="muted">(DMs always work)</span></label>` : ""}
     <div class="step" style="--c:#d62976"><i>1</i> Trigger keywords, comma separated (catches variations: PROMPTS = prompt, Prompts!, promt…)</div>
-    <input type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="Empty = replies to EVERY comment. Type a word like AGENT">
+    <input type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="${kw ? "Required: PRODUCT, PRODUCTS" : "Empty = replies to EVERY comment. Type a word like AGENT"}">
     <div class="step" style="--c:#3b82f6"><i>2</i> Public comment reply: one per line, a random one is used each time ({username} = their @name)</div>
     <textarea name="comment_reply" rows="3">${val(r, "comment_reply")}</textarea>
     <input type="hidden" name="dm_fail_reply" value="${esc(r.dm_fail_reply || "")}">
@@ -213,7 +229,8 @@ function ruleForm(id) {
     <textarea name="dm" rows="3" placeholder="Required: type your message with the link, e.g. Here you go 🎁 https://...">${esc(r.dm)}</textarea>
     <div class="formbar">
       <button class="primary">Save rule</button>
-      ${rules.reels[id] ? `<button type="button" class="secondary" onclick="deleteRule('${id}')">Remove</button>` : ""}
+      ${rules.reels[id] ? `<button type="button" class="secondary" onclick="deleteRule('${id}')">Remove</button>`
+        : kw ? `<button type="button" class="secondary" onclick="delete kwDrafts['${id}']; render()">Cancel</button>` : ""}
     </div></form>`;
 }
 
@@ -230,14 +247,18 @@ async function saveRule(e, id) {
     alert("Type the Final DM (step 5) first, or untick Enabled to save the rule as paused.");
     return f.dm.focus();
   }
+  if (id.startsWith("kw:") && !f.keywords.value.trim()) { alert("Type at least one keyword (step 1)."); return f.keywords.focus(); }
   const body = {enabled: f.enabled.checked, keywords: f.keywords.value.split(","),
+                ...(id.startsWith("kw:") ? {comments: f.comments.checked} : {}),
                 comment_reply: f.comment_reply.value, opening_dm: f.opening_dm.value,
                 button_text: f.button_text.value, require_follow: f.require_follow.checked,
                 follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value,
                 dm_fail_reply: f.dm_fail_reply.value,
                 dm: f.dm.value};
-  await fetch(`/api/rules/${encodeURIComponent(id)}`, {method: "PUT",
+  const res = await fetch(`/api/rules/${encodeURIComponent(id)}`, {method: "PUT",
     headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  if (!res.ok) { const j = await res.json().catch(() => ({})); return alert(j.error || "Could not save the rule."); }
+  delete kwDrafts[id];
   await loadRules(); render();
 }
 
@@ -290,6 +311,7 @@ let stats = null;
 function render() {
   document.getElementById("form-*").innerHTML = ruleForm("*");
   document.getElementById("badge-*").outerHTML = `<span id="badge-*">${badge("*")}</span>`;
+  renderKwRules();
   if (!stats) return;
   const a = stats.account;
   document.getElementById("username").textContent = "@" + a.username + " ·";
@@ -323,6 +345,33 @@ function render() {
           onclick="backfill(this, '${esc(r.id)}')">📨 Send to past comments</button></div>` : ""}
       </div></div>`;
   }).join("") : `<div class="card empty"><div>🎬</div>No reels found on this account.</div>`;
+}
+
+// Keyword rules live next to reel rules as "kw:WORD". New ones are drafts until saved.
+const kwDrafts = {};
+function renderKwRules() {
+  const el = document.getElementById("kwRules");
+  const open = new Set([...el.querySelectorAll("details[open]")].map(d => d.dataset.id));
+  const ids = [...Object.keys(kwDrafts).filter(id => !rules.reels[id]), ...Object.keys(rules.reels).filter(id => id.startsWith("kw:"))];
+  el.innerHTML = ids.length ? ids.map(id => {
+    const r = rules.reels[id] || kwDrafts[id];
+    const words = (r.keywords || []).join(", ") || id.slice(3);
+    const where = r.comments === false ? "DMs only" : "DMs + comments on any reel";
+    return `<details data-id="${esc(id)}" ${open.has(id) || !rules.reels[id] ? "open" : ""}>
+      <summary><span class="kw">${esc(words.toUpperCase())}</span> <span class="muted">· ${where}</span>
+        ${rules.reels[id] ? badge(id) : `<span class="badge off">not saved</span>`}</summary>${ruleForm(id)}</details>`;
+  }).join("") : `<p class="muted" style="margin:0 0 10px">No keyword rules yet.</p>`;
+}
+function addKwRule() {
+  const input = document.getElementById("kwNew");
+  const word = input.value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 24);
+  if (!word) { alert("Type a keyword like PRODUCT"); return input.focus(); }
+  const id = "kw:" + word;
+  if (rules.reels[id]) { alert(word + " already has a keyword rule: open it below."); return; }
+  const taken = Object.entries(rules.reels).find(([k, r]) => (r.keywords || []).some(w => w.trim().toUpperCase() === word));
+  if (taken && !confirm(`${word} is already a keyword in another rule (${taken[0] === "*" ? "ALL reels" : taken[0].startsWith("kw:") ? "keyword rule" : "a reel"}). Add anyway?`)) return;
+  kwDrafts[id] = {enabled: true, keywords: [word], comments: true};
+  input.value = ""; renderKwRules();
 }
 
 async function checkDomain() {

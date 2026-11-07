@@ -688,17 +688,39 @@ def keyword_matches(keyword, text):
     return any(w == k or (len(k) >= 5 and w[0] == k[0] and one_typo_apart(w, k)) for w in words)
 
 
+def is_keyword_rule(key):
+    """Keyword rules ("kw:PRODUCT") aren't tied to a reel: they answer DMs, and comments on any reel if allowed."""
+    return str(key).startswith("kw:")
+
+
+def keyword_rules(rules):
+    return [(k, r) for k, r in rules.get("reels", {}).items()
+            if is_keyword_rule(k) and r.get("enabled", True) and any(w.strip() for w in r.get("keywords", []))]
+
+
 def find_rule(rules, media_id, text):
-    """Returns (rule_key, rule) for a comment, or (None, None)."""
+    """Returns (rule_key, rule) for a comment, or (None, None).
+
+    Order: the reel's own rule, then keyword rules (any reel), then the ALL-reels fallback.
+    """
     reels = rules.get("reels", {})
-    key = media_id if media_id in reels else "*"
-    rule = reels.get(key)
+    own = reels.get(media_id) if media_id and not is_keyword_rule(media_id) and media_id != "*" else None
+    if own and own.get("enabled", True):
+        words = [k for k in own.get("keywords", []) if k.strip()]
+        if not words or any(keyword_matches(k, text) for k in words):
+            return media_id, own
+    for key, rule in keyword_rules(rules):
+        if rule.get("comments", True) and any(keyword_matches(k, text) for k in rule["keywords"] if k.strip()):
+            return key, rule
+    if own:  # the reel has its own rule (no match): don't fall through to the ALL-reels rule
+        return None, None
+    rule = reels.get("*")
     if not rule or not rule.get("enabled", True):
         return None, None
     keywords = [k for k in rule.get("keywords", []) if k.strip()]
     if keywords and not any(keyword_matches(k, text) for k in keywords):
         return None, None
-    return key, rule
+    return "*", rule
 
 
 def uses_button_flow(rule):
@@ -784,7 +806,9 @@ def handle_dm_text(ig_user_id, igsid, text):
     """
     if token_is_dead():
         return
-    for key, rule in load_rules().get("reels", {}).items():
+    # Keyword rules first: they exist for exactly this (e.g. "DM PRODUCT" on the Course 2 page).
+    ordered = sorted(load_rules().get("reels", {}).items(), key=lambda kv: not is_keyword_rule(kv[0]))
+    for key, rule in ordered:
         if rule.get("enabled", True) and any(keyword_matches(k, text) for k in dm_keywords(rule)):
             break
     else:
@@ -1677,6 +1701,12 @@ def api_switch_domain():
 @app.put("/api/rules/<media_id>")
 def api_put_rule(media_id):
     data = request.get_json(force=True)
+    keywords = [k.strip() for k in data.get("keywords", []) if k.strip()]
+    if is_keyword_rule(media_id):
+        if not re.fullmatch(r"kw:[A-Za-z0-9_-]{1,32}", media_id):
+            return jsonify({"error": "Bad keyword rule id"}), 400
+        if not keywords:
+            return jsonify({"error": "A keyword rule needs at least one keyword"}), 400
     rules = load_rules()
     rules.setdefault("reels", {})[media_id] = {
         "enabled": bool(data.get("enabled", True)),
@@ -1690,6 +1720,8 @@ def api_put_rule(media_id):
         "followed_button_text": data.get("followed_button_text", "").strip()[:20],
         "dm": data.get("dm", "").strip(),
     }
+    if is_keyword_rule(media_id):
+        rules["reels"][media_id]["comments"] = data.get("comments", True) is not False
     save_rules(rules)
     return jsonify(rules["reels"][media_id])
 

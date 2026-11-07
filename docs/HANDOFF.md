@@ -171,6 +171,10 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 26. **Home page live** at advocmedia.in (`templates/home.html`, `home_page()`, also `/home`): nav, hero + stats, Batch 1 strip, all courses, 3 steps, 6 newest freebies, about, footer. `/` on the custom domain no longer redirects to `/links`.
 27. **Course 2 merged** (`course2-page` → main): `/course?c=2`, `/courses`, `/digital-products` → redirect. Shows "Coming soon · DM PRODUCT" until a link is saved (no editor fields yet: `course2_data.DEFAULTS`).
 
+28. **Course 2 editor section** (`/links/edit` → 🎓 Course 2): link, price, MRP, price note, on/off → `page.course2` (`clean_course2()`).
+29. **Editor freebies fold** to one line after save (✏️ Edit opens one; Open all / Close all).
+30. **Keyword rules** (dashboard → 🔑 Keyword rules): stored in `rules.reels` as `kw:WORD` (`is_keyword_rule()`). Answer DMs of that word first, and comments on any reel unless `comments: false`. Comment order in `find_rule()`: reel's own rule → keyword rules → ALL-reels `*` fallback (a reel with its own rule never falls to `*`, as before). Button postbacks `GET|kw:WORD` work unchanged.
+
 ## 6. How to… (common tasks)
 
 **Add a freebie (no code):** `/links/edit` → 🎁 Freebies → ＋ Add freebie → keyword, title, topic, emoji → ⬆️ Upload file (≤ 4 MB) or paste a link → **💾 Save page** → check with the 🎁 Freebies preview tab. DM link to use in auto-DMs: `https://insta-autopilot-ten.vercel.app/free?k=KEYWORD`.
