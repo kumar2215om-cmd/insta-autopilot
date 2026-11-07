@@ -993,7 +993,7 @@ def receive_webhook():
 @app.before_request
 def check_password():
     # The link page, its click redirects and the freebies are public; the editor (/links/edit) is not.
-    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/", "/terms", "/refund-policy", "/privacy-policy", "/contact", "/digital-products", "/digital-products/", "/courses", "/courses/") or (request.path == "/" and on_custom_domain())
+    public = (request.path in ("/links", "/links/", "/free", "/course", "/course/", "/terms", "/refund-policy", "/privacy-policy", "/contact", "/digital-products", "/digital-products/", "/courses", "/courses/", "/home") or (request.path == "/" and on_custom_domain())
               or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")))
     if not DASHBOARD_PASSWORD or public:
         return
@@ -1060,10 +1060,47 @@ def on_custom_domain():
 
 @app.get("/")
 def home():
-    # On the brand domain the home page is the public link page; the dashboard lives at /admin.
+    # On the brand domain the home page is the public site home; the dashboard lives at /admin.
     if on_custom_domain():
-        return redirect("/links", code=302)
+        return home_page()
     return render_template("dashboard.html")
+
+
+def featured_freebies(page, n=6):
+    """Newest freebies for the home page: editor ones first (newest on top), then built-in ones by number."""
+    out = [{"k": fb.get("k", ""), "t": fb.get("t", ""), "e": fb.get("e") or "🎁", "topic": fb.get("topic", ""),
+            "href": "/free?k=" + fb.get("k", "")} for fb in reversed(page.get("freebies", []))
+           if fb.get("enabled", True) and fb.get("k") and fb.get("t")]
+    try:
+        with open(os.path.join(FREEBIES_DIR, "index.html"), encoding="utf-8") as f:
+            html = f.read()
+        start = html.index("const D=") + len("const D=")
+        items = json.loads(html[start:html.index(";\n", start)])["items"]
+        for it in sorted(items, key=lambda x: -int(x.get("n", 0))):
+            out.append({"k": it["k"], "t": it["t"], "e": it.get("e", "🎁"), "topic": it.get("topic", ""), "href": "/free?k=" + it["k"]})
+    except (OSError, ValueError, KeyError):
+        pass
+    seen, uniq = set(), []
+    for x in out:
+        if x["k"] not in seen:
+            seen.add(x["k"])
+            uniq.append(x)
+    return uniq[:n]
+
+
+@app.get("/home")
+def home_page():
+    """Public home page (advocmedia.in/): all courses, live batch, free guides, about Om."""
+    import legal_data
+    page = load_linkpage()
+    ig = instagram_profile()
+    c1 = page.get("course") or clean_course({})
+    live = (c1.get("live") or {}) if c1.get("enabled", True) else {}
+    return render_template("home.html", page=page, cards=course_cards(page, ig), live=live, course=c1,
+                           freebies=featured_freebies(page), freebie_total=freebies_count(page),
+                           avatar=page["avatar"] or ig.get("profile_picture_url", ""),
+                           username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"),
+                           email=legal_data.EMAIL)
 
 
 @app.get("/admin")
@@ -1178,14 +1215,11 @@ def course2_settings(page):
     return course
 
 
-@app.get("/courses")
-@app.get("/courses/")
-def courses_page():
+def course_cards(page, ig):
+    """Cards for every enabled course (used by /courses and the home page)."""
     import course_data, course2_data
-    page = load_linkpage()
     c1 = page.get("course") or clean_course({})
     c2 = course2_settings(page)
-    ig = instagram_profile()
 
     def off(c):
         mrp, price = str(c.get("mrp") or ""), str(c.get("price") or "")
@@ -1205,6 +1239,15 @@ def courses_page():
         cards.append({"n": 2, "href": "/course?c=2", "cover": course2_data.COVER, "title": course2_data.TITLE, "sub": course2_data.SUBTITLE,
                       "stats": course2_data.STATS, "price": c2["price"], "mrp": c2.get("mrp"), "off": off(c2),
                       "badge": "New" if c2.get("url") else "Coming soon", "note": course2_data.PRICE_NOTE, "ready": bool(c2.get("url"))})
+    return cards
+
+
+@app.get("/courses")
+@app.get("/courses/")
+def courses_page():
+    page = load_linkpage()
+    ig = instagram_profile()
+    cards = course_cards(page, ig)
     return render_template("courses.html", page=page, cards=cards, avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"))
 
