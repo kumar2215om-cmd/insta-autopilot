@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+{% if fbverify %}<meta name="facebook-domain-verification" content="{{ fbverify }}">
+{% endif %}<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{{ name or "Links" }}{% if username %} (@{{ username }}){% endif %}</title>
 <meta name="description" content="{{ page.bio }}">
 <meta property="og:title" content="{{ name }}">

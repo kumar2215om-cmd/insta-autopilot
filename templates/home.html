@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+{% if fbverify %}<meta name="facebook-domain-verification" content="{{ fbverify }}">
+{% endif %}<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Advoc Media · Practical AI courses by @{{ username }}</title>
 <meta name="description" content="Learn to grow on Instagram with Claude and AI. Courses, live classes and {{ freebie_total }}+ free guides by Om (@{{ username }}). Step by step, no jargon.">
 <meta property="og:title" content="Advoc Media · Learn AI the practical way">

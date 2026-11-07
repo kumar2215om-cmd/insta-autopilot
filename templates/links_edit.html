@@ -225,6 +225,8 @@
         <div style="margin-top:14px;border-top:1.5px dashed var(--line, #E7E0D4);padding-top:12px">
           <label>📈 Meta Pixel ID <span class="muted">(for ads: Events Manager → Data sources → your pixel → the number under its name. Empty = no tracking)</span></label>
           <input type="text" id="c-pixel" placeholder="e.g. 123456789012345" inputmode="numeric" maxlength="20">
+          <label style="margin-top:10px">✅ Meta domain verification code <span class="muted">(Business settings → Brand safety → Domains → advocmedia.in → "Meta-tag" → copy only the content="…" code)</span></label>
+          <input type="text" id="c-fbverify" placeholder="e.g. abc123def456ghi789" maxlength="64">
           <p class="hint" style="margin:6px 0 0">Tracks on the home page (PageView) and <code>/course</code> (PageView, ViewContent, InitiateCheckout on Join now). Ads should link to
             <code>advocmedia.in/course?utm_source=meta</code>: visitors from ads don't see the "← Links" / free-guides links, so they stay on the sales page.</p>
         </div>
@@ -552,7 +554,7 @@ async function importToGuide(i, input, file) {
 async function save() {
   page.name = $("name").value; page.bio = $("bio").value; page.avatar = $("avatar").value;
   page.socials = Object.fromEntries(SOCIALS.map(k => [k, $("s-" + k).value]));
-  page.course = {url: $("c-url").value, price: $("c-price").value, mrp: $("c-mrp").value, enabled: $("c-enabled").checked, pixel: $("c-pixel").value,
+  page.course = {url: $("c-url").value, price: $("c-price").value, mrp: $("c-mrp").value, enabled: $("c-enabled").checked, pixel: $("c-pixel").value, fbverify: $("c-fbverify").value,
                  live: {enabled: $("l-enabled").checked, name: $("l-name").value, start: $("l-start").value, time: $("l-time").value,
                         seats: $("l-seats").value, schedule: $("l-schedule").value}};
   page.course2 = {url: $("c2-url").value, price: $("c2-price").value, mrp: $("c2-mrp").value, note: $("c2-note").value,
@@ -582,6 +584,7 @@ async function save() {
   $("c-url").value = page.course.url || ""; $("c-price").value = page.course.price || ""; $("c-mrp").value = page.course.mrp || "";
   $("c-enabled").checked = page.course.enabled !== false;
   $("c-pixel").value = page.course.pixel || "";
+  $("c-fbverify").value = page.course.fbverify || "";
   const lv = page.course.live || {};
   $("l-enabled").checked = !!lv.enabled; $("l-name").value = lv.name || ""; $("l-start").value = lv.start || "";
   $("l-time").value = lv.time || ""; $("l-seats").value = lv.seats || ""; $("l-schedule").value = lv.schedule || "";

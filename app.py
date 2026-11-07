@@ -353,6 +353,13 @@ def clean_linkpage(data):
     }
 
 
+def fb_verify_code(raw):
+    """Accepts the bare code, content="code", or the whole <meta name="facebook-domain-verification" ...> tag."""
+    raw = str(raw or "")
+    m = re.search(r'content\s*=\s*["\']?([A-Za-z0-9]+)', raw)
+    return "".join(ch for ch in (m.group(1) if m else raw) if ch.isalnum())[:64]
+
+
 def clean_course(c):
     """Settings for the /course sales page (buy link on SuperProfile, prices in rupees)."""
     digits = lambda v: "".join(ch for ch in str(v or "") if ch.isdigit())[:6]
@@ -365,7 +372,9 @@ def clean_course(c):
     pixel = "".join(ch for ch in str(c.get("pixel") or "") if ch.isdigit())
     return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
             "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live,
-            "pixel": pixel if 8 <= len(pixel) <= 20 else ""}
+            "pixel": pixel if 8 <= len(pixel) <= 20 else "",
+            # Meta domain verification: the content="…" code from Business settings → Domains (letters + digits only)
+            "fbverify": fb_verify_code(c.get("fbverify"))}
 
 
 MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
@@ -1291,6 +1300,15 @@ def asset_v(rel):
 
 
 app.jinja_env.globals["asset_v"] = asset_v
+
+
+@app.context_processor
+def meta_verification():
+    """facebook-domain-verification code for public pages (set in the editor's Course section)."""
+    try:
+        return {"fbverify": (load_linkpage().get("course") or {}).get("fbverify", "")}
+    except Exception:
+        return {"fbverify": ""}
 
 
 def course2_settings(page):
