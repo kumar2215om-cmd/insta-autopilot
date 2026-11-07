@@ -1,76 +1,78 @@
-"""Content for the public course sales page (/course). Edit the text here; price + buy link are set in /links/edit."""
+"""Content for the public course sales page (/course), in English (the course itself is taught in Hinglish). Edit the text here; price + buy link are set in /links/edit."""
 
-TITLE = "Claude se Instagram grow karo"
+TITLE = "Grow on Instagram with Claude"
+TITLE_HI = "Claude se Instagram grow karo"  # the course's name on SuperProfile and in the lessons
 # {F} = live follower count from Instagram (e.g. "24K"); FOLLOWERS_FALLBACK is used if Instagram is unreachable.
 FOLLOWERS_FALLBACK = "24K"
-# English card text for the home page (the course itself is taught in Hinglish).
-TITLE_EN = "Grow on Instagram with Claude"
+COVER = "free/course_en.jpg"
+LANG_NOTE = "🗣️ Classes are taught in Hinglish (Hindi + English)"
+# Home page card text.
+TITLE_EN = TITLE
 SUBTITLE_EN = ("The exact system I used to grow @aiwith.om from 0 to {F}: profile, content plan, reels made with Claude, "
                "a comment → DM machine and a weekly growth loop. Step by step.")
-SUBTITLE = ("Wahi system jisse maine @aiwith.om ko 0 se {F} tak pahunchaya. "
-            "Profile, content plan, Claude se reels, comment → DM machine aur weekly growth loop. Hinglish mein, step by step.")
+SUBTITLE = ("The exact system I used to grow @aiwith.om from 0 to {F} followers. Profile, content plan, reels made with Claude, "
+            "a comment → DM machine and a weekly growth loop. Step by step, no jargon.")
 
 STATS = [("8", "modules"), ("32", "lessons"), ("~4.5h", "video"), ("6", "bonuses")]
 
 OUTCOMES = [
-    ("🧠", "Claude = tumhara strategist", "Ek Project jo tumhara brand yaad rakhta hai aur har plan table mein deta hai."),
-    ("👤", "Profile jo follow karwaye", "Niche, name field, bio, highlights aur link in bio, sab sahi."),
-    ("📅", "30 din ka plan, 10 minute mein", "Outlier research, hook lab aur calendar, copy-ready prompts ke saath."),
-    ("🎬", "Reels bina camera ke", "Script → voiceover → edit. CapCut (no-code) ya Claude Code + Remotion."),
-    ("💬", "Comment → DM machine", "Har reel pe keyword, DM mein free guide, followers badhte hain."),
-    ("📈", "Weekly growth loop", "Insights padhna, flop diagnosis, aur har hafte ka fix."),
+    ("🧠", "Claude = your strategist", "A Project that remembers your brand and gives you every plan as a clear table."),
+    ("👤", "A profile that gets follows", "Niche, name field, bio, highlights and link in bio, all set up right."),
+    ("📅", "A 30-day plan in 10 minutes", "Outlier research, hook lab and a content calendar, with copy-ready prompts."),
+    ("🎬", "Reels without a camera", "Script → voiceover → edit. CapCut (no code) or Claude Code + Remotion."),
+    ("💬", "Comment → DM machine", "A keyword on every reel, a free guide in the DM, and more followers."),
+    ("📈", "Weekly growth loop", "Read your Insights, find out why a reel flopped, and fix one thing every week."),
 ]
 
 MODULES = [
     ("Module 0", "Welcome", "Free preview", [
-        "Mera safar: 0 → {F}", "Tools aur kharcha", "Claude ko apna \"brain\" banao"]),
+        "My journey: 0 → {F}", "Tools and costs", "Make Claude your \"brain\""]),
     ("Module 1", "Niche + profile that converts", None, [
-        "Niche chuno jo tum 100 reels tak bol sako (free preview)", "Name field, bio, link", "Highlights jo trust banate hain", "Link in bio + freebies page"]),
+        "Pick a niche you can make 100 reels about (free preview)", "Name field, bio, link", "Highlights that build trust", "Link in bio + freebies page"]),
     ("Module 2", "Content plan with Claude", None, [
-        "Outliers dhoondo (copy nahi, pattern)", "30-day calendar in 10 minutes", "Hook lab", "Comment keyword har reel mein"]),
+        "Find outliers (patterns, not copies)", "30-day calendar in 10 minutes", "Hook lab", "A comment keyword on every reel"]),
     ("Module 3", "Reels with Claude", None, [
-        "Script jo 30–45 sec mein khatam ho", "Voiceover", "Path A: no-code edit (CapCut)", "Path B: Claude Code + Remotion reel factory",
+        "Scripts that finish in 30–45 seconds", "Voiceover", "Path A: no-code edit (CapCut)", "Path B: Claude Code + Remotion reel factory",
         "Brand look + quality checklist", "Cover + caption + hashtags"]),
     ("Module 4", "The comment → DM machine", None, [
-        "Kaise kaam karta hai", "Setup with a tool (ManyChat ya similar)", "Follow-gate the right way", "Safety: Instagram ke rules",
-        "(Advanced) Apna khud ka automation banao"]),
+        "How it works", "Setup with a tool (ManyChat or similar)", "Follow-gate the right way", "Safety: Instagram's rules",
+        "(Advanced) Build your own automation"]),
     ("Module 5", "Freebies that people actually want", None, [
-        "Lead magnet ideas", "Guide page in 15 minutes"]),
+        "Lead magnet ideas", "A guide page in 15 minutes"]),
     ("Module 6", "Analytics + growth loop", None, [
-        "Insights padhna seekho", "Reel flop kyun hui?", "Weekly routine (2 hours)", "Fix loop: playbooks"]),
+        "Learn to read Insights", "Why did a reel flop?", "Weekly routine (2 hours)", "Fix loop: playbooks"]),
     ("Module 7", "Monetize (optional, honest)", None, [
         "Affiliate links", "Digital products", "Brand collabs"]),
 ]
 
 # Default live-batch plan (shown when the editor's schedule box is empty). One class per line.
-LIVE_SESSIONS = ["Welcome + niche chuno (0.1–1.1)", "Profile, highlights, link in bio + outliers (1.2–2.1)",
+LIVE_SESSIONS = ["Welcome + pick your niche (0.1–1.1)", "Profile, highlights, link in bio + outliers (1.2–2.1)",
                  "30-day calendar, hook lab, keywords, script (2.2–3.1)", "Voiceover, CapCut edit, Claude Code reels (3.2–3.4)",
                  "Quality checklist, covers, DM machine setup (3.5–4.2)", "Follow-gate, safety, automation, freebie ideas (4.3–5.1)",
-                 "Guide page, insights, flop diagnosis, weekly routine (5.2–6.3)", "Playbooks + monetize honestly + wrap-up (6.4–7.3)"]
+                 "Guide page, Insights, flop diagnosis, weekly routine (5.2–6.3)", "Playbooks + honest monetizing + wrap-up (6.4–7.3)"]
 
-FOR = ["Creators, freelancers aur small businesses jo AI se Instagram grow karna chahte hain",
-       "Jinhe editing ya coding nahi aati (Path A no-code hai)", "Jo hafte mein 3–4 reels post karne ko ready hain"]
-NOT_FOR = ["\"Follower hack\" dhoondne wale", "Jo post kiye bina results chahte hain"]
+FOR = ["Creators, freelancers and small businesses who want to grow on Instagram with AI",
+       "People who can't edit or code (Path A is fully no-code)", "Anyone ready to post 3–4 reels a week"]
+NOT_FOR = ["People looking for a \"follower hack\"", "Anyone who wants results without posting"]
 
-INCLUDED = [("🎥", "32 video lessons", "Screen pe step by step, Hinglish mein"),
-            ("📘", "Student workbook (PDF)", "Har lesson ka copy-ready Claude prompt, templates aur checklists"),
+INCLUDED = [("🎥", "32 video lessons", "Step by step on screen, taught in Hinglish"),
+            ("📘", "Student workbook (PDF)", "A copy-ready Claude prompt for every lesson, plus templates and checklists"),
             ("🧩", "Templates", "Calendar, outlier log, DM messages, export checklist")]
 
 BONUSES = [
-    ("📕", "Viral Reels Playbook", "ebook", "3-second rule, 7 reel structures beat-by-beat, 50 hook templates, retention tricks, CTA patterns aur viral checklist."),
-    ("🧠", "Claude Prompt Vault", "52 prompts", "Research, ideas, scripts, captions, repurpose, DMs aur analytics: har kaam ka copy-ready prompt."),
-    ("💡", "100 Reel Idea Formulas", "ebook", "Fill-in-the-blank ideas, 10 categories, kisi bhi niche ke liye. Ideas kabhi khatam nahi honge."),
-    ("💬", "DM + Comment Script Pack", "ebook", "15 comment replies, keyword DM flow, FAQ, sales aur collab replies, negative comments ka jawab."),
-    ("🎬", "Reel Studio Kit + 3 kits", "files", "Mera Remotion reel project + Caption Sync, Motion aur Character kits: Claude Code ke saath seedha use karo."),
-    ("👤", "Profile + Highlights Kit", "files", "Highlight covers, About me / Freebies / Tips / Reviews / Collab story templates aur copy-ready bio."),
+    ("📕", "Viral Reels Playbook", "ebook", "The 3-second rule, 7 reel structures beat by beat, 50 hook templates, retention tricks, CTA patterns and a viral checklist."),
+    ("🧠", "Claude Prompt Vault", "52 prompts", "Research, ideas, scripts, captions, repurposing, DMs and analytics: a copy-ready prompt for every job."),
+    ("💡", "100 Reel Idea Formulas", "ebook", "Fill-in-the-blank ideas in 10 categories that work for any niche. You'll never run out of ideas."),
+    ("💬", "DM + Comment Script Pack", "ebook", "15 comment replies, a keyword DM flow, FAQ, sales and collab replies, and how to answer negative comments."),
+    ("🎬", "Reel Studio Kit + 3 kits", "files", "My Remotion reel project plus the Caption Sync, Motion and Character kits, ready to use with Claude Code."),
+    ("👤", "Profile + Highlights Kit", "files", "Highlight covers, About me / Freebies / Tips / Reviews / Collab story templates and a copy-ready bio."),
 ]
 
-FAQ = [("Kya Claude Pro zaroori hai?", "Nahi. Zyaadatar lessons free plan pe chalte hain. Long sessions aur Claude Code (Path B reels) ke liye paid plan chahiye."),
-       ("Coding aani chahiye?", "Nahi. Path A (CapCut) mein zero coding. Path B optional hai."),
-       ("Course kis language mein hai?", "Hinglish."),
-       ("Access kitne time ke liye hai?", "Purchase ke din se 6 mahine tak: saare videos, workbook aur bonuses. Bonus files download karke hamesha ke liye rakh sakte ho."),
-       ("Course kahan milega?", "Payment ke baad course SuperProfile pe khulta hai: videos, workbook, saare bonuses aur resources wahin."),
-       ("Payment ke baad kya hota hai?", "Payment hote hi SuperProfile pe course khul jaata hai: videos, workbook aur saare bonuses. Live batch ka Zoom link bhi wahin student dashboard mein milta hai."),
-       ("Live class miss ho gayi to?", "Koi baat nahi. Har class record hoti hai aur recording course mein add ho jaati hai."),
-       ("Refund milega?", "Digital course hai, isliye access milne ke baad refund nahi hota. Payment ya access ki koi problem ho to email ya Instagram DM karo, 48 ghante mein solve karenge. Poori policy: advocmedia.in/refund-policy."),
-       ("Kya followers guaranteed hain?", "Nahi. Koi bhi honest course ye promise nahi kar sakta. System milega; kaam tumhe karna hai.")]
+FAQ = [("Do I need Claude Pro?", "No. Most lessons work on the free plan. Long sessions and Claude Code (Path B reels) need a paid plan."),
+       ("Do I need to know coding?", "No. Path A (CapCut) needs zero coding. Path B is optional."),
+       ("What language is the course in?", "Hinglish: a natural mix of Hindi and English. This page is in English, but the video lessons and live classes are in Hinglish, so please make sure you're comfortable with that before you buy."),
+       ("How long do I get access?", "6 months from the day you buy: all videos, the workbook and the bonuses. You can download the bonus files and keep them forever."),
+       ("What happens after I pay?", "The course opens on SuperProfile right away: videos, workbook, all bonuses and resources. The Zoom link for the live batch is in the same student dashboard."),
+       ("What if I miss a live class?", "No problem. Every class is recorded and the recording is added to the course."),
+       ("Can I get a refund?", "It's a digital course, so there are no refunds once access is given. If there's any problem with payment or access, email us or DM on Instagram and we'll sort it out within 48 hours. Full policy: advocmedia.in/refund-policy."),
+       ("Are followers guaranteed?", "No. No honest course can promise that. You get the system; the work is yours.")]

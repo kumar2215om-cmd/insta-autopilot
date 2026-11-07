@@ -177,6 +177,8 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 
 31. **Course page for Meta ads:** Meta Pixel ID field (editor → 🎓 Course → `course.pixel`): PageView + ViewContent on load, InitiateCheckout on any SuperProfile link tap (/course only). **Ad mode** (`from_ad()`: `fbclid` / `utm_*` / `ad` in the URL) hides "← Links", the Courses button and the free-guides footer line; policy links stay. **Countdown** to Batch 1 from `batch_start()` (first schedule line, else start + time; IST), gone once it starts. 3 new FAQs. Privacy policy updated (Meta Pixel), `UPDATED` 7 Nov 2026. `course2_data.HIDDEN = True` hides Course 2 everywhere.
 
+32. **English home + course page** for an all-India audience: copy in `templates/home.html`, `course_data.py` (English; `TITLE_HI` keeps the Hinglish course name for the /free banner) and `templates/course.html`. English cover `freebies/course_en.jpg` (source `tools/cover/course_cover_en.html`). Both pages say clearly that classes are taught in Hinglish (`LANG_NOTE`, FAQ, card chip). Live batch topics come from the editor's schedule box.
+
 ## 6. How to… (common tasks)
 
 **Add a freebie (no code):** `/links/edit` → 🎁 Freebies → ＋ Add freebie → keyword, title, topic, emoji → ⬆️ Upload file (≤ 4 MB) or paste a link → **💾 Save page** → check with the 🎁 Freebies preview tab. DM link to use in auto-DMs: `https://insta-autopilot-ten.vercel.app/free?k=KEYWORD`.

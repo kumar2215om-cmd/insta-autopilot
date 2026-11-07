@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{{ c.TITLE }} · course by @{{ username }}</title>
 <meta name="description" content="{{ c.SUBTITLE|replace("{F}", fk) }}">
-<meta property="og:title" content="{{ c.OG_TITLE|default(c.TITLE ~ ': Zero se ' ~ fk ~ ' tak') }}">
+<meta property="og:title" content="{{ c.OG_TITLE|default(c.TITLE ~ ': zero to ' ~ fk ~ ' followers') }}">
 <meta property="og:description" content="{{ c.SUBTITLE|replace("{F}", fk) }}">
 {% set cover = c.COVER|default('free/course.jpg') %}<meta property="og:image" content="{{ request.host_url }}{{ cover }}?v={{ asset_v(cover[5:]) }}">
 <meta name="twitter:card" content="summary_large_image">
@@ -175,6 +175,7 @@
   .next .go { display:inline-block; margin-top:10px; background:var(--btn); color:var(--btn-ink); border-radius:30px; padding:9px 16px; font-weight:900; font-size:14px; }
   @media (max-width:420px) { .top { gap:8px; } .top .back { font-size:12px; padding:6px 10px; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } .rv { opacity:1; transform:none; } }
+  .langnote { display:inline-block; margin:2px 0 6px; font:800 13px Inter,sans-serif; color:#0F6E8F; background:#E6F4FA; border-radius:99px; padding:6px 12px; }
   .count { display:flex; align-items:center; gap:8px; flex-basis:100%; font:800 13.5px Inter,sans-serif; color:var(--rose); margin:-2px 0 2px; }
   .count b { font:400 18px/1 Anton,Inter; letter-spacing:.5px; color:var(--card-ink, var(--ink)); }
   .bar .count { flex-basis:auto; margin:0; font-size:11.5px; }
@@ -200,17 +201,18 @@
   </div>
 
   <section class="hero">
-    <div class="kicker">{% if live.enabled %}{{ live.name }} · live classes + video course{% else %}{{ c.KICKER|default('Hinglish video course') }}{% endif %}</div>
-    <h1>{{ c.H1_A|default('Claude se Instagram') }} <span>{{ c.H1_B|default('grow karo') }}</span></h1>
+    <div class="kicker">{% if live.enabled %}{{ live.name }} · live classes + video course{% else %}{{ c.KICKER|default('Video course · taught in Hinglish') }}{% endif %}</div>
+    <h1>{{ c.H1_A|default('Grow on Instagram') }} <span>{{ c.H1_B|default('with Claude') }}</span></h1>
     <p class="sub">{{ c.SUBTITLE|replace("{F}", fk) }}</p>
-    <div class="proof shadow"><div class="big">{{ c.PROOF_A|default('Zero se') }} <b>{{ c.PROOF_B|default(fk) }}</b>{{ c.PROOF_C|default(' tak') }}</div><div class="t">{{ c.PROOF_T|default('Mera real Instagram safar, step by step is course mein') }}<small>{{ c.PROOF_S|default('System milega, guarantee nahi. Honest course.') }}</small></div></div>
+    {% if c.LANG_NOTE %}<p class="langnote">{{ c.LANG_NOTE }}</p>{% endif %}
+    <div class="proof shadow"><div class="big">{{ c.PROOF_A|default('Zero to') }} <b>{{ c.PROOF_B|default(fk) }}</b>{{ c.PROOF_C|default('') }}</div><div class="t">{{ c.PROOF_T|default('My real Instagram followers, and the exact steps are in this course') }}<small>{{ c.PROOF_S|default('You get the system, not a guarantee. An honest course.') }}</small></div></div>
     <div class="chips">{% for n, l in c.STATS %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
     <div class="buy shadow">
-      {% if starts %}<div class="count" data-starts="{{ starts }}">⏳ <span class="lbl">{{ live.name or 'Batch 1' }} shuru hone mein</span> <b class="left">{{ live.start }}</b></div>{% endif %}
+      {% if starts %}<div class="count" data-starts="{{ starts }}">⏳ <span class="lbl">{{ live.name or 'Batch 1' }} starts in</span> <b class="left">{{ live.start }}</b></div>{% endif %}
       <span class="price">₹{{ course.price }}</span>
       {% if off %}<span class="mrp">₹{{ course.mrp }}</span><span class="off">{{ off }}% off · launch price</span>{% endif %}
       {{ buybtn() }}
-      <div class="note">{% set pnote = course.note if course.note is defined else (c.PRICE_NOTE if c.PRICE_NOTE is defined else '') %}{% if pnote %}{{ pnote }} · {% endif %}{% if has_url %}Secure checkout on SuperProfile · course aur workbook wahin milenge{% else %}Course jaldi aa raha hai. Instagram pe "{{ c.KEYWORD|default('COURSE') }}" DM karo, launch pe sabse pehle link milega.{% endif %}</div>
+      <div class="note">{% set pnote = course.note if course.note is defined else (c.PRICE_NOTE if c.PRICE_NOTE is defined else '') %}{% if pnote %}{{ pnote }} · {% endif %}{% if has_url %}Secure checkout on SuperProfile · you get the course and workbook there{% else %}Coming soon. DM "{{ c.KEYWORD|default('COURSE') }}" on Instagram to get the link first at launch.{% endif %}</div>
     </div>
     <img class="cover shadow rv" src="/{{ c.COVER|default('free/course.jpg') }}" alt="{{ c.TITLE }}: course cover" onerror="this.remove()">
   </section>
@@ -222,18 +224,18 @@
       <span>🎥 {{ sessions|length }} live classes</span>
       {% if live.start %}<span>📅 Starts {{ live.start }}</span>{% endif %}
       {% if live.time %}<span>🕖 {{ live.time }}</span>{% endif %}
-      {% if live.seats %}<span class="seat">Sirf {{ live.seats }} seats</span>{% endif %}
+      {% if live.seats %}<span class="seat">Only {{ live.seats }} seats</span>{% endif %}
     </div>
-    <p class="lp">Is batch mein main har module live sikhaunga, screen pe, step by step. Har class ke end mein Q&amp;A. Class miss ho gayi? Koi baat nahi: har class record hogi aur recording course mein add ho jaayegi. Class ka join link payment ke baad SuperProfile student dashboard mein milega.</p>
-    <ol>{% for when, topic in sessions %}<li><span>{% if when %}<small>{{ when }}</small>{% else %}<small>Date jaldi announce hogi</small>{% endif %}<b>{{ topic }}</b></span></li>{% endfor %}</ol>
-    <div class="perks"><div>🔴 Live Q&amp;A: apne page ke sawaal seedha poocho</div><div>📼 Har class ki recording course mein</div><div>📘 Workbook + 6 bonuses pehle din se</div></div>
+    <p class="lp">In this batch I teach every module live, on screen, step by step, with Q&amp;A at the end of each class. Missed a class? No problem: every class is recorded and added to the course. The join link is in your SuperProfile student dashboard after payment. Classes are in Hinglish.</p>
+    <ol>{% for when, topic in sessions %}<li><span>{% if when %}<small>{{ when }}</small>{% else %}<small>Date to be announced</small>{% endif %}<b>{{ topic }}</b></span></li>{% endfor %}</ol>
+    <div class="perks"><div>🔴 Live Q&amp;A: ask about your own page</div><div>📼 Every class recorded in the course</div><div>📘 Workbook + 6 bonuses from day one</div></div>
   </section>
   {% endif %}
 
-  <h2 class="rv">Kya <span>seekhoge</span></h2>
+  <h2 class="rv">What you'll <span>learn</span></h2>
   <div class="grid">{% for e, t, d in c.OUTCOMES %}<div class="card shadow rv"><div class="e">{{ e }}</div><b>{{ t }}</b><p>{{ d }}</p></div>{% endfor %}</div>
 
-  <h2 class="rv">Poora <span>curriculum</span></h2>
+  <h2 class="rv">Full <span>curriculum</span></h2>
   {% for code, name, badge, lessons in c.MODULES %}
   <details class="mod shadow rv" {% if loop.first %}open{% endif %}>
     <summary><span class="mn">{{ "★" if code.startswith("Bonus") else loop.index0 }}</span><span class="mt"><b>{{ name }}</b><small>{{ code }} · {{ lessons|length }} lesson{{ "s" if lessons|length != 1 }}</small></span>{% if badge %}<span class="free">{{ badge }}</span>{% endif %}</summary>
@@ -241,47 +243,47 @@
   </details>
   {% endfor %}
 
-  <h2 class="rv">Saath mein <span>kya milega</span></h2>
+  <h2 class="rv">What's <span>included</span></h2>
   <div class="grid">{% for e, t, d in c.INCLUDED %}<div class="card shadow rv"><div class="e">{{ e }}</div><b>{{ t }}</b><p>{{ d }}</p></div>{% endfor %}</div>
 
   {% if c.BONUSES %}
-  <div class="bonus-head rv"><h2 style="margin-bottom:14px">🎁 Bonuses <span>free with course</span></h2></div>
+  <div class="bonus-head rv"><h2 style="margin-bottom:14px">🎁 Bonuses <span>free with the course</span></h2></div>
   <div class="grid">{% for e, t, k, d in c.BONUSES %}<div class="bonus shadow rv"><span class="no">BONUS {{ loop.index }}</span><div class="e">{{ e }}</div><b>{{ t }}</b><span class="k">{{ k }}</span><p>{{ d }}</p></div>{% endfor %}</div>
   {% endif %}
 
-  <h2 class="rv">Kiske <span>liye hai</span></h2>
+  <h2 class="rv">Who it's <span>for</span></h2>
   <div class="two">
-    <div class="card shadow rv"><b>✅ Tumhare liye hai agar</b><ul>{% for x in c.FOR %}<li><span>•</span><span>{{ x }}</span></li>{% endfor %}</ul></div>
-    <div class="card shadow rv"><b>❌ Tumhare liye nahi hai agar</b><ul>{% for x in c.NOT_FOR %}<li><span>•</span><span>{{ x }}</span></li>{% endfor %}</ul></div>
+    <div class="card shadow rv"><b>✅ It's for you if you are</b><ul>{% for x in c.FOR %}<li><span>•</span><span>{{ x }}</span></li>{% endfor %}</ul></div>
+    <div class="card shadow rv"><b>❌ It's not for you if you are</b><ul>{% for x in c.NOT_FOR %}<li><span>•</span><span>{{ x }}</span></li>{% endfor %}</ul></div>
   </div>
-  <div class="warn rv">⚠️ {{ c.HONEST|default('Honest baat: ye followers ki guarantee nahi hai. Ye wo system hai jo maine use kiya. Results tumhare niche, consistency aur content pe depend karenge.') }}</div>
+  <div class="warn rv">⚠️ {{ c.HONEST|default('Honest note: this is not a follower guarantee. It is the system I used. Your results depend on your niche, consistency and content.') }}</div>
 
-  <h2 class="rv">Kaun <span>sikha raha hai</span></h2>
+  <h2 class="rv">Who's <span>teaching</span></h2>
   <div class="card shadow rv about">
     <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">{{ username[0]|upper }}</div>{% endif %}</div>
-    <div><b>Om · @{{ username }}</b><p>Simplifying AI for everyone. Founder @advocmedia, building Likholabs. Zero se {{ fk }} followers tak, Claude ke saath, Hinglish mein.</p></div>
+    <div><b>Om · @{{ username }}</b><p>Simplifying AI for everyone. Founder @advocmedia, building Likholabs. I grew from zero to {{ fk }} followers with Claude, and I teach the whole system in Hinglish.</p></div>
   </div>
 
-  <h2 class="rv">Sawaal <span>jawab</span></h2>
+  <h2 class="rv">Questions &amp; <span>answers</span></h2>
   {% for q, a in c.FAQ %}<details class="faq shadow rv"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}
 
   {% if c2 and tab == 1 %}
-  <h2 class="rv">Iske baad: <span>Course 2</span></h2>
+  <h2 class="rv">Next: <span>Course 2</span></h2>
   <a class="next shadow rv" href="/course?c=2">
     <img src="/{{ c2.COVER }}" alt="{{ c2.TITLE }}" onerror="this.remove()">
     <span><span class="k">Course 2 · ₹{{ course2.price }}</span><b>{{ c2.TITLE }}</b>
-      <p>Page grow ho gaya? Ab usse kamao: idea se pehli sale tak. Course 1 (Batch 1) students ko coupon se ₹499.</p>
-      <span class="go">Course 2 dekho →</span></span>
+      <p>Grown your page? Now earn from it: from idea to first sale. Course 1 (Batch 1) students get it for ₹499 with a coupon.</p>
+      <span class="go">See Course 2 →</span></span>
   </a>
   {% endif %}
 
   <div class="final rv">
-    <h2>Ready ho?</h2>
-    <p>{{ c.FINAL|default('Profile se auto-DMs tak, poora system.') }} ₹{{ course.price }}{% if off %} (launch price){% endif %}.</p>
+    <h2>Ready?</h2>
+    <p>{{ c.FINAL|default('From profile to auto-DMs, the whole system.') }} ₹{{ course.price }}{% if off %} (launch price){% endif %}.</p>
     {{ buybtn() }}
-    <p style="margin-top:14px;font-size:13.5px">Koi sawaal? <a href="mailto:kumarom1315@gmail.com" style="color:var(--rose);font-weight:900">kumarom1315@gmail.com</a> ya Instagram DM <b>@{{ username }}</b></p>
+    <p style="margin-top:14px;font-size:13.5px">Questions? <a href="mailto:kumarom1315@gmail.com" style="color:var(--rose);font-weight:900">kumarom1315@gmail.com</a> or DM <b>@{{ username }}</b> on Instagram</p>
   </div>
-  <footer>{% if not ad %}Free guides bhi hain: <a href="/free/">advocmedia.in/free</a> · <a href="/links">All links</a><br>{% endif %}<a href="/terms">Terms</a> · <a href="/refund-policy">Refund policy</a> · <a href="/privacy-policy">Privacy</a> · <a href="/contact">Contact</a></footer>
+  <footer>{% if not ad %}Free guides too: <a href="/free/">advocmedia.in/free</a> · <a href="/links">All links</a><br>{% endif %}<a href="/terms">Terms</a> · <a href="/refund-policy">Refund policy</a> · <a href="/privacy-policy">Privacy</a> · <a href="/contact">Contact</a></footer>
 </div>
 
 <div class="bar" id="bar"><span class="price">₹{{ course.price }}</span>{% if off %}<span class="mrp">₹{{ course.mrp }}</span>{% endif %}
