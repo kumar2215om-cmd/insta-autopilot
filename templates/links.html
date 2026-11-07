@@ -66,7 +66,7 @@
   h1 span { color:var(--hl, var(--rose)); }
   .bio { color:var(--mute); font-weight:600; font-size:15px; line-height:1.5; margin:0 0 14px; white-space:pre-line; }
 
-  .socials { display:flex; gap:8px; overflow-x:auto; padding:2px 0 4px; scrollbar-width:none; }
+  .socials { display:flex; flex-wrap:wrap; gap:8px; padding:2px 0 4px; }  /* wrap, so every chip (e.g. Website) is visible */
   .socials::-webkit-scrollbar { display:none; }
   .socials a { flex:none; display:inline-flex; align-items:center; gap:7px; text-decoration:none; border:2px solid var(--line); background:var(--card);
                color:var(--card-ink); border-radius:30px; padding:7px 13px 7px 10px; font:800 13px Inter,sans-serif; }
