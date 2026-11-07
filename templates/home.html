@@ -188,7 +188,7 @@
     <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">O</div>{% endif %}</div>
     <b>advoc<span>media</span></b>
   </a>
-  <div class="links"><a href="#courses">Courses</a><a href="#free">Free guides</a><a href="#about">About</a><a href="/links">Links</a></div>
+  <div class="links"><a href="#courses">Courses</a>{% if not ad %}<a href="#free">Free guides</a>{% endif %}<a href="#about">About</a>{% if not ad %}<a href="/links">Links</a>{% endif %}</div>
   <a class="cta rose" href="{{ cards[0].href if cards else '/courses' }}">{% if live.enabled %}{{ live.name or 'Batch 1' }} join karo{% else %}Course dekho{% endif %}</a>
 </div></nav>
 
@@ -200,7 +200,7 @@
       <p class="lead rise d2">Hi, main Om hoon (@{{ username }}). Yahan mere saare courses, live classes aur free guides hain: wahi system jisse maine page ko zero se {{ followers|kfollowers or '24K' }} tak pahunchaya. Step by step, bina jargon ke.</p>
       <div class="btns rise d3">
         <a class="btn rose" href="#courses">🎓 Courses dekho</a>
-        <a class="btn ghost" href="/free/">🎁 {{ freebie_total }}+ free guides</a>
+        {% if not ad %}<a class="btn ghost" href="/free/">🎁 {{ freebie_total }}+ free guides</a>{% endif %}
       </div>
       <div class="stats rise d4">
         <div class="stat"><b><em>{{ followers|kfollowers or '24K' }}</em></b><span>Instagram family</span></div>
@@ -256,6 +256,7 @@
     </div>
   </section>
 
+  {% if not ad %}
   <section id="free">
     <div class="head rv">
       <div><div class="kicker">Free guides</div><h2>Pehle <span>free</span> mein seekho</h2></div>
@@ -267,6 +268,7 @@
       {% endfor %}
     </div>
   </section>
+  {% endif %}
 
   <section id="about">
     <div class="about rv">
@@ -277,7 +279,7 @@
         <p>Simplifying AI for everyone. Founder of Advoc Media, building Likholabs. Main roz Instagram pe AI tools aur tips share karta hoon, Hinglish mein, taaki koi bhi Claude aur AI ko apne kaam mein use kar sake. Zero se {{ followers|kfollowers or '24K' }} followers tak ka safar Claude ke saath kiya, aur wahi system yahan sikhata hoon.</p>
         <div class="social">
           <a class="ig" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">📸 Follow @{{ username }}</a>
-          <a href="/links">🔗 All links</a>
+          {% if not ad %}<a href="/links">🔗 All links</a>{% endif %}
           <a href="mailto:{{ email }}">✉️ Email</a>
         </div>
       </div>
@@ -290,13 +292,13 @@
     <p>Ek course, ek system, aur har hafte thoda aage. Doubt ho to Instagram pe DM karo.</p>
     <div class="btns" style="justify-content:center;margin-top:0">
       <a class="btn rose" href="{{ cards[0].href if cards else '/courses' }}">🎓 {{ cards[0].title if cards else 'Courses' }} →</a>
-      <a class="btn ghost" style="color:var(--ink)" href="/free/">🎁 Free guides</a>
+      {% if not ad %}<a class="btn ghost" style="color:var(--ink)" href="/free/">🎁 Free guides</a>{% endif %}
     </div>
   </div>
 
   <footer>
     © 2026 Advoc Media · Om (@{{ username }})<br>
-    <a href="/courses">Courses</a> <span class="sep">·</span> <a href="/free/">Free guides</a> <span class="sep">·</span> <a href="/links">Links</a> <span class="sep">·</span> <a href="/terms">Terms</a> <span class="sep">·</span> <a href="/refund-policy">Refund</a> <span class="sep">·</span> <a href="/privacy-policy">Privacy</a> <span class="sep">·</span> <a href="/contact">Contact</a>
+    <a href="/courses">Courses</a> <span class="sep">·</span> {% if not ad %}<a href="/free/">Free guides</a> <span class="sep">·</span> <a href="/links">Links</a> <span class="sep">·</span> {% endif %}<a href="/terms">Terms</a> <span class="sep">·</span> <a href="/refund-policy">Refund</a> <span class="sep">·</span> <a href="/privacy-policy">Privacy</a> <span class="sep">·</span> <a href="/contact">Contact</a>
   </footer>
 </div>
 

@@ -398,9 +398,21 @@ def batch_start(live, now=None):
     return None
 
 
+AD_KEYS = ("fbclid", "utm_source", "utm_medium", "utm_campaign", "ad")
+
+
 def from_ad():
-    """Visitor came from an ad or a tagged link: hide links that lead away from the purchase."""
-    return any(request.args.get(k) for k in ("fbclid", "utm_source", "utm_medium", "utm_campaign", "ad"))
+    """Visitor came from an ad or a tagged link (now or earlier in this browser visit, via the `adv` cookie):
+    hide links that lead away from the courses."""
+    return any(request.args.get(k) for k in AD_KEYS) or request.cookies.get("adv") == "1"
+
+
+@app.after_request
+def remember_ad_visit(resp):
+    # Ad landing on / or /course: keep ad mode for this browser visit (session cookie), e.g. home → course.
+    if request.method == "GET" and any(request.args.get(k) for k in AD_KEYS) and request.path in ("/", "/home", "/course", "/course/"):
+        resp.set_cookie("adv", "1", samesite="Lax", secure=request.is_secure, httponly=True)
+    return resp
 
 
 def clean_course2(c):
@@ -1174,7 +1186,7 @@ def home_page():
                            freebies=featured_freebies(page), freebie_total=freebies_count(page),
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"),
-                           email=legal_data.EMAIL, pixel=c1.get("pixel", ""))
+                           email=legal_data.EMAIL, pixel=c1.get("pixel", ""), ad=from_ad())
 
 
 @app.get("/admin")
