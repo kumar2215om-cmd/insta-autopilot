@@ -46,6 +46,21 @@
   /* Reels */
   .reel { padding:16px; display:grid; grid-template-columns: 92px minmax(0, 1fr); gap:18px; margin-bottom:14px; }
   .reel.fallback { display:block; border-style:dashed; border-color:var(--line2); background:var(--panel); box-shadow:none; }
+  /* Reel cards fold to one line: small thumb, caption, views, rule badge, Edit. */
+  .rx .rhead { display:flex; align-items:center; gap:10px; min-width:0; cursor:pointer; }
+  .rx .rhead .rcap { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:700; font-size:14.5px; }
+  .rx .rhead .rv { font-weight:800; font-size:13px; color:#FF6A4D; white-space:nowrap; }
+  .rx .rhead .rdate { font-size:12.5px; white-space:nowrap; }
+  .rx .rhead .tog { flex:none; }
+  .rx:not(.open) { grid-template-columns:40px minmax(0, 1fr); gap:12px; padding:10px 14px; margin-bottom:8px; align-items:center; }
+  .rx:not(.open) .thumb img { width:40px; height:56px; border-radius:8px; }
+  .rx:not(.open) .thumb { border-radius:8px; box-shadow:none; }
+  .rx:not(.open) .thumb::after { display:none; }
+  .rx:not(.open) .rbody { display:none; }
+  .rx.open .rhead { margin-bottom:8px; }
+  .rx.open .rhead .rcap, .rx.open .rhead .rv { display:none; }
+  .rx.open .rhead .rdate { flex:1; }
+  @media (max-width:600px) { .rx .rhead .rdate { display:none; } .rx:not(.open) .rhead .rv { display:none; } }
   .kwbox { margin-bottom:22px; }
   /* Rule groups fold to a title bar (tap to open), like the link page editor. */
   .foldbar { display:flex; gap:8px; justify-content:flex-end; margin:0 0 10px; }
@@ -282,7 +297,8 @@ async function saveRule(e, id) {
     headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
   if (!res.ok) { const j = await res.json().catch(() => ({})); return alert(j.error || "Could not save the rule."); }
   delete kwDrafts[id];
-  justSaved = id;  // fold that rule's form again after the re-draw
+  justSaved = id;  // fold that rule's form (and its reel card) again after the re-draw
+  openReels.delete(id);
   await loadRules(); render(); justSaved = null;
 }
 
@@ -351,11 +367,20 @@ function render() {
   if (!reelsEl.dataset.shown) { reelsEl.dataset.shown = 1; reelsEl.classList.add("intro"); setTimeout(() => reelsEl.classList.remove("intro"), 1500); }
   reelsEl.innerHTML = stats.reels.length ? stats.reels.map((r, n) => {
     const i = r.insights;
-    return `<div class="card reel" style="--i:${Math.min(n, 6)}">
+    const isOpen = openReels.has(r.id);
+    return `<div class="card reel rx ${isOpen ? "open" : ""}" id="reel-${esc(r.id)}" style="--i:${Math.min(n, 6)}">
       <a class="thumb" href="${esc(r.permalink)}" target="_blank"><img src="${esc(r.thumbnail_url)}" alt=""></a>
-      <div>
+      <div style="min-width:0">
+        <div class="rhead" onclick="if (!event.target.closest('a,button')) toggleReel('${esc(r.id)}')">
+          <span class="rcap">${esc((r.caption || "").split("\n")[0]) || "<span class=muted>(no caption)</span>"}</span>
+          <span class="rv">▶ ${fmt(i.views)}</span>
+          <span class="rdate muted">${new Date(r.timestamp).toLocaleDateString()}</span>
+          ${badge(r.id)}
+          <button type="button" class="secondary sm tog" onclick="toggleReel('${esc(r.id)}')">${isOpen ? "▴ Close" : "✏️ Edit"}</button>
+        </div>
+        <div class="rbody">
         <p class="caption">${esc(r.caption) || "<span class=muted>(no caption)</span>"}</p>
-        <div class="meta muted">${new Date(r.timestamp).toLocaleString()} ${badge(r.id)}</div>
+        <div class="meta muted">${new Date(r.timestamp).toLocaleString()}</div>
         <div class="metrics">
           <span class="chip" style="--c:#FF6A4D"><b>${fmt(i.views)}</b><span><i>▶</i> views</span></span>
           <span class="chip" style="--c:#7C4DFF"><b>${fmt(i.reach)}</b><span><i>👁</i> reach</span></span>
@@ -365,15 +390,25 @@ function render() {
           <span class="chip" style="--c:#E08A00"><b>${fmt(i.saved)}</b><span><i>🔖</i> saves</span></span>
           ${(stats.gate_follows || {})[r.id] ? `<span class="chip wide" style="--c:#15A05A"><b>${exact(stats.gate_follows[r.id])}</b><span><i>🎯</i> follows from automation</span></span>` : ""}
         </div>
-        <details data-id="${esc(r.id)}" ${open.has(r.id) ? "open" : ""}>
+        <details data-id="${esc(r.id)}" ${open.has(r.id) || (isOpen && !rules.reels[r.id] && justSaved !== r.id) ? "open" : ""}>
           <summary>Auto comment + DM rule</summary>${ruleForm(r.id)}</details>
         ${rules.reels[r.id] ? `<div class="actions" style="margin-top:8px"><button type="button" class="send sm"
           onclick="backfill(this, '${esc(r.id)}')">📨 Send to past comments</button></div>` : ""}
+        </div>
       </div></div>`;
   }).join("") : `<div class="card empty"><div>🎬</div>No reels found on this account.</div>`;
 }
 
 let justSaved = null;
+const openReels = new Set();
+function toggleReel(id) {
+  openReels.has(id) ? openReels.delete(id) : openReels.add(id);
+  const card = document.getElementById("reel-" + id);
+  card.classList.toggle("open", openReels.has(id));
+  card.querySelector(".tog").textContent = openReels.has(id) ? "▴ Close" : "✏️ Edit";
+  // A reel without a rule opens straight to the rule form.
+  if (openReels.has(id) && !rules.reels[id]) card.querySelector("details").open = true;
+}
 // ---- Rule groups fold to one line; which are open is remembered in this browser only ----
 const GROUP_KEY = "dashOpenGroups";
 function groupSums() {
@@ -392,7 +427,10 @@ function rememberGroups() {
 function foldGroups(fold) {
   document.querySelectorAll(".fgroup").forEach(g => setGroup(g, fold));
   // Close all also folds every rule form; Open all only opens the groups.
-  if (fold) document.querySelectorAll(".fgroup details[open]").forEach(d => d.open = false);
+  if (fold) {
+    document.querySelectorAll(".fgroup details[open]").forEach(d => d.open = false);
+    openReels.clear(); document.querySelectorAll(".rx.open").forEach(c => { c.classList.remove("open"); c.querySelector(".tog").textContent = "✏️ Edit"; });
+  }
   rememberGroups();
 }
 (function setupGroups() {
