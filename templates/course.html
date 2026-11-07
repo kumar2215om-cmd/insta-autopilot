@@ -204,7 +204,7 @@
   </div>
 
   <section class="hero">
-    <div class="kicker">{% if bstate == "started" %}🔴 {{ live.name }} is live now · join anytime{% elif bstate == "full" %}{{ live.name }} is full · next batch waitlist open{% elif live.enabled %}{{ live.name }} · live classes + video course{% else %}{{ c.KICKER|default('Video course · taught in Hinglish') }}{% endif %}</div>
+    <div class="kicker">{% if bstate == "ended" %}Video course · {{ live.name }} recordings included{% elif bstate == "started" %}🔴 {{ live.name }} is live now · join anytime{% elif bstate == "full" %}{{ live.name }} is full · next batch waitlist open{% elif live.enabled %}{{ live.name }} · live classes + video course{% else %}{{ c.KICKER|default('Video course · taught in Hinglish') }}{% endif %}</div>
     <h1>{{ c.H1_A|default('Grow on Instagram') }} <span>{{ c.H1_B|default('with Claude') }}</span></h1>
     <p class="sub">{{ c.SUBTITLE|replace("{F}", fk) }}</p>
     {% if c.LANG_NOTE %}<p class="langnote">{{ c.LANG_NOTE }}</p>{% endif %}
@@ -212,6 +212,7 @@
     <div class="chips">{% for n, l in c.STATS %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
     <div class="buy shadow">
       {% if bstate == "started" %}<div class="count">🔴 <span>{{ live.name }} started{% if live.start %} {{ live.start }}{% endif %}. Join now and catch up: every class is recorded.</span></div>
+      {% elif bstate == "ended" %}<div class="count">📼 <span>Includes all {{ sessions|length or '' }} {{ live.name }} live class recordings. Learn at your own pace.</span></div>
       {% elif bstate == "full" %}<div class="count">🙏 <span>{{ live.name }} is full. DM me to get a seat in the next batch first.</span></div>{% endif %}
       {% if starts %}<div class="count" data-starts="{{ starts }}">⏳ <span class="lbl">{{ live.name or 'Batch 1' }} starts in</span> <b class="left">{{ live.start }}</b></div>{% endif %}
       <span class="price">₹{{ course.price }}</span>
@@ -224,17 +225,18 @@
 
   {% if live.enabled and sessions %}
   <section class="live shadow rv" id="live">
-    <div class="lt"><span class="dot" aria-hidden="true"></span><h2>{{ live.name }} · <span>live classes</span></h2></div>
+    <div class="lt">{% if bstate != "ended" %}<span class="dot" aria-hidden="true"></span>{% endif %}<h2>{{ live.name }} · <span>{{ "class recordings" if bstate == "ended" else "live classes" }}</span></h2></div>
     <div class="meta">
-      <span>🎥 {{ sessions|length }} live classes</span>
-      {% if live.start %}<span>📅 {{ "Started" if bstate in ("started", "full") else "Starts" }} {{ live.start }}</span>{% endif %}
+      <span>🎥 {{ sessions|length }} {{ "recorded classes" if bstate == "ended" else "live classes" }}</span>
+      {% if live.start %}<span>📅 {{ "Held from" if bstate == "ended" else "Started" if bstate in ("started", "full") else "Starts" }} {{ live.start }}</span>{% endif %}
       {% if bstate == "full" %}<span class="seat">Batch full</span>{% endif %}
-      {% if live.time %}<span>🕖 {{ live.time }}</span>{% endif %}
+      {% if live.time and bstate != "ended" %}<span>🕖 {{ live.time }}</span>{% endif %}
       {% if live.seats and bstate == "open" %}<span class="seat">Only {{ live.seats }} seats</span>{% endif %}
     </div>
-    <p class="lp">In this batch I teach every module live, on screen, step by step, with Q&amp;A at the end of each class. Missed a class? No problem: every class is recorded and added to the course. The join link is in your SuperProfile student dashboard after payment. Classes are in Hinglish.</p>
+    {% if bstate == "ended" %}<p class="lp">Every class from {{ live.name }} was recorded live, on screen, step by step, with real questions from students. All the recordings are part of the course, so you can watch them anytime. Classes are in Hinglish.</p>
+    {% else %}<p class="lp">In this batch I teach every module live, on screen, step by step, with Q&amp;A at the end of each class. Missed a class? No problem: every class is recorded and added to the course. The join link is in your SuperProfile student dashboard after payment. Classes are in Hinglish.</p>{% endif %}
     <ol>{% for when, topic in sessions %}<li><span>{% if when %}<small>{{ when }}</small>{% else %}<small>Date to be announced</small>{% endif %}<b>{{ topic }}</b></span></li>{% endfor %}</ol>
-    <div class="perks"><div>🔴 Live Q&amp;A: ask about your own page</div><div>📼 Every class recorded in the course</div><div>📘 Workbook + 6 bonuses from day one</div></div>
+    <div class="perks">{% if bstate == "ended" %}<div>📼 All class recordings in the course</div><div>❓ Real student Q&amp;A in every class</div>{% else %}<div>🔴 Live Q&amp;A: ask about your own page</div><div>📼 Every class recorded in the course</div>{% endif %}<div>📘 Workbook + 6 bonuses from day one</div></div>
   </section>
   {% endif %}
 

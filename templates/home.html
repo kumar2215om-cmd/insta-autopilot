@@ -197,7 +197,7 @@
     <b>advoc<span>media</span></b>
   </a>
   <div class="links"><a href="#courses">Courses</a>{% if not ad %}<a href="#free">Free guides</a>{% endif %}<a href="#about">About</a>{% if not ad %}<a href="/links">Links</a>{% endif %}</div>
-  <a class="cta rose" href="{{ cards[0].href if cards else '/courses' }}">{% if bstate in ("open", "started") %}Join {{ live.name or 'Batch 1' }}{% else %}See the course{% endif %}</a>
+  <a class="cta rose" href="{{ cards[0].href if cards else '/courses' }}">{% if bstate in ("open", "started") %}Join {{ live.name or 'Batch 1' }}{% elif bstate == "ended" %}Join the course{% else %}See the course{% endif %}</a>
 </div></nav>
 
 <div class="wrap">
@@ -220,17 +220,21 @@
     <div class="show rise d2">
       <img class="cover" src="/free/course_en.jpg?v={{ asset_v('course_en.jpg') }}" alt="Grow on Instagram with Claude: course cover">
       <div class="float a"><span class="big">0 → {{ followers|kfollowers or '24K' }}</span><span>real result,<br>built with Claude</span></div>
-      {% if bstate %}<div class="float b"><span class="dot"></span><span>{{ live.name or 'Batch 1' }} {% if bstate == "started" %}is live now{% elif bstate == "full" %}is full{% else %}live{% if live.start %} · {{ live.start }}{% endif %}{% endif %}</span></div>{% endif %}
+      {% if bstate %}<div class="float b">{% if bstate != "ended" %}<span class="dot"></span>{% else %}📼 {% endif %}<span>{{ live.name or 'Batch 1' }} {% if bstate == "started" %}is live now{% elif bstate == "ended" %}recordings included{% elif bstate == "full" %}is full{% else %}live{% if live.start %} · {{ live.start }}{% endif %}{% endif %}</span></div>{% endif %}
     </div>
   </header>
 
   {% if bstate %}
   <div class="live rv">
-    <span class="dot"></span>
+    {% if bstate != "ended" %}<span class="dot"></span>{% endif %}
     {% if bstate == "full" %}
     <div class="t">{{ live.name or 'Batch 1' }} is full
       <small>Thank you! DM me to get a seat in the next batch first.</small></div>
     <a class="cta rose" href="https://ig.me/m/{{ username }}" target="_blank" rel="noopener">Join the waitlist →</a>
+    {% elif bstate == "ended" %}
+    <div class="t">Video course + all {{ live.name or 'Batch 1' }} class recordings
+      <small>Learn at your own pace · 6 months access · ₹{{ course.price }}{% if course.mrp %} <s>₹{{ course.mrp }}</s>{% endif %}</small></div>
+    <a class="cta rose" href="/course">Join the course →</a>
     {% elif bstate == "started" %}
     <div class="t">{{ live.name or 'Batch 1' }} is live now{% if live.start %}, started {{ live.start }}{% endif %}
       <small>Join anytime: every class is recorded · {{ live.time or 'Sat & Sun · 9–10 PM IST' }} · ₹{{ course.price }}{% if course.mrp %} <s>₹{{ course.mrp }}</s>{% endif %}</small></div>

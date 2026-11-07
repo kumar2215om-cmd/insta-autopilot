@@ -217,8 +217,9 @@
             <div><label>Batch status</label><select id="l-status">
               <option value="open">🟢 Open: taking sign-ups (countdown)</option>
               <option value="started">🔴 Started: live now, late joining open</option>
+              <option value="ended">📼 Ended: video course + recordings</option>
               <option value="full">⛔ Full: closed, waitlist only</option></select>
-              <p class="hint" style="margin:4px 0 0">Open switches to Started by itself after the first class. Full turns every Join button into an Instagram DM waitlist.</p></div>
+              <p class="hint" style="margin:4px 0 0">Automatic: Open → Started after the first class → Ended (video course with the recordings) after the last class in the schedule. The course stays for sale in every status except Full, which turns Join into an Instagram DM waitlist.</p></div>
           </div>
           <label>Schedule <span class="muted">(one class per line: <code>date · time | topic</code>. Empty = the 8 default topics, dates "soon")</span></label>
           <textarea id="l-schedule" rows="5" placeholder="Sat 15 Nov · 9 PM | Welcome + niche chuno&#10;Sun 16 Nov · 9 PM | Profile, highlights, link in bio"></textarea>
@@ -619,7 +620,7 @@ function sectionSums() {
     "sec-socials": n(Object.values(page.socials || {}).filter(v => (v || "").trim()).length, "link", "links"),
     "sec-links": n(page.items.length, "item", "items"),
     "sec-freebies": n(page.freebies.length, "freebie", "freebies"),
-    "sec-course": c.enabled === false ? "off" : `₹${c.price || "499"}${lv.enabled ? " · " + (lv.name || "Batch") + ({started: " started", full: " full"}[lv.status] || " live") : ""}${c.url ? "" : " · coming soon"}`,
+    "sec-course": c.enabled === false ? "off" : `₹${c.price || "499"}${lv.enabled ? " · " + (lv.name || "Batch") + ({started: " started", ended: " ended", full: " full"}[lv.status] || " live") : ""}${c.url ? "" : " · coming soon"}`,
     "sec-course2": c2.enabled === false ? "off" : `₹${c2.price || "799"} · ${c2.url ? "live" : "coming soon"}`,
   };
   for (const [id, text] of Object.entries(sums)) { const el = document.querySelector(`#${id} .sum`); if (el) el.textContent = text; }

@@ -370,7 +370,8 @@ def clean_course(c):
             "start": text(lv.get("start"), 60), "time": text(lv.get("time"), 80),
             "seats": digits(lv.get("seats"))[:4], "schedule": "\n".join(schedule),
             # open = taking sign-ups (countdown) · started = live now, late joining open · full = closed, waitlist only
-            "status": lv.get("status") if lv.get("status") in ("open", "started", "full") else "open"}
+            "status": lv.get("status") if lv.get("status") in ("open", "started", "ended", "full") else "open",
+            "dated": lv.get("dated") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(lv.get("dated") or "")) else ""}
     pixel = "".join(ch for ch in str(c.get("pixel") or "") if ch.isdigit())
     return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
             "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live,
@@ -383,6 +384,36 @@ MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", 
 IST = timezone(timedelta(hours=5, minutes=30))
 
 
+def _parse_when(text, now):
+    """"Sat 14 Nov · 9 PM" / "14 November 9:30 pm" / "9–10 PM" ranges → aware IST datetime, or None."""
+    d = re.search(r"\b(\d{1,2})\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*", text, re.I)
+    if not d:
+        return None
+    # "9 PM", "9:30 pm", or a range "9–10 PM" (start = the first number)
+    t = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(?:[–-]\s*\d{1,2}(?::\d{2})?\s*)?(am|pm)\b", text, re.I)
+    hour, minute = (int(t.group(1)) % 12 + (12 if t.group(3).lower() == "pm" else 0), int(t.group(2) or 0)) if t else (21, 0)
+    try:
+        when = datetime(now.year, MONTHS[d.group(2).lower()], int(d.group(1)), hour, minute, tzinfo=IST)
+    except ValueError:
+        return None
+    if when < now - timedelta(days=180):  # "14 Jan" written in December means next year
+        when = when.replace(year=now.year + 1)
+    elif when > now + timedelta(days=180):  # "14 Nov" read in January means last year
+        when = when.replace(year=now.year - 1)
+    return when
+
+
+LEGACY_DATED = "2026-11-07"  # batches saved before the "dated" field existed (Batch 1, Nov 2026)
+
+
+def _anchor(live, now):
+    """The day the batch dates were saved (noon IST); dates are read relative to it. Falls back to now."""
+    try:
+        return datetime.fromisoformat(live.get("dated") or LEGACY_DATED).replace(hour=12, tzinfo=IST)
+    except (TypeError, ValueError):
+        return now
+
+
 def batch_start(live, now=None):
     """First class time from the editor ("Sat 14 Nov · 9 PM | …" in the schedule, else start + class time), in IST.
 
@@ -390,41 +421,50 @@ def batch_start(live, now=None):
     """
     if not live.get("enabled"):
         return None
-    first = (live.get("schedule") or "").splitlines()[0].split("|")[0] if live.get("schedule") else ""
-    for text in (first, f'{live.get("start", "")} {live.get("time", "")}'):
-        d = re.search(r"\b(\d{1,2})\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*", text, re.I)
-        # "9 PM", "9:30 pm", or a range "9–10 PM" (start = the first number)
-        t = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(?:[–-]\s*\d{1,2}(?::\d{2})?\s*)?(am|pm)\b", text, re.I)
-        if not d:
-            continue
-        hour, minute = (int(t.group(1)) % 12 + (12 if t.group(3).lower() == "pm" else 0), int(t.group(2) or 0)) if t else (21, 0)
-        now = now or datetime.now(IST)
-        try:
-            when = datetime(now.year, MONTHS[d.group(2).lower()], int(d.group(1)), hour, minute, tzinfo=IST)
-        except ValueError:
-            continue
-        if when < now - timedelta(days=180):  # "14 Jan" written in December means next year
-            when = when.replace(year=now.year + 1)
-        return when
+    ref = _anchor(live, now or datetime.now(IST))
+    lines = [l for l in (live.get("schedule") or "").splitlines() if l.strip()]
+    for text in ((lines[0].split("|")[0] if lines else ""), f'{live.get("start", "")} {live.get("time", "")}'):
+        when = _parse_when(text, ref)
+        if when:
+            return when
     return None
 
 
-AD_KEYS = ("fbclid", "utm_source", "utm_medium", "utm_campaign", "ad")
+def batch_end(live, now=None):
+    """When the last scheduled class is over (its time + 2 hours), or None if the schedule has no dates."""
+    if not live.get("enabled"):
+        return None
+    ref = _anchor(live, now or datetime.now(IST))
+    lines = [l.split("|")[0] for l in (live.get("schedule") or "").splitlines() if l.strip()]
+    last = _parse_when(lines[-1], ref) if lines else None
+    first = batch_start(live, now)
+    if last and first and last < first:  # schedule runs past New Year
+        last = last.replace(year=last.year + 1)
+    return last + timedelta(hours=2) if last else None
 
 
 def batch_state(live, now=None):
-    """What the live batch shows now: "" (no live batch), "open", "started" or "full".
+    """What the live batch shows now: "" (no live batch), "open", "started", "ended" or "full".
 
-    "open" turns into "started" by itself once the first class time has passed; "full" is only ever set by hand.
+    The course is always for sale except in "full". "open" turns into "started" by itself once the first class
+    has begun, and "open"/"started" into "ended" (a video course with the class recordings) after the last class.
+    "full" and "ended" can also be set by hand in the editor.
     """
     if not live.get("enabled"):
         return ""
     status = live.get("status") or "open"
-    if status == "open":
+    if status in ("open", "started"):
+        now = now or datetime.now(IST)
+        end = batch_end(live, now)
+        if end and end <= now:
+            return "ended"
         first = batch_start(live, now)
-        if first and first <= (now or datetime.now(IST)):
+        if status == "open" and first and first <= now:
             return "started"
     return status
+
+
+AD_KEYS = ("fbclid", "utm_source", "utm_medium", "utm_campaign", "ad")
 
 
 def from_ad():
@@ -1359,8 +1399,8 @@ def course_cards(page, ig):
         cards.append({"n": 1, "href": "/course", "cover": "free/course.jpg", "title": course_data.TITLE,
                       "sub": course_data.SUBTITLE.replace("{F}", followers_short(ig.get("followers_count"), course_data.FOLLOWERS_FALLBACK)),
                       "stats": course_data.STATS, "price": c1["price"], "mrp": c1.get("mrp"), "off": off(c1),
-                      "badge": {"open": " · live", "started": " · live now", "full": " · full"}.get(batch_state(live)) and
-                               (live.get("name") or "Batch 1") + {"open": " · live", "started": " · live now", "full": " · full"}[batch_state(live)] or "Available",
+                      "badge": {"open": " · live", "started": " · live now", "ended": " · recordings included", "full": " · full"}.get(batch_state(live)) and
+                               (live.get("name") or "Batch 1") + {"open": " · live", "started": " · live now", "ended": " · recordings included", "full": " · full"}[batch_state(live)] or "Available",
                       "note": "", "ready": bool(c1.get("url")), "title_en": getattr(course_data, "TITLE_EN", ""), "cover_en": "free/course_en.jpg",
                       "sub_en": getattr(course_data, "SUBTITLE_EN", "").replace("{F}", followers_short(ig.get("followers_count"), course_data.FOLLOWERS_FALLBACK))})
     if c2.get("enabled", True):
@@ -1488,6 +1528,7 @@ def course_banner(page):
     st, nm = batch_state(live), escape(live.get("name") or "Batch 1")
     when = {"open": f' · {nm} live' + (f' · {escape(live["start"])} se' if live.get("start") else ""),
             "started": f' · {nm} chal raha hai, recordings ke saath join karo',
+            "ended": f' · {nm} ki saari live class recordings ke saath',
             "full": f' · {nm} full, agle batch ki waitlist ke liye DM karo'}.get(st, "")
     price = escape(c.get("price") or "")
     return (
@@ -1513,6 +1554,7 @@ def course_promo_card(page):
     st, nm = batch_state(live), escape(live.get("name") or "Batch 1")
     when = {"open": f' {nm} live' + (f' · {escape(live["start"])} se.' if live.get("start") else "."),
             "started": f' {nm} chal raha hai: recordings ke saath abhi bhi join kar sakte ho.',
+            "ended": f' {nm} ki saari live classes ki recordings bhi course mein hain.',
             "full": f' {nm} full ho gaya; agle batch ke liye DM karo.'}.get(st, "")
     price = escape(c.get("price") or "")
     return (
@@ -1696,7 +1738,12 @@ def api_get_linkpage():
 
 @app.put("/api/linkpage")
 def api_put_linkpage():
+    old_live = (load_linkpage().get("course") or {}).get("live") or {}
     page = clean_linkpage(request.get_json(force=True))
+    live = page["course"]["live"]
+    same = all(old_live.get(k, "") == live.get(k, "") for k in ("schedule", "start", "time"))
+    # Batch dates have no year: remember when they were typed, so "14 Nov" stays 2026 forever.
+    live["dated"] = old_live.get("dated") if same and old_live.get("dated") else datetime.now(IST).date().isoformat()
     save_linkpage(page)
     return jsonify(page)
 

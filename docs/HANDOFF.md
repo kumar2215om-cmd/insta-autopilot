@@ -181,7 +181,7 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 
 33. **Meta tracking (set up 7 Nov 2026):** dataset **course** `1667034868290085` (ad account om 846767394140573). Site: Pixel ID in editor → PageView (home), PageView + ViewContent + InitiateCheckout (/course). SuperProfile course: same pixel, Page Views + Payment Complete (= Purchase), with a Conversions API token saved **in SuperProfile only** (never in this repo). Initiate Payment left off on SuperProfile to avoid double InitiateCheckout. Domain verification code field in the editor (`course.fbverify`).
 
-34. **Batch status** (editor → 🎓 Course → live batch → Batch status, stored as `course.live.status`): `open` (countdown, checkout) · `started` (live now, late joining, no countdown) · `full` (no checkout links; every Join button → `ig.me/m/<username>` waitlist DM; launch-price labels hidden). `batch_state()` turns `open` into `started` automatically after the first class. Used by /course, home strip + badge, /courses badge and the Hinglish /free banner + guide card.
+34. **Batch status** (editor → 🎓 Course → live batch → Batch status, `course.live.status`): `open` (countdown) → `started` (auto after the first class: live now, late joining) → `ended` (auto after the last schedule line + 2 h: evergreen video course, "recordings included", class list = recordings) · `full` (manual only: no checkout, Join → `ig.me/m/<username>` waitlist, launch-price labels hidden). The course is for sale in every state except `full`. Dates have no year: `course.live.dated` (set on save when schedule/start/time change; legacy = `LEGACY_DATED` 2026-11-07) anchors them, so "14 Nov" stays 2026. Logic: `batch_start/batch_end/batch_state` in app.py.
 
 ## 6. How to… (common tasks)
 
