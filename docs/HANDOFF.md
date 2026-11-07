@@ -181,6 +181,8 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 
 33. **Meta tracking (set up 7 Nov 2026):** dataset **course** `1667034868290085` (ad account om 846767394140573). Site: Pixel ID in editor → PageView (home), PageView + ViewContent + InitiateCheckout (/course). SuperProfile course: same pixel, Page Views + Payment Complete (= Purchase), with a Conversions API token saved **in SuperProfile only** (never in this repo). Initiate Payment left off on SuperProfile to avoid double InitiateCheckout. Domain verification code field in the editor (`course.fbverify`).
 
+34. **Batch status** (editor → 🎓 Course → live batch → Batch status, stored as `course.live.status`): `open` (countdown, checkout) · `started` (live now, late joining, no countdown) · `full` (no checkout links; every Join button → `ig.me/m/<username>` waitlist DM; launch-price labels hidden). `batch_state()` turns `open` into `started` automatically after the first class. Used by /course, home strip + badge, /courses badge and the Hinglish /free banner + guide card.
+
 ## 6. How to… (common tasks)
 
 **Add a freebie (no code):** `/links/edit` → 🎁 Freebies → ＋ Add freebie → keyword, title, topic, emoji → ⬆️ Upload file (≤ 4 MB) or paste a link → **💾 Save page** → check with the 🎁 Freebies preview tab. DM link to use in auto-DMs: `https://insta-autopilot-ten.vercel.app/free?k=KEYWORD`.

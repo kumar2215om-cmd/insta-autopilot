@@ -368,7 +368,9 @@ def clean_course(c):
     schedule = [text(line, 120) for line in str(lv.get("schedule") or "").splitlines() if line.strip()][:12]
     live = {"enabled": lv.get("enabled") is True, "name": text(lv.get("name"), 40) or "Batch 1",
             "start": text(lv.get("start"), 60), "time": text(lv.get("time"), 80),
-            "seats": digits(lv.get("seats"))[:4], "schedule": "\n".join(schedule)}
+            "seats": digits(lv.get("seats"))[:4], "schedule": "\n".join(schedule),
+            # open = taking sign-ups (countdown) · started = live now, late joining open · full = closed, waitlist only
+            "status": lv.get("status") if lv.get("status") in ("open", "started", "full") else "open"}
     pixel = "".join(ch for ch in str(c.get("pixel") or "") if ch.isdigit())
     return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
             "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live,
@@ -408,6 +410,21 @@ def batch_start(live, now=None):
 
 
 AD_KEYS = ("fbclid", "utm_source", "utm_medium", "utm_campaign", "ad")
+
+
+def batch_state(live, now=None):
+    """What the live batch shows now: "" (no live batch), "open", "started" or "full".
+
+    "open" turns into "started" by itself once the first class time has passed; "full" is only ever set by hand.
+    """
+    if not live.get("enabled"):
+        return ""
+    status = live.get("status") or "open"
+    if status == "open":
+        first = batch_start(live, now)
+        if first and first <= (now or datetime.now(IST)):
+            return "started"
+    return status
 
 
 def from_ad():
@@ -1195,7 +1212,7 @@ def home_page():
                            freebies=featured_freebies(page), freebie_total=freebies_count(page),
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"),
-                           email=legal_data.EMAIL, pixel=c1.get("pixel", ""), ad=from_ad())
+                           email=legal_data.EMAIL, pixel=c1.get("pixel", ""), ad=from_ad(), bstate=batch_state(live))
 
 
 @app.get("/admin")
@@ -1262,7 +1279,8 @@ def course_page():
             sessions = [("", t) for t in course_data.LIVE_SESSIONS]
     return render_template("course.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
                            tab=1, c2=course2_data if course2.get("enabled", True) else None, course2=course2,
-                           starts=(lambda t: t.isoformat() if t and t > datetime.now(IST) else "")(batch_start(live)),
+                           starts=(lambda t: t.isoformat() if t and t > datetime.now(IST) and batch_state(live) == "open" else "")(batch_start(live)),
+                           bstate=batch_state(live),
                            ad=from_ad(), pixel=course.get("pixel", ""),
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"),
@@ -1341,7 +1359,8 @@ def course_cards(page, ig):
         cards.append({"n": 1, "href": "/course", "cover": "free/course.jpg", "title": course_data.TITLE,
                       "sub": course_data.SUBTITLE.replace("{F}", followers_short(ig.get("followers_count"), course_data.FOLLOWERS_FALLBACK)),
                       "stats": course_data.STATS, "price": c1["price"], "mrp": c1.get("mrp"), "off": off(c1),
-                      "badge": (live.get("name") or "Batch 1") + " · live" if live.get("enabled") else "Available",
+                      "badge": {"open": " · live", "started": " · live now", "full": " · full"}.get(batch_state(live)) and
+                               (live.get("name") or "Batch 1") + {"open": " · live", "started": " · live now", "full": " · full"}[batch_state(live)] or "Available",
                       "note": "", "ready": bool(c1.get("url")), "title_en": getattr(course_data, "TITLE_EN", ""), "cover_en": "free/course_en.jpg",
                       "sub_en": getattr(course_data, "SUBTITLE_EN", "").replace("{F}", followers_short(ig.get("followers_count"), course_data.FOLLOWERS_FALLBACK))})
     if c2.get("enabled", True):
@@ -1466,7 +1485,10 @@ def course_banner(page):
     if c.get("enabled", True) is False or not c.get("url"):
         return ""
     live = c.get("live") or {}
-    when = (f' · {escape(live.get("name") or "Batch 1")} live' + (f' · {escape(live["start"])} se' if live.get("start") else "")) if live.get("enabled") else ""
+    st, nm = batch_state(live), escape(live.get("name") or "Batch 1")
+    when = {"open": f' · {nm} live' + (f' · {escape(live["start"])} se' if live.get("start") else ""),
+            "started": f' · {nm} chal raha hai, recordings ke saath join karo',
+            "full": f' · {nm} full, agle batch ki waitlist ke liye DM karo'}.get(st, "")
     price = escape(c.get("price") or "")
     return (
         '<div class="cbn" id="cbn"><style>'
@@ -1488,7 +1510,10 @@ def course_promo_card(page):
     if c.get("enabled", True) is False or not c.get("url"):
         return ""
     live = c.get("live") or {}
-    when = f' {escape(live.get("name") or "Batch 1")} live' + (f' · {escape(live["start"])} se.' if live.get("start") else ".") if live.get("enabled") else ""
+    st, nm = batch_state(live), escape(live.get("name") or "Batch 1")
+    when = {"open": f' {nm} live' + (f' · {escape(live["start"])} se.' if live.get("start") else "."),
+            "started": f' {nm} chal raha hai: recordings ke saath abhi bhi join kar sakte ho.',
+            "full": f' {nm} full ho gaya; agle batch ke liye DM karo.'}.get(st, "")
     price = escape(c.get("price") or "")
     return (
         '<section class="cpromo" style="background:#1C1A17;color:#fff;border:0">'

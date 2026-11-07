@@ -188,8 +188,10 @@
 <body class="t-{{ page.theme }}">
 {% set has_url = course.url %}
 {% set off = (((course.mrp|int) - (course.price|int)) * 100 / (course.mrp|int))|round|int if (course.mrp|int) > (course.price|int) > 0 else 0 %}
+{% set waitlist = "https://ig.me/m/" ~ username %}
 {% macro buybtn(cls="") -%}
-  {% if has_url %}<a class="btn {{ cls }}" href="{{ course.url }}" rel="noopener">Join now →</a>
+  {% if bstate == "full" %}<a class="btn {{ cls }}" href="{{ waitlist }}" target="_blank" rel="noopener">Join the next batch waitlist →</a>
+  {% elif has_url %}<a class="btn {{ cls }}" href="{{ course.url }}" rel="noopener">Join now →</a>
   {% else %}<a class="btn soon {{ cls }}" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">Coming soon · DM {{ c.KEYWORD|default('COURSE') }}</a>{% endif %}
 {%- endmacro %}
 <div class="wrap">
@@ -202,18 +204,20 @@
   </div>
 
   <section class="hero">
-    <div class="kicker">{% if live.enabled %}{{ live.name }} · live classes + video course{% else %}{{ c.KICKER|default('Video course · taught in Hinglish') }}{% endif %}</div>
+    <div class="kicker">{% if bstate == "started" %}🔴 {{ live.name }} is live now · join anytime{% elif bstate == "full" %}{{ live.name }} is full · next batch waitlist open{% elif live.enabled %}{{ live.name }} · live classes + video course{% else %}{{ c.KICKER|default('Video course · taught in Hinglish') }}{% endif %}</div>
     <h1>{{ c.H1_A|default('Grow on Instagram') }} <span>{{ c.H1_B|default('with Claude') }}</span></h1>
     <p class="sub">{{ c.SUBTITLE|replace("{F}", fk) }}</p>
     {% if c.LANG_NOTE %}<p class="langnote">{{ c.LANG_NOTE }}</p>{% endif %}
     <div class="proof shadow"><div class="big">{{ c.PROOF_A|default('Zero to') }} <b>{{ c.PROOF_B|default(fk) }}</b>{{ c.PROOF_C|default('') }}</div><div class="t">{{ c.PROOF_T|default('My real Instagram followers, and the exact steps are in this course') }}<small>{{ c.PROOF_S|default('You get the system, not a guarantee. An honest course.') }}</small></div></div>
     <div class="chips">{% for n, l in c.STATS %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
     <div class="buy shadow">
+      {% if bstate == "started" %}<div class="count">🔴 <span>{{ live.name }} started{% if live.start %} {{ live.start }}{% endif %}. Join now and catch up: every class is recorded.</span></div>
+      {% elif bstate == "full" %}<div class="count">🙏 <span>{{ live.name }} is full. DM me to get a seat in the next batch first.</span></div>{% endif %}
       {% if starts %}<div class="count" data-starts="{{ starts }}">⏳ <span class="lbl">{{ live.name or 'Batch 1' }} starts in</span> <b class="left">{{ live.start }}</b></div>{% endif %}
       <span class="price">₹{{ course.price }}</span>
-      {% if off %}<span class="mrp">₹{{ course.mrp }}</span><span class="off">{{ off }}% off · launch price</span>{% endif %}
+      {% if off and bstate != "full" %}<span class="mrp">₹{{ course.mrp }}</span><span class="off">{{ off }}% off · launch price</span>{% endif %}
       {{ buybtn() }}
-      <div class="note">{% set pnote = course.note if course.note is defined else (c.PRICE_NOTE if c.PRICE_NOTE is defined else '') %}{% if pnote %}{{ pnote }} · {% endif %}{% if has_url %}Secure checkout on SuperProfile · you get the course and workbook there{% else %}Coming soon. DM "{{ c.KEYWORD|default('COURSE') }}" on Instagram to get the link first at launch.{% endif %}</div>
+      <div class="note">{% set pnote = course.note if course.note is defined else (c.PRICE_NOTE if c.PRICE_NOTE is defined else '') %}{% if pnote %}{{ pnote }} · {% endif %}{% if bstate == "full" %}Checkout is closed for {{ live.name }}. The waitlist is a DM to @{{ username }} on Instagram.{% elif has_url %}Secure checkout on SuperProfile · you get the course and workbook there{% else %}Coming soon. DM "{{ c.KEYWORD|default('COURSE') }}" on Instagram to get the link first at launch.{% endif %}</div>
     </div>
     <img class="cover shadow rv" src="/{{ c.COVER|default('free/course.jpg') }}" alt="{{ c.TITLE }}: course cover" onerror="this.remove()">
   </section>
@@ -223,9 +227,10 @@
     <div class="lt"><span class="dot" aria-hidden="true"></span><h2>{{ live.name }} · <span>live classes</span></h2></div>
     <div class="meta">
       <span>🎥 {{ sessions|length }} live classes</span>
-      {% if live.start %}<span>📅 Starts {{ live.start }}</span>{% endif %}
+      {% if live.start %}<span>📅 {{ "Started" if bstate in ("started", "full") else "Starts" }} {{ live.start }}</span>{% endif %}
+      {% if bstate == "full" %}<span class="seat">Batch full</span>{% endif %}
       {% if live.time %}<span>🕖 {{ live.time }}</span>{% endif %}
-      {% if live.seats %}<span class="seat">Only {{ live.seats }} seats</span>{% endif %}
+      {% if live.seats and bstate == "open" %}<span class="seat">Only {{ live.seats }} seats</span>{% endif %}
     </div>
     <p class="lp">In this batch I teach every module live, on screen, step by step, with Q&amp;A at the end of each class. Missed a class? No problem: every class is recorded and added to the course. The join link is in your SuperProfile student dashboard after payment. Classes are in Hinglish.</p>
     <ol>{% for when, topic in sessions %}<li><span>{% if when %}<small>{{ when }}</small>{% else %}<small>Date to be announced</small>{% endif %}<b>{{ topic }}</b></span></li>{% endfor %}</ol>
@@ -280,7 +285,7 @@
 
   <div class="final rv">
     <h2>Ready?</h2>
-    <p>{{ c.FINAL|default('From profile to auto-DMs, the whole system.') }} ₹{{ course.price }}{% if off %} (launch price){% endif %}.</p>
+    <p>{{ c.FINAL|default('From profile to auto-DMs, the whole system.') }} ₹{{ course.price }}{% if off and bstate != "full" %} (launch price){% endif %}.</p>
     {{ buybtn() }}
     <p style="margin-top:14px;font-size:13.5px">Questions? <a href="mailto:kumarom1315@gmail.com" style="color:var(--rose);font-weight:900">kumarom1315@gmail.com</a> or DM <b>@{{ username }}</b> on Instagram</p>
   </div>
