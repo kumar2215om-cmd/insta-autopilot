@@ -15,6 +15,23 @@
   .tabs a { text-decoration:none; color:#4A443D; font-weight:600; font-size:13px; padding:7px 12px; border-radius:10px; }
   .tabs a:hover { background:var(--card); box-shadow:var(--sh-sm); }
   section.block { margin-bottom:20px; scroll-margin-top:140px; }
+  /* Sections fold to their title bar; tap the bar to open. */
+  section.block > .card-h { cursor:pointer; user-select:none; }
+  section.block > .card-h h2 { flex:1; }
+  section.block > .card-h .sum { font-size:12.5px; font-weight:800; color:var(--mute,#8C8780); background:#F4EFE6; border-radius:99px; padding:3px 10px; }
+  section.block > .card-h .chev { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:#F4EFE6; font-size:13px; transition:transform .2s; }
+  section.block:not(.fold) > .card-h .chev { transform:rotate(180deg); }
+  section.block.fold > :not(.card-h) { display:none; }
+  section.block.fold > .card-h { padding-bottom:18px; }
+  section.block.fold > .card-h p { display:none; }
+  .foldbar { display:flex; gap:8px; justify-content:flex-end; margin:-4px 0 12px; }
+  .itx .item-head { cursor:pointer; margin-bottom:0; }
+  .itx.open .item-head { margin-bottom:12px; }
+  .itx:not(.open) > :not(.item-head) { display:none; }
+  .itx .it-sum { color:var(--mute,#8C8780); font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; flex:1 1 120px; }
+  .itx.open .it-sum { display:none; }
+  .itx .tog { margin-left:auto; }
+  @media (prefers-reduced-motion: reduce) { section.block > .card-h .chev { transition:none; } }
   .card-h p { flex-basis:100%; margin:2px 0 0; }
   .field { margin-bottom:12px; } .field label { display:block; margin-bottom:6px; }
   .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:0 14px; }
@@ -129,6 +146,7 @@
       <button class="secondary" onclick="navigator.clipboard.writeText(publicUrl.textContent); this.textContent='Copied ✓'">Copy link</button>
     </div>
 
+    <div class="foldbar"><button class="secondary sm" type="button" onclick="foldAll(false)">Open all</button><button class="secondary sm" type="button" onclick="foldAll(true)">Close all</button></div>
     <section class="card block" id="sec-profile">
       <div class="card-h"><h2>👤 Profile</h2><p class="muted">How you appear at the top of your page.</p></div>
       <div class="card-b">
@@ -265,11 +283,14 @@ function renderThemes() {
 function itemHtml(it, i) {
   const field = (k, label, ph = "") =>
     `<div><label>${label}</label><input type="text" value="${esc(it[k])}" placeholder="${ph}" oninput="page.items[${i}].${k}=this.value"></div>`;
-  return `<div class="item ${it.enabled === false ? "off" : ""}">
-    <div class="item-head">
+  const open = openIt.has(it.id || "i" + i);
+  return `<div class="item itx ${open ? "open" : ""} ${it.enabled === false ? "off" : ""}" id="it-card-${i}">
+    <div class="item-head" onclick="if (!event.target.closest('button,a,input')) toggleIt(${i})">
       <span class="pill ${it.type}">${it.type === "product" ? "PRODUCT" : "LINK"}</span>
       <b>${esc(it.title) || "(untitled)"}</b>
+      <span class="it-sum">${it.type === "product" && it.price ? esc(/^\d+$/.test(it.price) ? "₹" + it.price : it.price) + " · " : ""}${esc((it.url || "").replace(/^https?:\/\/(www\.)?/, ""))}${it.enabled === false ? " · hidden" : ""}</span>
       <span class="clicks">👆 ${clicks[it.id] || 0} clicks</span>
+      <button class="secondary sm tog" id="it-tog-${i}" onclick="toggleIt(${i})">${open ? "▴ Close" : "✏️ Edit"}</button>
     </div>
     <div class="grid2">
       ${field("title", "Title", it.type === "product" ? "AI Prompt Pack" : "My YouTube channel")}
@@ -290,14 +311,23 @@ function itemHtml(it, i) {
   </div>`;
 }
 
+const openIt = new Set();
+function toggleIt(i) {
+  const k = page.items[i].id || "i" + i;
+  openIt.has(k) ? openIt.delete(k) : openIt.add(k);
+  $("it-card-" + i).classList.toggle("open", openIt.has(k));
+  $("it-tog-" + i).textContent = openIt.has(k) ? "▴ Close" : "✏️ Edit";
+}
 function renderItems() {
   $("items").innerHTML = page.items.length ? page.items.map(itemHtml).join("")
     : `<div class="empty">No links yet. Add your first one below 👇</div>`;
 }
 
 function addItem(type) {
-  page.items.push({id: Math.random().toString(36).slice(2, 10), type, title: "", url: "", subtitle: "",
+  const id = Math.random().toString(36).slice(2, 10);
+  page.items.push({id, type, title: "", url: "", subtitle: "",
                    price: "", image: "", featured: false, enabled: true});
+  openIt.add(id);
   renderItems();
   const inputs = $("items").querySelectorAll(".item:last-child input[type=text]");
   inputs[0] && inputs[0].focus();
@@ -525,8 +555,8 @@ async function save() {
   const r = await fetch("/api/linkpage", {method: "PUT", headers: {"Content-Type": "application/json"},
                                           body: JSON.stringify(page)});
   page = await r.json();
-  openFb.clear();
-  renderItems(); renderFreebies();
+  openFb.clear(); openIt.clear();
+  renderItems(); renderFreebies(); sectionSums();
   $("status").textContent = "Saved ✓" + (skipped ? ` (${skipped} item(s) without a title or link were left out)` : "");
   setTimeout(() => $("status").textContent = "", 4000);
   showPreview(pv);
@@ -552,7 +582,50 @@ async function save() {
   $("c2-note").value = c2.note || ""; $("c2-enabled").checked = c2.enabled !== false;
   $("topics") || document.body.insertAdjacentHTML("beforeend", `<datalist id="topics">${TOPICS.map(t => `<option value="${t}">`).join("")}</datalist>`);
   renderThemes(); renderItems(); renderFreebies();
+  setupFolds();
 })();
+
+// ---- Sections fold to one line; which ones are open is remembered in this browser only ----
+const FOLD_KEY = "linksEditOpen";
+function openSet() { try { return new Set(JSON.parse(localStorage.getItem(FOLD_KEY) || "[]")); } catch (e) { return new Set(); } }
+function rememberOpen() {
+  const ids = [...document.querySelectorAll("section.block:not(.fold)")].map(s => s.id);
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify(ids)); } catch (e) {}
+}
+function setFold(sec, fold) { sec.classList.toggle("fold", fold); }
+function foldAll(fold) { document.querySelectorAll("section.block").forEach(s => setFold(s, fold)); rememberOpen(); }
+function sectionSums() {
+  const n = (x, one, many) => `${x} ${x === 1 ? one : many}`;
+  const c = page.course || {}, c2 = page.course2 || {}, lv = c.live || {};
+  const sums = {
+    "sec-profile": page.name || "name, bio, theme",
+    "sec-socials": n(Object.values(page.socials || {}).filter(v => (v || "").trim()).length, "link", "links"),
+    "sec-links": n(page.items.length, "item", "items"),
+    "sec-freebies": n(page.freebies.length, "freebie", "freebies"),
+    "sec-course": c.enabled === false ? "off" : `₹${c.price || "499"}${lv.enabled ? " · " + (lv.name || "Batch") + " live" : ""}${c.url ? "" : " · coming soon"}`,
+    "sec-course2": c2.enabled === false ? "off" : `₹${c2.price || "799"} · ${c2.url ? "live" : "coming soon"}`,
+  };
+  for (const [id, text] of Object.entries(sums)) { const el = document.querySelector(`#${id} .sum`); if (el) el.textContent = text; }
+}
+function setupFolds() {
+  const open = openSet();
+  document.querySelectorAll("section.block").forEach(sec => {
+    const head = sec.querySelector(":scope > .card-h");
+    if (!head) return;
+    head.querySelector("h2").insertAdjacentHTML("afterend", `<span class="sum"></span><span class="chev" aria-hidden="true">▾</span>`);
+    setFold(sec, !open.has(sec.id));
+    head.addEventListener("click", e => {
+      if (e.target.closest("a,button,input,label")) return;
+      setFold(sec, !sec.classList.contains("fold")); rememberOpen();
+    });
+  });
+  // Top tabs open the section they jump to.
+  document.querySelectorAll('.tabs a[href^="#sec-"]').forEach(a => a.addEventListener("click", () => {
+    const sec = document.querySelector(a.getAttribute("href")); if (sec) { setFold(sec, false); rememberOpen(); }
+  }));
+  if (location.hash.startsWith("#sec-")) { const sec = document.querySelector(location.hash); sec && setFold(sec, false); }
+  sectionSums();
+}
 </script>
 </body>
 </html>
