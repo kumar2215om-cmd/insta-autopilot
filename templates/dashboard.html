@@ -47,6 +47,20 @@
   .reel { padding:16px; display:grid; grid-template-columns: 92px minmax(0, 1fr); gap:18px; margin-bottom:14px; }
   .reel.fallback { display:block; border-style:dashed; border-color:var(--line2); background:var(--panel); box-shadow:none; }
   .kwbox { margin-bottom:22px; }
+  /* Rule groups fold to a title bar (tap to open), like the link page editor. */
+  .foldbar { display:flex; gap:8px; justify-content:flex-end; margin:0 0 10px; }
+  .fgroup { margin-bottom:16px; }
+  .fhead { cursor:pointer; user-select:none; align-items:center; background:var(--card,#fff); border:1px solid var(--line,#E7E0D4);
+           border-radius:18px; padding:14px 16px; margin:0 0 12px; box-shadow:0 6px 16px rgba(60,40,20,.06); }
+  .fhead h2 { flex:none; }
+  .fhead .fdesc { flex:1; min-width:0; }
+  .fhead .sum { margin-left:auto; font-size:12.5px; font-weight:800; color:var(--mute,#8C8780); background:#F4EFE6; border-radius:99px; padding:3px 10px; white-space:nowrap; }
+  .fhead .chev { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:#F4EFE6; font-size:13px; flex:none; transition:transform .2s; }
+  .fgroup:not(.fold) .fhead .chev { transform:rotate(180deg); }
+  .fgroup.fold .fbody { display:none; }
+  .fgroup.fold .fhead { margin-bottom:0; }
+  @media (max-width:700px) { .fhead .fdesc { display:none; } }
+  @media (prefers-reduced-motion: reduce) { .fhead .chev { transition:none; } }
   .kwbox details { border:1.5px solid var(--line2); border-radius:14px; background:#fff; padding:2px 14px; margin-bottom:10px; }
   .kwbox details > summary { padding:10px 0; }
   .kwbox .kw { font:900 14px Inter, sans-serif; letter-spacing:.5px; }
@@ -154,7 +168,11 @@
             <button class="primary" id="domainBtn" onclick="switchDomain(this)">Update links</button>
           </div>
         </div>
-        <div class="section-h"><h2>🔑 Keyword rules</h2><span class="muted">Not tied to a reel: answer DMs like "PRODUCT", and comments on any reel</span></div>
+        <div class="foldbar"><button class="secondary sm" type="button" onclick="foldGroups(false)">Open all</button><button class="secondary sm" type="button" onclick="foldGroups(true)">Close all</button></div>
+        <div class="fgroup" id="g-kw">
+        <div class="section-h fhead"><h2>🔑 Keyword rules</h2><span class="muted fdesc">Not tied to a reel: answer DMs like "PRODUCT", and comments on any reel</span>
+          <span class="sum" id="sum-kw"></span><span class="chev" aria-hidden="true">▾</span></div>
+        <div class="fbody">
         <div class="card reel fallback kwbox">
           <p class="muted" style="margin:0 0 10px">For words people DM you (e.g. the Course 2 page says <b>DM PRODUCT</b>) or comment on any reel.
             A reel's own rule always wins; the ALL-reels rule is used only if no keyword rule matches.</p>
@@ -162,7 +180,11 @@
           <div class="kwadd"><input type="text" id="kwNew" placeholder="New keyword, e.g. PRODUCT" maxlength="24"
             onkeydown="if (event.key === 'Enter') addKwRule()"><button class="primary" type="button" onclick="addKwRule()">＋ Add keyword rule</button></div>
         </div>
-        <div class="section-h"><h2>🎞️ Your reels</h2><span class="muted">Each reel can have its own comment → DM rule</span></div>
+        </div></div>
+        <div class="fgroup" id="g-reels">
+        <div class="section-h fhead"><h2>🎞️ Your reels</h2><span class="muted fdesc">Each reel can have its own comment → DM rule</span>
+          <span class="sum" id="sum-reels"></span><span class="chev" aria-hidden="true">▾</span></div>
+        <div class="fbody">
         <div class="card reel fallback">
           <details>
             <summary>Rule for ALL reels (fallback) <span class="badge" id="badge-*"></span></summary>
@@ -170,6 +192,7 @@
           </details>
         </div>
         <div id="reels"><div class="card empty"><div>⏳</div>Loading your reels…</div></div>
+        </div></div>
       </section>
       <aside class="card log">
         <div class="card-h"><h2><span class="live"></span> Live activity</h2>
@@ -259,7 +282,8 @@ async function saveRule(e, id) {
     headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
   if (!res.ok) { const j = await res.json().catch(() => ({})); return alert(j.error || "Could not save the rule."); }
   delete kwDrafts[id];
-  await loadRules(); render();
+  justSaved = id;  // fold that rule's form again after the re-draw
+  await loadRules(); render(); justSaved = null;
 }
 
 async function backfill(btn, id) {
@@ -312,6 +336,7 @@ function render() {
   document.getElementById("form-*").innerHTML = ruleForm("*");
   document.getElementById("badge-*").outerHTML = `<span id="badge-*">${badge("*")}</span>`;
   renderKwRules();
+  groupSums();
   if (!stats) return;
   const a = stats.account;
   document.getElementById("username").textContent = "@" + a.username + " ·";
@@ -321,6 +346,7 @@ function render() {
   countTo(document.getElementById("totalViews"), stats.reels.reduce((s, r) => s + (r.insights.views || 0), 0));
   document.getElementById("fetched").textContent = "updated " + new Date(stats.fetched_at).toLocaleTimeString();
   const open = new Set([...document.querySelectorAll("#reels details[open]")].map(d => d.dataset.id));
+  open.delete(justSaved);
   const reelsEl = document.getElementById("reels");
   if (!reelsEl.dataset.shown) { reelsEl.dataset.shown = 1; reelsEl.classList.add("intro"); setTimeout(() => reelsEl.classList.remove("intro"), 1500); }
   reelsEl.innerHTML = stats.reels.length ? stats.reels.map((r, n) => {
@@ -347,11 +373,45 @@ function render() {
   }).join("") : `<div class="card empty"><div>🎬</div>No reels found on this account.</div>`;
 }
 
+let justSaved = null;
+// ---- Rule groups fold to one line; which are open is remembered in this browser only ----
+const GROUP_KEY = "dashOpenGroups";
+function groupSums() {
+  const all = rules.reels || {}, ids = Object.keys(all);
+  const kw = ids.filter(id => id.startsWith("kw:")), on = id => all[id].enabled !== false;
+  const reelIds = ids.filter(id => !id.startsWith("kw:") && id !== "*");
+  const nReels = stats ? stats.reels.length : null;
+  document.getElementById("sum-kw").textContent = kw.length ? `${kw.length} rule${kw.length === 1 ? "" : "s"} · ${kw.filter(on).length} on` : "none yet";
+  document.getElementById("sum-reels").textContent = (nReels == null ? "" : `${nReels} reels · `) +
+    `${reelIds.filter(on).length} rule${reelIds.filter(on).length === 1 ? "" : "s"} on` + (all["*"] && on("*") ? " · ALL-reels on" : "");
+}
+function setGroup(g, fold) { g.classList.toggle("fold", fold); }
+function rememberGroups() {
+  try { localStorage.setItem(GROUP_KEY, JSON.stringify([...document.querySelectorAll(".fgroup:not(.fold)")].map(g => g.id))); } catch (e) {}
+}
+function foldGroups(fold) {
+  document.querySelectorAll(".fgroup").forEach(g => setGroup(g, fold));
+  // Close all also folds every rule form; Open all only opens the groups.
+  if (fold) document.querySelectorAll(".fgroup details[open]").forEach(d => d.open = false);
+  rememberGroups();
+}
+(function setupGroups() {
+  let open; try { open = new Set(JSON.parse(localStorage.getItem(GROUP_KEY) || "[]")); } catch (e) { open = new Set(); }
+  document.querySelectorAll(".fgroup").forEach(g => {
+    setGroup(g, !open.has(g.id));
+    g.querySelector(".fhead").addEventListener("click", e => {
+      if (e.target.closest("a,button,input")) return;
+      setGroup(g, !g.classList.contains("fold")); rememberGroups();
+    });
+  });
+})();
+
 // Keyword rules live next to reel rules as "kw:WORD". New ones are drafts until saved.
 const kwDrafts = {};
 function renderKwRules() {
   const el = document.getElementById("kwRules");
   const open = new Set([...el.querySelectorAll("details[open]")].map(d => d.dataset.id));
+  open.delete(justSaved);
   const ids = [...Object.keys(kwDrafts).filter(id => !rules.reels[id]), ...Object.keys(rules.reels).filter(id => id.startsWith("kw:"))];
   el.innerHTML = ids.length ? ids.map(id => {
     const r = rules.reels[id] || kwDrafts[id];
@@ -371,6 +431,7 @@ function addKwRule() {
   const taken = Object.entries(rules.reels).find(([k, r]) => (r.keywords || []).some(w => w.trim().toUpperCase() === word));
   if (taken && !confirm(`${word} is already a keyword in another rule (${taken[0] === "*" ? "ALL reels" : taken[0].startsWith("kw:") ? "keyword rule" : "a reel"}). Add anyway?`)) return;
   kwDrafts[id] = {enabled: true, keywords: [word], comments: true};
+  setGroup(document.getElementById("g-kw"), false); rememberGroups();
   input.value = ""; renderKwRules();
 }
 
