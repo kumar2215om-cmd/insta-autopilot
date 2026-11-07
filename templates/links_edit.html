@@ -105,7 +105,7 @@
   <div>
     <nav class="tabs">
       <a href="#sec-profile">👤 Profile</a><a href="#sec-socials">🌐 Socials</a>
-      <a href="#sec-links">🛍️ Links &amp; products</a><a href="#sec-freebies">🎁 Freebies</a><a href="#sec-course">🎓 Course</a>
+      <a href="#sec-links">🛍️ Links &amp; products</a><a href="#sec-freebies">🎁 Freebies</a><a href="#sec-course">🎓 Course</a><a href="#sec-course2">🎓 Course 2</a>
     </nav>
 
     <div class="card share" style="margin-bottom:20px">
@@ -190,6 +190,27 @@
           <a class="btn btn-ghost sm spacer" href="/course" target="_blank">Open course page ↗</a>
         </div>
         <p class="hint" style="margin:10px 0 0">Tip: point your link page product and your <b>COURSE</b> auto-DM to <code>advocmedia.in/course</code>, so people see the full curriculum before paying.</p>
+      </div>
+    </section>
+
+    <section class="card block" id="sec-course2">
+      <div class="card-h"><h2>🎓 Course 2 page</h2>
+        <p class="muted">"AI se Digital Products banao aur becho" at <a href="/course?c=2" target="_blank">/course?c=2</a> (also on <a href="/courses" target="_blank">/courses</a> and the home page). Page text is in <code>course2_data.py</code>.</p></div>
+      <div class="card-b">
+        <div class="grid2">
+          <div><label>SuperProfile course link <span class="muted">(empty = "Coming soon · DM PRODUCT")</span></label><input type="text" id="c2-url" placeholder="https://superprofile.bio/…"></div>
+          <div class="grid2" style="gap:0 10px">
+            <div><label>Price (₹)</label><input type="text" id="c2-price" placeholder="799" inputmode="numeric"></div>
+            <div><label>MRP (₹) <span class="muted">optional</span></label><input type="text" id="c2-mrp" placeholder="" inputmode="numeric"></div>
+          </div>
+        </div>
+        <label>Price note <span class="muted">(small line under the price, e.g. a coupon. Empty = no note)</span></label>
+        <input type="text" id="c2-note" maxlength="120" placeholder="Course 1 (Batch 1) students: coupon se ₹499">
+        <div class="tools">
+          <label><input type="checkbox" id="c2-enabled"> Course 2 live <span class="muted">(untick to hide it everywhere)</span></label>
+          <a class="btn btn-ghost sm spacer" href="/course?c=2" target="_blank">Open Course 2 page ↗</a>
+        </div>
+        <p class="hint" style="margin:10px 0 0">When you add the link, the "Coming soon" badge changes to "New" and the button to "Join now". Add a <b>PRODUCT</b> auto-DM pointing to <code>advocmedia.in/course?c=2</code>.</p>
       </div>
     </section>
 
@@ -457,6 +478,8 @@ async function save() {
   page.course = {url: $("c-url").value, price: $("c-price").value, mrp: $("c-mrp").value, enabled: $("c-enabled").checked,
                  live: {enabled: $("l-enabled").checked, name: $("l-name").value, start: $("l-start").value, time: $("l-time").value,
                         seats: $("l-seats").value, schedule: $("l-schedule").value}};
+  page.course2 = {url: $("c2-url").value, price: $("c2-price").value, mrp: $("c2-mrp").value, note: $("c2-note").value,
+                  enabled: $("c2-enabled").checked};
   const skipped = page.items.filter(it => !it.title.trim() || !it.url.trim()).length
     + page.freebies.filter(fb => !(fb.k || "").trim() || !(fb.t || "").trim() || !((fb.u || "").trim() || (fb.body || "").trim())).length;
   const r = await fetch("/api/linkpage", {method: "PUT", headers: {"Content-Type": "application/json"},
@@ -483,6 +506,9 @@ async function save() {
   const lv = page.course.live || {};
   $("l-enabled").checked = !!lv.enabled; $("l-name").value = lv.name || ""; $("l-start").value = lv.start || "";
   $("l-time").value = lv.time || ""; $("l-seats").value = lv.seats || ""; $("l-schedule").value = lv.schedule || "";
+  const c2 = page.course2 || {};
+  $("c2-url").value = c2.url || ""; $("c2-price").value = c2.price || ""; $("c2-mrp").value = c2.mrp || "";
+  $("c2-note").value = c2.note || ""; $("c2-enabled").checked = c2.enabled !== false;
   $("topics") || document.body.insertAdjacentHTML("beforeend", `<datalist id="topics">${TOPICS.map(t => `<option value="${t}">`).join("")}</datalist>`);
   renderThemes(); renderItems(); renderFreebies();
 })();

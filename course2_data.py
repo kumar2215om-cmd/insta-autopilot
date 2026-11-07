@@ -1,4 +1,4 @@
-"""Content for the Course 2 sales page (/digital-products). Same template as /course; price + buy link in DEFAULTS (editor later)."""
+"""Content for the Course 2 sales page (/digital-products). Same template as /course; defaults below; link, price, MRP, note and on/off are set in /links/edit → 🎓 Course 2."""
 
 TITLE = "AI se Digital Products banao aur becho"
 OG_TITLE = "AI se Digital Products banao aur becho: idea → product → pehli sale"

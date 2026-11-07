@@ -203,7 +203,7 @@
       <span class="price">₹{{ course.price }}</span>
       {% if off %}<span class="mrp">₹{{ course.mrp }}</span><span class="off">{{ off }}% off · launch price</span>{% endif %}
       {{ buybtn() }}
-      <div class="note">{% if c.PRICE_NOTE is defined %}{{ c.PRICE_NOTE }} · {% endif %}{% if has_url %}Secure checkout on SuperProfile · course aur workbook wahin milenge{% else %}Course jaldi aa raha hai. Instagram pe "{{ c.KEYWORD|default('COURSE') }}" DM karo, launch pe sabse pehle link milega.{% endif %}</div>
+      <div class="note">{% set pnote = course.note if course.note is defined else (c.PRICE_NOTE if c.PRICE_NOTE is defined else '') %}{% if pnote %}{{ pnote }} · {% endif %}{% if has_url %}Secure checkout on SuperProfile · course aur workbook wahin milenge{% else %}Course jaldi aa raha hai. Instagram pe "{{ c.KEYWORD|default('COURSE') }}" DM karo, launch pe sabse pehle link milega.{% endif %}</div>
     </div>
     <img class="cover shadow rv" src="/{{ c.COVER|default('free/course.jpg') }}" alt="{{ c.TITLE }}: course cover" onerror="this.remove()">
   </section>

@@ -278,6 +278,7 @@ def load_linkpage():
     page.setdefault("items", [])
     page.setdefault("freebies", [])
     page.setdefault("course", clean_course({}))
+    page.setdefault("course2", clean_course2({}))
     return page
 
 
@@ -348,6 +349,7 @@ def clean_linkpage(data):
         "items": items,
         "freebies": freebies,
         "course": clean_course(data.get("course") or {}),
+        "course2": clean_course2(data.get("course2") or {}),
     }
 
 
@@ -362,6 +364,17 @@ def clean_course(c):
             "seats": digits(lv.get("seats"))[:4], "schedule": "\n".join(schedule)}
     return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
             "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live}
+
+
+def clean_course2(c):
+    """Editor settings for Course 2 (/course?c=2). Text lives in course2_data.py; empty link = "Coming soon"."""
+    import course2_data
+    d = course2_data.DEFAULTS
+    digits = lambda v: "".join(ch for ch in str(v or "") if ch.isdigit())[:6]
+    note = " ".join(str(c.get("note", d.get("note", course2_data.PRICE_NOTE)) or "").split())[:120]
+    return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
+            "price": digits(c.get("price")) or d["price"], "mrp": digits(c.get("mrp")), "note": note,
+            "live": {"enabled": False}}
 
 
 def social_links(socials):
@@ -1207,7 +1220,7 @@ app.jinja_env.globals["asset_v"] = asset_v
 
 def course2_settings(page):
     import course2_data
-    course = {**course2_data.DEFAULTS, **(page.get("course2") or {})}
+    course = clean_course2(page.get("course2") or {})
     url = course.get("url") or ""
     if "superprofile.bio/course/" in url and "checkout=" not in url:
         url += ("&" if "?" in url else "?") + "checkout=true"
@@ -1238,7 +1251,7 @@ def course_cards(page, ig):
     if c2.get("enabled", True):
         cards.append({"n": 2, "href": "/course?c=2", "cover": course2_data.COVER, "title": course2_data.TITLE, "sub": course2_data.SUBTITLE,
                       "stats": course2_data.STATS, "price": c2["price"], "mrp": c2.get("mrp"), "off": off(c2),
-                      "badge": "New" if c2.get("url") else "Coming soon", "note": course2_data.PRICE_NOTE, "ready": bool(c2.get("url"))})
+                      "badge": "New" if c2.get("url") else "Coming soon", "note": c2.get("note", ""), "ready": bool(c2.get("url"))})
     return cards
 
 
