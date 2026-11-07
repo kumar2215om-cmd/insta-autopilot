@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Advoc Media · AI courses in Hinglish by @{{ username }}</title>
-<meta name="description" content="Claude aur AI se Instagram grow karo. Om (@{{ username }}) ke Hinglish courses, live classes aur {{ freebie_total }}+ free guides.">
-<meta property="og:title" content="Advoc Media · AI seekho, Hinglish mein">
+<title>Advoc Media · Practical AI courses by @{{ username }}</title>
+<meta name="description" content="Learn to grow on Instagram with Claude and AI. Courses, live classes and {{ freebie_total }}+ free guides by Om (@{{ username }}). Step by step, no jargon.">
+<meta property="og:title" content="Advoc Media · Learn AI the practical way">
 <meta property="og:description" content="Om (@{{ username }}) ke courses, live classes aur {{ freebie_total }}+ free guides. Zero se {{ followers|kfollowers or '24K' }} followers ka real system.">
-<meta property="og:image" content="{{ request.host_url }}free/course.jpg?v={{ asset_v('course.jpg') }}">
+<meta property="og:image" content="{{ request.host_url }}free/course_en.jpg?v={{ asset_v('course_en.jpg') }}">
 <meta name="twitter:card" content="summary_large_image">
 {% if avatar %}<link rel="icon" href="{{ avatar }}">{% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -104,6 +104,13 @@
   .go { margin-left:auto; background:var(--ink); color:#fff; border-radius:30px; padding:12px 18px; font-weight:900; font-size:14.5px; }
   .cc:hover .go { background:var(--rose); }
   .note { flex-basis:100%; font-size:12.5px; font-weight:700; color:var(--cer); }
+  /* One course: cover and details side by side instead of one huge card. */
+  .courses.one .cc { flex-direction:row; }
+  .courses.one .cc .img { flex:0 0 52%; }
+  .courses.one .cc img { height:100%; aspect-ratio:auto; min-height:100%; }
+  .courses.one .cc .body { padding:26px 28px; }
+  @media (max-width:860px) { .courses.one .cc { flex-direction:column; } .courses.one .cc .img { flex:none; } .courses.one .cc img { aspect-ratio:16/9; height:auto; } }
+  .cc .lang { align-self:flex-start; margin-top:12px; font:800 12.5px Inter; color:#0F6E8F; background:#E6F4FA; border-radius:99px; padding:5px 11px; }
 
   /* steps */
   .steps { display:grid; grid-template-columns:repeat(3, 1fr); gap:18px; }
@@ -189,29 +196,29 @@
     <b>advoc<span>media</span></b>
   </a>
   <div class="links"><a href="#courses">Courses</a>{% if not ad %}<a href="#free">Free guides</a>{% endif %}<a href="#about">About</a>{% if not ad %}<a href="/links">Links</a>{% endif %}</div>
-  <a class="cta rose" href="{{ cards[0].href if cards else '/courses' }}">{% if live.enabled %}{{ live.name or 'Batch 1' }} join karo{% else %}Course dekho{% endif %}</a>
+  <a class="cta rose" href="{{ cards[0].href if cards else '/courses' }}">{% if live.enabled %}Join {{ live.name or 'Batch 1' }}{% else %}See the course{% endif %}</a>
 </div></nav>
 
 <div class="wrap">
   <header class="hero">
     <div>
-      <div class="kicker rise">AI seekho · Hinglish mein</div>
-      <h1 class="rise d1">Claude se <span class="nw">grow karo,</span><br><span class="hl">AI se kamao</span></h1>
-      <p class="lead rise d2">Hi, main Om hoon (@{{ username }}). Yahan mere saare courses, live classes aur free guides hain: wahi system jisse maine page ko zero se {{ followers|kfollowers or '24K' }} tak pahunchaya. Step by step, bina jargon ke.</p>
+      <div class="kicker rise">Practical AI courses · Made in India</div>
+      <h1 class="rise d1">Grow with Claude,<br><span class="hl">earn with AI</span></h1>
+      <p class="lead rise d2">Hi, I'm Om (@{{ username }}). Here you'll find my courses, live classes and free guides: the exact system I used to grow my page from zero to {{ followers|kfollowers or '24K' }} followers with Claude. Step by step, no jargon.</p>
       <div class="btns rise d3">
-        <a class="btn rose" href="#courses">🎓 Courses dekho</a>
+        <a class="btn rose" href="#courses">🎓 See courses</a>
         {% if not ad %}<a class="btn ghost" href="/free/">🎁 {{ freebie_total }}+ free guides</a>{% endif %}
       </div>
       <div class="stats rise d4">
-        <div class="stat"><b><em>{{ followers|kfollowers or '24K' }}</em></b><span>Instagram family</span></div>
+        <div class="stat"><b><em>{{ followers|kfollowers or '24K' }}</em></b><span>Instagram community</span></div>
         <div class="stat"><b>{{ cards|length }}</b><span>course{{ 's' if cards|length != 1 }}</span></div>
         <div class="stat"><b>{{ freebie_total }}+</b><span>free guides</span></div>
-        <div class="stat"><b>₹{{ course.price or '499' }}</b><span>se shuru</span></div>
+        <div class="stat"><b>₹{{ course.price or '499' }}</b><span>starting price</span></div>
       </div>
     </div>
     <div class="show rise d2">
-      <img class="cover" src="/free/course.jpg?v={{ asset_v('course.jpg') }}" alt="Claude se Instagram grow karo: course cover">
-      <div class="float a"><span class="big">0 → {{ followers|kfollowers or '24K' }}</span><span>real result,<br>Claude ke saath</span></div>
+      <img class="cover" src="/free/course_en.jpg?v={{ asset_v('course_en.jpg') }}" alt="Grow on Instagram with Claude: course cover">
+      <div class="float a"><span class="big">0 → {{ followers|kfollowers or '24K' }}</span><span>real result,<br>built with Claude</span></div>
       {% if live.enabled %}<div class="float b"><span class="dot"></span><span>{{ live.name or 'Batch 1' }} live{% if live.start %} · {{ live.start }}{% endif %}</span></div>{% endif %}
     </div>
   </header>
@@ -219,28 +226,29 @@
   {% if live.enabled %}
   <div class="live rv">
     <span class="dot"></span>
-    <div class="t">{{ live.name or 'Batch 1' }}: live classes on Zoom{% if live.start %}, {{ live.start }} se{% endif %}
+    <div class="t">{{ live.name or 'Batch 1' }}: live classes on Zoom{% if live.start %}, from {{ live.start }}{% endif %}
       <small>{{ live.time or 'Sat & Sun · 9–10 PM IST' }} · recordings + 6 months access · ₹{{ course.price }}{% if course.mrp %} <s>₹{{ course.mrp }}</s>{% endif %}</small></div>
-    <a class="cta rose" href="/course">Seat pakka karo →</a>
+    <a class="cta rose" href="/course">Join {{ live.name or 'Batch 1' }} →</a>
   </div>
   {% endif %}
 
   <section id="courses">
     <div class="head rv">
-      <div><div class="kicker">Courses</div><h2>Mere <span>courses</span></h2></div>
-      <p class="lead" style="max-width:420px;font-size:15.5px">Pehle page grow karo, phir usse kamao. Har course mein workbook, bonuses aur honest baat: system milega, guarantee nahi.</p>
+      <div><div class="kicker">Courses</div><h2>My <span>courses</span></h2></div>
+      <p class="lead" style="max-width:420px;font-size:15.5px">Grow your page first, then earn from it. Every course comes with a workbook, bonuses and an honest promise: you get the system, not a guarantee.</p>
     </div>
-    <div class="courses">
+    <div class="courses {{ 'one' if cards|length == 1 }}">
       {% for k in cards %}
       <a class="cc rv" href="{{ k.href }}">
-        <div class="img"><img src="/{{ k.cover }}" alt="{{ k.title }}" loading="lazy"><span class="bd {% if not k.ready %}soon{% endif %}">{{ k.badge }}</span></div>
+        <div class="img"><img src="/{{ k.cover_en or k.cover }}" alt="{{ k.title_en or k.title }}" loading="lazy"><span class="bd {% if not k.ready %}soon{% endif %}">{{ k.badge }}</span></div>
         <div class="body">
           <span class="no">COURSE {{ k.n }}</span>
-          <b class="t">{{ k.title }}</b>
-          <p>{{ k.sub }}</p>
+          <b class="t">{{ k.title_en or k.title }}</b>
+          <p>{{ k.sub_en or k.sub }}</p>
+          <span class="lang">🗣️ Taught in Hinglish (Hindi + English)</span>
           <div class="chips">{% for n, l in k.stats %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
           <div class="row"><span class="price">₹{{ k.price }}</span>{% if k.off %}<span class="mrp">₹{{ k.mrp }}</span><span class="off">{{ k.off }}% off</span>{% endif %}
-            <span class="go">{{ 'Details dekho →' if k.ready else 'Preview dekho →' }}</span>{% if k.note %}<span class="note">🎓 {{ k.note }}</span>{% endif %}</div>
+            <span class="go">{{ 'View details →' if k.ready else 'Preview →' }}</span>{% if k.note %}<span class="note">🎓 {{ k.note }}</span>{% endif %}</div>
         </div>
       </a>
       {% endfor %}
@@ -248,19 +256,19 @@
   </section>
 
   <section>
-    <div class="head rv"><div><div class="kicker">Kaise shuru karein</div><h2>3 steps, <span>bas</span></h2></div></div>
+    <div class="head rv"><div><div class="kicker">How it works</div><h2>3 simple <span>steps</span></h2></div></div>
     <div class="steps">
-      <div class="step rv"><div class="n">01</div><b>Free guide se shuru</b><p>Koi bhi reel pe keyword comment karo, ya seedha free guides kholo. Pehle free mein try karo.</p></div>
-      <div class="step rv"><div class="n">02</div><b>Course join karo</b><p>Video lessons, workbook aur bonuses. Apni speed pe, Hinglish mein, 6 months access.</p></div>
-      <div class="step rv"><div class="n">03</div><b>Live class mein poocho</b><p>Batch ke saath live Zoom classes: apna page dikhao, doubts clear karo, har hafte aage badho.</p></div>
+      <div class="step rv"><div class="n">01</div><b>Start with a free guide</b><p>Comment the keyword on any reel, or open the free guides directly. Try it free first.</p></div>
+      <div class="step rv"><div class="n">02</div><b>Join a course</b><p>Video lessons, a workbook and bonuses. Learn at your own pace, with 6 months of access.</p></div>
+      <div class="step rv"><div class="n">03</div><b>Ask in live classes</b><p>Live Zoom classes with your batch: share your page, clear your doubts and improve every week.</p></div>
     </div>
   </section>
 
   {% if not ad %}
   <section id="free">
     <div class="head rv">
-      <div><div class="kicker">Free guides</div><h2>Pehle <span>free</span> mein seekho</h2></div>
-      <a class="more" href="/free/">Saare {{ freebie_total }} freebies dekho →</a>
+      <div><div class="kicker">Free guides</div><h2>Start <span>free</span></h2></div>
+      <a class="more" href="/free/">See all {{ freebie_total }} free guides →</a>
     </div>
     <div class="frees">
       {% for f in freebies %}
@@ -275,8 +283,8 @@
       <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="Om">{% else %}<div class="ini">O</div>{% endif %}</div>
       <div>
         <div class="kicker">About</div>
-        <h3>Hi, main <span>Om</span> hoon 👋</h3>
-        <p>Simplifying AI for everyone. Founder of Advoc Media, building Likholabs. Main roz Instagram pe AI tools aur tips share karta hoon, Hinglish mein, taaki koi bhi Claude aur AI ko apne kaam mein use kar sake. Zero se {{ followers|kfollowers or '24K' }} followers tak ka safar Claude ke saath kiya, aur wahi system yahan sikhata hoon.</p>
+        <h3>Hi, I'm <span>Om</span> 👋</h3>
+        <p>Simplifying AI for everyone. Founder of Advoc Media, building Likholabs. I share AI tools and tips on Instagram every day, so anyone can put Claude and AI to work. I grew from zero to {{ followers|kfollowers or '24K' }} followers with Claude, and that's exactly the system I teach here.</p>
         <div class="social">
           <a class="ig" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">📸 Follow @{{ username }}</a>
           {% if not ad %}<a href="/links">🔗 All links</a>{% endif %}
@@ -288,10 +296,10 @@
 
   <div class="final rv">
     <div class="kicker" style="color:#7FD3F0">Ready?</div>
-    <h2>Aaj se <span>shuru</span> karo</h2>
-    <p>Ek course, ek system, aur har hafte thoda aage. Doubt ho to Instagram pe DM karo.</p>
+    <h2>Start <span>today</span></h2>
+    <p>One course, one clear system, and a little progress every week. Questions? DM me on Instagram.</p>
     <div class="btns" style="justify-content:center;margin-top:0">
-      <a class="btn rose" href="{{ cards[0].href if cards else '/courses' }}">🎓 {{ cards[0].title if cards else 'Courses' }} →</a>
+      <a class="btn rose" href="{{ cards[0].href if cards else '/courses' }}">🎓 {{ (cards[0].title_en or cards[0].title) if cards else 'See courses' }} →</a>
       {% if not ad %}<a class="btn ghost" style="color:var(--ink)" href="/free/">🎁 Free guides</a>{% endif %}
     </div>
   </div>

@@ -14,6 +14,9 @@ PROOF_T = "Real case study: mera prompt bundle, start to finish"
 PROOF_S = "Process milega, income ki guarantee nahi. Honest course."
 COVER = "free/course2.jpg"
 KEYWORD = "PRODUCT"
+TITLE_EN = "Build and sell digital products with AI"
+SUBTITLE_EN = ("From idea to first sale: what to build, how to build it with Claude, the sales page, checkout and an Instagram launch. "
+               "The same process I used for my own prompt bundle and course.")
 PRICE_NOTE = "Course 1 (Batch 1) students: coupon se ₹499"
 HONEST = ("Honest baat: ye income ki guarantee nahi hai. Pehle 1–3 mahine sales kam ho sakti hain. Ye wo system hai jo maine khud use kiya; "
           "results tumhari audience, product aur consistency pe depend karenge.")

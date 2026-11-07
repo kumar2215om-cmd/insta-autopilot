@@ -3,6 +3,10 @@
 TITLE = "Claude se Instagram grow karo"
 # {F} = live follower count from Instagram (e.g. "24K"); FOLLOWERS_FALLBACK is used if Instagram is unreachable.
 FOLLOWERS_FALLBACK = "24K"
+# English card text for the home page (the course itself is taught in Hinglish).
+TITLE_EN = "Grow on Instagram with Claude"
+SUBTITLE_EN = ("The exact system I used to grow @aiwith.om from 0 to {F}: profile, content plan, reels made with Claude, "
+               "a comment → DM machine and a weekly growth loop. Step by step.")
 SUBTITLE = ("Wahi system jisse maine @aiwith.om ko 0 se {F} tak pahunchaya. "
             "Profile, content plan, Claude se reels, comment → DM machine aur weekly growth loop. Hinglish mein, step by step.")
 

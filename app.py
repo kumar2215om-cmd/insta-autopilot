@@ -1324,11 +1324,13 @@ def course_cards(page, ig):
                       "sub": course_data.SUBTITLE.replace("{F}", followers_short(ig.get("followers_count"), course_data.FOLLOWERS_FALLBACK)),
                       "stats": course_data.STATS, "price": c1["price"], "mrp": c1.get("mrp"), "off": off(c1),
                       "badge": (live.get("name") or "Batch 1") + " · live" if live.get("enabled") else "Available",
-                      "note": "", "ready": bool(c1.get("url"))})
+                      "note": "", "ready": bool(c1.get("url")), "title_en": getattr(course_data, "TITLE_EN", ""), "cover_en": "free/course_en.jpg",
+                      "sub_en": getattr(course_data, "SUBTITLE_EN", "").replace("{F}", followers_short(ig.get("followers_count"), course_data.FOLLOWERS_FALLBACK))})
     if c2.get("enabled", True):
         cards.append({"n": 2, "href": "/course?c=2", "cover": course2_data.COVER, "title": course2_data.TITLE, "sub": course2_data.SUBTITLE,
                       "stats": course2_data.STATS, "price": c2["price"], "mrp": c2.get("mrp"), "off": off(c2),
-                      "badge": "New" if c2.get("url") else "Coming soon", "note": c2.get("note", ""), "ready": bool(c2.get("url"))})
+                      "badge": "New" if c2.get("url") else "Coming soon", "note": c2.get("note", ""), "ready": bool(c2.get("url")),
+                      "title_en": getattr(course2_data, "TITLE_EN", ""), "sub_en": getattr(course2_data, "SUBTITLE_EN", "")})
     return cards
 
 
