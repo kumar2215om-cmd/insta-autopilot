@@ -1517,8 +1517,8 @@ def themed_guide(path):
     return Response(apply_guide_theme(html, load_linkpage()), mimetype="text/html", headers={"Cache-Control": "no-store"})
 
 
-def course_banner(page):
-    """Small 'new course' bar for the freebies page and guides; shown only once the course has a buy link."""
+def course_banner(page, lang="hi"):
+    """Small 'new course' bar for the freebies page (English) and guides (Hinglish); only once the course has a buy link."""
     import course_data
     from markupsafe import escape
     c = page.get("course") or {}
@@ -1526,7 +1526,15 @@ def course_banner(page):
         return ""
     live = c.get("live") or {}
     st, nm = batch_state(live), escape(live.get("name") or "Batch 1")
-    when = {"open": f' · {nm} live' + (f' · {escape(live["start"])} se' if live.get("start") else ""),
+    if lang == "en":
+        when = {"open": f' · {nm} live' + (f' from {escape(live["start"])}' if live.get("start") else ""),
+                "started": f' · {nm} is live now, join anytime',
+                "ended": f' · includes all {nm} class recordings',
+                "full": f' · {nm} is full, DM for the waitlist'}.get(st, "")
+        label, title, go = "New course:", course_data.TITLE, "See it →"
+    else:
+        label, title, go = "Naya course:", getattr(course_data, "TITLE_HI", course_data.TITLE), "Dekho →"
+    when = when if lang == "en" else {"open": f' · {nm} live' + (f' · {escape(live["start"])} se' if live.get("start") else ""),
             "started": f' · {nm} chal raha hai, recordings ke saath join karo',
             "ended": f' · {nm} ki saari live class recordings ke saath',
             "full": f' · {nm} full, agle batch ki waitlist ke liye DM karo'}.get(st, "")
@@ -1538,8 +1546,8 @@ def course_banner(page):
         '.cbn a.cbn-go{margin-left:auto;flex:none;background:#FF2D95;color:#fff;text-decoration:none;font-weight:900;border-radius:30px;padding:8px 14px;white-space:nowrap}'
         '.cbn b{color:#FF8CC6}.cbn button{flex:none;background:none;border:0;color:#bbb;font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}'
         '@media (max-width:420px){.cbn{font-size:12.5px}.cbn a.cbn-go{padding:7px 11px}}</style>'
-        f'<span>🎓 <b>Naya course:</b> {escape(getattr(course_data, "TITLE_HI", course_data.TITLE))}{when}</span>'
-        f'<a class="cbn-go" href="/course">{"₹" + price + " · " if price else ""}Dekho →</a>'
+        f'<span>🎓 <b>{label}</b> {escape(title)}{when}</span>'
+        f'<a class="cbn-go" href="/course">{"₹" + price + " · " if price else ""}{go}</a>'
         '<button type="button" aria-label="Hide" onclick="try{sessionStorage.setItem(\'cbn\',\'1\')}catch(e){}this.parentNode.remove()">×</button>'
         '<script>try{if(sessionStorage.getItem("cbn"))document.getElementById("cbn").remove()}catch(e){}</script></div>')
 
@@ -1607,7 +1615,7 @@ def freebies_index():
     page = load_linkpage()
     # Same colour theme as the link page (chosen in the editor).
     theme = page.get("theme") if page.get("theme") in THEMES else "studio"
-    html = html.replace('<body>\n<div class="wrap">', f'<body class="t-{theme}">\n{course_banner(page)}<div class="wrap">', 1)
+    html = html.replace('<body>\n<div class="wrap">', f'<body class="t-{theme}">\n{course_banner(page, "en")}<div class="wrap">', 1)
     start = html.index("const D=") + len("const D=")
     end = html.index(";\n", start)
     data = json.loads(html[start:end])
