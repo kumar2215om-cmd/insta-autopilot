@@ -179,6 +179,8 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 
 32. **English home + course page** for an all-India audience: copy in `templates/home.html`, `course_data.py` (English; `TITLE_HI` keeps the Hinglish course name for the /free banner) and `templates/course.html`. English cover `freebies/course_en.jpg` (source `tools/cover/course_cover_en.html`). Both pages say clearly that classes are taught in Hinglish (`LANG_NOTE`, FAQ, card chip). Live batch topics come from the editor's schedule box.
 
+33. **Meta tracking (set up 7 Nov 2026):** dataset **course** `1667034868290085` (ad account om 846767394140573). Site: Pixel ID in editor → PageView (home), PageView + ViewContent + InitiateCheckout (/course). SuperProfile course: same pixel, Page Views + Payment Complete (= Purchase), with a Conversions API token saved **in SuperProfile only** (never in this repo). Initiate Payment left off on SuperProfile to avoid double InitiateCheckout. Domain verification code field in the editor (`course.fbverify`).
+
 ## 6. How to… (common tasks)
 
 **Add a freebie (no code):** `/links/edit` → 🎁 Freebies → ＋ Add freebie → keyword, title, topic, emoji → ⬆️ Upload file (≤ 4 MB) or paste a link → **💾 Save page** → check with the 🎁 Freebies preview tab. DM link to use in auto-DMs: `https://insta-autopilot-ten.vercel.app/free?k=KEYWORD`.
