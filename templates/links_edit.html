@@ -241,6 +241,7 @@
         <input type="text" id="c2-note" maxlength="120" placeholder="Course 1 (Batch 1) students: coupon se ₹499">
         <div class="tools">
           <label><input type="checkbox" id="c2-enabled"> Course 2 live <span class="muted">(untick to hide it everywhere)</span></label>
+          {% if c2_hidden %}<span class="muted" style="font-weight:700;color:#b45309">⏸ Hidden for now in code (course2_data.HIDDEN)</span>{% endif %}
           <a class="btn btn-ghost sm spacer" href="/course?c=2" target="_blank">Open Course 2 page ↗</a>
         </div>
         <p class="hint" style="margin:10px 0 0">When you add the link, the "Coming soon" badge changes to "New" and the button to "Join now". Add a <b>PRODUCT</b> auto-DM pointing to <code>advocmedia.in/course?c=2</code>.</p>

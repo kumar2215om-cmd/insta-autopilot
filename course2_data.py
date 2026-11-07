@@ -19,6 +19,10 @@ HONEST = ("Honest baat: ye income ki guarantee nahi hai. Pehle 1–3 mahine sale
           "results tumhari audience, product aur consistency pe depend karenge.")
 FINAL = "Idea se pehli sale tak, poora system."
 
+# True = Course 2 is hidden everywhere (/course promo + "Courses" button, home page, /courses, /course?c=2),
+# whatever the editor says. Set to False when it's ready to show.
+HIDDEN = True
+
 DEFAULTS = {"enabled": True, "url": "", "price": "799", "mrp": "", "live": {"enabled": False}}
 
 STATS = [("8", "modules"), ("31", "lessons"), ("~4h", "video"), ("6", "bonuses")]

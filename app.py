@@ -1249,6 +1249,8 @@ def course2_settings(page):
     if "superprofile.bio/course/" in url and "checkout=" not in url:
         url += ("&" if "?" in url else "?") + "checkout=true"
     course["url"] = url
+    if getattr(course2_data, "HIDDEN", False):
+        course["enabled"] = False
     return course
 
 
@@ -1587,7 +1589,8 @@ def api_import_freebie():
 
 @app.get("/links/edit")
 def link_page_editor():
-    return render_template("links_edit.html", themes=THEMES)
+    import course2_data
+    return render_template("links_edit.html", themes=THEMES, c2_hidden=getattr(course2_data, "HIDDEN", False))
 
 
 @app.get("/api/linkpage")
