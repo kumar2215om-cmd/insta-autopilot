@@ -222,6 +222,12 @@
           <label><input type="checkbox" id="c-enabled"> Course page live</label>
           <a class="btn btn-ghost sm spacer" href="/course" target="_blank">Open course page ↗</a>
         </div>
+        <div style="margin-top:14px;border-top:1.5px dashed var(--line, #E7E0D4);padding-top:12px">
+          <label>📈 Meta Pixel ID <span class="muted">(for ads: Events Manager → Data sources → your pixel → the number under its name. Empty = no tracking)</span></label>
+          <input type="text" id="c-pixel" placeholder="e.g. 123456789012345" inputmode="numeric" maxlength="20">
+          <p class="hint" style="margin:6px 0 0">Tracks on <code>/course</code> only: PageView, ViewContent and InitiateCheckout (Join now). Ads should link to
+            <code>advocmedia.in/course?utm_source=meta</code>: visitors from ads don't see the "← Links" / free-guides links, so they stay on the sales page.</p>
+        </div>
         <p class="hint" style="margin:10px 0 0">Tip: point your link page product and your <b>COURSE</b> auto-DM to <code>advocmedia.in/course</code>, so people see the full curriculum before paying.</p>
       </div>
     </section>
@@ -546,7 +552,7 @@ async function importToGuide(i, input, file) {
 async function save() {
   page.name = $("name").value; page.bio = $("bio").value; page.avatar = $("avatar").value;
   page.socials = Object.fromEntries(SOCIALS.map(k => [k, $("s-" + k).value]));
-  page.course = {url: $("c-url").value, price: $("c-price").value, mrp: $("c-mrp").value, enabled: $("c-enabled").checked,
+  page.course = {url: $("c-url").value, price: $("c-price").value, mrp: $("c-mrp").value, enabled: $("c-enabled").checked, pixel: $("c-pixel").value,
                  live: {enabled: $("l-enabled").checked, name: $("l-name").value, start: $("l-start").value, time: $("l-time").value,
                         seats: $("l-seats").value, schedule: $("l-schedule").value}};
   page.course2 = {url: $("c2-url").value, price: $("c2-price").value, mrp: $("c2-mrp").value, note: $("c2-note").value,
@@ -575,6 +581,7 @@ async function save() {
   page.course = page.course || {enabled: true, url: "", price: "499", mrp: "999"};
   $("c-url").value = page.course.url || ""; $("c-price").value = page.course.price || ""; $("c-mrp").value = page.course.mrp || "";
   $("c-enabled").checked = page.course.enabled !== false;
+  $("c-pixel").value = page.course.pixel || "";
   const lv = page.course.live || {};
   $("l-enabled").checked = !!lv.enabled; $("l-name").value = lv.name || ""; $("l-start").value = lv.start || "";
   $("l-time").value = lv.time || ""; $("l-seats").value = lv.seats || ""; $("l-schedule").value = lv.schedule || "";

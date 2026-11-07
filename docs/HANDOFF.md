@@ -175,6 +175,8 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 29. **Editor freebies fold** to one line after save (✏️ Edit opens one; Open all / Close all).
 30. **Keyword rules** (dashboard → 🔑 Keyword rules): stored in `rules.reels` as `kw:WORD` (`is_keyword_rule()`). Answer DMs of that word first, and comments on any reel unless `comments: false`. Comment order in `find_rule()`: reel's own rule → keyword rules → ALL-reels `*` fallback (a reel with its own rule never falls to `*`, as before). Button postbacks `GET|kw:WORD` work unchanged.
 
+31. **Course page for Meta ads:** Meta Pixel ID field (editor → 🎓 Course → `course.pixel`): PageView + ViewContent on load, InitiateCheckout on any SuperProfile link tap (/course only). **Ad mode** (`from_ad()`: `fbclid` / `utm_*` / `ad` in the URL) hides "← Links", the Courses button and the free-guides footer line; policy links stay. **Countdown** to Batch 1 from `batch_start()` (first schedule line, else start + time; IST), gone once it starts. 3 new FAQs. Privacy policy updated (Meta Pixel), `UPDATED` 7 Nov 2026. `course2_data.HIDDEN = True` hides Course 2 everywhere.
+
 ## 6. How to… (common tasks)
 
 **Add a freebie (no code):** `/links/edit` → 🎁 Freebies → ＋ Add freebie → keyword, title, topic, emoji → ⬆️ Upload file (≤ 4 MB) or paste a link → **💾 Save page** → check with the 🎁 Freebies preview tab. DM link to use in auto-DMs: `https://insta-autopilot-ten.vercel.app/free?k=KEYWORD`.

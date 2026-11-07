@@ -175,7 +175,28 @@
   .next .go { display:inline-block; margin-top:10px; background:var(--btn); color:var(--btn-ink); border-radius:30px; padding:9px 16px; font-weight:900; font-size:14px; }
   @media (max-width:420px) { .top { gap:8px; } .top .back { font-size:12px; padding:6px 10px; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } .rv { opacity:1; transform:none; } }
+  .count { display:flex; align-items:center; gap:8px; flex-basis:100%; font:800 13.5px Inter,sans-serif; color:var(--rose); margin:-2px 0 2px; }
+  .count b { font:400 18px/1 Anton,Inter; letter-spacing:.5px; color:var(--card-ink, var(--ink)); }
+  .bar .count { flex-basis:auto; margin:0; font-size:11.5px; }
+  .bar .count b { font-size:14px; }
+  @media (max-width:420px) { .bar .count .lbl { display:none; } }
 </style>
+{% if pixel %}
+<!-- Meta Pixel: page view, course view and Join now taps (InitiateCheckout) -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '{{ pixel }}');
+fbq('track', 'PageView');
+fbq('track', 'ViewContent', {content_name: {{ c.TITLE|tojson }}, content_type: 'product', value: {{ course.price|int }}, currency: 'INR'});
+document.addEventListener('click', function (e) {
+  var a = e.target.closest && e.target.closest('a[href*="superprofile.bio"]');
+  if (a) fbq('track', 'InitiateCheckout', {content_name: {{ c.TITLE|tojson }}, value: {{ course.price|int }}, currency: 'INR'});
+}, true);
+</script>
+<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id={{ pixel }}&ev=PageView&noscript=1"></noscript>
+{% endif %}
 </head>
 <body class="t-{{ page.theme }}">
 {% set has_url = course.url %}
@@ -189,8 +210,8 @@
     <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">{{ username[0]|upper }}</div>{% endif %}</div>
     <div><a class="handle" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">@{{ username }}</a><br>
       <span class="tag">course</span> {% if followers %}<span class="tag c">{{ fk }} followers</span>{% endif %}</div>
-    {% if c2 %}<a class="back" href="/courses" style="margin-left:auto;background:var(--rose);color:#fff;border-color:var(--rose)">🎓 Courses</a>{% endif %}
-    <a class="back" href="/links" {% if c2 %}style="margin-left:0"{% endif %}>← Links</a>
+    {% if c2 and not ad %}<a class="back" href="/courses" style="margin-left:auto;background:var(--rose);color:#fff;border-color:var(--rose)">🎓 Courses</a>{% endif %}
+    {% if not ad %}<a class="back" href="/links" {% if c2 %}style="margin-left:0"{% endif %}>← Links</a>{% endif %}
   </div>
 
   <section class="hero">
@@ -200,6 +221,7 @@
     <div class="proof shadow"><div class="big">{{ c.PROOF_A|default('Zero se') }} <b>{{ c.PROOF_B|default(fk) }}</b>{{ c.PROOF_C|default(' tak') }}</div><div class="t">{{ c.PROOF_T|default('Mera real Instagram safar, step by step is course mein') }}<small>{{ c.PROOF_S|default('System milega, guarantee nahi. Honest course.') }}</small></div></div>
     <div class="chips">{% for n, l in c.STATS %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
     <div class="buy shadow">
+      {% if starts %}<div class="count" data-starts="{{ starts }}">⏳ <span class="lbl">{{ live.name or 'Batch 1' }} shuru hone mein</span> <b class="left">{{ live.start }}</b></div>{% endif %}
       <span class="price">₹{{ course.price }}</span>
       {% if off %}<span class="mrp">₹{{ course.mrp }}</span><span class="off">{{ off }}% off · launch price</span>{% endif %}
       {{ buybtn() }}
@@ -274,10 +296,28 @@
     {{ buybtn() }}
     <p style="margin-top:14px;font-size:13.5px">Koi sawaal? <a href="mailto:kumarom1315@gmail.com" style="color:var(--rose);font-weight:900">kumarom1315@gmail.com</a> ya Instagram DM <b>@{{ username }}</b></p>
   </div>
-  <footer>Free guides bhi hain: <a href="/free/">advocmedia.in/free</a> · <a href="/links">All links</a><br><a href="/terms">Terms</a> · <a href="/refund-policy">Refund policy</a> · <a href="/privacy-policy">Privacy</a> · <a href="/contact">Contact</a></footer>
+  <footer>{% if not ad %}Free guides bhi hain: <a href="/free/">advocmedia.in/free</a> · <a href="/links">All links</a><br>{% endif %}<a href="/terms">Terms</a> · <a href="/refund-policy">Refund policy</a> · <a href="/privacy-policy">Privacy</a> · <a href="/contact">Contact</a></footer>
 </div>
 
-<div class="bar" id="bar"><span class="price">₹{{ course.price }}</span>{% if off %}<span class="mrp">₹{{ course.mrp }}</span>{% endif %}<span style="margin-left:auto"></span>{{ buybtn() }}</div>
+<div class="bar" id="bar"><span class="price">₹{{ course.price }}</span>{% if off %}<span class="mrp">₹{{ course.mrp }}</span>{% endif %}
+  {% if starts %}<span class="count" data-starts="{{ starts }}">⏳ <span class="lbl">Starts in</span> <b class="left">{{ live.start }}</b></span>{% endif %}
+  <span style="margin-left:auto"></span>{{ buybtn() }}</div>
+{% if starts %}
+<script>
+(function () {  // live countdown to the first class; hides itself once it has started
+  var els = document.querySelectorAll(".count[data-starts]");
+  function tick() {
+    els.forEach(function (el) {
+      var ms = new Date(el.dataset.starts) - new Date();
+      if (ms <= 0) { el.remove(); return; }
+      var d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s = Math.floor(ms / 1e3) % 60;
+      el.querySelector(".left").textContent = d > 0 ? d + "d " + h + "h " + m + "m" : h + "h " + m + "m " + s + "s";
+    });
+  }
+  tick(); setInterval(tick, 1000);
+})();
+</script>
+{% endif %}
 
 <script>
 (function () {

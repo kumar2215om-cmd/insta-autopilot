@@ -362,8 +362,45 @@ def clean_course(c):
     live = {"enabled": lv.get("enabled") is True, "name": text(lv.get("name"), 40) or "Batch 1",
             "start": text(lv.get("start"), 60), "time": text(lv.get("time"), 80),
             "seats": digits(lv.get("seats"))[:4], "schedule": "\n".join(schedule)}
+    pixel = "".join(ch for ch in str(c.get("pixel") or "") if ch.isdigit())
     return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
-            "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live}
+            "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live,
+            "pixel": pixel if 8 <= len(pixel) <= 20 else ""}
+
+
+MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def batch_start(live, now=None):
+    """First class time from the editor ("Sat 14 Nov · 9 PM | …" in the schedule, else start + class time), in IST.
+
+    Returns an aware datetime, or None if it can't be read. Used for the honest countdown on /course.
+    """
+    if not live.get("enabled"):
+        return None
+    first = (live.get("schedule") or "").splitlines()[0].split("|")[0] if live.get("schedule") else ""
+    for text in (first, f'{live.get("start", "")} {live.get("time", "")}'):
+        d = re.search(r"\b(\d{1,2})\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*", text, re.I)
+        # "9 PM", "9:30 pm", or a range "9–10 PM" (start = the first number)
+        t = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(?:[–-]\s*\d{1,2}(?::\d{2})?\s*)?(am|pm)\b", text, re.I)
+        if not d:
+            continue
+        hour, minute = (int(t.group(1)) % 12 + (12 if t.group(3).lower() == "pm" else 0), int(t.group(2) or 0)) if t else (21, 0)
+        now = now or datetime.now(IST)
+        try:
+            when = datetime(now.year, MONTHS[d.group(2).lower()], int(d.group(1)), hour, minute, tzinfo=IST)
+        except ValueError:
+            continue
+        if when < now - timedelta(days=180):  # "14 Jan" written in December means next year
+            when = when.replace(year=now.year + 1)
+        return when
+    return None
+
+
+def from_ad():
+    """Visitor came from an ad or a tagged link: hide links that lead away from the purchase."""
+    return any(request.args.get(k) for k in ("fbclid", "utm_source", "utm_medium", "utm_campaign", "ad"))
 
 
 def clean_course2(c):
@@ -1204,6 +1241,8 @@ def course_page():
             sessions = [("", t) for t in course_data.LIVE_SESSIONS]
     return render_template("course.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
                            tab=1, c2=course2_data if course2.get("enabled", True) else None, course2=course2,
+                           starts=(lambda t: t.isoformat() if t and t > datetime.now(IST) else "")(batch_start(live)),
+                           ad=from_ad(), pixel=course.get("pixel", ""),
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"),
                            fk=followers_short(ig.get("followers_count"), course_data.FOLLOWERS_FALLBACK))

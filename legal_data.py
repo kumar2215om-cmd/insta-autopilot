@@ -1,6 +1,6 @@
 """Text for the public policy pages (/terms, /refund-policy, /privacy-policy, /contact). Edit the wording here."""
 
-UPDATED = "2 November 2026"
+UPDATED = "7 November 2026"
 EMAIL = "kumarom1315@gmail.com"
 OWNER = "Om Kumar (@aiwith.om)"
 
@@ -41,10 +41,10 @@ PAGES = {
             "• Course buyers: name, email, phone number and Instagram username you enter at checkout (collected by SuperProfile).",
             "• Instagram automation: when you comment a keyword on our reels or message our account, we receive your Instagram username, "
             "the comment or message and whether you follow the account, through Instagram's official API. We use this only to reply and send the link you asked for.",
-            "• Website: we count clicks on links on our link page. We don't use advertising trackers on advocmedia.in."]),
+            "• Website: we count clicks on links on our link page. On the course page (advocmedia.in/course) we use the Meta Pixel to measure our Instagram/Facebook ads: it tells Meta that the page was viewed and when Join now is tapped, so we can see which ads work. It uses Meta cookies; you can limit this in your Meta ad settings or by blocking third-party cookies."]),
         ("How we use it", ["To give course access, send class updates, deliver the free guides you request, answer your questions and see which content helps people. "
                            "We don't sell or rent your data, and we don't share it except with the services that run the course and website."]),
-        ("Services we use", ["SuperProfile (course checkout, payments and access), Zoom (live classes), Instagram/Meta (comments and DMs) and our hosting and database providers. "
+        ("Services we use", ["SuperProfile (course checkout, payments and access), Zoom (live classes), Instagram/Meta (comments, DMs and ad measurement with the Meta Pixel) and our hosting and database providers. "
                              "Card and UPI details are handled by the payment provider; we never see or store them."]),
         ("How long we keep it", ["Buyer details are kept for as long as you have course access and as needed for invoices and the law. "
                                  "Automation activity is kept only for a short recent history."]),

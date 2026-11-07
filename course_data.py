@@ -66,4 +66,7 @@ FAQ = [("Kya Claude Pro zaroori hai?", "Nahi. Zyaadatar lessons free plan pe cha
        ("Course kis language mein hai?", "Hinglish."),
        ("Access kitne time ke liye hai?", "Purchase ke din se 6 mahine tak: saare videos, workbook aur bonuses. Bonus files download karke hamesha ke liye rakh sakte ho."),
        ("Course kahan milega?", "Payment ke baad course SuperProfile pe khulta hai: videos, workbook, saare bonuses aur resources wahin."),
+       ("Payment ke baad kya hota hai?", "Payment hote hi SuperProfile pe course khul jaata hai: videos, workbook aur saare bonuses. Live batch ka Zoom link bhi wahin student dashboard mein milta hai."),
+       ("Live class miss ho gayi to?", "Koi baat nahi. Har class record hoti hai aur recording course mein add ho jaati hai."),
+       ("Refund milega?", "Digital course hai, isliye access milne ke baad refund nahi hota. Payment ya access ki koi problem ho to email ya Instagram DM karo, 48 ghante mein solve karenge. Poori policy: advocmedia.in/refund-policy."),
        ("Kya followers guaranteed hain?", "Nahi. Koi bhi honest course ye promise nahi kar sakta. System milega; kaam tumhe karna hai.")]
