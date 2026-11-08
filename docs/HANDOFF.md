@@ -4,7 +4,7 @@ Owner: Om · Instagram **@aiwith.om** ("AI Tools & Tips Daily", Hinglish).
 Scope of this handoff: the **Insta Autopilot web app**: admin dashboard, link-in-bio page + editor, `/free` freebies page, guide pages, uploads, themes and animations.
 **Not included:** reel making/editing (the Remotion studio in `/home/user/aiwithom/template`). That has its own v3 handoff.
 
-Last updated: **2 Nov 2026 (v3)** · latest commit on `main`: see `git log` (v3 work = course, policy pages, freebie→course promo, PDF import).
+Last updated: **8 Nov 2026 (v5: Meta App Review approved, see §5 v5)** · v3 was 2 Nov 2026 · latest commit on `main`: see `git log` (v3 work = course, policy pages, freebie→course promo, PDF import).
 
 > **v3 quick summary:** advocmedia.in is the main domain · `/course` sells Course 1 (SuperProfile checkout, direct `?checkout=true`) with an optional live-batch section · `/terms` `/refund-policy` `/privacy-policy` `/contact` · course banner + black course card injected into `/free` and every guide · PDF/TXT/MD upload on a freebie fills the 📝 guide box · Course 2 page + `/courses` hub are **parked on branch `course2-page`** (not on main).
 
@@ -182,6 +182,20 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 33. **Meta tracking (set up 7 Nov 2026):** dataset **course** `1667034868290085` (ad account om 846767394140573). Site: Pixel ID in editor → PageView (home), PageView + ViewContent + InitiateCheckout (/course). SuperProfile course: same pixel, Page Views + Payment Complete (= Purchase), with a Conversions API token saved **in SuperProfile only** (never in this repo). Initiate Payment left off on SuperProfile to avoid double InitiateCheckout. Domain verification code field in the editor (`course.fbverify`).
 
 34. **Batch status** (editor → 🎓 Course → live batch → Batch status, `course.live.status`): `open` (countdown) → `started` (auto after the first class: live now, late joining) → `ended` (auto after the last schedule line + 2 h: evergreen video course, "recordings included", class list = recordings) · `full` (manual only: no checkout, Join → `ig.me/m/<username>` waitlist, launch-price labels hidden). The course is for sale in every state except `full`. Dates have no year: `course.live.dated` (set on save when schedule/start/time change; legacy = `LEGACY_DATED` 2026-11-07) anchors them, so "14 Nov" stays 2026. Logic: `batch_start/batch_end/batch_state` in app.py.
+
+### v5 (8 Nov 2026): Meta App Review approved
+35. **Meta App Review APPROVED** (submitted and approved 8 Nov 2026). Meta app **LikhoDm** (Instagram API with Instagram Login) has Advanced Access to `instagram_business_basic`, `instagram_business_manage_messages`, `instagram_business_manage_comments`, `instagram_business_manage_insights`, and is **Published (Live)**: the comment→DM automation now works for every commenter, not only app testers. Business: Udyam registered, Meta business verification done (likholabs.in).
+36. **While review was pending, reel automations ran on SuperProfile AutoDM** (~10 automations, 1K+ DMs, 800+ followers gained). In our dashboard every reel covered by SuperProfile is **paused**, and the ALL-reels `*` fallback is **off (not set)**. Only the reviewers' test reel (keyword **PROMPTS**) stayed enabled. **Never run SuperProfile and our app on the same reel**: Instagram allows one DM (private reply) per comment, so they collide, and each comment would get two public replies.
+37. Code from that period (on main): paused rules drop their pending DM retries (`retry_failed_dms`); the `*` fallback form starts unticked, shows "off (not set)", and can be saved as paused with an empty Final DM (Final DM only required when enabled).
+38. `story/`: two 1080×1920 Instagram stories for the PromptBundle offer (39 AI video prompt packs, ₹149 with ₹399 struck), rendered from `story/story.html` + `f1.html`/`f2.html` with Playwright.
+
+**To do after approval:**
+- **Change `DASHBOARD_PASSWORD`** in Vercel (the old one was given to Meta's reviewers), then Redeploy.
+- **Test as a normal user:** from a non-tester account, comment PROMPTS on the test reel; the DM should arrive with no `2534001` errors in the activity feed (Advanced Access should end most of the refusals seen before approval).
+- **Move reels back one at a time** if Om wants our app instead of SuperProfile: turn the automation off in SuperProfile first, then enable the rule in our dashboard. Watch one reel for a day before moving the rest.
+- **Old retry queue** (~17K items from before approval): items older than 6 days expire on the daily `/cron/retry-failed`. Don't mass-retry a big backlog: it burns the hourly request limit (codes 4/17/32/613 → 15-minute backoff).
+- **Prices:** PromptBundle is ₹399 on promptbundle.store; a SuperProfile payment page was made at ₹199 and a story offer used ₹149. Keep website, payment page, DMs and stories on the same current price, and give "limited time" offers a real end date.
+- Don't remove the app under Instagram → Settings → Apps and websites, don't turn off the Meta webhook subscription, and remember a password change on Instagram invalidates the token (error 190 → generate a new token, paste into `IG_ACCESS_TOKEN`, Redeploy).
 
 ## 6. How to… (common tasks)
 
