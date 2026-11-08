@@ -12,6 +12,8 @@ import os
 import secrets
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import requests
@@ -42,6 +44,8 @@ SCOPES = ("instagram_business_basic,instagram_business_manage_messages,"
           "instagram_business_manage_comments,instagram_business_manage_insights")
 WEBHOOK_FIELDS = "comments,messages,messaging_postbacks"
 REELS_CACHE_SECONDS = 300
+REPORT_CACHE_SECONDS = 600  # each reel's insights is one request against Instagram's hourly limit
+REPORT_REELS = 12
 
 app = Flask(__name__)
 app.secret_key = env("SECRET_KEY") or secrets.token_hex(32)  # set SECRET_KEY in production, or logins reset
@@ -222,10 +226,130 @@ def api_reels():
         return jsonify(error=str(e), reels=[]), 502
     acc.update(followers=me.get("followers_count"), pic=me.get("profile_picture_url", acc.get("pic")))
     store.save_account(acc)
+    created = [m["id"] for m in media if engine.auto_setup(acc, m)]  # new reels whose caption asks for a keyword
     data = {"followers": me.get("followers_count"), "media_count": me.get("media_count"),
-            "reels": media, "fetched_at": int(time.time())}
+            "reels": media, "fetched_at": int(time.time()), "auto_created": created}
     store.redis("SET", key, json.dumps(data), "EX", REELS_CACHE_SECONDS)
     return jsonify(data)
+
+
+# ---------- auto-setup ----------
+
+def ig_now():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+0000")  # Instagram's timestamp format
+
+
+@app.get("/api/auto-setup")
+def api_get_auto_setup():
+    acc = current_account()
+    return jsonify(settings=engine.auto_settings(acc), recent=store.recent_autos(acc["id"]))
+
+
+@app.put("/api/auto-setup")
+def api_put_auto_setup():
+    acc = current_account()
+    data = request.get_json(force=True)
+    t = data.get("template") or {}
+    template = {
+        "comment_reply": str(t.get("comment_reply", ""))[:1000].strip(),
+        "opening_dm": str(t.get("opening_dm", ""))[:640].strip(),
+        "button_text": str(t.get("button_text", ""))[:20].strip(),
+        "require_follow": bool(t.get("require_follow")),
+        "follow_dm": str(t.get("follow_dm", ""))[:640].strip(),
+        "followed_button_text": str(t.get("followed_button_text", ""))[:20].strip(),
+        "dm": str(t.get("dm", ""))[:1000].strip(),
+    }
+    enabled = bool(data.get("enabled"))
+    if enabled and not template["dm"]:
+        return jsonify(error="Add the final DM first. Use {keyword} for the word from the caption."), 400
+    old = engine.auto_settings(acc)
+    # Turning it on starts the clock: only reels posted from now on are set up automatically.
+    since = old.get("since") if old.get("enabled") and enabled else (ig_now() if enabled else "")
+    acc["auto_setup"] = {"enabled": enabled, "since": since, "template": template}
+    store.save_account(acc)
+    return jsonify(settings=acc["auto_setup"])
+
+
+@app.post("/api/auto-setup/<media_id>/undo")
+def api_undo_auto_setup(media_id):
+    acc = current_account()
+    rules = store.load_rules(acc["id"])
+    rule = rules.get("reels", {}).get(media_id)
+    if rule and rule.get("auto"):
+        rules["reels"].pop(media_id)
+        store.save_rules(acc["id"], rules)
+    events = store.recent_autos(acc["id"])
+    for e in events:
+        if e.get("media_id") == media_id:
+            e["undone"] = True
+    store.redis("DEL", store.account_key(acc["id"], "autos"))
+    for e in reversed(events):
+        store.log_auto(acc["id"], e)
+    return jsonify(rules)
+
+
+# ---------- reel report ----------
+
+def reel_views(ig, media_id):
+    try:
+        data = ig.get(f"{media_id}/insights", metric="views,reach,saved,shares")["data"]
+        return {i["name"]: i["values"][0]["value"] for i in data}
+    except Exception:
+        return {}
+
+
+@app.get("/api/report")
+def api_report():
+    acc = current_account()
+    key = store.account_key(acc["id"], "report")
+    cached = store.get_json(key)
+    if cached and not request.args.get("fresh"):
+        return jsonify(cached)
+    try:
+        ig = engine.Instagram(acc)
+        media = ig.get("me/media", limit=30, fields=(
+            "id,caption,media_product_type,permalink,thumbnail_url,media_url,timestamp,comments_count,like_count"))["data"]
+    except Exception as e:
+        if cached:
+            return jsonify({**cached, "warning": str(e)})
+        return jsonify(error=str(e), reels=[]), 502
+    reels = [m for m in media if m.get("media_product_type") == "REELS"][:REPORT_REELS]
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        insights = list(pool.map(lambda m: reel_views(ig, m["id"]), reels))
+    rules = store.load_rules(acc["id"]).get("reels", {})
+    rows = []
+    for m, ins in zip(reels, insights):
+        c = store.media_counts(acc["id"], m["id"])
+        rule = rules.get(m["id"])
+        views = ins.get("views") or 0
+        rows.append({
+            "id": m["id"], "caption": (m.get("caption") or "").strip().split("\n")[0][:140],
+            "thumb": m.get("thumbnail_url") or m.get("media_url", ""), "permalink": m.get("permalink", ""),
+            "timestamp": m.get("timestamp", ""), "views": views, "reach": ins.get("reach"),
+            "saves": ins.get("saved"), "shares": ins.get("shares"), "comments": m.get("comments_count") or 0,
+            "keyword": c.get("keyword", 0), "dm": c.get("dm", 0), "link": c.get("link", 0), "follow": c.get("follow", 0),
+            "has_rule": bool(rule and rule.get("enabled", True)), "auto": bool(rule and rule.get("auto")),
+            "keywords": (rule or {}).get("keywords", []), "require_follow": bool((rule or {}).get("require_follow")),
+            "per_1k": round(c.get("follow", 0) / views * 1000, 1) if views else None,
+        })
+    rated = [r["per_1k"] for r in rows if r["has_rule"] and r["per_1k"] is not None and r["views"] >= 1000]
+    avg = round(sum(rated) / len(rated), 1) if rated else None
+    ranked = sorted((r for r in rows if r["per_1k"] is not None), key=lambda r: -r["per_1k"])
+    for r in rows:
+        r["tips"] = engine.reel_tips(r, avg)
+        r["rank"] = next((i + 1 for i, x in enumerate(ranked) if x["id"] == r["id"]), None)
+    data = {"reels": rows, "avg_per_1k": avg, "ranked_count": len(ranked), "steps": engine.REPORT_STEPS,
+            "fetched_at": int(time.time())}
+    store.redis("SET", key, json.dumps(data), "EX", REPORT_CACHE_SECONDS)
+    return jsonify(data)
+
+
+@app.get("/report")
+def report_page():
+    acc = current_account()
+    if not acc:
+        return redirect(url_for("landing"))
+    return render_template("report.html", acc=public_account(acc))
 
 
 @app.get("/api/rules")

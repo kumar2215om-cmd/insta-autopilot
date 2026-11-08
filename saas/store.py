@@ -130,8 +130,9 @@ def account_ids():
 
 def delete_account(ig_id):
     """Removes an account and everything stored for it (used by Disconnect and Meta's deletion callback)."""
-    parts = ["", "rules", "activity", "counts", "rate_limited", "token_dead", "stats"]
-    redis("DEL", *[account_key(ig_id, p) for p in parts])
+    parts = ["", "rules", "activity", "counts", "rate_limited", "token_dead", "stats", "report", "autos", "medias"]
+    medias = redis("SMEMBERS", account_key(ig_id, "medias")) or []
+    redis("DEL", *[account_key(ig_id, p) for p in parts], *[account_key(ig_id, f"m:{m}") for m in medias])
     redis("SREM", "s:accounts", ig_id)
 
 
@@ -162,3 +163,26 @@ def count(ig_id, field, n=1):
 
 def counts(ig_id):
     return hash_all(account_key(ig_id, "counts"))
+
+
+# ---------- per-reel numbers and auto-setup log ----------
+
+def media_count(ig_id, media_id, field, n=1):
+    if not media_id or not str(media_id).isdigit():
+        return
+    redis("HINCRBY", account_key(ig_id, f"m:{media_id}"), field, n)
+    redis("SADD", account_key(ig_id, "medias"), media_id)
+
+
+def media_counts(ig_id, media_id):
+    return hash_all(account_key(ig_id, f"m:{media_id}"))
+
+
+def log_auto(ig_id, event):
+    key = account_key(ig_id, "autos")
+    redis("LPUSH", key, json.dumps(event, ensure_ascii=False))
+    redis("LTRIM", key, 0, 19)
+
+
+def recent_autos(ig_id):
+    return [json.loads(x) for x in redis("LRANGE", account_key(ig_id, "autos"), 0, 19) or []]

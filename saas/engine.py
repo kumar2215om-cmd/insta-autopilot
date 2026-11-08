@@ -4,6 +4,7 @@ Same flow and matching as the single-account app (../app.py), with every call ti
 """
 import os
 import random
+import re
 import time
 from datetime import datetime, timezone
 
@@ -213,9 +214,12 @@ def handle_comment(acc, value):
     media_id = value.get("media", {}).get("id", "")
     if not comment_id or sender.get("id") == acc["id"] or value.get("parent_id"):
         return False  # own comments and replies inside threads
+    if media_id and not is_blocked(acc):
+        auto_setup_from_comment(acc, media_id)
     key, rule = find_rule(store.load_rules(acc["id"]), media_id, text)
     if not rule or is_blocked(acc) or not store.claim(f"s:seen:{acc['id']}:{comment_id}"):
         return False
+    store.media_count(acc["id"], media_id, "keyword")
     ig = Instagram(acc)
     fill = lambda s: s.replace("{username}", username)
 
@@ -227,11 +231,13 @@ def handle_comment(acc, value):
         try:
             if uses_button_flow(rule):
                 ig.send_buttons({"comment_id": comment_id}, fill(rule.get("opening_dm") or DEFAULT_OPENING),
-                                postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}")])
+                                postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}|{media_id}")])
             elif rule.get("dm"):
                 ig.send_dm({"comment_id": comment_id}, {"text": fill(rule["dm"])})
                 store.count(acc["id"], "links_sent")
+                store.media_count(acc["id"], media_id, "link")
             note_dm(acc)
+            store.media_count(acc["id"], media_id, "dm")
             store.log_activity(acc["id"], media_id, username, text, action, "ok")
         except Exception as e:
             store.log_activity(acc["id"], media_id, username, text, action, "error", str(e))
@@ -282,7 +288,8 @@ def handle_dm_text(acc, igsid, text):
 
 def handle_button(acc, igsid, payload):
     """They tapped "Send me the link" or "I followed": check the follow, then send the link or ask again."""
-    step, _, key = payload.partition("|")
+    step, key, media_id = (payload.split("|") + ["", ""])[:3]
+    media_id = media_id or (key if key.isdigit() else "")  # older buttons carried only the rule key
     rule = store.load_rules(acc["id"]).get("reels", {}).get(key)
     if step not in ("GET", "FOLLOWED") or not rule or is_blocked(acc):
         return
@@ -301,17 +308,122 @@ def handle_button(acc, igsid, payload):
                 raise RuntimeError("The final DM is empty: add your message and link to this rule")
             ig.send_dm({"id": igsid}, {"text": fill(rule["dm"])})
             store.count(acc["id"], "links_sent")
+            store.media_count(acc["id"], media_id, "link")
             store.log_activity(acc["id"], key, username or igsid, payload, "dm", "ok")
             if step == "FOLLOWED" and rule.get("require_follow") and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
                 store.count(acc["id"], "gate_follows")
+                store.media_count(acc["id"], media_id, "follow")
         else:
             ig.send_buttons({"id": igsid}, fill(rule.get("follow_dm") or DEFAULT_FOLLOW),
                             links=[("Open profile", f"https://www.instagram.com/{acc['username']}/")],
                             postbacks=[(rule.get("followed_button_text") or DEFAULT_FOLLOWED_BUTTON,
-                                        f"FOLLOWED|{key}")])
+                                        f"FOLLOWED|{key}|{media_id}")])
             store.log_activity(acc["id"], key, username or igsid, payload, "follow_prompt", "ok")
     except Exception as e:
         store.log_activity(acc["id"], key, username or igsid, payload, "dm", "error", str(e))
+
+
+# ---------- auto-setup: "Comment GUIDE" in a new reel's caption creates its automation ----------
+
+QUOTES = "\"'“”‘’«»"
+# "Comment GUIDE", "comment karo \"gpt\"", "Type LINK below", "likho PROMPTS"
+_AFTER = re.compile(r"\b(?:comment|type|likho|write)(?:\s+(?:karo|kare|karein|kijiye|kar\s+do|below|now|here|down|me|the\s+word|word))*"
+                    r"[^A-Za-z0-9" + QUOTES + r"]{1,8}([" + QUOTES + r"]?)([A-Za-z0-9]{2,24})", re.I)
+# "GPT comment karo", "\"GUIDE\" likho"
+_BEFORE = re.compile(r"([" + QUOTES + r"]?)\b([A-Z][A-Z0-9]{1,23})\b[" + QUOTES + r"]?[^A-Za-z0-9]{1,6}(?:comment|likho|type)\b", re.I)
+_NOT_KEYWORDS = {"below", "karo", "kare", "here", "now", "down", "and", "aur", "for", "the", "your", "this", "me",
+                 "kar", "karna", "comment", "comments", "type", "likho", "box", "section", "if", "to", "in", "on"}
+
+
+def caption_keyword(caption):
+    """The keyword a caption asks people to comment, or "". Only a quoted or ALL-CAPS word counts,
+    so "comment below your thoughts" doesn't create anything."""
+    caption = caption or ""
+    found = []
+    for pattern in (_AFTER, _BEFORE):
+        for m in pattern.finditer(caption):
+            quote, word = m.group(1), m.group(2)
+            caught = caption[m.start(2):m.end(2)]
+            if word.lower() in _NOT_KEYWORDS:
+                continue
+            if quote or (caught.isupper() and any(c.isalpha() for c in caught)):
+                found.append((m.start(), word.upper()))
+    return min(found)[1] if found else ""
+
+
+def auto_settings(acc):
+    return acc.get("auto_setup") or {}
+
+
+def auto_setup(acc, media):
+    """Creates the rule for one new reel from the account's template. Returns the keyword, or ""."""
+    cfg = auto_settings(acc)
+    if not cfg.get("enabled") or not (cfg.get("template") or {}).get("dm"):
+        return ""
+    # Only reels posted after auto-setup was switched on, so old reels are never touched.
+    posted = media.get("timestamp", "")
+    if posted and posted < cfg.get("since", ""):
+        return ""
+    rules = store.load_rules(acc["id"])
+    if media["id"] in rules.get("reels", {}) or not store.claim(f"s:seen:{acc['id']}:auto:{media['id']}", 90 * 86400):
+        return ""
+    keyword = caption_keyword(media.get("caption", ""))
+    if not keyword:
+        return ""
+    template = cfg["template"]
+    rule = {k: v.replace("{keyword}", keyword) if isinstance(v, str) else v for k, v in template.items()}
+    rule.update(enabled=True, keywords=[keyword], auto=True, comments=True,
+                label=(media.get("caption") or "").strip().split("\n")[0][:120])
+    rules.setdefault("reels", {})[media["id"]] = rule
+    store.save_rules(acc["id"], rules)
+    store.log_auto(acc["id"], {"media_id": media["id"], "keyword": keyword, "label": rule["label"],
+                               "thumb": media.get("thumbnail_url") or media.get("media_url", ""), "at": int(time.time())})
+    store.log_activity(acc["id"], media["id"], "", rule["label"], "auto_setup", "ok", f"Keyword {keyword}")
+    return keyword
+
+
+def auto_setup_from_comment(acc, media_id):
+    """First comment on a reel without a rule: read its caption once and set it up if it asks for a keyword."""
+    if not auto_settings(acc).get("enabled") or media_id in store.load_rules(acc["id"]).get("reels", {}):
+        return ""
+    if not store.claim(f"s:seen:{acc['id']}:autolook:{media_id}", 86400):
+        return ""  # looked at this reel recently
+    try:
+        media = Instagram(acc).get(media_id, fields="id,caption,timestamp,thumbnail_url,media_url,media_product_type")
+    except Exception:
+        return ""
+    return auto_setup(acc, media)
+
+
+# ---------- reel report ----------
+
+REPORT_STEPS = [("views", "Views"), ("comments", "Comments"), ("keyword", "Used the keyword"),
+                ("dm", "Got the DM"), ("link", "Link sent"), ("follow", "Followed to unlock")]
+
+
+def reel_tips(row, avg_per_1k):
+    """Plain advice from a reel's numbers (shown as "Reel Doctor")."""
+    tips, kw = [], (row.get("keywords") or ["your keyword"])[0]
+    views, comments, used, dms, follows = (row.get(k, 0) for k in ("views", "comments", "keyword", "dm", "follow"))
+    if not row.get("has_rule"):
+        if comments >= 10:
+            tips.append(f"{comments} comments and no automation on this reel. Add a keyword so these people get a DM and follow you.")
+        return tips or ["No automation on this reel yet."]
+    if comments >= 20 and used / comments < 0.4:
+        tips.append(f"Only {round(used / comments * 100)}% of comments used {kw}. Say \"Comment {kw}\" in the first 3 seconds "
+                    "and pin a comment with it.")
+    if used >= 10 and dms / used < 0.8:
+        tips.append(f"Instagram refused some DMs on this reel. Add \"or DM me {kw}\" to the caption: "
+                    "people who DM you the word still get it.")
+    if row.get("require_follow") and dms >= 20 and follows / dms < 0.05:
+        tips.append("Few people followed to unlock. Make the first DM say exactly what they get, then ask for the follow.")
+    per_1k = row.get("per_1k")
+    if per_1k is not None and avg_per_1k and views >= 1000:
+        if per_1k >= 1.5 * avg_per_1k:
+            tips.append(f"{per_1k} follows per 1K views, well above your average of {avg_per_1k}. Reuse this hook and format.")
+        elif per_1k <= 0.5 * avg_per_1k:
+            tips.append(f"{per_1k} follows per 1K views, below your average of {avg_per_1k}. Try a stronger reason to comment.")
+    return tips or ["Doing fine. Tips appear here when a number stands out."]
 
 
 def dispatch(body, run):

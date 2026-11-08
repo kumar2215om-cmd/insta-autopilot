@@ -37,6 +37,12 @@ class FakeInstagram:
 
     def __init__(self):
         self.calls, self.follows, self.fail_dm, self.dead = [], True, False, False
+        self.media = [
+            {"id": "777", "caption": "Naya reel! Comment GUIDE and I'll DM you", "timestamp": "2999-01-01T00:00:00+0000",
+             "media_product_type": "REELS", "comments_count": 30, "thumbnail_url": "t.jpg"},
+            {"id": "555", "caption": "Old reel. Comment OLD", "timestamp": "2020-01-01T00:00:00+0000",
+             "media_product_type": "REELS", "comments_count": 50},
+        ]
 
     def get(self, url, params=None, timeout=None):
         self.calls.append(("GET", url, params))
@@ -47,7 +53,15 @@ class FakeInstagram:
                          "profile_picture_url": "", "followers_count": 500})
         if url.endswith("/refresh_access_token"):
             return Resp({"access_token": "NEWER"})
-        if "is_user_follow_business" in (params or {}).get("fields", ""):
+        fields = (params or {}).get("fields", "")
+        if url.endswith("/me/media"):
+            return Resp({"data": self.media})
+        if url.endswith("/insights"):
+            return Resp({"data": [{"name": "views", "values": [{"value": 2000}]}, {"name": "saved", "values": [{"value": 7}]}]})
+        if "caption" in fields:
+            mid = url.rsplit("/", 1)[1]
+            return Resp(next(m for m in self.media if m["id"] == mid))
+        if "is_user_follow_business" in fields:
             return Resp({"username": "fan", "is_user_follow_business": self.follows})
         return Resp({"username": "fan"})
 
@@ -146,7 +160,7 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.hook(comment("promts pls")).status_code, 200)  # one typo still matches
         first = self.ig.messages()[0]
         self.assertEqual(first["recipient"], {"comment_id": "c1"})
-        self.assertEqual(first["message"]["attachment"]["payload"]["buttons"][0]["payload"], "GET|555")
+        self.assertEqual(first["message"]["attachment"]["payload"]["buttons"][0]["payload"], "GET|555|555")
         self.assertEqual(self.ig.replies(), [{"message": "@fan Check your DM 📩"}])
         # the same comment again (Instagram retries webhooks): handled once
         self.hook(comment("promts pls"))
@@ -238,6 +252,56 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.c.get("/owner").status_code, 401)
         auth = {"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}
         self.assertIn("@creator", self.c.get("/owner", headers=auth).get_data(as_text=True))
+
+    def test_caption_keyword(self):
+        cases = {'Comment "GPT" for full setup': "GPT", "comment karo GUIDE 🔥": "GUIDE", "GPT comment karo": "GPT",
+                 "Comment below 👇 PROMPTS": "PROMPTS", "comment below your thoughts": "", "likho AUDIT": "AUDIT",
+                 "Comment “Otto” and I will DM": "OTTO", "": ""}
+        for caption, want in cases.items():
+            self.assertEqual(engine.caption_keyword(caption), want, caption)
+
+    def turn_on_auto(self, **template):
+        body = {"enabled": True, "template": {"comment_reply": "Sent 📩", "require_follow": False,
+                                              "dm": "Here: https://x.com/free?k={keyword}", **template}}
+        return self.c.put("/api/auto-setup", json=body)
+
+    def test_auto_setup_on_first_comment_and_undo(self):
+        self.login()
+        self.assertEqual(self.c.put("/api/auto-setup", json={"enabled": True, "template": {}}).status_code, 400)
+        self.assertEqual(self.turn_on_auto().status_code, 200)
+        self.hook(comment("guide please", media="777"))
+        rule = self.c.get("/api/rules").get_json()["reels"]["777"]
+        self.assertEqual((rule["keywords"], rule["auto"], rule["dm"]), (["GUIDE"], True, "Here: https://x.com/free?k=GUIDE"))
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Here: https://x.com/free?k=GUIDE"})
+        recent = self.c.get("/api/auto-setup").get_json()["recent"]
+        self.assertEqual(recent[0]["keyword"], "GUIDE")
+        self.c.post("/api/auto-setup/777/undo", json={})
+        self.assertNotIn("777", self.c.get("/api/rules").get_json()["reels"])
+        self.assertTrue(self.c.get("/api/auto-setup").get_json()["recent"][0]["undone"])
+        self.hook(comment("GUIDE", cid="c2", media="777"))  # undone stays undone
+        self.assertNotIn("777", self.c.get("/api/rules").get_json()["reels"])
+
+    def test_auto_setup_skips_old_reels_and_works_from_reel_list(self):
+        self.login()
+        self.turn_on_auto()
+        self.hook(comment("OLD", media="555"))  # posted before auto-setup was turned on
+        self.assertNotIn("555", self.c.get("/api/rules").get_json()["reels"])
+        data = self.c.get("/api/reels?fresh=1").get_json()
+        self.assertEqual(data["auto_created"], ["777"])
+
+    def test_report_counts_per_reel(self):
+        self.login()
+        self.put_rule("777", keywords=["GUIDE"])
+        self.hook(comment("GUIDE", media="777"))
+        tap = {"entry": [{"id": "1789", "messaging": [{"sender": {"id": "77"}, "postback": {"payload": "FOLLOWED|777|777"}}]}]}
+        self.hook(tap)
+        reels = {r["id"]: r for r in self.c.get("/api/report").get_json()["reels"]}
+        r = reels["777"]
+        self.assertEqual((r["views"], r["comments"], r["keyword"], r["dm"], r["link"], r["follow"]), (2000, 30, 1, 1, 1, 1))
+        self.assertEqual(r["per_1k"], 0.5)
+        self.assertTrue(r["has_rule"])
+        self.assertIn("50 comments and no automation", reels["555"]["tips"][0])
+        self.assertEqual(self.c.get("/report").status_code, 200)
 
     def test_pages_render(self):
         for path in ("/", "/privacy", "/terms", "/data-deletion"):

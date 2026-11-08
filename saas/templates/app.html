@@ -55,7 +55,9 @@
     </div>
   </header>
 
+  {% with active="app" %}{% include "_nav.html" %}{% endwith %}
   <div id="banners"></div>
+  <div id="autoBanners"></div>
 
   <div class="tiles">
     <div class="card tile"><div class="label">DMs this month</div><div class="n" id="tDms">–</div>
@@ -68,6 +70,29 @@
 
   <div class="cols">
     <main>
+      <div class="card" style="margin-bottom:16px">
+        <h2 style="margin-top:0">✨ Auto-setup new reels</h2>
+        <p class="muted" style="margin-top:0">Post a reel whose caption says <b>"Comment GUIDE"</b> (or any word in capitals or quotes)
+          and its automation is created for you from this template. Only reels posted after you turn it on.</p>
+        <p style="margin:0 0 8px"><span class="badge off" id="autoStatus">off</span></p>
+        <details id="autoBox"><summary class="btn small ghost" style="list-style:none">Edit template</summary>
+        <form class="rule" id="autoForm">
+          <label><input type="checkbox" name="enabled"> <b>Auto-setup on</b></label>
+          <label class="f">Public reply <span class="hint">one per line · empty = no reply</span></label>
+          <textarea name="comment_reply" rows="2"></textarea>
+          <label class="f">First DM + button</label>
+          <textarea name="opening_dm" rows="2"></textarea>
+          <input type="text" name="button_text" maxlength="20" aria-label="Button text">
+          <label><input type="checkbox" name="require_follow"> <b>Must follow me first</b></label>
+          <textarea name="follow_dm" rows="2" aria-label="Follow message"></textarea>
+          <input type="text" name="followed_button_text" maxlength="20" aria-label="I followed button text">
+          <label class="f">Final DM <span class="hint">required · {keyword} = the word from the caption, e.g. https://yoursite.com/free?k={keyword}</span></label>
+          <textarea name="dm" rows="2" placeholder="Here you go 🎁 https://yoursite.com/free?k={keyword}"></textarea>
+          <div class="row"><button class="btn small">Save template</button><span data-msg></span></div>
+        </form>
+        </details>
+      </div>
+
       <div class="card">
         <h2 style="margin-top:0">🔑 Keyword rules</h2>
         <p class="muted" style="margin-top:0">Work on <b>every reel</b> and when someone <b>DMs</b> the word.</p>
@@ -158,7 +183,7 @@ function renderReels() {
   $("reels").innerHTML = reels.map(m => `
     <div class="rule-row"><img src="${esc(m.thumbnail_url || m.media_url || "")}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
       <div class="txt"><div class="cap">${esc((m.caption || "(no caption)").split("\n")[0])}</div>
-        ${badge(m.id)}<span class="muted">${new Date(m.timestamp).toLocaleDateString()} · 💬 ${m.comments_count ?? 0}</span></div>
+        ${badge(m.id)}${rules.reels[m.id]?.auto ? `<span class="badge on" title="Created by auto-setup">✨ auto</span>` : ""}<span class="muted">${new Date(m.timestamp).toLocaleDateString()} · 💬 ${m.comments_count ?? 0}</span></div>
       <button class="btn small ${rules.reels[m.id] ? "ghost" : ""}" type="button" data-toggle="${esc(m.id)}">${open.has(m.id) ? "Close" : rules.reels[m.id] ? "Edit" : "Set up"}</button></div>
     ${open.has(m.id) ? ruleForm(m.id) : ""}`).join("");
 }
@@ -236,6 +261,7 @@ async function loadReels(fresh) {
   try {
     const data = await api("/api/reels" + (fresh ? "?fresh=1" : ""));
     reels = (data.reels || []).filter(m => m.media_type !== "STORY");
+    if ((data.auto_created || []).length) { rules = await api("/api/rules"); render(); loadAuto(); }
   } catch (err) { $("reels").innerHTML = `<div class="empty err">Couldn't load reels: ${esc(err.message)}</div>`; return; }
   renderReels();
 }
@@ -253,8 +279,47 @@ async function loadFeed() {
     ${a.status !== "ok" ? `<div class="e">⚠️ ${esc(a.detail)}</div>` : ""}</div>`).join("");
 }
 
+// ---------- auto-setup ----------
+async function loadAuto() {
+  const {settings, recent} = await api("/api/auto-setup");
+  const f = $("autoForm"), t = {...DEFAULTS, require_follow: true, ...(settings.template || {})};
+  f.enabled.checked = !!settings.enabled;
+  for (const k of ["comment_reply", "opening_dm", "button_text", "follow_dm", "followed_button_text", "dm"]) f[k].value = t[k] ?? "";
+  f.require_follow.checked = !!t.require_follow;
+  $("autoBox").open = !settings.enabled;
+  $("autoStatus").className = "badge " + (settings.enabled ? "on" : "off");
+  $("autoStatus").textContent = settings.enabled ? "on · new reels are set up automatically" : "off";
+  const week = Date.now() / 1000 - 7 * 86400;
+  $("autoBanners").innerHTML = recent.filter(e => !e.undone && e.at > week && rules.reels[e.media_id]).map(e => `
+    <div class="autobanner"><p>✨ <b>Auto-setup:</b> your reel “${esc(e.label || "new reel")}” asks people to comment
+      <b>${esc(e.keyword)}</b>. The automation is live.</p>
+      <button class="btn small" type="button" data-review="${esc(e.media_id)}">Review</button>
+      <button class="btn small ghost" type="button" data-undo="${esc(e.media_id)}">Undo</button></div>`).join("");
+}
+
+$("autoForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target, msg = f.querySelector("[data-msg]");
+  const template = {comment_reply: f.comment_reply.value, opening_dm: f.opening_dm.value, button_text: f.button_text.value,
+    require_follow: f.require_follow.checked, follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value};
+  try {
+    await api("/api/auto-setup", {method: "PUT", body: JSON.stringify({enabled: f.enabled.checked, template})});
+    msg.className = "muted"; msg.textContent = f.enabled.checked ? "Saved. New reels will be set up automatically." : "Saved (auto-setup is off).";
+    $("autoStatus").className = "badge " + (f.enabled.checked ? "on" : "off");
+    $("autoStatus").textContent = f.enabled.checked ? "on · new reels are set up automatically" : "off";
+  } catch (err) { msg.className = "err"; msg.textContent = err.message; }
+});
+
+document.addEventListener("click", async (e) => {
+  const u = e.target.closest("[data-undo]");
+  if (u) { rules = await api(`/api/auto-setup/${encodeURIComponent(u.dataset.undo)}/undo`, {method: "POST", body: "{}"}); render(); loadAuto(); return; }
+  const r = e.target.closest("[data-review]");
+  if (r) { open.add(r.dataset.review); render(); document.querySelector(`form.rule[data-key="${r.dataset.review}"]`)?.scrollIntoView({behavior: "smooth", block: "center"}); }
+});
+
 (async () => {
   rules = await api("/api/rules");
+  loadAuto();
   render();
   loadMe(); loadReels(false); loadFeed();
   setInterval(() => { if (!document.hidden) { loadFeed(); loadMe(); } }, 10000);

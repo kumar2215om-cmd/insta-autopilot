@@ -190,6 +190,7 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 38. `story/`: two 1080×1920 Instagram stories for the PromptBundle offer (39 AI video prompt packs, ₹149 with ₹399 struck), rendered from `story/story.html` + `f1.html`/`f2.html` with Playwright.
 
 39. **SaaS (multi-account) app in `saas/`, branded LikhoDM:** "Continue with Instagram" login (Instagram Business Login OAuth → long-lived token → `me/subscribed_apps`), per-account rules (reel / `kw:` keyword / `*`), activity, counts, monthly free DM limit (`FREE_MONTHLY_DMS`), pause, disconnect + delete, Meta deauthorize and data-deletion callbacks, daily token renewal cron, `/owner` account list, privacy/terms/data-deletion pages. Redis keys start with `s:` (`s:t:<ig_id>…`) so it can share Upstash. Tests: `cd saas && python3 -m unittest test_saas`. Setup steps: `saas/README.md` (second Vercel project with Root Directory `saas`). **Not live yet** until those steps are done.
+41. **SaaS: auto-setup from caption + Reel report** (`/report`, Reel Doctor tips). Details in `saas/README.md`.
 40. **Root app webhook:** answers only Om's own account (`my_ig_id()`, cached in kv `my_ig_id`); when `SAAS_WEBHOOK_URL` is set, it forwards the raw webhook body + signature to the SaaS for any other account. The Meta webhook callback stays on the root app.
 
 **To do after approval:**

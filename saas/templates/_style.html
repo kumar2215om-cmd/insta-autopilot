@@ -25,5 +25,11 @@
   input[type=text]:focus, textarea:focus { outline:none; border-color:var(--rose); }
   .muted { color:var(--mute); }
   .err { color:var(--bad); }
+  nav.tabs { display:flex; flex-wrap:wrap; gap:6px; padding:4px; background:#e7e0d4; border-radius:14px; width:max-content; max-width:100%; margin:4px 0 12px; }
+  nav.tabs a { padding:9px 16px; border-radius:11px; font-weight:800; font-size:14px; color:var(--ink); text-decoration:none; }
+  nav.tabs a[aria-current="page"] { background:#fff; box-shadow:0 2px 8px rgba(60,40,20,.1); }
+  .autobanner { display:flex; flex-wrap:wrap; gap:12px; align-items:center; background:var(--ink); color:#fff; border-radius:16px; padding:14px 18px; margin:8px 0; }
+  .autobanner p { margin:0; flex:1 1 320px; }
+  .autobanner .btn.ghost { color:#fff; border-color:#6b6660; }
   @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
 </style>

@@ -15,6 +15,17 @@ It's a separate Flask app from the one in the repo root (Om's own site, courses 
 - `templates/`: landing page, dashboard, privacy/terms/data-deletion pages, owner page.
 - `test_saas.py`: tests with Instagram mocked: `cd saas && python3 -m unittest test_saas`.
 
+## Auto-setup and Reel report
+- **Auto-setup new reels** (dashboard card): the creator saves a template once (reply, DM, follow gate, final DM with
+  `{keyword}`). When a reel posted *after* switching it on says "Comment GUIDE" (a word in capitals or quotes after
+  comment/type/likho, or "GUIDE comment karo"), its rule is created automatically: on the reel's first comment (caption read
+  once per reel per day) or when the dashboard loads the reel list. A banner offers Review and Undo; undone reels are never
+  set up again. Parser: `engine.caption_keyword`.
+- **Reel report** (`/report`): for the latest 12 reels, views (Instagram insights) → comments → used the keyword → got the DM
+  → link sent → followed to unlock, follows per 1K views, rank, and "Reel Doctor" tips (`engine.reel_tips`, rule-based, not AI).
+  Per-reel counts are stored in `s:t:<id>:m:<media_id>` from the moment a reel's automation runs; button payloads now carry
+  the reel (`GET|<rule>|<media_id>`). Cached 10 minutes; ↻ Refresh fetches again.
+
 ## How events reach it
 Instagram sends **every** connected account's webhook events to the one callback URL set in the Meta app,
 which stays pointed at the root app (`/webhook`). The root app answers only Om's account and forwards
