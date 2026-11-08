@@ -861,11 +861,14 @@ def handle_comment(ig_user_id, value):
     # Skip our own comments/replies and replies inside threads.
     if not comment_id or sender.get("id") == ig_user_id or value.get("parent_id"):
         return False
+    if media_id and not token_is_dead() and not rate_limited_until():
+        auto_setup_from_comment(media_id)
     key, rule = find_rule(load_rules(), media_id, text)
     # While the login is dead, leave comments unhandled so "Send to past comments" can reach them later.
     # While logged out or rate limited, leave comments unhandled so "Send to past comments" reaches them later.
     if not rule or token_is_dead() or rate_limited_until() or not claim_comment(comment_id):
         return False
+    media_count("keyword", media_id)
 
     # DM first, so the public reply can tell people what to do if Instagram refuses the DM.
     item = {"ig_user_id": ig_user_id, "key": key, "media_id": media_id, "username": username,
@@ -965,7 +968,9 @@ def send_comment_dm(comment_id, item, rule, retry=False):
                          postbacks=[(rule.get("button_text") or "Send me the link", f"GET|{item['key']}")])
         elif rule.get("dm"):
             send_dm(item["ig_user_id"], recipient, {"text": fill(rule["dm"])})
+            media_count("link", item["media_id"])
         log_activity(item["media_id"], item["username"], item["text"], action, "ok", note)
+        media_count("dm", item["media_id"])
         record_dm_result(True)
         return True
     except Exception as e:
@@ -1081,6 +1086,7 @@ def handle_button(ig_user_id, igsid, payload):
                 raise RuntimeError("Final DM is empty: add your message and link to this rule in the dashboard")
             send_dm(ig_user_id, recipient, {"text": fill(rule["dm"])})
             log_activity(key, username or igsid, payload, "dm", "ok")
+            media_count("link", key)
             # Tapped "I followed" after the follow prompt and now follows: a follower won by the gate.
             if step == "FOLLOWED" and rule.get("require_follow") and claim_comment(f"gatefollow:{igsid}"):
                 counter_add("gate_follows", key)
@@ -1094,6 +1100,111 @@ def handle_button(ig_user_id, igsid, payload):
             log_activity(key, username or igsid, payload, "follow_prompt", "ok")
     except Exception as e:
         log_activity(key, username or igsid, payload, "dm", "error", str(e))
+
+
+# ---------- per-reel numbers, auto-setup from captions, Reel report ----------
+# caption_keyword and reel_tips are kept the same as in saas/engine.py (the multi-account app).
+
+def media_count(field, media_id):
+    """Per-reel counters for the Reel report: keyword comments, DMs sent, links sent. Follows: gate_follows."""
+    if media_id and str(media_id).isdigit():
+        counter_add(f"media_{field}", str(media_id))
+
+
+QUOTES = "\"'“”‘’«»"
+_AFTER = re.compile(r"\b(?:comment|type|likho|write)(?:\s+(?:karo|kare|karein|kijiye|kar\s+do|below|now|here|down|me|the\s+word|word))*"
+                    r"[^A-Za-z0-9" + QUOTES + r"]{1,8}([" + QUOTES + r"]?)([A-Za-z0-9]{2,24})", re.I)
+_BEFORE = re.compile(r"([" + QUOTES + r"]?)\b([A-Z][A-Z0-9]{1,23})\b[" + QUOTES + r"]?[^A-Za-z0-9]{1,6}(?:comment|likho|type)\b", re.I)
+_NOT_KEYWORDS = {"below", "karo", "kare", "here", "now", "down", "and", "aur", "for", "the", "your", "this", "me",
+                 "kar", "karna", "comment", "comments", "type", "likho", "box", "section", "if", "to", "in", "on"}
+
+
+def caption_keyword(caption):
+    """The keyword a caption asks people to comment ("Comment GUIDE", "GPT comment karo"), or "".
+    Only a quoted or ALL-CAPS word counts, so "comment below your thoughts" sets up nothing."""
+    caption, found = caption or "", []
+    for pattern in (_AFTER, _BEFORE):
+        for m in pattern.finditer(caption):
+            quote, word, caught = m.group(1), m.group(2), caption[m.start(2):m.end(2)]
+            if word.lower() in _NOT_KEYWORDS:
+                continue
+            if quote or (caught.isupper() and any(c.isalpha() for c in caught)):
+                found.append((m.start(), word.upper()))
+    return min(found)[1] if found else ""
+
+
+def auto_settings():
+    return json.loads(kv_get("auto_setup") or "{}")
+
+
+def auto_log():
+    return json.loads(kv_get("auto_log") or "[]")
+
+
+def auto_setup(media):
+    """Creates the rule for one new reel from the template. Returns the keyword, or ""."""
+    cfg = auto_settings()
+    if not cfg.get("enabled") or not (cfg.get("template") or {}).get("dm"):
+        return ""
+    if media.get("timestamp", "") < cfg.get("since", "~"):
+        return ""  # only reels posted after auto-setup was switched on
+    rules = load_rules()
+    if media["id"] in rules.get("reels", {}) or not claim_comment(f"auto:{media['id']}"):
+        return ""
+    keyword = caption_keyword(media.get("caption", ""))
+    if not keyword:
+        return ""
+    rule = {k: v.replace("{keyword}", keyword) if isinstance(v, str) else v for k, v in cfg["template"].items()}
+    label = (media.get("caption") or "").strip().split("\n")[0][:120]
+    rule.update(enabled=True, keywords=[keyword], auto=True)
+    rules.setdefault("reels", {})[media["id"]] = rule
+    save_rules(rules)
+    log = [{"media_id": media["id"], "keyword": keyword, "label": label, "at": int(time.time())}] + auto_log()
+    kv_set("auto_log", json.dumps(log[:20], ensure_ascii=False))
+    log_activity(media["id"], "", label, "auto_setup", "ok", f"Keyword {keyword}")
+    return keyword
+
+
+def auto_setup_from_comment(media_id):
+    """A comment on a reel without a rule: read its caption (once a day per reel) and set it up if it asks for a keyword."""
+    if not auto_settings().get("enabled") or media_id in load_rules().get("reels", {}):
+        return ""
+    if not claim_comment(f"autolook:{media_id}:{today_ist()}"):
+        return ""
+    try:
+        media = ig_get(media_id, fields="id,caption,timestamp,media_product_type")
+    except Exception:
+        return ""
+    return auto_setup(media)
+
+
+REPORT_STEPS = [("views", "Views"), ("comments", "Comments"), ("keyword", "Used the keyword"),
+                ("dm", "Got the DM"), ("link", "Link sent"), ("follow", "Followed to unlock")]
+
+
+def reel_tips(row, avg_per_1k):
+    """Plain advice from a reel's numbers (shown as "Reel Doctor")."""
+    tips, kw = [], (row.get("keywords") or ["your keyword"])[0]
+    views, comments, used, dms, follows = (row.get(k, 0) for k in ("views", "comments", "keyword", "dm", "follow"))
+    if not row.get("has_rule"):
+        if comments >= 10:
+            tips.append(f"{comments} comments and no automation on this reel. Add a keyword so these people get a DM and follow you.")
+        return tips or ["No automation on this reel yet."]
+    if comments >= 20 and used / comments < 0.4:
+        tips.append(f"Only {round(used / comments * 100)}% of comments used {kw}. Say \"Comment {kw}\" in the first 3 seconds "
+                    "and pin a comment with it.")
+    if used >= 10 and dms / used < 0.8:
+        tips.append(f"Instagram refused some DMs on this reel. Add \"or DM me {kw}\" to the caption: "
+                    "people who DM you the word still get it.")
+    if row.get("require_follow") and dms >= 20 and follows / dms < 0.05:
+        tips.append("Few people followed to unlock. Make the first DM say exactly what they get, then ask for the follow.")
+    per_1k = row.get("per_1k")
+    if per_1k is not None and avg_per_1k and views >= 1000:
+        if per_1k >= 1.5 * avg_per_1k:
+            tips.append(f"{per_1k} follows per 1K views, well above your average of {avg_per_1k}. Reuse this hook and format.")
+        elif per_1k <= 0.5 * avg_per_1k:
+            tips.append(f"{per_1k} follows per 1K views, below your average of {avg_per_1k}. Try a stronger reason to comment.")
+    return tips or ["Doing fine. Tips appear here when a number stands out."]
 
 
 # ---------- webhook ----------
@@ -1838,6 +1949,115 @@ def api_stats():
     data["growth"] = growth_summary()
     data["gate_follows"] = counter_all("gate_follows")
     return jsonify(data)
+
+
+# ---------- auto-setup + Reel report (pages: /report) ----------
+
+def ig_now():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+0000")  # Instagram's timestamp format
+
+
+@app.get("/report")
+def report_page():
+    return render_template("report.html")
+
+
+@app.get("/api/auto-setup")
+def api_get_auto_setup():
+    return jsonify(settings=auto_settings(), recent=auto_log())
+
+
+@app.put("/api/auto-setup")
+def api_put_auto_setup():
+    data = request.get_json(force=True)
+    t = data.get("template") or {}
+    template = {
+        "comment_reply": str(t.get("comment_reply", ""))[:1000].strip(),
+        "opening_dm": str(t.get("opening_dm", ""))[:640].strip(),
+        "button_text": str(t.get("button_text", ""))[:20].strip(),
+        "require_follow": bool(t.get("require_follow")),
+        "follow_dm": str(t.get("follow_dm", ""))[:640].strip(),
+        "followed_button_text": str(t.get("followed_button_text", ""))[:20].strip(),
+        "dm": str(t.get("dm", ""))[:1000].strip(),
+    }
+    enabled = bool(data.get("enabled"))
+    if enabled and not template["dm"]:
+        return jsonify(error="Add the final DM first. Use {keyword} for the word from the caption."), 400
+    old = auto_settings()
+    # Turning it on starts the clock: only reels posted from now on are set up.
+    since = old.get("since") if old.get("enabled") and enabled else (ig_now() if enabled else "")
+    settings = {"enabled": enabled, "since": since, "template": template}
+    kv_set("auto_setup", json.dumps(settings, ensure_ascii=False))
+    return jsonify(settings=settings)
+
+
+@app.post("/api/auto-setup/scan")
+def api_auto_setup_scan():
+    """Checks the latest reels now instead of waiting for their first comment."""
+    if token_is_dead() or rate_limited_until():
+        return jsonify(error="Instagram isn't available right now. Try again in a few minutes."), 429
+    media = ig_get("me/media", limit=12, fields="id,caption,timestamp,media_product_type")["data"]
+    return jsonify(created=[m["id"] for m in media if auto_setup(m)])
+
+
+@app.post("/api/auto-setup/<media_id>/undo")
+def api_undo_auto_setup(media_id):
+    rules = load_rules()
+    if rules.get("reels", {}).get(media_id, {}).get("auto"):
+        rules["reels"].pop(media_id)
+        save_rules(rules)
+    log = auto_log()
+    for e in log:
+        if e.get("media_id") == media_id:
+            e["undone"] = True
+    kv_set("auto_log", json.dumps(log, ensure_ascii=False))
+    return jsonify(ok=True)
+
+
+@app.get("/api/report")
+def api_report():
+    if not _stats_cache["data"]:
+        saved = kv_get("stats_cache")
+        if saved:
+            _stats_cache.update(json.loads(saved))
+    stale = time.time() - _stats_cache["at"] > STATS_CACHE_SECONDS
+    forced = request.args.get("refresh") and time.time() - _stats_cache["at"] > 30
+    if (stale or forced or not _stats_cache["data"]) and not token_is_dead() and not rate_limited_until():
+        try:
+            _stats_cache["data"] = fetch_stats()
+            _stats_cache["at"] = _stats_cache["acct_at"] = time.time()
+            kv_set("stats_cache", json.dumps(_stats_cache))
+            record_growth(_stats_cache["data"])
+        except Exception as e:
+            if not _stats_cache["data"]:
+                return jsonify(error=str(e), reels=[]), 502
+    stats = _stats_cache["data"] or {"reels": []}
+    rules = load_rules().get("reels", {})
+    counts = {f: counter_all(f"media_{f}") for f in ("keyword", "dm", "link")}
+    follows = counter_all("gate_follows")
+    rows = []
+    for m in stats.get("reels", []):
+        ins, rule, mid = m.get("insights", {}), rules.get(m["id"]), m["id"]
+        views = ins.get("views") or 0
+        rows.append({
+            "id": mid, "caption": (m.get("caption") or "").strip().split("\n")[0][:140],
+            "thumb": m.get("thumbnail_url") or m.get("media_url", ""), "permalink": m.get("permalink", ""),
+            "timestamp": m.get("timestamp", ""), "views": views, "saves": ins.get("saved"), "shares": ins.get("shares"),
+            "comments": m.get("comments_count") or ins.get("comments") or 0,
+            "keyword": counts["keyword"].get(mid, 0), "dm": counts["dm"].get(mid, 0),
+            "link": counts["link"].get(mid, 0), "follow": follows.get(mid, 0),
+            "has_rule": bool(rule and rule.get("enabled", True)), "auto": bool(rule and rule.get("auto")),
+            "keywords": (rule or {}).get("keywords", []), "require_follow": bool((rule or {}).get("require_follow")),
+            "per_1k": round(follows.get(mid, 0) / views * 1000, 1) if views else None,
+        })
+    rated = [r["per_1k"] for r in rows if r["has_rule"] and r["per_1k"] is not None and r["views"] >= 1000]
+    avg = round(sum(rated) / len(rated), 1) if rated else None
+    ranked = sorted((r for r in rows if r["per_1k"] is not None), key=lambda r: -r["per_1k"])
+    for r in rows:
+        r["tips"] = reel_tips(r, avg)
+        r["rank"] = next((i + 1 for i, x in enumerate(ranked) if x["id"] == r["id"]), None)
+    return jsonify(reels=rows, avg_per_1k=avg, ranked_count=len(ranked), steps=REPORT_STEPS,
+                   fetched_at=stats.get("fetched_at"))
 
 
 @app.get("/api/activity")

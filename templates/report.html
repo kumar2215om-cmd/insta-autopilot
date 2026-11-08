@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reel report · Autopilot</title>
+{% include "_admin_style.html" %}
+<style>
+  .grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:18px; }
+  .stat b { display:block; font-size:28px; font-weight:900; }
+  .reel { display:grid; grid-template-columns:96px minmax(0, 1fr); gap:16px; padding:18px; margin-bottom:16px; }
+  .reel img, .reel .ph { width:96px; height:170px; border-radius:14px; object-fit:cover; background:var(--line); }
+  .reel h3 { font-size:16px; margin:0 0 6px; letter-spacing:-.01em; line-height:1.35; }
+  .meta { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:12.5px; color:var(--muted); }
+  .body { display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(0, 1fr); gap:18px; margin-top:12px; }
+  .step { display:grid; grid-template-columns:140px minmax(0, 1fr) 70px; gap:10px; align-items:center; font-size:13.5px; margin:6px 0; }
+  .track { height:20px; background:#F1ECE4; border-radius:7px; overflow:hidden; }
+  .track i { display:block; height:100%; border-radius:7px; }
+  .step b { text-align:right; }
+  .nums { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .nums span { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:5px 10px; font-size:12.5px; }
+  .doctor { background:#FFFAF5; border:2px solid var(--rose); border-radius:16px; padding:14px 16px; }
+  .doctor h4 { margin:0 0 8px; font-size:14.5px; }
+  .doctor ol { margin:0; padding-left:18px; display:grid; gap:8px; font-size:13.5px; line-height:1.5; }
+  .row-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .auto-form { display:grid; gap:10px; margin-top:12px; }
+  .auto-ev { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:10px 0; border-top:1px solid var(--line); }
+  .auto-ev:first-child { border-top:0; }
+  .auto-ev p { margin:0; flex:1 1 280px; }
+  table.rank { width:100%; border-collapse:collapse; min-width:640px; font-size:13.5px; }
+  table.rank th, table.rank td { text-align:left; padding:10px 8px; border-top:1px solid var(--line); }
+  table.rank th { border-top:0; color:var(--muted); font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; }
+  .scroll { overflow-x:auto; }
+  .empty { color:var(--muted); padding:14px 0; }
+  @media (max-width: 860px) { .body { grid-template-columns:minmax(0, 1fr); } .reel { grid-template-columns:64px minmax(0, 1fr); }
+    .reel img, .reel .ph { width:64px; height:114px; } .step { grid-template-columns:104px minmax(0, 1fr) 56px; } }
+</style>
+</head>
+<body>
+{% with active="report" %}{% include "_admin_nav.html" %}{% endwith %}
+<div class="app">
+  <div class="topbar"><div class="topbar-in">
+    <div class="grow"><h1>Reel <span>report</span></h1><div class="sub">Which reel brings followers, and why</div></div>
+    <button class="primary" id="refreshBtn" type="button">↻ Refresh</button>
+  </div></div>
+  <div class="wrap">
+
+    <section class="card" style="margin-bottom:18px">
+      <div class="card-h"><h2>✨ Auto-setup new reels</h2><span class="badge off" id="autoStatus">off</span></div>
+      <div class="card-b">
+        <p class="hint" style="margin-top:0">Post a reel whose caption says <b>"Comment GUIDE"</b> (a word in CAPITALS or quotes) and its automation
+          is created from this template. Only reels posted after you switch it on.</p>
+        <div class="banner warn" style="display:block">⚠️ Most of your reels run on SuperProfile right now. If SuperProfile also handles your
+          new reels, keep this <b>off</b>, or every comment gets two replies.</div>
+        <div id="autoEvents"></div>
+        <details id="autoBox"><summary class="btn btn-ghost sm" style="list-style:none; width:max-content">Edit template</summary>
+          <form class="auto-form" id="autoForm">
+            <label><input type="checkbox" name="enabled"> Auto-setup on</label>
+            <label for="a_reply">Public reply <span class="hint">(one per line, empty = no reply)</span></label>
+            <textarea id="a_reply" name="comment_reply" rows="2"></textarea>
+            <label for="a_open">First DM</label>
+            <textarea id="a_open" name="opening_dm" rows="2"></textarea>
+            <label for="a_btn">Button text</label>
+            <input id="a_btn" type="text" name="button_text" maxlength="20">
+            <label><input type="checkbox" name="require_follow"> Must follow me first</label>
+            <label for="a_follow">Follow message</label>
+            <textarea id="a_follow" name="follow_dm" rows="2"></textarea>
+            <label for="a_fbtn">"I followed" button text</label>
+            <input id="a_fbtn" type="text" name="followed_button_text" maxlength="20">
+            <label for="a_dm">Final DM <span class="hint">(required; {keyword} = the word from the caption)</span></label>
+            <textarea id="a_dm" name="dm" rows="2" placeholder="Here you go 🎁 https://www.advocmedia.in/free?k={keyword}"></textarea>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center">
+              <button class="primary" type="submit">Save template</button>
+              <button class="secondary" type="button" id="scanBtn">Check my latest reels now</button>
+              <span id="autoMsg" class="hint"></span>
+            </div>
+          </form>
+        </details>
+      </div>
+    </section>
+
+    <div class="grid2">
+      <div class="card card-b stat"><span class="hint">Avg follows per 1K views</span><b id="sAvg">–</b><span class="hint">reels with an automation</span></div>
+      <div class="card card-b stat"><span class="hint">Reels in this report</span><b id="sCount">–</b><span class="hint">your latest reels</span></div>
+    </div>
+    <p class="hint" id="note">"Followed to unlock" = people who followed through the DM follow gate. "Used the keyword", "Got the DM" and
+      "Link sent" are counted from this update on, so older reels show 0 there.</p>
+
+    <div id="reels"><div class="empty">Loading your reels…</div></div>
+
+    <section class="card">
+      <div class="card-h"><h2>🏆 All reels, best first</h2></div>
+      <div class="card-b scroll"><table class="rank">
+        <thead><tr><th scope="col">Reel</th><th scope="col">Views</th><th scope="col">Comments</th><th scope="col">Got the DM</th><th scope="col">Followed</th><th scope="col">Per 1K views</th></tr></thead>
+        <tbody id="ranked"></tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (n) => n == null ? "–" : Number(n).toLocaleString("en-IN");
+const COLORS = {views: "#C9C1B4", comments: "#C9C1B4", keyword: "#FF8FC5", dm: "#FF5CAB", link: "#FF2D95", follow: "#007BA7"};
+const DEFAULTS = {comment_reply: "@{username} Check your DM 📩 follow zaroor karna 🙌\n@{username} Sent! Inbox check karo 📥",
+  opening_dm: "Hey {username}! 👋 Tap the button below and I'll send it to you.", button_text: "Send me the link",
+  follow_dm: 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.', followed_button_text: "I followed ✅",
+  require_follow: true, dm: ""};
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {...opts, headers: {"Content-Type": "application/json"}});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
+  return data;
+}
+
+// ---------- auto-setup ----------
+function setStatus(on) {
+  $("autoStatus").className = "badge " + (on ? "on" : "off");
+  $("autoStatus").textContent = on ? "on: new reels are set up automatically" : "off";
+}
+
+async function loadAuto() {
+  const {settings, recent} = await api("/api/auto-setup");
+  const f = $("autoForm"), t = {...DEFAULTS, ...(settings.template || {})};
+  f.enabled.checked = !!settings.enabled;
+  for (const k of ["comment_reply", "opening_dm", "button_text", "follow_dm", "followed_button_text", "dm"]) f[k].value = t[k] ?? "";
+  f.require_follow.checked = !!t.require_follow;
+  $("autoBox").open = !settings.enabled;
+  setStatus(settings.enabled);
+  $("autoEvents").innerHTML = recent.slice(0, 5).map(e => `<div class="auto-ev">
+    <p>${e.undone ? "↩️ Undone:" : "✨ Set up:"} “${esc(e.label || "reel")}” → keyword <b>${esc(e.keyword)}</b>
+      <span class="hint">${new Date(e.at * 1000).toLocaleString()}</span></p>
+    ${e.undone ? "" : `<a class="btn btn-ghost sm" href="/admin">Review</a><button class="danger sm" type="button" data-undo="${esc(e.media_id)}">Undo</button>`}
+  </div>`).join("");
+}
+
+$("autoForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const template = {comment_reply: f.comment_reply.value, opening_dm: f.opening_dm.value, button_text: f.button_text.value,
+    require_follow: f.require_follow.checked, follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value};
+  try {
+    await api("/api/auto-setup", {method: "PUT", body: JSON.stringify({enabled: f.enabled.checked, template})});
+    $("autoMsg").className = "hint ok"; $("autoMsg").textContent = "Saved.";
+    setStatus(f.enabled.checked);
+  } catch (err) { $("autoMsg").className = "hint error"; $("autoMsg").textContent = err.message; }
+});
+
+$("scanBtn").onclick = async () => {
+  try {
+    const {created} = await api("/api/auto-setup/scan", {method: "POST", body: "{}"});
+    $("autoMsg").className = "hint ok";
+    $("autoMsg").textContent = created.length ? `Set up ${created.length} new reel(s).` : "No new reel needed setting up.";
+    loadAuto(); load(false);
+  } catch (err) { $("autoMsg").className = "hint error"; $("autoMsg").textContent = err.message; }
+};
+
+document.addEventListener("click", async (e) => {
+  const u = e.target.closest("[data-undo]");
+  if (!u || !confirm("Remove the automation that auto-setup created for this reel?")) return;
+  await api(`/api/auto-setup/${encodeURIComponent(u.dataset.undo)}/undo`, {method: "POST", body: "{}"});
+  loadAuto(); load(false);
+});
+
+// ---------- report ----------
+function funnel(r, steps) {
+  const top = Math.log10((r.views || r.comments || 1) + 1);
+  return steps.map(([k, label]) => {
+    const v = r[k] || 0, w = v ? Math.max(3, Math.round(Math.log10(v + 1) / top * 100)) : 0;
+    return `<div class="step"><span>${esc(label)}</span><div class="track"><i style="width:${Math.min(w, 100)}%;background:${COLORS[k]}"></i></div><b>${fmt(v)}</b></div>`;
+  }).join("");
+}
+
+function render(data) {
+  $("sAvg").textContent = data.avg_per_1k ?? "–";
+  $("sCount").textContent = data.reels.length;
+  if (!data.reels.length) { $("reels").innerHTML = `<div class="empty">No reels found yet.</div>`; $("ranked").innerHTML = ""; return; }
+  $("reels").innerHTML = data.reels.map(r => `
+    <article class="card reel">
+      ${r.thumb ? `<img src="${esc(r.thumb)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<div class="ph"></div>`}
+      <div style="min-width:0">
+        <h3>${esc(r.caption || "(no caption)")}</h3>
+        <div class="meta">${new Date(r.timestamp).toLocaleDateString()}
+          ${r.has_rule ? `<span class="badge on">automation on${r.keywords.length ? " · " + esc(r.keywords.join(", ")) : ""}</span>` : `<span class="badge off">no automation here</span>`}
+          ${r.auto ? `<span class="badge on">✨ auto-setup</span>` : ""}
+          ${r.rank ? `<span>Rank #${r.rank} of ${data.ranked_count}</span>` : ""}</div>
+        <div class="body">
+          <div>${funnel(r, data.steps)}
+            <div class="nums"><span><b>${r.per_1k ?? "–"}</b> follows per 1K views</span>
+              ${r.saves != null ? `<span>${fmt(r.saves)} saves</span>` : ""}${r.shares != null ? `<span>${fmt(r.shares)} shares</span>` : ""}</div>
+          </div>
+          <div class="doctor"><h4>🩺 Reel Doctor</h4><ol>${r.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ol></div>
+        </div>
+        <div class="row-actions">
+          ${r.permalink ? `<a class="btn btn-ghost sm" href="${esc(r.permalink)}" target="_blank" rel="noopener">Open on Instagram</a>` : ""}
+          <a class="btn ${r.has_rule ? "btn-ghost" : "btn-primary"} sm" href="/admin">${r.has_rule ? "Edit automation" : "Set up automation"}</a>
+        </div>
+      </div>
+    </article>`).join("");
+  const ranked = data.reels.filter(r => r.per_1k != null).sort((a, b) => b.per_1k - a.per_1k);
+  $("ranked").innerHTML = ranked.map(r => `<tr><td>${esc((r.caption || "(no caption)").slice(0, 60))}</td><td>${fmt(r.views)}</td>
+    <td>${fmt(r.comments)}</td><td>${fmt(r.dm)}</td><td>${fmt(r.follow)}</td><td><b>${r.per_1k}</b></td></tr>`).join("")
+    || `<tr><td colspan="6" class="hint">Rankings appear once your reels have views.</td></tr>`;
+}
+
+async function load(fresh) {
+  try { render(await api("/api/report" + (fresh ? "?refresh=1" : ""))); }
+  catch (err) { $("reels").innerHTML = `<div class="empty error">Couldn't load the report: ${esc(err.message)}</div>`; }
+}
+$("refreshBtn").onclick = () => load(true);
+loadAuto();
+load(false);
+</script>
+</body>
+</html>
