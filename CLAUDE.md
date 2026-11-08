@@ -12,6 +12,8 @@ Full handoff (routes, data shapes, env var names, Blob uploads, design system, t
 - `freebies/theme.css`: theme + motion for guide pages. `freebies/guides/`: guides, PDFs, kit zips.
 - New freebie guides are written in the editor (📝 box) and served at `/free/g/KEYWORD` from Redis via `tools/md2guide.py`; older ones were rebuilt from PDFs in `tools/guides_src/`.
 
+- `saas/`: separate multi-account app (LikhoDM, Login with Instagram) deployed as its own Vercel project (Root Directory `saas`); see `saas/README.md`. The root `/webhook` forwards other accounts' events to it via `SAAS_WEBHOOK_URL`.
+
 ## Rules
 - Look: cream/rose "freebies style" (bg #F1EADC, ink #1C1A17, rose #FF2D95, cerulean #007BA7; Inter 900 + Anton). One editor theme setting drives /links, /free and guides; `studio` is the default.
 - Every animation must stay off under `prefers-reduced-motion`; don't replay entrance animations on periodic re-renders.

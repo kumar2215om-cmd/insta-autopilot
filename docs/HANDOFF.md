@@ -189,6 +189,9 @@ Course material (outside the repo, in `_course/` and the v3 handoff zip): workbo
 37. Code from that period (on main): paused rules drop their pending DM retries (`retry_failed_dms`); the `*` fallback form starts unticked, shows "off (not set)", and can be saved as paused with an empty Final DM (Final DM only required when enabled).
 38. `story/`: two 1080×1920 Instagram stories for the PromptBundle offer (39 AI video prompt packs, ₹149 with ₹399 struck), rendered from `story/story.html` + `f1.html`/`f2.html` with Playwright.
 
+39. **SaaS (multi-account) app in `saas/`, branded LikhoDM:** "Continue with Instagram" login (Instagram Business Login OAuth → long-lived token → `me/subscribed_apps`), per-account rules (reel / `kw:` keyword / `*`), activity, counts, monthly free DM limit (`FREE_MONTHLY_DMS`), pause, disconnect + delete, Meta deauthorize and data-deletion callbacks, daily token renewal cron, `/owner` account list, privacy/terms/data-deletion pages. Redis keys start with `s:` (`s:t:<ig_id>…`) so it can share Upstash. Tests: `cd saas && python3 -m unittest test_saas`. Setup steps: `saas/README.md` (second Vercel project with Root Directory `saas`). **Not live yet** until those steps are done.
+40. **Root app webhook:** answers only Om's own account (`my_ig_id()`, cached in kv `my_ig_id`); when `SAAS_WEBHOOK_URL` is set, it forwards the raw webhook body + signature to the SaaS for any other account. The Meta webhook callback stays on the root app.
+
 **To do after approval:**
 - **Change `DASHBOARD_PASSWORD`** in Vercel (the old one was given to Meta's reviewers), then Redeploy.
 - **Test as a normal user:** from a non-tester account, comment PROMPTS on the test reel; the DM should arrive with no `2534001` errors in the activity feed (Advanced Access should end most of the refusals seen before approval).

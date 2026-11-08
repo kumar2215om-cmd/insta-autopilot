@@ -1115,6 +1115,33 @@ def run_task(fn, *args):
         threading.Thread(target=fn, args=args).start()
 
 
+# The same Meta app serves other creators through saas/ (LikhoDM). Instagram sends every account's
+# events here, so events for other accounts are passed on, signature included, to the SaaS webhook.
+SAAS_WEBHOOK_URL = os.environ.get("SAAS_WEBHOOK_URL", "").strip()
+
+
+def my_ig_id():
+    """This account's Instagram user ID (the "entry.id" in webhooks), or "" if it can't be looked up."""
+    cached = kv_get("my_ig_id")
+    if cached:
+        return cached
+    try:
+        own = str(ig_get("me", fields="user_id")["user_id"])
+    except Exception:
+        return ""  # unknown: handle everything, as before
+    kv_set("my_ig_id", own)
+    return own
+
+
+def forward_to_saas():
+    try:
+        requests.post(SAAS_WEBHOOK_URL, data=request.get_data(), timeout=8, headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": request.headers.get("X-Hub-Signature-256", "")})
+    except Exception as e:
+        print("Forwarding to the SaaS webhook failed:", e, file=sys.stderr)
+
+
 @app.post("/webhook")
 def receive_webhook():
     if APP_SECRET:
@@ -1123,7 +1150,13 @@ def receive_webhook():
         if not hmac.compare_digest(expected, request.headers.get("X-Hub-Signature-256", "")):
             abort(403)
     body = request.get_json(silent=True) or {}
+    own = my_ig_id()
+    if SAAS_WEBHOOK_URL and any(str(e.get("id")) != own for e in body.get("entry", [])):
+        forward_to_saas()
     for entry in body.get("entry", []):
+        # Other creators' accounts (connected through the multi-account app in saas/) aren't ours to answer.
+        if own and str(entry.get("id")) != own:
+            continue
         for change in entry.get("changes", []):
             if change.get("field") == "comments":
                 run_task(handle_comment, entry.get("id"), change.get("value", {}))

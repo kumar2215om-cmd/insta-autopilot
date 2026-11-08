@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ brand }}: Comment to DM for Instagram</title>
+<meta name="description" content="Auto-reply to comments and DM the link, with a follow check. Built for Instagram creators.">
+{% include "_style.html" %}
+<style>
+  header.top { display:flex; justify-content:space-between; align-items:center; padding:18px 0; }
+  .logo { font-weight:900; font-size:22px; }
+  .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:32px; align-items:center; padding:40px 0 56px; }
+  .hero h1 { font-size:clamp(36px, 6vw, 60px); margin:12px 0 16px; }
+  .hero p.lead { font-size:18px; color:#4a453f; max-width:520px; }
+  .cta { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:24px; }
+  .invite { display:flex; gap:8px; max-width:420px; margin-top:20px; }
+  .flow { display:grid; gap:12px; }
+  .bubble { background:#fff; border:1px solid var(--line); border-radius:18px; padding:12px 16px; box-shadow:var(--shadow);
+            max-width:320px; font-size:14px; }
+  .bubble.me { margin-left:auto; background:var(--ink); color:#fff; border-color:var(--ink); }
+  .bubble b { display:block; font-size:12px; color:var(--mute); margin-bottom:2px; }
+  .bubble.me b { color:#d6d0c6; }
+  .chip { display:inline-block; margin-top:8px; padding:6px 12px; border-radius:999px; background:var(--rose); color:#fff;
+          font-weight:800; font-size:13px; }
+  section { padding:40px 0; }
+  .grid3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-top:20px; }
+  .grid3 .card h3 { font-size:18px; margin:8px 0 6px; }
+  .step { font-weight:900; font-size:40px; color:var(--rose); line-height:1; }
+  .plans { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; margin-top:20px; max-width:760px; }
+  .price { font-size:36px; font-weight:900; margin:6px 0; }
+  .plans ul { padding-left:18px; margin:10px 0 0; }
+  .alert { background:#fff1e6; border:1px solid #fed7aa; color:var(--bad); border-radius:12px; padding:10px 14px; margin-top:16px; }
+  details { background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-top:10px; }
+  summary { font-weight:800; cursor:pointer; }
+  footer { padding:32px 0 48px; color:var(--mute); font-size:14px; display:flex; flex-wrap:wrap; gap:16px; }
+  @media (max-width: 760px) { .hero, .grid3, .plans { grid-template-columns:1fr; } .hero { padding-top:16px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">{{ brand }}<span class="hl">.</span></div>
+    <a class="btn dark small" href="#start">Get started</a>
+  </header>
+
+  <div class="hero">
+    <div>
+      <div class="label">For Instagram creators</div>
+      <h1>Comment a word. <span class="hl">Get the link in DM.</span></h1>
+      <p class="lead">Followers comment your keyword on a reel. {{ brand }} replies to the comment, sends them a DM,
+        checks that they follow you, then sends the link. Automatically, 24/7.</p>
+      <div class="cta" id="start">
+        {% if invite_only %}
+          <form class="invite" action="/login" method="get">
+            <input type="text" name="invite" placeholder="Invite code" required aria-label="Invite code">
+            <button class="btn">Continue with Instagram</button>
+          </form>
+        {% else %}
+          <a class="btn" href="/login">Continue with Instagram</a>
+        {% endif %}
+        <span class="muted">Free · no card needed</span>
+      </div>
+      {% if error %}
+        <div class="alert">
+          {% if error == "invite" %}That invite code doesn't work. Check it and try again.
+          {% elif error == "denied" %}Instagram login was cancelled. Try again whenever you're ready.
+          {% elif error == "setup" %}Login isn't set up yet. Please try again later.
+          {% else %}Instagram login didn't finish. Please try again. Your account must be a Business or Creator account.{% endif %}
+        </div>
+      {% endif %}
+    </div>
+    <div class="flow" aria-hidden="true">
+      <div class="bubble"><b>@rahul.creates commented</b>PROMPTS 🔥</div>
+      <div class="bubble me"><b>You replied</b>@rahul.creates Check your DM 📩</div>
+      <div class="bubble me"><b>DM</b>Hey rahul.creates! 👋 Tap below and I'll send it to you.<br><span class="chip">Send me the link</span></div>
+      <div class="bubble me"><b>DM</b>Here you go 🎁 https://your-link.com</div>
+    </div>
+  </div>
+
+  <section>
+    <div class="label">How it works</div>
+    <h2>Set up in 2 minutes</h2>
+    <div class="grid3">
+      <div class="card"><div class="step">1</div><h3>Connect Instagram</h3><p class="muted">Log in with Instagram. We use Instagram's official API, so there's no password sharing and no risk of a ban from bots.</p></div>
+      <div class="card"><div class="step">2</div><h3>Pick a reel + keyword</h3><p class="muted">Choose the reel, the word people comment (like PROMPTS), and the link to send. Spelling mistakes still match.</p></div>
+      <div class="card"><div class="step">3</div><h3>Watch DMs go out</h3><p class="muted">Every matching comment gets a reply and a DM. Turn on "follow first" to grow followers with every link.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Pricing</div>
+    <h2>Start free</h2>
+    <div class="plans">
+      <div class="card"><div class="label">Free</div><div class="price">₹0</div>
+        <ul><li>Up to 1,000 DMs a month</li><li>Unlimited reels and keywords</li><li>Follow-to-unlock</li><li>Live activity feed</li></ul></div>
+      <div class="card"><div class="label">Pro · coming soon</div><div class="price">₹—</div>
+        <ul><li>More DMs every month</li><li>Priority support</li><li>More features as we build them</li></ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="label">Questions</div>
+    <h2>FAQ</h2>
+    <details><summary>Which accounts work?</summary><p>Instagram Business or Creator accounts (free to switch in Instagram settings: Account type and tools).</p></details>
+    <details><summary>Is it safe for my account?</summary><p>Yes. {{ brand }} uses Instagram's official API, approved by Meta. We never ask for your password, and you can disconnect any time.</p></details>
+    <details><summary>Why do people tap a button before getting the link?</summary><p>Instagram only lets apps check whether someone follows you after they reply to your DM. The button tap is that reply.</p></details>
+    <details><summary>What are the limits?</summary><p>Instagram lets an app DM someone who commented within 7 days of the comment, once per comment. Very busy reels can hit Instagram's hourly limit; {{ brand }} then waits and continues.</p></details>
+  </section>
+
+  <footer>
+    <span>© {{ brand }}</span>
+    <a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/data-deletion">Data deletion</a>
+    {% if contact_email %}<a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% endif %}
+  </footer>
+</div>
+</body>
+</html>
