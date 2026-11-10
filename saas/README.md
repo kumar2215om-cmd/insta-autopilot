@@ -1,4 +1,4 @@
-# LikhoDM: comment-to-DM for any Instagram creator
+# ReplyInbox (formerly LikhoDM): comment-to-DM for any Instagram creator
 
 The multi-account version of Insta Autopilot. Creators click **Continue with Instagram**, pick a reel, a
 keyword and a link, and get the same flow: public comment reply → DM with a button → follow check → link.
@@ -45,7 +45,7 @@ No Meta webhook change needed.
    | `SECRET_KEY` | any long random string (keeps people logged in) |
    | `CRON_SECRET` | any long random string |
    | `OWNER_PASSWORD` | password for `/owner` |
-   | `PUBLIC_URL` | this project's address, e.g. `https://likhodm.vercel.app` |
+   | `PUBLIC_URL` | this project's address, e.g. `https://replyinbox.in` |
    | `CONTACT_EMAIL` | shown on the privacy, terms and data-deletion pages |
    | optional | `BRAND_NAME` (default LikhoDM), `FREE_MONTHLY_DMS` (default 1000, 0 = no limit), `SIGNUPS=invite` + `INVITE_CODES=BETA1,BETA2` for an invite-only beta |
 4. **Meta app → Instagram → API setup with Instagram business login → Business login settings:**

@@ -1,4 +1,4 @@
-"""LikhoDM: comment-to-DM automation for any Instagram creator ("Login with Instagram").
+"""ReplyInbox (formerly LikhoDM): comment-to-DM automation for any Instagram creator ("Login with Instagram").
 
 A separate app from ../app.py (Om's own site). Same approved Meta app, many accounts:
 each creator connects their Instagram, sets keyword rules per reel, and gets the
@@ -33,7 +33,7 @@ VERIFY_TOKEN = env("IG_VERIFY_TOKEN", "change-me")
 CRON_SECRET = env("CRON_SECRET")
 OWNER_PASSWORD = env("OWNER_PASSWORD")    # for /owner (list of connected accounts)
 PUBLIC_URL = env("PUBLIC_URL").rstrip("/")  # e.g. https://app.likhodm.com; else taken from the request
-BRAND = env("BRAND_NAME", "LikhoDM")
+BRAND = env("BRAND_NAME", "ReplyInbox")
 CONTACT_EMAIL = env("CONTACT_EMAIL")
 # "open": anyone can connect. "invite": only with a code from INVITE_CODES (comma separated), e.g. for a beta.
 SIGNUPS = env("SIGNUPS", "open")
