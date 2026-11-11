@@ -657,6 +657,7 @@ def save_rule(acc, key, data):
         "follow_dm": str(data.get("follow_dm", ""))[:640].strip(),
         "followed_button_text": str(data.get("followed_button_text", ""))[:20].strip(),
         "dm": str(data.get("dm", ""))[:1000].strip(),
+        "tags": ", ".join(store.clean_tags(str(data.get("tags", "")).split(","))[:5]),
         "ask_email": bool(data.get("ask_email")),
         "followup_on": bool(data.get("followup_on")),
         "followup_hours": int(data.get("followup_hours") or 3) if str(data.get("followup_hours") or 3).isdigit() else 3,
@@ -1114,7 +1115,22 @@ def api_put_page():
 
 @app.get("/api/contacts")
 def api_contacts():
-    return jsonify(contacts=store.contacts(current_account()["id"]))
+    rows = store.contacts(current_account()["id"])
+    for c in rows:
+        c["key"] = store.contact_key(c.get("username"), c.get("igsid", ""))
+    return jsonify(contacts=rows)
+
+
+@app.put("/api/contacts/tags")
+def api_contact_tags():
+    data = request.get_json(force=True)
+    tags = data.get("tags") or []
+    if isinstance(tags, str):
+        tags = tags.split(",")
+    c = store.set_contact_tags(current_account()["id"], str(data.get("key", "")), tags)
+    if not c:
+        return jsonify(error="Contact not found."), 404
+    return jsonify(contact=c)
 
 
 @app.get("/api/contacts.csv")
@@ -1122,11 +1138,14 @@ def api_contacts_csv():
     acc = current_account()
     out = io.StringIO()
     w = csv.writer(out)
-    w.writerow(["username", "email", "phone", "followed", "keyword", "interactions", "first_seen", "last_seen"])
+    w.writerow(["username", "email", "phone", "followed", "keyword", "tags", "interactions", "first_seen", "last_seen"])
+    tag = request.args.get("tag", "").strip().lower()
     for c in store.contacts(acc["id"]):
+        if tag and tag not in (c.get("tags") or []):
+            continue
         fmt = lambda t: datetime.fromtimestamp(t or 0, timezone.utc).strftime("%Y-%m-%d %H:%M")
         w.writerow([c.get("username", ""), c.get("email", ""), c.get("phone", ""), "yes" if c.get("followed") else "no", c.get("keyword", ""),
-                    c.get("interactions", 0), fmt(c.get("first_at")), fmt(c.get("last_at"))])
+                    "; ".join(c.get("tags") or []), c.get("interactions", 0), fmt(c.get("first_at")), fmt(c.get("last_at"))])
     return out.getvalue(), 200, {"Content-Type": "text/csv; charset=utf-8",
                                  "Content-Disposition": f"attachment; filename={acc.get('username', 'contacts')}-contacts.csv"}
 

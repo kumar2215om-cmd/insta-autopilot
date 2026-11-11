@@ -166,6 +166,8 @@ function ruleForm(key) {
   return `<form class="rule" data-key="${esc(key)}">
     <div class="row"><label><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> <b>Automation on</b></label>
       ${kw ? `<label><input type="checkbox" name="comments" ${r.comments !== false ? "checked" : ""}> Also answer comments on every reel</label>` : ""}</div>
+    <div><label class="f" for="tg-${esc(key)}">Tag these people <span class="hint">optional · added in Contacts, comma separated</span></label>
+      <input id="tg-${esc(key)}" type="text" name="tags" value="${esc(r.tags || "")}" placeholder="prompts-lead, launch-2026" maxlength="120"></div>
     <details class="sched" ${r.starts_at || r.ends_at ? "open" : ""}><summary class="small"><b>Schedule</b> <span class="hint">optional · for launches and limited-time offers</span></summary>
       <div class="two" style="margin-top:8px"><div><label class="f" for="sa-${esc(key)}">Starts <span class="hint">empty = now</span></label><input id="sa-${esc(key)}" type="datetime-local" name="starts_at" value="${toLocal(r.starts_at)}"></div>
         <div><label class="f" for="ea-${esc(key)}">Ends <span class="hint">empty = never</span></label><input id="ea-${esc(key)}" type="datetime-local" name="ends_at" value="${toLocal(r.ends_at)}"></div></div></details>
@@ -354,7 +356,7 @@ document.addEventListener("submit", async (e) => {
     opening_dm: f.opening_dm.value, opening_dm_b: f.opening_dm_b.value, button_text: f.button_text.value, require_follow: f.require_follow.checked,
     follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value,
     ask_email: f.ask_email.checked, email_dm: f.email_dm.value, email_required: f.email_required.checked,
-    starts_at: fromLocal(f.starts_at.value), ends_at: fromLocal(f.ends_at.value),
+    starts_at: fromLocal(f.starts_at.value), ends_at: fromLocal(f.ends_at.value), tags: f.tags.value,
     ask_phone: f.ask_phone.checked, phone_dm: f.phone_dm.value, phone_required: f.phone_required.checked,
     followup_on: f.followup_on.checked, followup_dm: f.followup_dm.value, followup_hours: Number(f.followup_hours.value),
     followup_url: f.followup_url.value, followup_button: f.followup_button.value,

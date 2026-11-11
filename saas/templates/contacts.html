@@ -1,7 +1,16 @@
 {% extends "_base.html" %}
 {% block title %}Contacts{% endblock %}
 {% block heading %}Contacts{% endblock %}
-{% block actions %}<a class="btn ghost" href="/api/contacts.csv">Download CSV</a>{% endblock %}
+{% block actions %}<a class="btn ghost" id="csv" href="/api/contacts.csv">Download CSV</a>{% endblock %}
+{% block head %}
+<style>
+  .tags { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:99px; background:#FFEDE6; color:#9A3412; }
+  .addtag { border:1px dashed var(--line); background:none; border-radius:99px; padding:2px 8px; font:500 12px var(--text); color:var(--mute); cursor:pointer; }
+  .addtag:hover { border-color:var(--accent); color:var(--accent-ink); }
+  .tagedit { display:flex; gap:6px; } .tagedit input { min-width:160px; padding:6px 10px; font-size:13px; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="grid">
   <div class="card tile"><div class="k">People</div><div class="n" id="cAll">–</div><div class="d">commented, DMed or tapped a button</div></div>
@@ -14,10 +23,11 @@
     <label class="f" for="q" style="margin:0">Search</label>
     <input id="q" type="search" placeholder="Username, keyword, email or phone" style="flex:1; min-width:180px; max-width:360px">
     <select id="kw" aria-label="Filter by keyword" style="width:auto"><option value="">All keywords</option></select>
+    <select id="tagf" aria-label="Filter by tag" style="width:auto"><option value="">All tags</option></select>
   </div>
-  <div class="scroll"><table style="min-width:760px">
-    <thead><tr><th scope="col">Person</th><th scope="col">Keyword</th><th scope="col">Followed</th><th scope="col">Email</th><th scope="col">Phone</th><th scope="col">Interactions</th><th scope="col">Last seen</th></tr></thead>
-    <tbody id="rows"><tr><td colspan="7" class="muted">Loading…</td></tr></tbody></table></div>
+  <div class="scroll"><table style="min-width:900px">
+    <thead><tr><th scope="col">Person</th><th scope="col">Keyword</th><th scope="col">Tags</th><th scope="col">Followed</th><th scope="col">Email</th><th scope="col">Phone</th><th scope="col">Interactions</th><th scope="col">Last seen</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="8" class="muted">Loading…</td></tr></tbody></table></div>
   <p class="muted small" style="margin:10px 0 0">Everyone who interacts with your automations is saved here, so you keep your audience even outside Instagram.</p>
 </section>
 {% endblock %}
@@ -26,11 +36,15 @@
 let all = [];
 function draw() {
   const q = $("q").value.trim().toLowerCase(), kw = $("kw").value;
-  const rows = all.filter(c => (!kw || c.keyword === kw) && (!q || [c.username, c.keyword, c.email, c.phone].join(" ").toLowerCase().includes(q)));
+  const tg = $("tagf").value;
+  const rows = all.filter(c => (!kw || c.keyword === kw) && (!tg || (c.tags || []).includes(tg))
+    && (!q || [c.username, c.keyword, c.email, c.phone, ...(c.tags || [])].join(" ").toLowerCase().includes(q)));
+  $("csv").href = "/api/contacts.csv" + (tg ? "?tag=" + encodeURIComponent(tg) : "");
   $("rows").innerHTML = rows.map(c => `<tr><td><b>@${esc(c.username || "(DM)")}</b></td><td>${c.keyword ? `<span class="badge accent">${esc(c.keyword)}</span>` : ""}</td>
+    <td><span class="tags">${(c.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("")}<button type="button" class="addtag" data-tag="${esc(c.key)}" aria-label="Edit tags for ${esc(c.username || "contact")}">${(c.tags || []).length ? "Edit" : "+ Tag"}</button></span></td>
     <td>${c.followed ? `<span class="badge on">Yes</span>` : `<span class="badge">No</span>`}</td><td>${esc(c.email || "")}</td><td>${c.phone ? `<a href="https://wa.me/${esc(c.phone.replace("+", ""))}" target="_blank" rel="noopener">${esc(c.phone)}</a>` : ""}</td>
     <td>${fmt(c.interactions || 0)}</td><td class="muted">${new Date((c.last_at || 0) * 1000).toLocaleString()}</td></tr>`).join("")
-    || `<tr><td colspan="7" class="muted">No contacts yet. They appear when people comment your keyword or DM you.</td></tr>`;
+    || `<tr><td colspan="8" class="muted">No contacts yet. They appear when people comment your keyword or DM you.</td></tr>`;
 }
 (async () => {
   loadBanners();
@@ -40,8 +54,31 @@ function draw() {
   $("cMail").textContent = fmt(all.filter(c => c.email).length);
   $("cPhone").textContent = fmt(all.filter(c => c.phone).length);
   [...new Set(all.map(c => c.keyword).filter(Boolean))].sort().forEach(k => $("kw").insertAdjacentHTML("beforeend", `<option>${esc(k)}</option>`));
+  drawTagFilter();
   draw();
 })();
+function drawTagFilter() {
+  const cur = $("tagf").value;
+  $("tagf").innerHTML = `<option value="">All tags</option>` + [...new Set(all.flatMap(c => c.tags || []))].sort().map(t => `<option ${t === cur ? "selected" : ""}>${esc(t)}</option>`).join("");
+}
+$("tagf").onchange = draw;
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tag]");
+  if (!b) return;
+  const c = all.find(x => x.key === b.dataset.tag);
+  b.closest(".tags").innerHTML = `<form class="tagedit" data-key="${esc(c.key)}"><input type="text" value="${esc((c.tags || []).join(", "))}" placeholder="vip, bought" aria-label="Tags, comma separated"><button class="btn sm" type="submit">Save</button></form>`;
+  document.querySelector(`form.tagedit[data-key="${CSS.escape(c.key)}"] input`).focus();
+});
+document.addEventListener("submit", async (e) => {
+  const f = e.target.closest("form.tagedit");
+  if (!f) return;
+  e.preventDefault();
+  try {
+    const r = await api("/api/contacts/tags", {method: "PUT", body: JSON.stringify({key: f.dataset.key, tags: f.querySelector("input").value})});
+    Object.assign(all.find(x => x.key === f.dataset.key), {tags: r.contact.tags});
+    drawTagFilter(); draw(); toast("Tags saved");
+  } catch (err) { toast(err.message); }
+});
 $("q").oninput = draw; $("kw").onchange = draw;
 </script>
 {% endblock %}

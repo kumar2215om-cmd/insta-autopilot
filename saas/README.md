@@ -190,6 +190,12 @@ No Meta webhook change needed.
 If Meta asks for **Access verification (Tech Provider)** in the app dashboard, complete it: it's required
 for apps used by businesses other than the app owner.
 
+## Contact tags
+Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
+to 5) adds tags to everyone who goes through it (comments, keyword DMs, story replies and mentions). Creators edit tags
+inline on the Contacts page (`PUT /api/contacts/tags` with the contact `key`), filter by tag, and download a tag's CSV
+(`/api/contacts.csv?tag=vip`).
+
 ## Saved replies (AI Inbox)
 `acc["saved_replies"]` (up to 30 × {title, text}), edited in the AI Inbox's "Saved replies" panel (`GET/PUT /api/saved-replies`).
 They show as buttons above the reply box; tapping one fills the box with `{username}` replaced.

@@ -193,6 +193,11 @@ def is_keyword_rule(key):
     return str(key).startswith("kw:")
 
 
+def rule_tags(rule):
+    """Tags an automation adds to everyone who goes through it."""
+    return [t for t in str(rule.get("tags", "")).split(",") if t.strip()]
+
+
 def is_live(rule):
     """On, and inside its schedule (starts_at / ends_at, Unix seconds, either optional)."""
     if not rule.get("enabled", True):
@@ -266,7 +271,7 @@ def handle_comment(acc, value):
     if not rule or is_blocked(acc) or not store.claim(f"s:seen:{acc['id']}:{comment_id}"):
         return False
     store.media_count(acc["id"], media_id, "keyword")
-    store.touch_contact(acc["id"], username, keyword=(keywords_of(rule) or [""])[0], source=media_id)
+    store.touch_contact(acc["id"], username, keyword=(keywords_of(rule) or [""])[0], source=media_id, tags=rule_tags(rule))
     ig = Instagram(acc)
     fill = lambda s: s.replace("{username}", username)
 
@@ -549,7 +554,7 @@ def handle_dm_text(acc, igsid, text, mid=""):
         return
     ig = Instagram(acc)
     username = username_of(ig, igsid)
-    store.touch_contact(acc["id"], username, igsid, keyword=(keywords_of(rule) or [""])[0], source="dm")
+    store.touch_contact(acc["id"], username, igsid, keyword=(keywords_of(rule) or [""])[0], source="dm", tags=rule_tags(rule))
     send_rule_dm(acc, ig, igsid, key, rule, username, text, "dm_keyword")
 
 
@@ -569,7 +574,7 @@ def handle_story_reply(acc, igsid, text, story_id="", mid=""):
         return
     ig = Instagram(acc)
     username = username_of(ig, igsid)
-    store.touch_contact(acc["id"], username, igsid, keyword=(words or ["STORY"])[0], source="story")
+    store.touch_contact(acc["id"], username, igsid, keyword=(words or ["STORY"])[0], source="story", tags=rule_tags(rule))
     if send_rule_dm(acc, ig, igsid, "story:reply", rule, username, text, "story_reply"):
         store.count(acc["id"], "story_replies")
 
@@ -583,7 +588,7 @@ def handle_story_mention(acc, igsid):
         return
     ig = Instagram(acc)
     username = username_of(ig, igsid)
-    store.touch_contact(acc["id"], username, igsid, source="story_mention")
+    store.touch_contact(acc["id"], username, igsid, source="story_mention", tags=rule_tags(rule))
     if send_rule_dm(acc, ig, igsid, "story:mention", rule, username, "(mentioned you in their story)", "story_mention"):
         store.count(acc["id"], "story_mentions")
 

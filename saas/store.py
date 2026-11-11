@@ -324,7 +324,16 @@ def get_contact(ig_id, username="", igsid=""):
     return json.loads(raw) if raw else None
 
 
-def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, source="", email="", phone=""):
+def clean_tags(tags):
+    out = []
+    for t in tags or []:
+        t = " ".join(str(t).strip().lower().split())[:24]
+        if t and t not in out:
+            out.append(t)
+    return out[:20]
+
+
+def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, source="", email="", phone="", tags=()):
     """Adds or updates one person who interacted with an automation."""
     if not username and not igsid:
         return
@@ -354,7 +363,19 @@ def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, sourc
         c["email"] = email
     if phone:
         c["phone"] = phone
+    if tags:
+        c["tags"] = clean_tags(list(c.get("tags") or []) + list(tags))
     redis("HSET", key, field, json.dumps(c, ensure_ascii=False))
+
+
+def set_contact_tags(ig_id, key, tags):
+    raw = redis("HGET", account_key(ig_id, "contacts"), key)
+    if not raw:
+        return None
+    c = json.loads(raw)
+    c["tags"] = clean_tags(tags)
+    redis("HSET", account_key(ig_id, "contacts"), key, json.dumps(c, ensure_ascii=False))
+    return c
 
 
 def contacts(ig_id):

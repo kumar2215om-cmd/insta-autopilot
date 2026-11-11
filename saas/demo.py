@@ -135,6 +135,7 @@ def seed():
     ]):
         store.save_contact(DEMO_ID, {"username": user, "first_at": now - (i + 1) * 5400, "last_at": now - i * 3600,
                                      "keyword": kw, "followed": followed, "email": email, "phone": phone,
+                                     "tags": [["prompts-lead", "bought"], ["prompts-lead"], ["prompts-lead", "vip"], ["collab"], ["guide-lead"], []][i],
                                      "interactions": 1 + i % 3})
     for igsid, user, chat, extra in [
         ("900001", "ankit.edits", [("fan", "Bhai ye prompt pack kitne ka hai?"),

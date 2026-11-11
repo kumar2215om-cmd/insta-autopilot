@@ -905,6 +905,20 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(r.get_json()["replies"], [{"title": "UPI", "text": "UPI chalta hai {username}"}])
         self.assertEqual(len(self.c.get("/api/saved-replies").get_json()["replies"]), 1)
 
+    def test_contact_tags(self):
+        self.login()
+        self.put_rule("555", require_follow=False, comment_reply="", tags="Prompts Lead, launch")
+        self.assertEqual(store.load_rules("1789")["reels"]["555"]["tags"], "prompts lead, launch")
+        self.hook(comment("PROMPTS"))
+        c = self.c.get("/api/contacts").get_json()["contacts"][0]
+        self.assertEqual(c["tags"], ["prompts lead", "launch"])
+        r = self.c.put("/api/contacts/tags", json={"key": c["key"], "tags": "vip, VIP, bought"}).get_json()
+        self.assertEqual(r["contact"]["tags"], ["vip", "bought"])
+        csv = self.c.get("/api/contacts.csv?tag=vip").get_data(as_text=True)
+        self.assertIn("vip; bought", csv)
+        self.assertEqual(self.c.get("/api/contacts.csv?tag=nobody").get_data(as_text=True).count("\n"), 1)
+        self.assertEqual(self.c.put("/api/contacts/tags", json={"key": "nope", "tags": "x"}).status_code, 404)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)
