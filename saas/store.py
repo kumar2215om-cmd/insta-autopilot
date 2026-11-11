@@ -72,6 +72,11 @@ class MemoryRedis:
             if cmd == "HDEL":
                 h = self.data.get(a[0], {})
                 return sum(1 for f in a[1:] if h.pop(str(f), None) is not None)
+            if cmd == "EXPIRE":
+                if a[0] in self.data:
+                    self.expiry[a[0]] = time.time() + int(a[1])
+                    return 1
+                return 0
             if cmd == "HLEN":
                 return len(self.data.get(a[0], {}))
             if cmd == "HGETALL":
@@ -194,6 +199,7 @@ def delete_account(ig_id):
         redis("DEL", f"s:mcpkey:{acc['mcp_key_hash']}")
     if acc.get("username") and redis("GET", f"s:user:{acc['username'].lower()}") == ig_id:
         redis("DEL", f"s:user:{acc['username'].lower()}")
+    redis("DEL", *[account_key(ig_id, f"day:{day_str(i)}") for i in range(41)])
     abs_ = [account_key(ig_id, f"ab:{k}") for k in load_rules(ig_id).get("reels", {})]
     if abs_:
         redis("DEL", *abs_)
@@ -225,8 +231,22 @@ def recent_activity(ig_id):
     return [json.loads(x) for x in redis("LRANGE", account_key(ig_id, "activity"), 0, 99) or []]
 
 
+def day_str(offset_days=0):
+    """Today's date in India (most creators are there), or offset_days earlier."""
+    return time.strftime("%Y-%m-%d", time.gmtime(time.time() + 19800 - offset_days * 86400))
+
+
 def count(ig_id, field, n=1):
     redis("HINCRBY", account_key(ig_id, "counts"), field, n)
+    if ":" not in field:  # per-day numbers for the weekly summary (monthly counters already carry their month)
+        key = account_key(ig_id, f"day:{day_str()}")
+        redis("HINCRBY", key, field, n)
+        redis("EXPIRE", key, 40 * 86400)
+
+
+def days(ig_id, n=14):
+    """[(date, {field: count})] for the last n days, oldest first."""
+    return [(day_str(i), hash_all(account_key(ig_id, f"day:{day_str(i)}"))) for i in range(n - 1, -1, -1)]
 
 
 def counts(ig_id):

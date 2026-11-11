@@ -755,6 +755,19 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.ig.messages()[-1]["message"]["attachment"]["payload"]["buttons"][0]["payload"], "GET|555|555")
         self.assertEqual(self.c.get("/api/ab").get_json(), {})
 
+    def test_week_summary(self):
+        self.login()
+        store.count("1789", "links_sent", 3)
+        store.count("1789", f"dms:{engine.month()}")  # monthly counters aren't split by day
+        old = store.account_key("1789", f"day:{store.day_str(8)}")
+        store.redis("HINCRBY", old, "links_sent", 6)
+        w = self.c.get("/api/week").get_json()
+        self.assertEqual((w["this_week"]["links_sent"], w["last_week"]["links_sent"]), (3, 6))
+        self.assertEqual(len(w["daily"]), 14)
+        self.assertEqual(w["daily"][-1]["date"], store.day_str())
+        self.c.post("/api/disconnect", json={})
+        self.assertIsNone(store.redis("HGET", old, "links_sent"))
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

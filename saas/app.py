@@ -657,6 +657,20 @@ def api_ab():
                     if r.get("opening_dm_b")})
 
 
+WEEK_FIELDS = ["dms", "links_sent", "gate_follows", "comment_replies", "emails", "phones", "ai_replies",
+               "followups_sent", "story_replies", "hidden_comments"]
+
+
+@app.get("/api/week")
+def api_week():
+    """This week (last 7 days) against the 7 days before, and a daily series of DMs and follows."""
+    rows = store.days(current_account()["id"], 14)
+    total = lambda part, f: sum(int(d.get(f, 0)) for _, d in part)
+    return jsonify(this_week={f: total(rows[7:], f) for f in WEEK_FIELDS},
+                   last_week={f: total(rows[:7], f) for f in WEEK_FIELDS},
+                   daily=[{"date": day, "dms": int(d.get("dms", 0)), "follows": int(d.get("gate_follows", 0))} for day, d in rows])
+
+
 @app.get("/api/activity")
 def api_activity():
     return jsonify(store.recent_activity(current_account()["id"]))

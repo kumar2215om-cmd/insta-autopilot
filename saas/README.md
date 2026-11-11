@@ -24,6 +24,11 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Weekly summary (Home)
+`store.count` also adds to a per-day hash `s:t:<id>:day:<YYYY-MM-DD>` (India date, kept 40 days; monthly `x:YYYY-MM` counters
+are skipped). `GET /api/week` returns the last 7 days vs the 7 before for DMs, links, follows, replies, emails, phones, AI
+replies, follow-ups, story replies, hidden comments, and a 14-day daily series (Home bar chart).
+
 ## A/B test of the first DM
 A rule with `opening_dm_b` sends version A or B at random (`engine.opening`); the button payload carries it
 (`GET|<rule>|<media>|<A|B>`). Counters in `s:t:<id>:ab:<rule>`: `sent_*`, `tap_*` (once per person), `link_*` (once per person),

@@ -105,6 +105,13 @@ def seed():
     from engine import month
     for field, n in (("hidden_comments", 14), (f"dms:{month()}", 412), ("dms", 1980), ("links_sent", 230), ("comment_replies", 398), ("gate_follows", 61)):
         store.count(DEMO_ID, field, n)
+    for i, (dms, follows, links) in enumerate([(38, 5, 22), (44, 6, 30), (29, 3, 19), (51, 8, 34), (47, 6, 31), (35, 4, 24), (40, 5, 27),
+                                               (58, 9, 41), (63, 11, 45), (49, 7, 36), (71, 12, 52), (66, 10, 47), (55, 8, 40), (34, 5, 25)]):
+        key = store.account_key(DEMO_ID, f"day:{store.day_str(13 - i)}")
+        store.redis("DEL", key)
+        for field, n in (("dms", dms), ("gate_follows", follows), ("links_sent", links), ("comment_replies", dms - 4),
+                         ("emails", follows // 2), ("phones", follows // 3), ("ai_replies", 3 + i % 4), ("hidden_comments", i % 3)):
+            store.redis("HINCRBY", key, field, n)
     store.log_auto(DEMO_ID, {"media_id": "18000000000000002", "keyword": "GUIDE", "label": "Claude se Instagram grow karo",
                              "at": int(time.time()) - 3600})
     for user, comment, action, status, detail in [

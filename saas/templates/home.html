@@ -16,6 +16,14 @@
   .act .dot { width:10px; height:10px; border-radius:50%; margin-top:6px; flex:none; background:var(--accent); }
   .act .dot.error { background:var(--bad); }
   .act .e { color:var(--bad); font-size:12.5px; word-break:break-word; }
+  .week { display:grid; grid-template-columns:minmax(0, 1.2fr) minmax(0, 1fr); gap:24px; align-items:start; }
+  .chart { position:relative; }
+  .chart svg { display:block; width:100%; height:150px; overflow:visible; }
+  .chart .tip { position:absolute; pointer-events:none; background:var(--ink); color:#fff; font-size:12.5px; padding:6px 9px; border-radius:8px; white-space:nowrap; transform:translate(-50%, -110%); }
+  .wk { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; gap:6px 14px; font-size:14px; align-items:baseline; }
+  .wk b { font-variant-numeric:tabular-nums; text-align:right; }
+  .wk .chg { font-size:12.5px; color:var(--mute); text-align:right; min-width:64px; }
+  @media (max-width: 960px) { .week { grid-template-columns:minmax(0, 1fr); } }
   .link-box { display:flex; gap:8px; }
   .link-box input { flex:1; min-width:0; }
   @media (max-width: 960px) { .cols { grid-template-columns:minmax(0, 1fr); } }
@@ -31,6 +39,14 @@
   <div class="card tile"><div class="k">Followed to unlock</div><div class="n" id="tFollows">–</div><div class="d">followers won by your DMs</div></div>
   <div class="card tile"><div class="k">Contacts</div><div class="n" id="tContacts">–</div><div class="d">people who commented or DMed</div></div>
 </div>
+
+<section class="card">
+  <div class="row" style="margin-bottom:10px"><h2 style="margin-right:auto">This week</h2><span class="muted small">last 7 days vs the 7 days before</span></div>
+  <div class="week">
+    <div><div class="muted small" style="margin-bottom:6px">DMs sent per day, last 14 days</div><div class="chart" id="wChart"></div></div>
+    <div class="wk" id="wList"><div class="empty">Loading…</div></div>
+  </div>
+</section>
 
 <div class="cols">
   <div style="display:grid; gap:20px">
@@ -61,6 +77,43 @@ const NAME = {comment_reply: "replied to the comment", opening_dm: "sent the fir
   story_mention: "thanked a story mention", email_ask: "asked for their email", phone_ask: "asked for their phone number",
   followup: "sent the follow-up offer", chat_menu: "answered a chat menu question", ai_reply: "AI replied",
   ai_handoff: "AI handed a chat to you", inbox_reply: "you replied from the inbox"};
+
+const WEEK = [["dms", "DMs sent"], ["links_sent", "Links sent"], ["gate_follows", "Followers from DMs"], ["comment_replies", "Comment replies"],
+  ["emails", "Emails collected"], ["phones", "Phone numbers collected"], ["ai_replies", "AI replies"], ["followups_sent", "Follow-up offers"],
+  ["story_replies", "Story replies answered"], ["hidden_comments", "Spam comments hidden"]];
+
+async function loadWeek() {
+  const w = await api("/api/week");
+  $("wList").innerHTML = WEEK.filter(([k], i) => i < 3 || w.this_week[k] || w.last_week[k]).map(([k, label]) => {
+    const now = w.this_week[k], before = w.last_week[k];
+    const chg = !before ? (now ? "new" : "–") : `${now >= before ? "▲" : "▼"} ${Math.abs(Math.round(100 * (now - before) / before))}%`;
+    return `<span>${label}</span><b>${fmt(now)}</b><span class="chg" title="Last week: ${fmt(before)}">${chg}</span>`;
+  }).join("");
+  const d = w.daily, max = Math.max(1, ...d.map(x => x.dms)), W = 560, H = 150, pad = 18, gap = 2, bw = W / d.length;
+  const y = (v) => (H - pad) * (1 - v / max);
+  const bars = d.map((x, i) => {
+    const h = Math.max(x.dms ? 2 : 0, H - pad - y(x.dms)), x0 = i * bw + gap / 2, top = H - pad - h, r = Math.min(4, h);
+    const path = h ? `M${x0},${H - pad} V${top + r} Q${x0},${top} ${x0 + r},${top} H${x0 + bw - gap - r} Q${x0 + bw - gap},${top} ${x0 + bw - gap},${top + r} V${H - pad} Z` : "";
+    return `<g data-i="${i}"><rect x="${i * bw}" y="0" width="${bw}" height="${H - pad}" fill="transparent"></rect><path d="${path}" fill="var(--accent)"></path></g>`;
+  }).join("");
+  const label = (s) => new Date(s + "T00:00:00").toLocaleDateString([], {day: "numeric", month: "short"});
+  $("wChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="DMs sent per day for the last 14 days">
+      <line x1="0" x2="${W}" y1="${H - pad}" y2="${H - pad}" stroke="var(--line)" stroke-width="1"></line>
+      <line x1="${W / 2}" x2="${W / 2}" y1="0" y2="${H - pad}" stroke="var(--line)" stroke-dasharray="3 3"></line>${bars}
+      <text x="0" y="${H - 3}" font-size="11" fill="var(--mute)">${label(d[0].date)}</text>
+      <text x="${W / 2 + 4}" y="${H - 3}" font-size="11" fill="var(--mute)">this week</text>
+      <text x="${W}" y="${H - 3}" font-size="11" fill="var(--mute)" text-anchor="end">today</text></svg><div class="tip" hidden></div>`;
+  const tip = $("wChart").querySelector(".tip");
+  $("wChart").querySelectorAll("g[data-i]").forEach(g => {
+    g.addEventListener("mouseenter", () => {
+      const x = d[+g.dataset.i], box = $("wChart").getBoundingClientRect(), bar = g.querySelector("path");
+      const r = x.dms ? bar.getBoundingClientRect() : g.querySelector("rect").getBoundingClientRect();
+      tip.hidden = false; tip.textContent = `${label(x.date)}: ${fmt(x.dms)} DMs · ${fmt(x.follows)} follows`;
+      tip.style.left = `${r.left - box.left + r.width / 2}px`; tip.style.top = `${Math.max(30, (x.dms ? r.top : r.bottom) - box.top)}px`;
+    });
+    g.addEventListener("mouseleave", () => { tip.hidden = true; });
+  });
+}
 
 async function loadTiles() {
   const me = await loadBanners();
@@ -109,7 +162,7 @@ document.addEventListener("click", async (e) => {
 $("copyUrl")?.addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) { $("pageUrl").select(); }
 });
-loadTiles(); loadAutos(); loadBest(); loadFeed();
+loadTiles(); loadAutos(); loadBest(); loadFeed(); loadWeek();
 setInterval(() => { if (!document.hidden) { loadFeed(); loadTiles(); } }, 15000);
 </script>
 {% endblock %}

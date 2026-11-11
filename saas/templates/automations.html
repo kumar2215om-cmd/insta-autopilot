@@ -84,7 +84,7 @@ function abBox(key) {
   const lead = rate("A") === rate("B") ? "" : rate("A") > rate("B") ? "A" : "B";
   return `<div class="scroll" style="margin-top:10px"><table class="small" style="min-width:420px"><thead><tr><th></th><th scope="col">Sent</th><th scope="col">Tapped</th><th scope="col">Got the link</th><th scope="col">Follows</th></tr></thead>
     <tbody>${row("A")}${row("B")}</tbody></table></div>
-    <p class="hint" style="margin:6px 0 0">${!enough ? "Wait for at least 30 sends of each version before picking a winner." : lead ? `Version ${lead} is ahead. Keep it as the main message and try a new version B.` : "Both versions are doing the same."}</p>`;
+    <p class="hint" style="margin:6px 0 0">${!enough ? "Wait for at least 30 sends of each version before picking a winner." : lead === "A" ? "Version A is ahead. Try a new version B against it." : lead ? "Version B is ahead. Copy it into the main message above, then try a new version B." : "Both versions are doing the same."}</p>`;
 }
 
 function badge(key) {
