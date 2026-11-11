@@ -671,6 +671,48 @@ def api_week():
                    daily=[{"date": day, "dms": int(d.get("dms", 0)), "follows": int(d.get("gate_follows", 0))} for day, d in rows])
 
 
+def onboarding_steps(acc):
+    rules = store.load_rules(acc["id"]).get("reels", {})
+    page = store.load_page(acc["id"]) or {}
+    worked = any(a["status"] == "ok" and a["action"] in ("opening_dm", "dm", "dm_keyword")
+                 for a in store.recent_activity(acc["id"]))
+    marked = acc.get("onboarding") or {}
+    steps = [
+        ("connect", "Connect Instagram", "Done when you logged in.", True, ""),
+        ("automation", "Create your first automation", "Start from a template, add your link, Save.", bool(rules), "/app/automations"),
+        ("test", "Test it", "From another account, comment your keyword on a reel (or DM it). The DM should arrive in seconds.",
+         worked, "/app/automations"),
+        ("page", "Set up your link in bio", "Add your products and links.", bool(page.get("items")), "/app/links"),
+        ("bio", "Put the link in your Instagram bio", "Instagram → Edit profile → Links.", bool(marked.get("bio")), ""),
+        ("auto", "Turn on auto-setup", 'New reels whose caption says "Comment WORD" set themselves up.',
+         bool(engine.auto_settings(acc).get("enabled")), "/app/settings"),
+    ]
+    if apps_of(acc).get("inbox"):
+        steps.append(("ai", "Teach your AI", "Add your FAQ so it can answer fans' questions.", ai_agent.settings(acc)["enabled"], "/app/inbox"))
+    return [{"id": i, "title": t, "hint": h, "done": d, "href": href} for i, t, h, d, href in steps]
+
+
+@app.get("/api/onboarding")
+def api_onboarding():
+    acc = current_account()
+    steps = onboarding_steps(acc)
+    return jsonify(steps=steps, hidden=bool((acc.get("onboarding") or {}).get("dismissed")) or all(s["done"] for s in steps))
+
+
+@app.post("/api/onboarding")
+def api_onboarding_mark():
+    """{"done": "bio"} ticks a step only the creator can confirm; {"dismissed": true} hides the checklist."""
+    acc = current_account()
+    data = request.get_json(force=True)
+    marks = acc.setdefault("onboarding", {})
+    if data.get("done") == "bio":
+        marks["bio"] = True
+    if "dismissed" in data:
+        marks["dismissed"] = bool(data["dismissed"])
+    store.save_account(acc)
+    return api_onboarding()
+
+
 @app.get("/api/activity")
 def api_activity():
     return jsonify(store.recent_activity(current_account()["id"]))

@@ -24,12 +24,25 @@
   .wk b { font-variant-numeric:tabular-nums; text-align:right; }
   .wk .chg { font-size:12.5px; color:var(--mute); text-align:right; min-width:64px; }
   @media (max-width: 960px) { .week { grid-template-columns:minmax(0, 1fr); } }
+  .onb { list-style:none; margin:0; padding:0; display:grid; gap:2px; }
+  .onb li { display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line2); }
+  .onb li:first-child { border-top:0; }
+  .onb .ck { width:22px; height:22px; border-radius:50%; border:2px solid #C9C9C2; flex:none; display:grid; place-items:center; color:#fff; font-size:13px; font-weight:700; }
+  .onb li.done .ck { background:var(--ok); border-color:var(--ok); }
+  .onb li.done b { color:var(--mute); text-decoration:line-through; }
+  .onb .t { flex:1; min-width:0; } .onb .t span { display:block; font-size:13px; color:var(--mute); }
   .link-box { display:flex; gap:8px; }
   .link-box input { flex:1; min-width:0; }
   @media (max-width: 960px) { .cols { grid-template-columns:minmax(0, 1fr); } }
 </style>
 {% endblock %}
 {% block content %}
+<section class="card" id="onb" hidden>
+  <div class="row"><h2 style="margin-right:auto">Get set up</h2><span class="badge accent" id="onbCount"></span>
+    <button class="btn ghost sm" type="button" id="onbHide">Hide</button></div>
+  <div class="bar" style="margin:10px 0 6px"><i id="onbBar" style="width:0"></i></div>
+  <ol class="onb" id="onbList"></ol>
+</section>
 <div id="autos" style="display:grid; gap:10px"></div>
 
 <div class="grid">
@@ -81,6 +94,22 @@ const NAME = {comment_reply: "replied to the comment", opening_dm: "sent the fir
 const WEEK = [["dms", "DMs sent"], ["links_sent", "Links sent"], ["gate_follows", "Followers from DMs"], ["comment_replies", "Comment replies"],
   ["emails", "Emails collected"], ["phones", "Phone numbers collected"], ["ai_replies", "AI replies"], ["followups_sent", "Follow-up offers"],
   ["story_replies", "Story replies answered"], ["hidden_comments", "Spam comments hidden"]];
+
+async function loadOnboarding(data) {
+  const o = data || await api("/api/onboarding");
+  $("onb").hidden = o.hidden;
+  if (o.hidden) return;
+  const done = o.steps.filter(s => s.done).length;
+  $("onbCount").textContent = `${done} of ${o.steps.length} done`;
+  $("onbBar").style.width = `${100 * done / o.steps.length}%`;
+  $("onbList").innerHTML = o.steps.map(s => `<li class="${s.done ? "done" : ""}"><span class="ck" aria-hidden="true">${s.done ? "✓" : ""}</span>
+    <div class="t"><b>${esc(s.title)}</b>${s.done ? "" : `<span>${esc(s.hint)}</span>`}</div><span class="sr-only">${s.done ? "done" : "to do"}</span>
+    ${s.done ? "" : s.id === "bio" ? `<button class="btn ghost sm" type="button" data-mark="bio">I did it</button>` : s.href ? `<a class="btn ghost sm" href="${s.href}">Go</a>` : ""}</li>`).join("");
+}
+document.addEventListener("click", async (e) => {
+  if (e.target.closest("[data-mark]")) loadOnboarding(await api("/api/onboarding", {method: "POST", body: JSON.stringify({done: "bio"})}));
+  if (e.target.closest("#onbHide")) loadOnboarding(await api("/api/onboarding", {method: "POST", body: JSON.stringify({dismissed: true})}));
+});
 
 async function loadWeek() {
   const w = await api("/api/week");
@@ -162,7 +191,7 @@ document.addEventListener("click", async (e) => {
 $("copyUrl")?.addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) { $("pageUrl").select(); }
 });
-loadTiles(); loadAutos(); loadBest(); loadFeed(); loadWeek();
+loadTiles(); loadAutos(); loadBest(); loadFeed(); loadWeek(); loadOnboarding();
 setInterval(() => { if (!document.hidden) { loadFeed(); loadTiles(); } }, 15000);
 </script>
 {% endblock %}

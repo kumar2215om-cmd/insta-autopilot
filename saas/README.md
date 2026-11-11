@@ -24,6 +24,10 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Onboarding checklist (Home)
+`onboarding_steps(acc)`: connect, first automation, test (an ok DM in activity), link page, bio link (creator ticks "I did it"),
+auto-setup, AI FAQ (if the AI Inbox app is on). Hidden when all done or dismissed (`acc["onboarding"]`).
+
 ## Templates
 Automations → "Start from a template": Free guide, Lead magnet (email), Course launch (phone + follow-up), Giveaway entry,
 Story link, Brand collabs. Client-side only (`TEMPLATES` in `automations.html`): fills the form as a draft; nothing is saved

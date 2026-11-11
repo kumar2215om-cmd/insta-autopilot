@@ -768,6 +768,19 @@ class SaasTest(unittest.TestCase):
         self.c.post("/api/disconnect", json={})
         self.assertIsNone(store.redis("HGET", old, "links_sent"))
 
+    def test_onboarding_checklist(self):
+        self.login()
+        o = self.c.get("/api/onboarding").get_json()
+        state = {s["id"]: s["done"] for s in o["steps"]}
+        self.assertEqual((state["connect"], state["automation"], state["test"], o["hidden"]), (True, False, False, False))
+        self.put_rule("555", require_follow=False, comment_reply="")
+        self.hook(comment("PROMPTS"))
+        o = self.c.post("/api/onboarding", json={"done": "bio"}).get_json()
+        state = {s["id"]: s["done"] for s in o["steps"]}
+        self.assertEqual((state["automation"], state["test"], state["bio"]), (True, True, True))
+        self.assertTrue(self.c.post("/api/onboarding", json={"dismissed": True}).get_json()["hidden"])
+        self.assertIn('id="onb"', self.c.get("/app").get_data(as_text=True))
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)
