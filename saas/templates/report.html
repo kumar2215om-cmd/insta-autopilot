@@ -15,7 +15,7 @@
   .step b { text-align:right; font-variant-numeric:tabular-nums; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .chips span { background:var(--bg); border:1px solid var(--line); border-radius:9px; padding:4px 10px; font-size:13px; }
-  .doctor { border:1.5px solid var(--accent); border-radius:14px; padding:14px 16px; background:#FBFAFF; }
+  .doctor { border:1px solid #DDD5FF; border-radius:16px; padding:16px 18px; background:linear-gradient(160deg, #F4F0FF, #FFF6F2); }
   .doctor h4 { margin:0 0 8px; font:600 15px var(--display); }
   .doctor ol { margin:0; padding-left:18px; display:grid; gap:8px; font-size:14px; }
   @media (max-width: 860px) { .body { grid-template-columns:minmax(0, 1fr); } .reel { grid-template-columns:56px minmax(0, 1fr); }
@@ -38,7 +38,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const COLORS = {views: "#C9C9C2", comments: "#C9C9C2", keyword: "#B9AEFF", dm: "#8C77FF", link: "#5B3DF5", follow: "#136B3C"};
+const COLORS = {views: "#DAD4C8", comments: "#DAD4C8", keyword: "#C9BEFF", dm: "#9F8BFF", link: "#6A4CFF", follow: "#FF7A59"};
 function funnel(r, steps) {
   const top = Math.log10((r.views || r.comments || 1) + 1);
   return steps.map(([k, label]) => {

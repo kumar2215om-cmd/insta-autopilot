@@ -22,6 +22,9 @@ It's a separate Flask app from the one in the repo root (Om's own site, courses 
 - **Colour:** ink #0C0B10, paper #F7F5F0, violet #6A4CFF (ink #4B2FE6, lavender #B9A8FF), coral #FF7A59.
 - **Social share image:** `static/og.png` (1200×630), used by the Open Graph / Twitter tags on the landing page. Source:
   `brand/og.html`; re-render with Playwright at 1200×630, deviceScaleFactor 1.
+- **App shell** (`_base.html`): dark ink sidebar with the gradient mark, grouped nav (Workspace / Grow and sell / Account)
+  with a gradient active marker, warm paper canvas, white 18px cards, mono uppercase labels, the first stat tile in ink,
+  gradient progress bars, a "Get Pro free" referral nudge. Page templates only use the shared tokens (`--accent`, `--line`…).
 - **Landing** (`landing.html`): dark hero with the product UI, stat strip, bento feature grid, how it works, pricing + compare
   table, FAQ, final CTA, footer. Entrance animations run once and are off under `prefers-reduced-motion`.
 

@@ -62,7 +62,7 @@
   <button class="btn ghost sm" type="button" id="pause">Pause automation</button>
 </section>
 
-<section class="card" {% if role != "owner" or acc.demo %}hidden{% endif %}>
+<section class="card" id="invite" {% if role != "owner" or acc.demo %}hidden{% endif %}>
   <div class="row"><h2 style="margin-right:auto">Invite creators, get Pro free</h2><span class="badge" id="refPlan"></span></div>
   <p class="muted small" style="margin:6px 0 12px">Share your link. When a creator joins {{ brand }} through it, <b>you both get 1 month of Pro free</b>
     (no DM limit, 1,000 AI replies). Up to 12 free months.</p>
