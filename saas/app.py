@@ -749,6 +749,8 @@ def public_page(username):
     if not USERNAME_RE.fullmatch(username or ""):
         abort(404)
     acc = store.account_by_username(username)
+    if not acc and username.lower() == demo.USERNAME:  # demo data lives in memory without a database
+        acc = demo.seed()
     page = store.load_page(acc["id"]) if acc else None
     if not acc or not page:
         abort(404)
