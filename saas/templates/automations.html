@@ -132,7 +132,7 @@
   <div class="toolbar">
     <input id="q" type="search" placeholder="Search by name, keyword or message" aria-label="Search automations">
     <select id="fType" aria-label="Filter"><option value="">All automations</option><option value="on">Enabled</option><option value="off">Paused</option>
-      <option value="post">Posts and reels</option><option value="dm">Keyword DMs</option><option value="story">Stories</option></select>
+      <option value="post">Posts and reels</option><option value="dm">Keyword DMs</option><option value="story">Stories and Live</option></select>
   </div>
   <div class="thead" aria-hidden="true"><span>Automations</span><span>Followers gained</span><span>Runs</span><span>Button clicks</span><span>Status</span><span></span></div>
   <div class="list" id="list"><div class="card empty">Loading…</div></div>
@@ -198,6 +198,7 @@ function triggerOf(key, r) {
   if (key === "next") return {trigger: "comment", target: "next", label: "Next post"};
   if (key === "story:reply") return {trigger: "story", label: "Story replies"};
   if (key === "story:mention") return {trigger: "mention", label: "Story mentions"};
+  if (key === "live") return {trigger: "live", label: "Live comments"};
   if (key.startsWith("kw:")) return r.comments === false ? {trigger: "dm", label: "Keyword DM"} : {trigger: "comment", target: "any", label: "Any post + DMs"};
   return {trigger: "comment", label: key};
 }
@@ -218,10 +219,10 @@ function spark(values) {
 const short = (s, n) => (s || "").replace(/\s+/g, " ").trim().slice(0, n);
 
 /* ---------- list ---------- */
-const TKIND = {dm: "DM keyword", story: "Story replies", mention: "Story mentions"};
+const TKIND = {dm: "DM keyword", story: "Story replies", mention: "Story mentions", live: "Live comments"};
 function rowHtml(key) {
   const r = rules.reels[key], t = triggerOf(key, r), m = mediaById(key), st = stats[key] || {}, [cls, lbl] = stateOf(r);
-  const icon = {comment: "∗", dm: "#", story: "◎", mention: "@"}[t.trigger] || "∗";
+  const icon = {comment: "∗", dm: "#", story: "◎", mention: "@", live: "🔴"}[t.trigger] || "∗";
   const thumb = thumbOf(m) ? `<img class="thumb" src="${esc(thumbOf(m))}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'), {className: 'thumb', textContent: '▶'}))">`
     : `<span class="thumb" aria-hidden="true">${t.target === "next" ? "⏭" : /^\d+$/.test(key) ? "▶" : icon}</span>`;
   const kind = TKIND[t.trigger];
@@ -245,7 +246,7 @@ function drawList() {
     const r = rules.reels[k], t = triggerOf(k, r), on = stateOf(r)[0] !== "off";
     if (f === "on" && !on) return false; if (f === "off" && on) return false;
     if (f === "post" && t.trigger !== "comment") return false; if (f === "dm" && t.trigger !== "dm") return false;
-    if (f === "story" && !["story", "mention"].includes(t.trigger)) return false;
+    if (f === "story" && !["story", "mention", "live"].includes(t.trigger)) return false;
     return !q || [r.label, r.opening_dm, r.dm, ...(r.keywords || []), mediaById(k)?.caption].join(" ").toLowerCase().includes(q);
   }).sort((a, b) => (stats[b]?.runs || 0) - (stats[a]?.runs || 0));
   $("tabList").textContent = `Automations (${Object.keys(rules.reels).length})`;
@@ -314,9 +315,9 @@ $("create").onclick = () => openWizard({});
 
 /* ---------- wizard ---------- */
 const STEPS = {comment: ["trigger", "post", "when", "dms", "review"], dm: ["trigger", "when", "dms", "review"],
-               story: ["trigger", "when", "dms", "review"], mention: ["trigger", "dms", "review"]};
+               story: ["trigger", "when", "dms", "review"], live: ["trigger", "when", "dms", "review"], mention: ["trigger", "dms", "review"]};
 const TITLES = {comment: "When someone comments on your post or reel", dm: "When someone sends you a DM", story: "When someone replies to your story",
-                mention: "When someone mentions you in their story"};
+                mention: "When someone mentions you in their story", live: "When someone comments on your Live"};
 
 function openWizard({key, duplicate, template, mediaId}) {
   let r = {}, t = {trigger: "", target: "specific"}, start = 0;
@@ -365,7 +366,7 @@ function drawWizard() {
          ["story", "◎", "Replies to your story", "A story saying \"Reply LINK\""],
          ["mention", "@", "Mentions you in their story", "Send a thank-you DM"]].map(([k, ic, t, d]) =>
       `<button class="opt" type="button" data-trigger="${k}"><span class="ic" style="background:var(--accent-soft)">${ic}</span><span>${t}<span class="d">${d}</span></span></button>`).join("")
-      + `<button class="opt" type="button" disabled><span class="ic" style="background:var(--warn-soft)">🔴</span><span>Comments on your Live<span class="d">Coming soon</span></span></button>`;
+      + `<button class="opt" type="button" data-trigger="live"><span class="ic" style="background:var(--warn-soft)">🔴</span><span>Comments on your Live <span class="chip" style="margin-left:4px">beta</span><span class="d">Keyword in a Live comment → link in DM</span></span></button>`;
   }
   if (s === "post") {
     h = acctHtml() + `<div><span class="lbl">The comment is on…</span><div class="seg">
@@ -390,7 +391,7 @@ function drawWizard() {
         <div class="kwbox">${R.exclude.map((k, i) => `<span class="chip">${esc(k)}<button type="button" data-exdel="${i}" aria-label="Remove ${esc(k)}">×</button></span>`).join("")}
           <input id="exIn" type="text" placeholder="e.g. scam, fake, price" aria-label="Add an excluded word"></div></div>`
       : `<button class="dmbtn" type="button" data-showex style="text-align:left; border:0; padding:0">＋ Add excluded keywords</button>`;
-    if (wiz.trigger === "comment") h += `<div class="blk"><div class="hd"><b>Only once per person</b>${toggle("once_per_person", R.once_per_person)}</div>
+    if (wiz.trigger === "comment" || wiz.trigger === "live") h += `<div class="blk"><div class="hd"><b>Only once per person</b>${toggle("once_per_person", R.once_per_person)}</div>
         <p class="hint">Someone who comments 5 times gets one DM, not 5. Safer for your account.</p></div>`;
     if (wiz.trigger === "comment") h += `<div class="blk"><div class="hd"><b>Auto-reply to comments on the post</b>${toggle("replies_on", R.replies_on !== false)}</div>
         ${R.replies_on !== false ? `<p class="hint">Write 3 replies. A random one is used each time so your replies don't look like a bot.</p>
@@ -398,7 +399,7 @@ function drawWizard() {
   }
   if (s === "dms") {
     h = acctHtml();
-    if (wiz.trigger === "comment") h += `<div><label class="lbl" for="wDelay">Wait before the first DM</label>
+    if (wiz.trigger === "comment" || wiz.trigger === "live") h += `<div><label class="lbl" for="wDelay">Wait before the first DM</label>
       <select id="wDelay" data-f="delay_min">${[0, 1, 2, 5, 10].map(x => `<option value="${x}" ${+R.delay_min === x ? "selected" : ""}>${x ? `${x} minute${x > 1 ? "s" : ""}` : "No wait (send right away)"}</option>`).join("")}</select>
       <p class="hint" style="margin-top:6px">A short wait feels more human. The public reply still goes right away.</p></div>`;
     if (wiz.trigger !== "mention") h += `<div class="blk"><div class="hd"><b>Opening message with a button</b>${toggle("opening_on", R.opening_on)}</div>
@@ -424,6 +425,9 @@ function drawWizard() {
           <input type="url" data-f="dm_button_url" placeholder="https://your-link" value="${esc(R.dm_button_url || "")}" aria-label="Button link"></div>
           <button class="dmbtn" type="button" data-btnoff style="color:var(--bad)">Remove button</button>`
           : `<button class="dmbtn" type="button" data-btnon>＋ Add a button</button><p class="hint">No button? Put your link in the message itself.</p>`}</div>`;
+    h += `<div class="blk" style="background:var(--accent-soft); border-color:#DDD5FF"><b style="font-size:14px">🛡️ Account safety</b>
+      <p class="hint" style="margin:0">Write <code>{Hi|Hey|Hello}</code> in any message and each person gets one of the options, so not everyone receives the exact same text.
+      Instagram is less likely to treat varied DMs as spam. Example: <i>{Hey|Hi} {username}! {Here's|Ye lo} your guide 🎁</i></p></div>`;
     h += `<div class="blk"><div class="hd"><b>Follow-up message</b>${toggle("followup_on", R.followup_on)}</div>
       ${R.followup_on ? `<textarea rows="2" data-f="followup_dm" maxlength="640" placeholder="Did you try it {username}? The full pack is just ₹149 today 🙌" aria-label="Follow-up message">${esc(R.followup_dm || "")}</textarea>
         <div class="two2"><select data-f="followup_hours" aria-label="Send after">${[1, 3, 6, 12, 20].map(x => `<option value="${x}" ${(+R.followup_hours || 3) === x ? "selected" : ""}>after ${x} hour${x > 1 ? "s" : ""}</option>`).join("")}</select>
@@ -443,16 +447,18 @@ function drawWizard() {
 }
 
 function reviewHtml() {
-  const R = wiz.r, m = mediaById(wiz.mediaId), who = "priya.sharma", fill = (t) => esc((t || "").replaceAll("{username}", who));
+  const R = wiz.r, m = mediaById(wiz.mediaId), who = "priya.sharma",
+        fill = (t) => esc((t || "").replace(/\{([^{}|]*)\|[^{}]*\}/g, "$1").replaceAll("{username}", who));
   let h = `<p style="margin:0; font-weight:600">Awesome! Let's review once before we launch.</p><div class="review">`;
   if (wiz.trigger === "comment") {
     h += `<div class="note">💬 ${wiz.target === "specific" ? `Comments on <b>${esc(short(m?.caption, 40) || "this post")}</b>` : wiz.target === "next" ? "Comments on your <b>next post</b>" : "Comments on <b>any post</b>"}</div>
       <div class="cmt"><b>${who}</b> ${esc(wiz.match === "keyword" ? (R.keywords[0] || "KEYWORD") : "Interested!")}</div>`;
     if (R.replies_on !== false) h += `<div class="cmt rep"><b>${esc(ME.username)}</b> @${who} ${fill(R.replies[0])}</div><div class="note">Replies rotate: 1 of 3</div>`;
   } else if (wiz.trigger === "dm") h += `<div class="bub">${esc(R.keywords[0] || "KEYWORD")}</div>`;
+  else if (wiz.trigger === "live") h += `<div class="note">🔴 Comments on your Live${wiz.match === "keyword" ? ` with <b>${esc(R.keywords[0] || "")}</b>` : ""}</div>`;
   else if (wiz.trigger === "story") h += `<div class="note">◎ Replies to your story${wiz.match === "keyword" ? ` with <b>${esc(R.keywords[0] || "")}</b>` : ""}</div>`;
   else h += `<div class="note">@ Mentions you in their story</div>`;
-  if (wiz.trigger === "comment" && +R.delay_min) h += `<div class="note">🕒 then wait ${R.delay_min} minute${+R.delay_min > 1 ? "s" : ""}</div>`;
+  if (["comment", "live"].includes(wiz.trigger) && +R.delay_min) h += `<div class="note">🕒 then wait ${R.delay_min} minute${+R.delay_min > 1 ? "s" : ""}</div>`;
   h += `<div class="note" style="margin-top:6px">Message to @${who}</div>`;
   const gate = R.require_follow || R.ask_email || R.ask_phone || R.followup_on;
   if (wiz.trigger !== "mention" && (R.opening_on || gate)) h += `<div class="bub me">${fill(R.opening_on ? R.opening_dm : DEF.opening_dm)}<span class="b">${esc(R.button_text)}</span></div>`;
@@ -526,6 +532,7 @@ function targetKey() {
   if (wiz.trigger === "dm") return kw;
   if (wiz.trigger === "story") return "story:reply";
   if (wiz.trigger === "mention") return "story:mention";
+  if (wiz.trigger === "live") return "live";
   if (wiz.target === "specific") return wiz.mediaId;
   if (wiz.target === "next") return "next";
   return wiz.match === "keyword" ? kw : "*";
@@ -541,7 +548,8 @@ function bodyOf() {
     ask_email: !!R.ask_email, email_dm: R.email_dm, email_required: !!R.email_required,
     ask_phone: !!R.ask_phone, phone_dm: R.phone_dm, phone_required: !!R.phone_required,
     followup_on: !!R.followup_on, followup_dm: R.followup_dm || "", followup_hours: +R.followup_hours || 3, followup_url: R.followup_url || "", followup_button: R.followup_button || "",
-    exclude: R.exclude, once_per_person: wiz.trigger === "comment" && !!R.once_per_person, delay_min: wiz.trigger === "comment" ? +R.delay_min || 0 : 0,
+    exclude: R.exclude, once_per_person: ["comment", "live"].includes(wiz.trigger) && !!R.once_per_person,
+    delay_min: ["comment", "live"].includes(wiz.trigger) ? +R.delay_min || 0 : 0,
     comments: wiz.trigger !== "dm", label: R.label || "", tags: R.tags || "", starts_at: R.starts_at || 0, ends_at: R.ends_at || 0, since: R.since || ""};
 }
 $("wizBack").onclick = () => { wiz.step = Math.max(0, wiz.step - 1); if (stepsFor()[wiz.step] === "trigger" && wiz.origKey) wiz.step = 1; drawWizard(); };

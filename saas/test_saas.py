@@ -988,6 +988,25 @@ class SaasTest(unittest.TestCase):
         self.assertEqual([h["event"] for h in hooks], ["test", "lead"])
         self.assertEqual((hooks[1]["email"], hooks[1]["automation"], hooks[1]["account"]), ("me@x.com", "kw:GUIDE", "creator"))
 
+    def test_live_variations_activity(self):
+        self.login()
+        # Live comments: the "live" automation, private-reply DM, no public reply
+        self.assertEqual(self.put_rule("live", keywords=["LINK"], require_follow=False, comment_reply="x", dm="{Hi|Hey} there").status_code, 200)
+        body = {"entry": [{"id": "1789", "changes": [{"field": "live_comments", "value": {
+            "id": "lc1", "text": "link please", "from": {"id": "44", "username": "viewer"}, "media": {"id": "999"}}}]}]}
+        self.hook(body)
+        msg = self.ig.messages()[-1]
+        self.assertEqual(msg["recipient"], {"comment_id": "lc1"})
+        self.assertIn(msg["message"]["text"], ("Hi there", "Hey there"))  # variations
+        self.assertEqual(self.ig.replies(), [])
+        self.hook(comment("LINK", cid="lc2"))  # ordinary comments don't use the Live automation
+        self.assertEqual(len(self.ig.messages()), 1)
+        self.assertEqual(engine.vary("{username} {a|b}") in ("{username} a", "{username} b"), True)
+        # activity page and CSV
+        self.assertEqual(self.c.get("/app/activity").status_code, 200)
+        self.assertGreaterEqual(len(self.c.get("/api/activity?all=1").get_json()), 1)
+        self.assertIn("viewer", self.c.get("/api/activity.csv").get_data(as_text=True))
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

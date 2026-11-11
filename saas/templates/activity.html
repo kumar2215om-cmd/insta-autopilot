@@ -1,0 +1,85 @@
+{% extends "_base.html" %}
+{% block title %}Activity{% endblock %}
+{% block heading %}Activity{% endblock %}
+{% block actions %}<a class="btn ghost" href="/api/activity.csv">Download CSV</a>{% endblock %}
+{% block head %}
+<style>
+  .filters { display:flex; gap:8px; flex-wrap:wrap; }
+  .filters button { border:1px solid var(--line); background:var(--card); border-radius:99px; padding:8px 14px; font:600 13.5px var(--text); color:var(--body); cursor:pointer; }
+  .filters button[aria-pressed="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .toolbar { display:flex; gap:10px; flex-wrap:wrap; }
+  .toolbar input { flex:1; min-width:200px; }
+  .ev { display:grid; grid-template-columns:28px minmax(0, 1fr) auto; gap:12px; align-items:start; padding:12px 0; border-top:1px solid var(--line2); }
+  .ev:first-child { border-top:0; }
+  .ev .ic { width:28px; height:28px; border-radius:9px; display:grid; place-items:center; font-size:14px; background:var(--accent-soft); }
+  .ev.error .ic { background:var(--bad-soft); }
+  .ev b { font-weight:600; }
+  .ev .txt { min-width:0; }
+  .ev .q { color:var(--mute); font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ev .e { color:var(--bad); font-size:13px; margin-top:2px; word-break:break-word; }
+  .ev .d { color:var(--mute); font-size:13px; margin-top:2px; }
+  .ev time { color:var(--mute); font:500 12px var(--mono); white-space:nowrap; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="grid">
+  <div class="card tile"><div class="k">Events</div><div class="n" id="nAll">–</div><div class="d">latest 500 kept</div></div>
+  <div class="card tile"><div class="k">DMs sent</div><div class="n" id="nDm">–</div><div class="d">in this list</div></div>
+  <div class="card tile"><div class="k">Errors</div><div class="n" id="nErr">–</div><div class="d">refused or failed</div></div>
+</div>
+<section class="card" style="display:grid; gap:14px">
+  <div class="filters" role="group" aria-label="Show">
+    <button type="button" data-f="all" aria-pressed="true">All</button>
+    <button type="button" data-f="dm" aria-pressed="false">DMs</button>
+    <button type="button" data-f="reply" aria-pressed="false">Comment replies</button>
+    <button type="button" data-f="lead" aria-pressed="false">Leads and follows</button>
+    <button type="button" data-f="ai" aria-pressed="false">AI</button>
+    <button type="button" data-f="error" aria-pressed="false">Errors</button>
+  </div>
+  <div class="toolbar"><input id="q" type="search" placeholder="Search username, comment or error" aria-label="Search activity"></div>
+  <div id="list"><div class="empty">Loading…</div></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const NAME = {comment_reply: ["💬", "replied to the comment"], opening_dm: ["✉️", "sent the first DM"], dm: ["🔗", "sent the link"],
+  dm_keyword: ["✉️", "answered a keyword DM"], follow_prompt: ["👀", "asked them to follow first"], follow_check: ["👀", "follow check"],
+  connect: ["🔌", "connected Instagram"], token_refresh: ["🔑", "login renewal"], auto_setup: ["✨", "auto-setup"],
+  comment_hidden: ["🛡️", "hid a comment"], story_reply: ["◎", "answered a story reply"], story_mention: ["@", "thanked a story mention"],
+  email_ask: ["📧", "asked for their email"], phone_ask: ["📱", "asked for their WhatsApp number"], followup: ["🔁", "sent the follow-up offer"],
+  chat_menu: ["❓", "answered a chat menu question"], ai_reply: ["🤖", "AI replied"], ai_handoff: ["🙋", "AI handed the chat to you"],
+  inbox_reply: ["↩️", "you replied from the inbox"], integration: ["🔗", "sent a lead to your integration"], giveaway_winner: ["🎁", "announced a giveaway winner"]};
+const GROUP = {dm: ["opening_dm", "dm", "dm_keyword", "story_reply", "story_mention", "followup", "chat_menu", "email_ask", "phone_ask"],
+  reply: ["comment_reply", "comment_hidden"], lead: ["email_ask", "phone_ask", "follow_prompt", "follow_check", "integration"], ai: ["ai_reply", "ai_handoff", "inbox_reply"]};
+let all = [], filter = "all";
+const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? "now" : s < 3600 ? `${Math.floor(s / 60)}m ago` : s < 86400 ? `${Math.floor(s / 3600)}h ago` : new Date(iso).toLocaleDateString(); };
+function draw() {
+  const q = $("q").value.trim().toLowerCase();
+  const rows = all.filter(a => (filter === "all" || (filter === "error" ? a.status === "error" : (GROUP[filter] || []).includes(a.action)))
+    && (!q || [a.username, a.comment, a.detail, a.action].join(" ").toLowerCase().includes(q)));
+  $("list").innerHTML = rows.map(a => {
+    const [ic, label] = NAME[a.action] || ["•", a.action];
+    const ok = a.status !== "error";
+    return `<div class="ev ${ok ? "" : "error"}"><span class="ic" aria-hidden="true">${ic}</span>
+      <div class="txt"><div>${a.username ? `<b>@${esc(a.username)}</b> · ` : ""}${esc(label)}${ok ? "" : ` <span class="badge bad">failed</span>`}</div>
+        ${a.comment ? `<div class="q">“${esc(a.comment)}”</div>` : ""}
+        ${a.detail ? `<div class="${ok ? "d" : "e"}">${esc(a.detail)}</div>` : ""}</div>
+      <time datetime="${esc(a.at)}" title="${esc(new Date(a.at).toLocaleString())}">${ago(a.at)}</time></div>`;
+  }).join("") || `<div class="empty">Nothing here yet.</div>`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-f]");
+  if (!b) return;
+  filter = b.dataset.f; document.querySelectorAll("[data-f]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); draw();
+});
+$("q").oninput = draw;
+(async () => {
+  loadBanners();
+  all = await api("/api/activity?all=1");
+  $("nAll").textContent = fmt(all.length);
+  $("nDm").textContent = fmt(all.filter(a => a.status === "ok" && GROUP.dm.includes(a.action)).length);
+  $("nErr").textContent = fmt(all.filter(a => a.status === "error").length);
+  draw();
+})();
+</script>
+{% endblock %}

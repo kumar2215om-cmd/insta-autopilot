@@ -43,6 +43,14 @@ EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-
 
 # ---------- Instagram API for one account ----------
 
+SPIN = re.compile(r"\{([^{}|]*\|[^{}]*)\}")
+
+
+def vary(text):
+    """Natural variations: "{Hi|Hey|Hello} {username}" → one option picked at random each time. {username} is left alone."""
+    return SPIN.sub(lambda m: random.choice(m.group(1).split("|")), text or "")
+
+
 class Instagram:
     def __init__(self, acc):
         self.acc = acc
@@ -77,14 +85,17 @@ class Instagram:
         return self._check(requests.delete(f"{GRAPH}/{path}", params=params, json=payload, timeout=20))
 
     def reply_to_comment(self, comment_id, text):
-        return self.post(f"{comment_id}/replies", {"message": text})
+        return self.post(f"{comment_id}/replies", {"message": vary(text)})
 
     def send_dm(self, recipient, message):
         """recipient is {"comment_id": ...} for a private reply, or {"id": igsid} inside a chat."""
+        if isinstance(message.get("text"), str):
+            message = {**message, "text": vary(message["text"])}
         return self.post(f"{self.acc['id']}/messages", {"recipient": recipient, "message": message})
 
     def send_buttons(self, recipient, text, postbacks=(), links=()):
         """Text with buttons (button template); falls back to quick replies if Instagram rejects it."""
+        text = vary(text)
         buttons = ([{"type": "web_url", "title": t[:20], "url": u} for t, u in links]
                    + [{"type": "postback", "title": t[:20], "payload": p} for t, p in postbacks])
         try:
@@ -252,6 +263,17 @@ def delay_minutes(rule):
     return int(rule.get("delay_min") or 0) if int(rule.get("delay_min") or 0) in DELAYS else 0
 
 
+def find_live_rule(rules, text):
+    """(key, rule) for a comment on a Live broadcast: the "live" automation, if its keywords match."""
+    rule = rules.get("reels", {}).get("live")
+    if not rule or not is_live(rule) or excluded(rule, text):
+        return None, None
+    words = keywords_of(rule)
+    if words and not any(keyword_matches(k, text) for k in words):
+        return None, None
+    return "live", rule
+
+
 def uses_button_flow(rule):
     # the email question and the follow-up need the chat the button opens
     return (rule.get("require_follow") or rule.get("opening_dm") or rule.get("ask_email") or rule.get("ask_phone")
@@ -277,9 +299,10 @@ def handle_comment(acc, value):
         return False
     if value.get("parent_id"):
         return False  # replies inside threads
-    if media_id and not is_blocked(acc):
+    live = bool(value.get("_live"))
+    if media_id and not live and not is_blocked(acc):
         auto_setup_from_comment(acc, media_id)
-    key, rule = find_rule(store.load_rules(acc["id"]), media_id, text)
+    key, rule = find_live_rule(store.load_rules(acc["id"]), text) if live else find_rule(store.load_rules(acc["id"]), media_id, text)
     if not rule or is_blocked(acc) or not store.claim(f"s:seen:{acc['id']}:{comment_id}"):
         return False
     if rule.get("once_per_person") and sender.get("id") and not store.claim(
@@ -301,7 +324,7 @@ def handle_comment(acc, value):
     else:
         send_comment_dm(acc, ig, comment_id, key, rule, media_id, username, text)
 
-    reply = rule.get("comment_reply", DEFAULT_COMMENT_REPLY) if rule.get("replies_on", True) else ""
+    reply = rule.get("comment_reply", DEFAULT_COMMENT_REPLY) if rule.get("replies_on", True) and not live else ""
     if reply.strip():
         try:
             ig.reply_to_comment(comment_id, fill(pick_reply(reply)))
@@ -569,7 +592,7 @@ def pick_winners(acc, media_id, winners=1, keyword="", min_mentions=0, followed_
 
 def dm_keyword_match(rules, text):
     """(key, rule) of the first keyword automation a DM matches: keyword rules first, then reel rules."""
-    ordered = sorted(((k, r) for k, r in rules.items() if not is_story_rule(k) and k != "next"), key=lambda kv: not is_keyword_rule(kv[0]))
+    ordered = sorted(((k, r) for k, r in rules.items() if not is_story_rule(k) and k not in ("next", "live")), key=lambda kv: not is_keyword_rule(kv[0]))
     return next(((k, r) for k, r in ordered if is_live(r) and not excluded(r, text)
                  and any(keyword_matches(w, text) for w in keywords_of(r))), (None, None))
 
@@ -1098,6 +1121,8 @@ def dispatch(body, run):
         for change in entry.get("changes", []):
             if change.get("field") == "comments":
                 run(handle_comment, acc, change.get("value", {}))
+            elif change.get("field") == "live_comments":
+                run(handle_comment, acc, {**change.get("value", {}), "_live": True})
         for event in entry.get("messaging", []):
             msg = event.get("message", {})
             if msg.get("is_echo"):

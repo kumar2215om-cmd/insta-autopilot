@@ -48,6 +48,7 @@ SERVERLESS = bool(os.environ.get("VERCEL"))
 SCOPES = ("instagram_business_basic,instagram_business_manage_messages,"
           "instagram_business_manage_comments,instagram_business_manage_insights")
 WEBHOOK_FIELDS = "comments,messages,messaging_postbacks"
+LIVE_FIELDS = WEBHOOK_FIELDS + ",live_comments"  # tried first; falls back if the Meta app doesn't have live_comments yet
 REELS_CACHE_SECONDS = 300
 REPORT_CACHE_SECONDS = 600  # each reel's insights is one request against Instagram's hourly limit
 REPORT_REELS = 12
@@ -111,7 +112,7 @@ def public_account(acc):
 # Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
-    ("inbox", "/app/inbox", "AI Inbox", False),
+    ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("settings", "/app/settings", "Settings", True),
@@ -334,7 +335,10 @@ def auth_callback():
     store.save_account(acc)
     store.redis("DEL", store.account_key(ig_id, "token_dead"))
     try:  # without this subscription Instagram sends no comment/DM events for the account
-        engine.Instagram(acc).post("me/subscribed_apps", subscribed_fields=WEBHOOK_FIELDS)
+        try:
+            engine.Instagram(acc).post("me/subscribed_apps", subscribed_fields=LIVE_FIELDS)
+        except RuntimeError:
+            engine.Instagram(acc).post("me/subscribed_apps", subscribed_fields=WEBHOOK_FIELDS)
     except Exception as e:
         store.log_activity(ig_id, "", "", "", "connect", "error",
                            f"Couldn't turn on comment and DM events: {e}")
@@ -637,7 +641,7 @@ def api_autodm_summary():
 
 
 def valid_rule_key(key):
-    return key in ("*", "next") or key.isdigit() or key in engine.STORY_KEYS or (engine.is_keyword_rule(key) and key[3:].replace("_", "").isalnum())
+    return key in ("*", "next", "live") or key.isdigit() or key in engine.STORY_KEYS or (engine.is_keyword_rule(key) and key[3:].replace("_", "").isalnum())
 
 
 @app.put("/api/rules/<key>")
@@ -974,7 +978,25 @@ def api_test_integration():
 
 @app.get("/api/activity")
 def api_activity():
-    return jsonify(store.recent_activity(current_account()["id"]))
+    return jsonify(store.recent_activity(current_account()["id"], store.ACTIVITY_KEEP if request.args.get("all") else 100))
+
+
+@app.get("/api/activity.csv")
+def api_activity_csv():
+    acc = current_account()
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["time_utc", "action", "status", "username", "text", "automation_or_post", "detail"])
+    for a in store.recent_activity(acc["id"], store.ACTIVITY_KEEP):
+        w.writerow([a.get("at", ""), a.get("action", ""), a.get("status", ""), a.get("username", ""), a.get("comment", ""),
+                    a.get("media_id", ""), a.get("detail", "")])
+    return out.getvalue(), 200, {"Content-Type": "text/csv; charset=utf-8",
+                                 "Content-Disposition": f"attachment; filename={acc.get('username', 'account')}-activity.csv"}
+
+
+@app.get("/app/activity")
+def activity_page():
+    return render_app("activity.html", "activity")
 
 
 @app.post("/api/pause")

@@ -245,11 +245,14 @@ def log_activity(ig_id, media_id, username, comment, action, status, detail=""):
         "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "media_id": media_id,
         "username": username, "comment": comment[:300], "action": action, "status": status,
         "detail": str(detail)[:500]}, ensure_ascii=False))
-    redis("LTRIM", key, 0, 99)
+    redis("LTRIM", key, 0, ACTIVITY_KEEP - 1)
 
 
-def recent_activity(ig_id):
-    return [json.loads(x) for x in redis("LRANGE", account_key(ig_id, "activity"), 0, 99) or []]
+ACTIVITY_KEEP = 500
+
+
+def recent_activity(ig_id, n=100):
+    return [json.loads(x) for x in redis("LRANGE", account_key(ig_id, "activity"), 0, n - 1) or []]
 
 
 def day_str(offset_days=0):

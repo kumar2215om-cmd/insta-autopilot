@@ -215,6 +215,16 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
   `engine.send_hook` (4 s timeout, no redirects). `safe_hook_url` only allows https to public IPs. `/api/integrations`,
   `/api/integrations/test`. The card includes a Google Apps Script snippet for Google Sheets.
 
+## Live comments, message variations, activity log
+- **Comments on your Live (beta):** rule key `live` (wizard trigger "Comments on your Live"). Webhook field `live_comments`
+  goes through `handle_comment` with `_live`, matched by `engine.find_live_rule`; private-reply DM only, no public reply.
+  Login subscribes `comments,messages,messaging_postbacks,live_comments` and falls back without `live_comments` if refused.
+  **Needs `live_comments` ticked in the Meta app's Instagram webhook fields** (Meta app → Webhooks → Instagram).
+- **Variations:** `engine.vary` turns `{Hi|Hey|Hello}` into one option at random in every DM, button-template text and
+  public reply (`{username}` is left alone). The wizard's "Account safety" box explains it; the review shows the first option.
+- **Activity** (`/app/activity`): the latest 500 events (`store.ACTIVITY_KEEP`), filters (DMs, replies, leads, AI, errors),
+  search, `GET /api/activity?all=1`, CSV at `/api/activity.csv`.
+
 ## Contact tags
 Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
 to 5) adds tags to everyone who goes through it (comments, keyword DMs, story replies and mentions). Creators edit tags
