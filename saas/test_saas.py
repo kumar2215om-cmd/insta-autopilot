@@ -781,6 +781,34 @@ class SaasTest(unittest.TestCase):
         self.assertTrue(self.c.post("/api/onboarding", json={"dismissed": True}).get_json()["hidden"])
         self.assertIn('id="onb"', self.c.get("/app").get_data(as_text=True))
 
+    def test_team_access(self):
+        self.login()
+        self.assertEqual(self.c.post("/api/team", json={"name": "", "role": "manager"}).status_code, 400)
+        m = self.c.post("/api/team", json={"name": "Riya", "role": "manager"}).get_json()
+        v = self.c.post("/api/team", json={"name": "Aman", "role": "viewer"}).get_json()
+        path = lambda link: "/join/" + link.rsplit("/join/", 1)[1]
+        owner = self.c
+        # the manager joins in their own browser
+        mgr = saas.app.test_client()
+        self.assertIn("Join @creator", mgr.get(path(m["link"])).get_data(as_text=True))  # GET doesn't use the invite
+        self.assertEqual(mgr.post(path(m["link"])).status_code, 302)
+        self.assertEqual(saas.app.test_client().post(path(m["link"])).status_code, 404)  # one time only
+        self.assertIn("Manager access", mgr.get("/app").get_data(as_text=True))
+        self.assertEqual(mgr.put("/api/rules/555", json={"enabled": True, "keywords": ["X"], "dm": "hi"}).status_code, 200)
+        for method, url in (("post", "/api/disconnect"), ("get", "/api/team"), ("post", "/api/mcp-key")):
+            self.assertEqual(getattr(mgr, method)(url, json={}).status_code, 403, url)
+        # the viewer can look but not change
+        view = saas.app.test_client()
+        view.post(path(v["link"]))
+        self.assertEqual(view.get("/api/rules").status_code, 200)
+        self.assertEqual(view.put("/api/rules/555", json={"enabled": False, "dm": "x"}).status_code, 403)
+        self.assertIn("view-only", view.get("/app").get_data(as_text=True))
+        # removing someone logs them out
+        owner.delete(f"/api/team/{m['member']['id']}", json={})
+        self.assertEqual(mgr.get("/api/rules").status_code, 401)
+        self.assertEqual([x["name"] for x in owner.get("/api/team").get_json()["team"]], ["Aman"])
+        self.assertEqual(owner.get("/app/settings").status_code, 200)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

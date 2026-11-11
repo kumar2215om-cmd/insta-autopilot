@@ -42,7 +42,7 @@
   <div id="guardHidden" style="margin-top:12px"></div>
 </section>
 
-<section class="card">
+<section class="card" {% if role != "owner" %}hidden{% endif %}>
   <div class="row"><h2 style="margin-right:auto">Connect Claude</h2><span class="badge" id="mcpStatus">not connected</span></div>
   <p class="muted small" style="margin:6px 0 12px">Run {{ brand }} from Claude: <i>"Set up DMs on my latest reel for GUIDE"</i>, <i>"Which reel got me the most followers?"</i>, <i>"Pause everything"</i>.</p>
   <div class="row"><button class="btn sm" type="button" id="mcpNew">Create Claude link</button><button class="btn danger sm" type="button" id="mcpOff">Disconnect Claude</button></div>
@@ -62,7 +62,23 @@
   <button class="btn ghost sm" type="button" id="pause">Pause automation</button>
 </section>
 
-<section class="card">
+<section class="card" {% if role != "owner" %}hidden{% endif %}>
+  <div class="row"><h2 style="margin-right:auto">Team</h2><span class="badge" id="teamCount"></span></div>
+  <p class="muted small" style="margin:6px 0 12px">Let your manager or editor log in to this account without your Instagram password.
+    <b>Manager</b>: everything except team, Claude and disconnecting. <b>Viewer</b>: can look, can't change anything.</p>
+  <div id="teamList"></div>
+  <form class="row" id="teamForm" style="margin-top:10px">
+    <input name="name" type="text" placeholder="Their name" aria-label="Their name" maxlength="40" style="flex:1; min-width:150px; max-width:260px">
+    <select name="role" aria-label="Role" style="width:auto"><option value="manager">Manager</option><option value="viewer">Viewer</option></select>
+    <button class="btn sm" type="submit">Create invite link</button><span class="small" id="teamMsg"></span>
+  </form>
+  <div id="teamOut" hidden style="margin-top:12px">
+    <p class="small" style="margin:0 0 6px"><b>Send this link to them</b> (shown once, works one time, expires in 7 days):</p>
+    <div class="copy"><input id="teamLink" type="text" readonly aria-label="Invite link"><button class="btn ghost sm" type="button" id="teamCopy">Copy</button></div>
+  </div>
+</section>
+
+<section class="card" {% if role != "owner" %}hidden{% endif %}>
   <h2>Account</h2>
   <p class="muted small" style="margin:6px 0 12px">Disconnecting deletes your automations, contacts, page and activity from {{ brand }}, and stops the automation.</p>
   <button class="btn danger sm" type="button" id="disconnect">Disconnect Instagram and delete my data</button>
@@ -136,5 +152,30 @@ $("g_try").oninput = () => { clearTimeout(gTimer); gTimer = setTimeout(async () 
   $("g_tryOut").className = `small ${r.reason ? "err" : "ok"}`; $("g_tryOut").textContent = r.reason ? `Hidden (${r.reason})` : "Kept";
 }, 300); };
 loadGuard();
+{% if role == "owner" %}
+function drawTeam(team) {
+  $("teamCount").textContent = `${team.length} of 5`;
+  $("teamList").innerHTML = team.map(m => `<div class="row" style="padding:8px 0; border-top:1px solid var(--line2)">
+    <b>${esc(m.name)}</b><span class="badge ${m.role === "manager" ? "accent" : ""}">${m.role === "manager" ? "Manager" : "Viewer"}</span>
+    <span class="muted small" style="margin-right:auto">${m.joined ? `joined ${new Date(m.joined * 1000).toLocaleDateString()}` : "invite not used yet"}</span>
+    <button class="btn danger sm" type="button" data-rm="${esc(m.id)}">Remove</button></div>`).join("") || `<p class="muted small" style="margin:0">Just you so far.</p>`;
+}
+api("/api/team").then(d => drawTeam(d.team)).catch(() => {});
+$("teamForm").onsubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const d = await api("/api/team", {method: "POST", body: JSON.stringify({name: e.target.name.value, role: e.target.role.value})});
+    drawTeam(d.team); $("teamLink").value = d.link; $("teamOut").hidden = false; e.target.name.value = ""; $("teamMsg").textContent = "";
+  } catch (err) { $("teamMsg").className = "small err"; $("teamMsg").textContent = err.message; }
+};
+$("teamCopy").onclick = () => { navigator.clipboard.writeText($("teamLink").value).then(() => toast("Copied")); };
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-rm]");
+  if (!b) return;
+  if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Click again to remove"; return; }
+  drawTeam((await api(`/api/team/${encodeURIComponent(b.dataset.rm)}`, {method: "DELETE", body: "{}"})).team);
+  toast("Removed. They're logged out.");
+});
+{% endif %}
 </script>
 {% endblock %}

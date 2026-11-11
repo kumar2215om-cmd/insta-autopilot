@@ -67,7 +67,39 @@ def current_account():
     acc = store.load_account(uid)
     if not acc and uid == demo.DEMO_ID:  # demo data lives in memory without a database: recreate it
         acc = demo.seed()
+    if acc and session.get("member") and not team_member(acc, session["member"]):
+        return None  # removed from the team
     return acc
+
+
+# ---------- team: managers and viewers who log in with an invite link ----------
+
+ROLES = {"manager": "Manager", "viewer": "Viewer"}
+OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key")
+MAX_TEAM = 5
+
+
+def team_member(acc, member_id):
+    return next((m for m in acc.get("team") or [] if m["id"] == member_id), None)
+
+
+def current_role():
+    """"owner", or the logged-in team member's role."""
+    acc = store.load_account(session.get("uid"))
+    member = team_member(acc, session["member"]) if acc and session.get("member") else None
+    return member["role"] if member else "owner"
+
+
+def role_blocks(path, method):
+    """Why the logged-in person may not do this, or ""."""
+    role = current_role()
+    if role == "owner":
+        return ""
+    if any(path.startswith(p) for p in OWNER_ONLY):
+        return "Only the account owner can do this."
+    if role == "viewer" and method in ("POST", "PUT", "DELETE") and path not in ("/api/onboarding", "/api/guard/test"):
+        return "You have view-only access."
+    return ""
 
 
 def public_account(acc):
@@ -96,7 +128,7 @@ def render_app(template, active, **extra):
         return redirect(url_for("landing"))
     on = apps_of(acc)
     nav = [(key, href, label) for key, href, label, core in SECTIONS if core or on.get(key)]
-    return render_template(template, acc=public_account(acc), active=active, nav=nav, apps=on,
+    return render_template(template, acc=public_account(acc), active=active, nav=nav, apps=on, role=current_role(),
                            page_url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}", **extra)
 
 
@@ -113,6 +145,9 @@ def guard():
             return jsonify(error="Please log in again."), 401
         if request.method in ("POST", "PUT", "DELETE") and not request.is_json:
             return jsonify(error="JSON required"), 415
+        blocked = role_blocks(request.path, request.method)
+        if blocked:
+            return jsonify(error=blocked), 403
 
 
 # ---------- pages ----------
@@ -250,6 +285,62 @@ def auth_callback():
                            f"Couldn't turn on comment and DM events: {e}")
     session.permanent = True
     session["uid"] = ig_id
+    return redirect(url_for("dashboard"))
+
+
+@app.get("/api/team")
+def api_team():
+    acc = current_account()
+    return jsonify(team=acc.get("team") or [], roles=ROLES)
+
+
+@app.post("/api/team")
+def api_team_invite():
+    """Creates a one-time invite link (valid 7 days). Only its SHA-256 is stored."""
+    acc = current_account()
+    data = request.get_json(force=True)
+    name, role = str(data.get("name", "")).strip()[:40], data.get("role")
+    if not name or role not in ROLES:
+        return jsonify(error="Add their name and pick a role."), 400
+    team = acc.setdefault("team", [])
+    if len(team) >= MAX_TEAM:
+        return jsonify(error=f"A team can have up to {MAX_TEAM} people."), 400
+    member = {"id": secrets.token_hex(6), "name": name, "role": role, "invited": int(time.time()), "joined": 0}
+    token = secrets.token_urlsafe(24)
+    store.redis("SET", f"s:join:{hashlib.sha256(token.encode()).hexdigest()}",
+                json.dumps({"acc": acc["id"], "member": member["id"]}), "EX", 7 * 86400)
+    team.append(member)
+    store.save_account(acc)
+    return jsonify(member=member, link=f"{base_url()}/join/{token}", team=team)
+
+
+@app.delete("/api/team/<member_id>")
+def api_team_remove(member_id):
+    acc = current_account()
+    acc["team"] = [m for m in acc.get("team") or [] if m["id"] != member_id]
+    store.save_account(acc)
+    return jsonify(team=acc["team"])
+
+
+@app.route("/join/<token>", methods=["GET", "POST"])
+def join_team(token):
+    """GET shows who invited them (link previews don't use up the invite); POST joins."""
+    key = f"s:join:{hashlib.sha256(token.encode()).hexdigest()}"
+    raw = store.redis("GET", key)
+    invite = json.loads(raw) if raw else None
+    acc = store.load_account(invite["acc"]) if invite else None
+    member = team_member(acc, invite["member"]) if acc else None
+    if not member:
+        return render_template("join.html", error="This invite link has expired or was already used. Ask for a new one."), 404
+    if request.method == "GET":
+        return render_template("join.html", owner=acc.get("username", ""), member=member, role=ROLES[member["role"]])
+    if not store.redis("DEL", key):
+        return render_template("join.html", error="This invite link was already used."), 404
+    member["joined"] = int(time.time())
+    store.save_account(acc)
+    session.clear()
+    session.permanent = True
+    session.update(uid=acc["id"], member=member["id"])
     return redirect(url_for("dashboard"))
 
 

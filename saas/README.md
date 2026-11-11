@@ -24,6 +24,12 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Team access (Settings → Team)
+Owners invite up to 5 people as **Manager** (everything except `/api/disconnect`, `/api/team`, `/api/mcp-key`) or **Viewer**
+(read-only; only `/api/onboarding` and `/api/guard/test` may POST). An invite is a one-time link `/join/<token>` valid 7 days
+(only `sha256(token)` stored as `s:join:<hash>`); GET shows the invite, POST joins (so link previews don't use it up). The session
+then holds `uid` + `member`; `current_account()` logs them out as soon as the owner removes them (`acc["team"]`).
+
 ## Onboarding checklist (Home)
 `onboarding_steps(acc)`: connect, first automation, test (an ok DM in activity), link page, bio link (creator ticks "I did it"),
 auto-setup, AI FAQ (if the AI Inbox app is on). Hidden when all done or dismissed (`acc["onboarding"]`).

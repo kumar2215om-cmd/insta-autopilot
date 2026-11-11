@@ -118,7 +118,7 @@
     </nav>
     <div class="who">
       {% if acc.pic %}<img class="av" src="{{ acc.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}
-      <div class="meta"><b>@{{ acc.username }}</b><span class="muted small">{{ "Demo account" if acc.demo else "Free plan" }}</span></div>
+      <div class="meta"><b>@{{ acc.username }}</b><span class="muted small">{{ "Demo account" if acc.demo else ("Free plan" if role == "owner" else ("Manager access" if role == "manager" else "View-only access")) }}</span></div>
       <form action="/logout" method="post"><button class="btn ghost sm" type="submit" aria-label="Log out">Log out</button></form>
     </div>
   </aside>
@@ -127,6 +127,7 @@
     <div class="content">
       {% if acc.demo %}<div class="banner demo"><span><b>Demo mode:</b> sample data, nothing is sent to Instagram. Click around freely.</span>
         <a href="/">Back to the home page</a></div>{% endif %}
+      {% if role == "viewer" %}<div class="banner info">You have view-only access to @{{ acc.username }}. Ask the owner if you need to change something.</div>{% endif %}
       <div id="banners"></div>
       {% block content %}{% endblock %}
     </div>
