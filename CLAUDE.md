@@ -15,6 +15,7 @@ Full handoff (routes, data shapes, env var names, Blob uploads, design system, t
 - `saas/`: separate multi-account app (LikhoDM, Login with Instagram) deployed as its own Vercel project (Root Directory `saas`); see `saas/README.md`. The root `/webhook` forwards other accounts' events to it via `SAAS_WEBHOOK_URL`.
 
 ## Rules
+- **New product features go only into ReplyInbox (`saas/`, replyinbox.in).** The root app is Om's own site/automation: maintenance only, unless Om asks.
 - Look: cream/rose "freebies style" (bg #F1EADC, ink #1C1A17, rose #FF2D95, cerulean #007BA7; Inter 900 + Anton). One editor theme setting drives /links, /free and guides; `studio` is the default.
 - Every animation must stay off under `prefers-reduced-motion`; don't replay entrance animations on periodic re-renders.
 - Public paths are whitelisted in `check_password()`; everything else needs `DASHBOARD_PASSWORD`.
