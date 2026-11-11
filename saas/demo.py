@@ -64,6 +64,9 @@ def seed():
                           "template": {"comment_reply": "@{username} Check your DM 📩", "require_follow": True,
                                        "dm": "Here you go 🎁 https://example.com/free?k={keyword}"}},
            "plan": "pro",
+           "saved_replies": [{"title": "UPI kaise karu?", "text": "Link pe UPI, card ya netbanking sab chalta hai {username} 🙌 Payment ke turant baad download mil jayega."},
+                             {"title": "Refund", "text": "Sorry {username}! Apna payment screenshot bhej do, main 24 ghante mein check karke batata hoon 🙏"},
+                             {"title": "Collab", "text": "Thanks for reaching out! 🙌 Please email your brief and budget, I'll reply within 2 days."}],
            "guard": {"enabled": True, "links": True, "words": ["cheap followers", "promotion", "crypto"]},
            "ice": {"enabled": True, "items": [
                {"question": "How do I buy the prompt pack?", "answer": "Yahan se le lo 👉 https://example.com/prompts (₹149, instant download)", "rule": ""},

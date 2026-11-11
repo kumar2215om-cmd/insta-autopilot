@@ -1001,6 +1001,21 @@ def api_ai_test():
     return jsonify(answer)
 
 
+@app.get("/api/saved-replies")
+def api_saved_replies():
+    return jsonify(replies=current_account().get("saved_replies") or [])
+
+
+@app.put("/api/saved-replies")
+def api_put_saved_replies():
+    acc = current_account()
+    rows = request.get_json(force=True).get("replies") or []
+    acc["saved_replies"] = [{"title": str(r.get("title", "")).strip()[:40], "text": str(r.get("text", "")).strip()[:1000]}
+                            for r in rows[:30] if str(r.get("title", "")).strip() and str(r.get("text", "")).strip()]
+    store.save_account(acc)
+    return jsonify(replies=acc["saved_replies"])
+
+
 @app.get("/api/inbox/<igsid>")
 def api_thread(igsid):
     acc = current_account()

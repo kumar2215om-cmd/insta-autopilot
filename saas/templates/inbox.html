@@ -32,6 +32,9 @@
   .m small { display:block; font-size:11px; opacity:.7; margin-top:3px; }
   .needs { margin:12px 18px 0; padding:12px 14px; border-radius:12px; background:var(--warn-soft); color:var(--warn); font-size:14px; }
   .needs .sug { margin-top:8px; padding:10px 12px; background:var(--card); border-radius:10px; color:var(--ink); white-space:pre-wrap; }
+  .saved { display:flex; gap:6px; flex-wrap:wrap; padding:12px 18px 0; }
+  .saved button { border:1px solid var(--line); background:var(--card); border-radius:99px; padding:6px 12px; font:500 13px var(--text); color:var(--body); cursor:pointer; }
+  .saved button:hover { border-color:var(--accent); color:var(--accent-ink); }
   .composer { display:flex; gap:8px; padding:12px 18px 16px; align-items:flex-end; }
   .composer textarea { flex:1; min-width:0; resize:vertical; }
   .placeholder { margin:auto; text-align:center; color:var(--mute); padding:40px 20px; }
@@ -40,8 +43,10 @@
   .two { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
   .try { display:flex; gap:8px; } .try input { flex:1; min-width:0; }
   .answer { margin-top:10px; padding:12px 14px; border-radius:12px; background:var(--bg); border:1px solid var(--line2); white-space:pre-wrap; font-size:14px; }
+  #savedBox > summary { cursor:pointer; font:600 17px var(--display); }
   details.card > summary { cursor:pointer; font:700 17px var(--display); list-style-position:inside; }
   @media (max-width: 760px) {
+    .srow { grid-template-columns:minmax(0, 1fr) !important; }
     .inbox { grid-template-columns:1fr; }
     .list { border-right:0; }
     .inbox.open .list { display:none; }
@@ -72,6 +77,13 @@
   <div class="chat" id="chat"><div class="placeholder">Pick a conversation to read it.<br><span class="small">Keyword DMs still go to your automations. Every other DM comes here and the AI answers it.</span></div></div>
 </section>
 
+<details class="card" id="savedBox">
+  <summary>Saved replies</summary>
+  <p class="muted small" style="margin:8px 0 12px">Answers you send often. They show as buttons above the reply box; {username} becomes their name.</p>
+  <div id="savedRows" style="display:grid; gap:10px"></div>
+  <div class="row" style="margin-top:12px"><button class="btn ghost sm" type="button" id="savedAdd">＋ Saved reply</button><button class="btn sm" type="button" id="savedSave">Save</button><span class="small" id="savedMsg"></span></div>
+</details>
+
 <details class="card" id="setup">
   <summary>Teach your AI</summary>
   <p class="muted small" style="margin:8px 0 0">It already knows the products and links on your <a href="/app/links">Link in bio</a> page and your automation links. It never makes up prices or links, and hands the chat to you when it isn't sure.</p>
@@ -101,7 +113,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
-let state = null, threads = [], filter = "all", openId = null, current = null;
+let state = null, threads = [], filter = "all", openId = null, current = null, saved = [];
 const ago = (t) => { const s = Date.now() / 1000 - t; return s < 60 ? "now" : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`; };
 const STATUS = {needs_you: `<span class="badge warn">Needs you</span>`, ai: `<span class="badge accent">AI</span>`, you: `<span class="badge">You</span>`};
 
@@ -123,6 +135,7 @@ function drawChat() {
     ${t.status === "needs_you" ? `<div class="needs"><b>The AI handed this to you:</b> ${esc(t.reason || "needs your answer")}
       ${t.suggestion ? `<div class="sug">${esc(t.suggestion)}</div><button type="button" class="btn sm" id="useSug" style="margin-top:8px">Use this reply</button>` : ""}</div>` : ""}
     <div class="msgs" id="msgs">${current.messages.map(m => `<div class="m ${m.role}">${esc(m.text)}<small>${m.role === "ai" ? "AI · " : m.role === "you" ? "You · " : ""}${new Date(m.at * 1000).toLocaleString([], {dateStyle: "short", timeStyle: "short"})}</small></div>`).join("")}</div>
+    ${saved.length && inWindow ? `<div class="saved" role="group" aria-label="Saved replies">${saved.map((r, i) => `<button type="button" data-saved="${i}" title="${esc(r.text)}">${esc(r.title)}</button>`).join("")}</div>` : ""}
     <form class="composer" id="composer">
       <textarea id="reply" rows="2" maxlength="1000" aria-label="Your reply" placeholder="${inWindow ? "Write your reply…" : "More than 24 hours since their last message: Instagram won't deliver a reply until they write again."}" ${inWindow ? "" : "disabled"}></textarea>
       <button class="btn" type="submit" ${inWindow ? "" : "disabled"}>Send</button></form>
@@ -174,6 +187,8 @@ document.addEventListener("click", async (e) => {
   const t = e.target.closest(".t");
   if (t) return openThread(t.dataset.id);
   if (e.target.closest("#back")) { $("inbox").classList.remove("open"); openId = null; drawList(); return; }
+  const sv = e.target.closest("[data-saved]");
+  if (sv) { const r = $("reply"); r.value = saved[+sv.dataset.saved].text.replaceAll("{username}", current.thread.username || ""); r.focus(); return; }
   if (e.target.closest("#useSug")) { $("reply").value = current.thread.suggestion; $("reply").focus(); return; }
   const st = e.target.closest("[data-status]");
   if (st) {
@@ -222,6 +237,24 @@ $("tryForm").onsubmit = async (e) => {
   } catch (err) { $("tryOut").innerHTML = `<div class="answer err">${esc(err.message)}</div>`; }
 };
 
-(async () => { loadBanners(); await load(); })();
+const SAVED_EXAMPLES = [{title: "UPI kaise karu?", text: "Link pe UPI, card ya netbanking sab chalta hai {username} 🙌 Payment ke turant baad download mil jayega."},
+  {title: "Refund", text: "Sorry {username}! Apna payment screenshot bhej do, main 24 ghante mein check karke batata hoon 🙏"}];
+function drawSaved() {
+  const rows = saved.length ? saved : SAVED_EXAMPLES;
+  $("savedRows").innerHTML = rows.map((r, i) => `<div class="srow two" data-i="${i}" style="grid-template-columns:minmax(0, 1fr) minmax(0, 2fr) auto; align-items:start">
+    <input type="text" data-k="title" maxlength="40" value="${esc(r.title)}" aria-label="Button label">
+    <textarea data-k="text" rows="2" maxlength="1000" aria-label="Reply text">${esc(r.text)}</textarea>
+    <button class="btn danger sm" type="button" data-srm="${i}" aria-label="Remove">✕</button></div>`).join("");
+}
+const readSaved = () => [...document.querySelectorAll(".srow")].map(r => ({title: r.querySelector("[data-k=title]").value, text: r.querySelector("[data-k=text]").value}));
+$("savedAdd").onclick = () => { saved = [...readSaved(), {title: "", text: ""}]; drawSaved(); };
+document.addEventListener("click", (e) => { const x = e.target.closest("[data-srm]"); if (x) { const r = readSaved(); r.splice(+x.dataset.srm, 1); saved = r; drawSaved(); } });
+$("savedSave").onclick = async () => {
+  try { saved = (await api("/api/saved-replies", {method: "PUT", body: JSON.stringify({replies: readSaved()})})).replies; drawSaved();
+    $("savedMsg").className = "small ok"; $("savedMsg").textContent = "Saved ✓"; if (current) drawChat(); }
+  catch (err) { $("savedMsg").className = "small err"; $("savedMsg").textContent = err.message; }
+};
+
+(async () => { loadBanners(); saved = (await api("/api/saved-replies")).replies; drawSaved(); await load(); })();
 </script>
 {% endblock %}

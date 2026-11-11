@@ -899,6 +899,12 @@ class SaasTest(unittest.TestCase):
         self.c.post("/logout")
         self.assertEqual(self.c.get("/api/me").status_code, 401)
 
+    def test_saved_replies(self):
+        self.login()
+        r = self.c.put("/api/saved-replies", json={"replies": [{"title": "UPI", "text": "UPI chalta hai {username}"}, {"title": "", "text": "x"}]})
+        self.assertEqual(r.get_json()["replies"], [{"title": "UPI", "text": "UPI chalta hai {username}"}])
+        self.assertEqual(len(self.c.get("/api/saved-replies").get_json()["replies"]), 1)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

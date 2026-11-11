@@ -190,6 +190,10 @@ No Meta webhook change needed.
 If Meta asks for **Access verification (Tech Provider)** in the app dashboard, complete it: it's required
 for apps used by businesses other than the app owner.
 
+## Saved replies (AI Inbox)
+`acc["saved_replies"]` (up to 30 × {title, text}), edited in the AI Inbox's "Saved replies" panel (`GET/PUT /api/saved-replies`).
+They show as buttons above the reply box; tapping one fills the box with `{username}` replaced.
+
 ## Several Instagram accounts in one login
 Every owner login adds the account to `session["accounts"]` (up to 10). The sidebar's "Switch account" menu lists them
 (`POST /api/switch`, only accounts this browser logged in to) and "Add another Instagram account" (`/login?add=1`, skips the
