@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ brand }}{% endblock %} · {{ brand }}</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* ReplyInbox app: clean white surfaces, near-black ink, one violet accent. Sidebar app shell. */
+  :root { --bg:#F7F7F4; --card:#fff; --ink:#15151A; --body:#3B3B44; --mute:#5C5C66; --line:#E4E4DE; --line2:#ECECE6;
+          --accent:#5B3DF5; --accent-ink:#2A1AA0; --accent-soft:#EEEAFE; --ok:#136B3C; --ok-soft:#E9F7EF;
+          --warn:#8A3B00; --warn-soft:#FFF0E3; --bad:#B42318; --bad-soft:#FEF0EE;
+          --display:"Space Grotesk", Inter, system-ui, sans-serif; --text:Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { background:var(--bg); color:var(--ink); font:15px/1.55 var(--text); -webkit-font-smoothing:antialiased; }
+  a { color:var(--accent); }
+  h1, h2, h3 { font-family:var(--display); letter-spacing:-.01em; line-height:1.2; margin:0; }
+  .shell { display:flex; flex-wrap:wrap; min-height:100vh; }
+  .side { flex:0 0 240px; background:var(--card); border-right:1px solid var(--line); padding:20px 14px; display:flex; flex-direction:column; gap:18px; }
+  .brand { display:flex; align-items:center; gap:10px; padding:0 8px; text-decoration:none; color:var(--ink); }
+  .brand .mark { width:32px; height:32px; border-radius:9px; background:var(--accent); display:grid; place-items:center; }
+  .brand b { font:700 19px var(--display); }
+  .nav { display:flex; flex-direction:column; gap:2px; }
+  .nav a { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; color:var(--body); text-decoration:none; font-weight:500; }
+  .nav a:hover { background:#F4F3FF; }
+  .nav a[aria-current="page"] { background:var(--accent-soft); color:var(--accent-ink); font-weight:600; }
+  .nav svg { flex:none; }
+  .who { margin-top:auto; display:flex; align-items:center; gap:10px; padding:12px; border-radius:12px; background:var(--bg); border:1px solid var(--line2); }
+  .who .av { width:34px; height:34px; border-radius:50%; background:#FFD7BF; object-fit:cover; flex:none; }
+  .who b { display:block; font-size:14px; }
+  .who form { margin-left:auto; }
+  .main { flex:999 1 560px; min-width:0; }
+  .top { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:24px 32px 8px; }
+  .top h1 { font-size:28px; margin-right:auto; }
+  .content { padding:12px 32px 56px; display:flex; flex-direction:column; gap:20px; max-width:1240px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; }
+  .card h2 { font-size:18px; margin-bottom:6px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px; }
+  .tile .k { font-size:13px; color:var(--mute); }
+  .tile .n { font:700 30px var(--display); margin-top:4px; font-variant-numeric:tabular-nums; }
+  .tile .d { font-size:13px; color:var(--mute); margin-top:2px; }
+  .bar { height:8px; border-radius:99px; background:var(--line); overflow:hidden; margin-top:8px; }
+  .bar i { display:block; height:100%; background:var(--accent); }
+  .muted { color:var(--mute); }
+  .small { font-size:13px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid transparent; border-radius:10px;
+         padding:10px 16px; font:600 14px var(--text); cursor:pointer; text-decoration:none; background:var(--accent); color:#fff; min-height:40px; }
+  .btn:hover { filter:brightness(1.06); }
+  .btn.ghost { background:var(--card); color:var(--ink); border-color:#D6D6CF; }
+  .btn.dark { background:var(--ink); }
+  .btn.danger { background:var(--card); color:var(--bad); border-color:#F3C9C4; }
+  .btn.sm { padding:7px 12px; min-height:34px; font-size:13px; }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .btn:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .badge { display:inline-block; font-size:12px; font-weight:600; padding:3px 10px; border-radius:99px; background:var(--line2); color:var(--body); }
+  .badge.on { background:var(--ok-soft); color:var(--ok); } .badge.warn { background:var(--warn-soft); color:var(--warn); }
+  .badge.accent { background:var(--accent-soft); color:var(--accent-ink); } .badge.bad { background:var(--bad-soft); color:var(--bad); }
+  label.f { display:block; font-weight:600; font-size:14px; margin-bottom:6px; }
+  .hint { font-weight:400; font-size:12.5px; color:var(--mute); }
+  input[type=text], input[type=email], input[type=url], input[type=search], textarea, select {
+    width:100%; border:1px solid #D6D6CF; border-radius:10px; padding:10px 12px; font:15px var(--text); background:#fff; color:var(--ink); }
+  textarea { resize:vertical; line-height:1.5; }
+  input[type=checkbox] { accent-color:var(--accent); width:16px; height:16px; }
+  .banner { border-radius:12px; padding:12px 16px; font-weight:500; }
+  .banner.info { background:var(--accent-soft); color:var(--accent-ink); }
+  .banner.bad { background:var(--bad-soft); color:var(--bad); }
+  .banner.demo { background:var(--ink); color:#fff; display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .banner.demo a { color:#fff; font-weight:700; }
+  .empty { color:var(--mute); padding:12px 0; }
+  #banners:empty, #autos:empty { display:none; }
+  .who .btn { white-space:nowrap; }
+  .err { color:var(--bad); }
+  .ok { color:var(--ok); }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:10px 8px; border-top:1px solid var(--line2); vertical-align:middle; }
+  th { border-top:0; font-size:12px; color:var(--mute); text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(80px); opacity:0; background:var(--ink); color:#fff;
+           padding:10px 16px; border-radius:10px; font-weight:600; transition:transform .2s, opacity .2s; pointer-events:none; z-index:20; }
+  .toast.on { transform:translateX(-50%); opacity:1; }
+  @media (max-width: 860px) {
+    .side { flex:1 1 100%; min-width:0; max-width:100%; flex-direction:row; flex-wrap:wrap; align-items:center; padding:12px 16px; border-right:0; border-bottom:1px solid var(--line); gap:10px; }
+    .nav { flex-direction:row; flex-wrap:nowrap; overflow-x:auto; flex:1 1 100%; min-width:0; order:3; }
+    .nav a { white-space:nowrap; padding:8px 10px; }
+    .who { margin:0 0 0 auto; padding:6px 10px; }
+    .who .meta { display:none; }
+    .top, .content { padding-left:16px; padding-right:16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="/app"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg></span><b>{{ brand }}</b></a>
+    <nav class="nav" aria-label="App">
+      {% set icons = {
+        "home": '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path>',
+        "automations": '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path>',
+        "report": '<path d="M4 19V10M10 19V5M16 19v-7M22 19H2"></path>',
+        "links": '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path>',
+        "contacts": '<circle cx="9" cy="8" r="4"></circle><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"></path><path d="M16 4a4 4 0 0 1 0 8M22 21c0-3-1.8-5.6-4.5-6.6"></path>',
+        "apps": '<rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect>',
+        "settings": '<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"></path>'} %}
+      {% for key, href, label in nav %}
+        <a href="{{ href }}" {% if key == active %}aria-current="page"{% endif %}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icons[key]|safe }}</svg>{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="who">
+      {% if acc.pic %}<img class="av" src="{{ acc.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}
+      <div class="meta"><b>@{{ acc.username }}</b><span class="muted small">{{ "Demo account" if acc.demo else "Free plan" }}</span></div>
+      <form action="/logout" method="post"><button class="btn ghost sm" type="submit" aria-label="Log out">Log out</button></form>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top"><h1>{% block heading %}{% endblock %}</h1>{% block actions %}{% endblock %}</header>
+    <div class="content">
+      {% if acc.demo %}<div class="banner demo"><span><b>Demo mode:</b> sample data, nothing is sent to Instagram. Click around freely.</span>
+        <a href="/">Back to the home page</a></div>{% endif %}
+      <div id="banners"></div>
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (n) => n == null ? "–" : Number(n).toLocaleString("en-IN");
+async function api(path, opts = {}) {
+  const r = await fetch(path, {...opts, headers: {"Content-Type": "application/json"}});
+  if (r.status === 401) { location.href = "/"; throw new Error("logged out"); }
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
+  return data;
+}
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
+async function loadBanners() {
+  try {
+    const me = await api("/api/me"), b = [];
+    if (me.blocked === "logged_out") b.push(`<div class="banner bad">Instagram logged this account out (for example after a password change). <a href="/login">Log in again</a> to restart the automation.</div>`);
+    if (me.blocked === "rate_limited") b.push(`<div class="banner info">Instagram's hourly limit was reached. The automation waits 15 minutes, then continues.</div>`);
+    if (me.account.paused) b.push(`<div class="banner info">Automation is paused: comments and DMs aren't answered. Resume it in Settings.</div>`);
+    if (me.dm_limit && me.dms_this_month >= me.dm_limit) b.push(`<div class="banner bad">You've used this month's ${fmt(me.dm_limit)} free DMs. New comments still get the public reply.</div>`);
+    $("banners").innerHTML = b.join("");
+    return me;
+  } catch (e) { return null; }
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

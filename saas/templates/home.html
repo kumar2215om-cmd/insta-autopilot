@@ -1,0 +1,112 @@
+{% extends "_base.html" %}
+{% block title %}Home{% endblock %}
+{% block heading %}Hi @{{ acc.username }} 👋{% endblock %}
+{% block actions %}<a class="btn" href="/app/automations">New automation</a>{% endblock %}
+{% block head %}
+<style>
+  .cols { display:grid; grid-template-columns:minmax(0, 1.6fr) minmax(0, 1fr); gap:20px; align-items:start; }
+  .auto { display:flex; flex-wrap:wrap; gap:10px; align-items:center; background:var(--ink); color:#fff; border-radius:14px; padding:14px 16px; }
+  .auto p { margin:0; flex:1 1 300px; }
+  .auto .btn.ghost { background:transparent; color:#fff; border-color:#55555F; }
+  .reel { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:4px 12px; padding:10px 0; border-top:1px solid var(--line2); }
+  .reel:first-child { border-top:0; }
+  .reel .cap { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+  .act { display:flex; gap:10px; padding:10px 0; border-top:1px solid var(--line2); font-size:14px; }
+  .act:first-child { border-top:0; }
+  .act .dot { width:10px; height:10px; border-radius:50%; margin-top:6px; flex:none; background:var(--accent); }
+  .act .dot.error { background:var(--bad); }
+  .act .e { color:var(--bad); font-size:12.5px; word-break:break-word; }
+  .link-box { display:flex; gap:8px; }
+  .link-box input { flex:1; min-width:0; }
+  @media (max-width: 960px) { .cols { grid-template-columns:minmax(0, 1fr); } }
+</style>
+{% endblock %}
+{% block content %}
+<div id="autos" style="display:grid; gap:10px"></div>
+
+<div class="grid">
+  <div class="card tile"><div class="k">DMs this month</div><div class="n" id="tDms">–</div>
+    <div class="bar"><i id="tBar" style="width:0"></i></div><div class="d" id="tLimit"></div></div>
+  <div class="card tile"><div class="k">Links sent</div><div class="n" id="tLinks">–</div><div class="d">all time</div></div>
+  <div class="card tile"><div class="k">Followed to unlock</div><div class="n" id="tFollows">–</div><div class="d">followers won by your DMs</div></div>
+  <div class="card tile"><div class="k">Contacts</div><div class="n" id="tContacts">–</div><div class="d">people who commented or DMed</div></div>
+</div>
+
+<div class="cols">
+  <div style="display:grid; gap:20px">
+    <section class="card">
+      <div class="row" style="margin-bottom:8px"><h2 style="margin-right:auto">Best reels for followers</h2><a class="small" href="/app/report">Full report →</a></div>
+      <div id="best"><div class="empty">Loading…</div></div>
+    </section>
+    {% if apps.links %}
+    <section class="card">
+      <h2>Your link in bio</h2>
+      <p class="muted small" style="margin:0 0 10px">Put this in your Instagram bio. Edit it in <a href="/app/links">Link in bio</a>.</p>
+      <div class="link-box"><input id="pageUrl" type="text" value="{{ page_url }}" readonly aria-label="Your link page address">
+        <button class="btn ghost sm" type="button" id="copyUrl">Copy</button><a class="btn ghost sm" href="{{ page_url }}" target="_blank" rel="noopener">Open</a></div>
+    </section>
+    {% endif %}
+  </div>
+  <aside class="card">
+    <h2>Live activity</h2>
+    <div id="feed"><div class="empty">Nothing yet. Comment your keyword on a reel to test.</div></div>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const NAME = {comment_reply: "replied to the comment", opening_dm: "sent the first DM", dm: "sent the link", dm_keyword: "answered a DM",
+  follow_prompt: "asked to follow first", follow_check: "follow check", connect: "connected Instagram", token_refresh: "login renewal",
+  auto_setup: "auto-setup created an automation"};
+
+async function loadTiles() {
+  const me = await loadBanners();
+  if (!me) return;
+  $("tDms").textContent = fmt(me.dms_this_month);
+  $("tLimit").textContent = me.dm_limit ? `of ${fmt(me.dm_limit)} on the free plan` : "no monthly limit";
+  $("tBar").style.width = me.dm_limit ? Math.min(100, me.dms_this_month / me.dm_limit * 100) + "%" : "0";
+  $("tLinks").textContent = fmt(me.totals.links_sent);
+  $("tFollows").textContent = fmt(me.totals.gate_follows);
+  try { $("tContacts").textContent = fmt((await api("/api/contacts")).contacts.length); } catch (e) {}
+}
+
+async function loadAutos() {
+  const [{recent}, rules] = await Promise.all([api("/api/auto-setup"), api("/api/rules")]);
+  const week = Date.now() / 1000 - 7 * 86400;
+  $("autos").innerHTML = recent.filter(e => !e.undone && e.at > week && rules.reels[e.media_id]).slice(0, 3).map(e => `
+    <div class="auto"><p>✨ <b>Auto-setup:</b> your reel “${esc(e.label || "new reel")}” asks people to comment <b>${esc(e.keyword)}</b>. Its automation is live.</p>
+      <a class="btn sm" href="/app/automations#${esc(e.media_id)}">Review</a>
+      <button class="btn ghost sm" type="button" data-undo="${esc(e.media_id)}">Undo</button></div>`).join("");
+}
+
+async function loadBest() {
+  try {
+    const data = await api("/api/report");
+    const rows = data.reels.filter(r => r.per_1k != null && r.has_rule).sort((a, b) => b.per_1k - a.per_1k).slice(0, 4);
+    $("best").innerHTML = rows.map(r => `<div class="reel"><span class="cap">${esc(r.caption || "(no caption)")}</span>
+      <b>${r.per_1k} <span class="muted small">per 1K views</span></b>
+      <span class="muted small">${fmt(r.views)} views · ${fmt(r.follow)} followed · ${fmt(r.dm)} DMs</span></div>`).join("")
+      || `<div class="empty">Numbers appear once a reel with an automation gets views.</div>`;
+  } catch (e) { $("best").innerHTML = `<div class="empty err">Couldn't load reels: ${esc(e.message)}</div>`; }
+}
+
+async function loadFeed() {
+  const items = await api("/api/activity");
+  if (!items.length) return;
+  $("feed").innerHTML = items.slice(0, 15).map(a => `<div class="act"><span class="dot ${a.status !== "ok" ? "error" : ""}"></span><div>
+    <b>@${esc(a.username || "someone")}</b> ${a.comment && !a.comment.includes("|") ? `“${esc(a.comment)}”` : ""}<br>
+    <span class="muted small">${esc(NAME[a.action] || a.action)} · ${new Date(a.at).toLocaleTimeString()}</span>
+    ${a.status !== "ok" ? `<div class="e">${esc(a.detail)}</div>` : ""}</div></div>`).join("");
+}
+
+document.addEventListener("click", async (e) => {
+  const u = e.target.closest("[data-undo]");
+  if (u) { await api(`/api/auto-setup/${encodeURIComponent(u.dataset.undo)}/undo`, {method: "POST", body: "{}"}); toast("Automation removed"); loadAutos(); }
+});
+$("copyUrl")?.addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) { $("pageUrl").select(); }
+});
+loadTiles(); loadAutos(); loadBest(); loadFeed();
+setInterval(() => { if (!document.hidden) { loadFeed(); loadTiles(); } }, 15000);
+</script>
+{% endblock %}

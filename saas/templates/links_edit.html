@@ -1,0 +1,113 @@
+{% extends "_base.html" %}
+{% block title %}Link in bio{% endblock %}
+{% block heading %}Link in bio{% endblock %}
+{% block actions %}<a class="btn ghost" href="{{ page_url }}" target="_blank" rel="noopener">Open my page</a><button class="btn" type="button" id="save">Save page</button>{% endblock %}
+{% block head %}
+<style>
+  .cols { display:grid; grid-template-columns:minmax(0, 1.4fr) 340px; gap:20px; align-items:start; }
+  .fields { display:grid; gap:12px; }
+  .two { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; }
+  .themes { display:flex; flex-wrap:wrap; gap:8px; }
+  .themes button { border:2px solid var(--line); border-radius:12px; padding:8px 12px; background:var(--card); font:600 13px var(--text); cursor:pointer; display:flex; gap:8px; align-items:center; }
+  .themes button[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); color:var(--accent-ink); }
+  .sw { width:18px; height:18px; border-radius:50%; }
+  .it { border:1px solid var(--line); border-radius:14px; padding:12px; display:grid; gap:10px; background:#FAFAF8; }
+  .it .head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .it .head b { margin-right:auto; }
+  .phone { position:sticky; top:16px; border:10px solid var(--ink); border-radius:34px; overflow:hidden; background:var(--card); height:640px; }
+  .phone iframe { width:100%; height:100%; border:0; }
+  @media (max-width: 1000px) { .cols { grid-template-columns:minmax(0, 1fr); } .phone { position:static; height:560px; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="cols">
+  <div style="display:grid; gap:20px">
+    <section class="card fields">
+      <h2>Profile</h2>
+      <div class="row"><input id="pageUrl" type="text" value="{{ page_url }}" readonly aria-label="Your page address" style="flex:1; min-width:0">
+        <button class="btn ghost sm" type="button" id="copy">Copy link</button></div>
+      <div class="two">
+        <div><label class="f" for="name">Name</label><input id="name" type="text" maxlength="60"></div>
+        <div><label class="f">Theme</label><div class="themes" id="themes" role="group" aria-label="Theme"></div></div>
+      </div>
+      <div><label class="f" for="bio">Bio</label><textarea id="bio" rows="2" maxlength="300"></textarea></div>
+      <div class="two">
+        <div><label class="f" for="s_instagram">Instagram username</label><input id="s_instagram" type="text"></div>
+        <div><label class="f" for="s_youtube">YouTube link</label><input id="s_youtube" type="url" placeholder="https://youtube.com/@you"></div>
+        <div><label class="f" for="s_whatsapp">WhatsApp link</label><input id="s_whatsapp" type="url" placeholder="https://wa.me/91…"></div>
+        <div><label class="f" for="s_website">Website</label><input id="s_website" type="url" placeholder="https://"></div>
+      </div>
+    </section>
+    <section class="card fields">
+      <div class="row"><h2 style="margin-right:auto">Links and products</h2>
+        <button class="btn ghost sm" type="button" data-add="link">＋ Link</button><button class="btn sm" type="button" data-add="product">＋ Product</button></div>
+      <div id="items" style="display:grid; gap:10px"></div>
+    </section>
+  </div>
+  <div><div class="phone"><iframe id="preview" title="Preview of your link page" src="{{ page_url }}"></iframe></div>
+    <p class="muted small" style="text-align:center">Preview updates when you save.</p></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const THEMES = [["violet", "#5B3DF5"], ["sunset", "#E1306C"], ["midnight", "#1E1B3A"], ["mint", "#0F8A5F"], ["mono", "#15151A"]];
+let page = null, clicks = {};
+
+function drawThemes() {
+  $("themes").innerHTML = THEMES.map(([t, c]) => `<button type="button" data-theme="${t}" aria-pressed="${page.theme === t}"><span class="sw" style="background:${c}"></span>${t}</button>`).join("");
+}
+function itemCard(it, i) {
+  return `<div class="it" data-i="${i}">
+    <div class="head"><b>${it.type === "product" ? "Product" : "Link"} · ${fmt(clicks[it.id] || 0)} clicks</b>
+      <label class="small"><input type="checkbox" data-k="featured" ${it.featured ? "checked" : ""}> Featured</label>
+      <label class="small"><input type="checkbox" data-k="enabled" ${it.enabled !== false ? "checked" : ""}> Show</label>
+      <button class="btn ghost sm" type="button" data-move="-1" aria-label="Move up">↑</button>
+      <button class="btn ghost sm" type="button" data-move="1" aria-label="Move down">↓</button>
+      <button class="btn danger sm" type="button" data-remove aria-label="Remove">Remove</button></div>
+    <div class="two"><div><label class="f" for="t${i}">Title</label><input id="t${i}" type="text" data-k="title" value="${esc(it.title)}" maxlength="80"></div>
+      <div><label class="f" for="u${i}">Link</label><input id="u${i}" type="url" data-k="url" value="${esc(it.url)}" placeholder="https://"></div></div>
+    <div class="two"><div><label class="f" for="s${i}">Short description</label><input id="s${i}" type="text" data-k="subtitle" value="${esc(it.subtitle)}" maxlength="120"></div>
+      ${it.type === "product" ? `<div><label class="f" for="p${i}">Price</label><input id="p${i}" type="text" data-k="price" value="${esc(it.price)}" placeholder="₹149" maxlength="20"></div>` : ""}</div>
+    ${it.type === "product" ? `<div><label class="f" for="im${i}">Image link <span class="hint">optional, https://</span></label><input id="im${i}" type="url" data-k="image" value="${esc(it.image || "")}"></div>` : ""}
+  </div>`;
+}
+function draw() {
+  $("name").value = page.name || ""; $("bio").value = page.bio || "";
+  for (const k of ["instagram", "youtube", "whatsapp", "website"]) $("s_" + k).value = (page.socials || {})[k] || "";
+  drawThemes();
+  $("items").innerHTML = page.items.map(itemCard).join("") || `<div class="empty">No links yet. Add your first link or product.</div>`;
+}
+function collect() {
+  page.name = $("name").value; page.bio = $("bio").value;
+  page.socials = Object.fromEntries(["instagram", "youtube", "whatsapp", "website"].map(k => [k, $("s_" + k).value]));
+}
+$("items").addEventListener("input", (e) => {
+  const card = e.target.closest(".it"), k = e.target.dataset.k;
+  if (!card || !k) return;
+  page.items[+card.dataset.i][k] = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+});
+document.addEventListener("click", (e) => {
+  const th = e.target.closest("[data-theme]");
+  if (th) { page.theme = th.dataset.theme; drawThemes(); return; }
+  const add = e.target.closest("[data-add]");
+  if (add) { collect(); page.items.push({type: add.dataset.add, title: "", url: "", subtitle: "", price: "", enabled: true, featured: false}); draw(); return; }
+  const card = e.target.closest(".it");
+  if (!card) return;
+  const i = +card.dataset.i;
+  if (e.target.closest("[data-remove]")) { collect(); page.items.splice(i, 1); draw(); }
+  const mv = e.target.closest("[data-move]");
+  if (mv) { collect(); const j = i + +mv.dataset.move; if (j >= 0 && j < page.items.length) { [page.items[i], page.items[j]] = [page.items[j], page.items[i]]; draw(); } }
+});
+$("save").onclick = async () => {
+  collect();
+  const skipped = page.items.filter(it => !it.title.trim() || !/^(https?:|mailto:|tel:)/.test(it.url.trim())).length;
+  try {
+    page = (await api("/api/page", {method: "PUT", body: JSON.stringify(page)})).page;
+    draw(); $("preview").src = $("pageUrl").value + "?t=" + Date.now();
+    toast(skipped ? `Saved. ${skipped} item(s) without a title or link were left out.` : "Page saved");
+  } catch (err) { toast(err.message); }
+};
+$("copy").onclick = async () => { try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) { $("pageUrl").select(); } };
+(async () => { loadBanners(); const d = await api("/api/page"); page = d.page; clicks = d.clicks; draw(); })();
+</script>
+{% endblock %}

@@ -49,10 +49,15 @@ class Instagram:
         raise RuntimeError(f"{r.status_code}: {r.text}")
 
     def get(self, path, **params):
+        if self.acc.get("demo"):  # demo account: sample data, no Instagram call
+            import demo
+            return demo.ig_get(path, params)
         params["access_token"] = self.acc["token"]
         return self._check(requests.get(f"{GRAPH}/{path}", params=params, timeout=20))
 
     def post(self, path, payload=None, **params):
+        if self.acc.get("demo"):
+            return {"id": "demo"}
         params["access_token"] = self.acc["token"]
         return self._check(requests.post(f"{GRAPH}/{path}", params=params, json=payload, timeout=20))
 
@@ -220,6 +225,7 @@ def handle_comment(acc, value):
     if not rule or is_blocked(acc) or not store.claim(f"s:seen:{acc['id']}:{comment_id}"):
         return False
     store.media_count(acc["id"], media_id, "keyword")
+    store.touch_contact(acc["id"], username, keyword=(keywords_of(rule) or [""])[0], source=media_id)
     ig = Instagram(acc)
     fill = lambda s: s.replace("{username}", username)
 
@@ -269,6 +275,7 @@ def handle_dm_text(acc, igsid, text):
         username = ig.get(igsid, fields="username").get("username", "")
     except Exception:
         username = ""
+    store.touch_contact(acc["id"], username, igsid, keyword=(keywords_of(rule) or [""])[0], source="dm")
     if over_limit(acc):
         store.log_activity(acc["id"], key, username or igsid, text, "dm_keyword", "error", "Monthly DM limit reached.")
         return
@@ -313,6 +320,7 @@ def handle_button(acc, igsid, payload):
             if step == "FOLLOWED" and rule.get("require_follow") and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
                 store.count(acc["id"], "gate_follows")
                 store.media_count(acc["id"], media_id, "follow")
+            store.touch_contact(acc["id"], username, igsid, followed=bool(rule.get("require_follow") and follows))
         else:
             ig.send_buttons({"id": igsid}, fill(rule.get("follow_dm") or DEFAULT_FOLLOW),
                             links=[("Open profile", f"https://www.instagram.com/{acc['username']}/")],

@@ -1,0 +1,53 @@
+{% extends "_base.html" %}
+{% block title %}Apps{% endblock %}
+{% block heading %}Apps{% endblock %}
+{% block head %}
+<style>
+  .apps { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:14px; }
+  .app { display:flex; gap:14px; align-items:center; padding:16px; }
+  .app .ic { width:46px; height:46px; border-radius:12px; display:grid; place-items:center; font:700 18px var(--display); flex:none; }
+  .app .txt { flex:1; min-width:0; }
+  .app b { display:block; }
+  .switch { width:50px; height:28px; border-radius:99px; border:0; padding:3px; background:#C9C9C2; display:flex; cursor:pointer; flex:none; }
+  .switch span { width:22px; height:22px; border-radius:50%; background:#fff; }
+  .switch[aria-checked="true"] { background:var(--accent); justify-content:flex-end; }
+  .switch:disabled { cursor:default; opacity:.45; }
+  h2.group { font:700 12px var(--text); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); margin:6px 0 -6px; }
+</style>
+{% endblock %}
+{% block content %}
+<p class="muted" style="margin:0">Turn on only what you need. Your menu shows the apps that are on.</p>
+<h2 class="group">Grow</h2>
+<div class="apps">
+  <div class="card app"><span class="ic" style="background:var(--accent-soft); color:var(--accent-ink)">A</span><div class="txt"><b>Auto DM</b><span class="muted small">Comments, keyword DMs and follow to unlock. Always on.</span></div><button class="switch" role="switch" aria-checked="true" disabled aria-label="Auto DM is always on"><span></span></button></div>
+  <div class="card app"><span class="ic" style="background:var(--accent-soft); color:var(--accent-ink)">R</span><div class="txt"><b>Reel report</b><span class="muted small">Followers, DMs and tips for every reel.</span></div><button class="switch" role="switch" data-app="report" aria-label="Reel report"><span></span></button></div>
+  <div class="card app"><span class="ic" style="background:var(--accent-soft); color:var(--accent-ink)">C</span><div class="txt"><b>Contacts</b><span class="muted small">Everyone who interacted, with CSV export.</span></div><button class="switch" role="switch" data-app="contacts" aria-label="Contacts"><span></span></button></div>
+  <div class="card app"><span class="ic" style="background:var(--accent-soft); color:var(--accent-ink)">S</span><div class="txt"><b>Story replies</b> <span class="badge warn">Soon</span><span class="muted small" style="display:block">Same flow when people reply to your story.</span></div><button class="switch" role="switch" disabled aria-label="Story replies, coming soon"><span></span></button></div>
+</div>
+<h2 class="group">Sell</h2>
+<div class="apps">
+  <div class="card app"><span class="ic" style="background:var(--warn-soft); color:var(--warn)">L</span><div class="txt"><b>Link in bio</b><span class="muted small">Your page with links and products.</span></div><button class="switch" role="switch" data-app="links" aria-label="Link in bio"><span></span></button></div>
+  <div class="card app"><span class="ic" style="background:var(--warn-soft); color:var(--warn)">P</span><div class="txt"><b>Digital products + UPI</b> <span class="badge warn">Soon</span><span class="muted small" style="display:block">Sell PDFs and packs with instant delivery.</span></div><button class="switch" role="switch" disabled aria-label="Digital products, coming soon"><span></span></button></div>
+  <div class="card app"><span class="ic" style="background:var(--warn-soft); color:var(--warn)">F</span><div class="txt"><b>Freebie → paid funnel</b> <span class="badge warn">Soon</span><span class="muted small" style="display:block">A follow-up offer within Instagram's 24 hours.</span></div><button class="switch" role="switch" disabled aria-label="Funnel, coming soon"><span></span></button></div>
+</div>
+<h2 class="group">AI</h2>
+<div class="apps">
+  <div class="card app"><span class="ic" style="background:var(--ok-soft); color:var(--ok)">AI</span><div class="txt"><b>AI DM agent</b> <span class="badge warn">Soon</span><span class="muted small" style="display:block">Answers fans in Hinglish and sends the payment link.</span></div><button class="switch" role="switch" disabled aria-label="AI DM agent, coming soon"><span></span></button></div>
+  <div class="card app"><span class="ic" style="background:var(--ok-soft); color:var(--ok)">✦</span><div class="txt"><b>Connect Claude</b><span class="muted small">Run {{ brand }} by chatting with Claude. In <a href="/app/settings">Settings</a>.</span></div><button class="switch" role="switch" aria-checked="true" disabled aria-label="Connect Claude is in Settings"><span></span></button></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let apps = {};
+function draw() { document.querySelectorAll("[data-app]").forEach(b => b.setAttribute("aria-checked", String(!!apps[b.dataset.app]))); }
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-app]");
+  if (!b) return;
+  apps[b.dataset.app] = !apps[b.dataset.app];
+  draw();
+  apps = await api("/api/apps", {method: "PUT", body: JSON.stringify(apps)});
+  toast("Saved. Reload to update the menu.");
+});
+(async () => { loadBanners(); apps = await api("/api/apps"); draw(); })();
+</script>
+{% endblock %}

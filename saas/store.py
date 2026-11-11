@@ -60,6 +60,18 @@ class MemoryRedis:
                 h = self.data.setdefault(a[0], {})
                 h[a[1]] = str(int(h.get(a[1], 0)) + int(a[2]))
                 return int(h[a[1]])
+            if cmd == "HSET":
+                h = self.data.setdefault(a[0], {})
+                added = 0
+                for i in range(1, len(a), 2):
+                    added += a[i] not in h
+                    h[str(a[i])] = str(a[i + 1])
+                return added
+            if cmd == "HGET":
+                return self.data.get(a[0], {}).get(str(a[1]))
+            if cmd == "HDEL":
+                h = self.data.get(a[0], {})
+                return sum(1 for f in a[1:] if h.pop(str(f), None) is not None)
             if cmd == "HGETALL":
                 h = self.data.get(a[0], {})
                 return [x for kv in h.items() for x in kv]
@@ -122,6 +134,12 @@ def load_account(ig_id):
 def save_account(acc):
     set_json(account_key(acc["id"]), acc)
     redis("SADD", "s:accounts", acc["id"])
+    if acc.get("username"):  # public link page lookup: replyinbox.in/<username>
+        redis("SET", f"s:user:{acc['username'].lower()}", acc["id"])
+
+
+def account_by_username(username):
+    return load_account(redis("GET", f"s:user:{username.lower()}"))
 
 
 def account_ids():
@@ -130,11 +148,14 @@ def account_ids():
 
 def delete_account(ig_id):
     """Removes an account and everything stored for it (used by Disconnect and Meta's deletion callback)."""
-    parts = ["", "rules", "activity", "counts", "rate_limited", "token_dead", "stats", "report", "autos", "medias"]
+    parts = ["", "rules", "activity", "counts", "rate_limited", "token_dead", "stats", "report", "autos", "medias",
+             "page", "contacts", "clicks"]
     medias = redis("SMEMBERS", account_key(ig_id, "medias")) or []
     acc = load_account(ig_id) or {}
     if acc.get("mcp_key_hash"):
         redis("DEL", f"s:mcpkey:{acc['mcp_key_hash']}")
+    if acc.get("username") and redis("GET", f"s:user:{acc['username'].lower()}") == ig_id:
+        redis("DEL", f"s:user:{acc['username'].lower()}")
     redis("DEL", *[account_key(ig_id, p) for p in parts], *[account_key(ig_id, f"m:{m}") for m in medias])
     redis("SREM", "s:accounts", ig_id)
 
@@ -189,3 +210,70 @@ def log_auto(ig_id, event):
 
 def recent_autos(ig_id):
     return [json.loads(x) for x in redis("LRANGE", account_key(ig_id, "autos"), 0, 19) or []]
+
+
+# ---------- link-in-bio page ----------
+
+def load_page(ig_id):
+    return get_json(account_key(ig_id, "page"))
+
+
+def save_page(ig_id, page):
+    set_json(account_key(ig_id, "page"), page)
+
+
+def count_click(ig_id, item_id):
+    redis("HINCRBY", account_key(ig_id, "clicks"), item_id, 1)
+
+
+def clicks(ig_id):
+    return hash_all(account_key(ig_id, "clicks"))
+
+
+# ---------- contacts: everyone who commented, DMed or tapped a button ----------
+
+MAX_CONTACTS = 5000
+
+
+def contact_key(username, igsid=""):
+    return (username or "").lower() or f"id:{igsid}"
+
+
+def save_contact(ig_id, contact):
+    key = account_key(ig_id, "contacts")
+    redis("HSET", key, contact_key(contact.get("username"), contact.get("igsid", "")), json.dumps(contact, ensure_ascii=False))
+
+
+def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, source=""):
+    """Adds or updates one person who interacted with an automation."""
+    if not username and not igsid:
+        return
+    key = account_key(ig_id, "contacts")
+    field = contact_key(username, igsid)
+    raw = redis("HGET", key, field)
+    now = int(time.time())
+    if raw:
+        c = json.loads(raw)
+    else:
+        if int(redis("HLEN", key) or 0) >= MAX_CONTACTS if REDIS_URL else False:
+            return
+        c = {"username": username, "igsid": igsid, "first_at": now, "interactions": 0, "email": "", "followed": False}
+    c["last_at"] = now
+    c["interactions"] = c.get("interactions", 0) + 1
+    if username:
+        c["username"] = username
+    if igsid:
+        c["igsid"] = igsid
+    if keyword:
+        c["keyword"] = keyword
+    if source:
+        c["source"] = source
+    if followed:
+        c["followed"] = True
+    redis("HSET", key, field, json.dumps(c, ensure_ascii=False))
+
+
+def contacts(ig_id):
+    flat = redis("HGETALL", account_key(ig_id, "contacts")) or []
+    rows = [json.loads(flat[i + 1]) for i in range(0, len(flat), 2)]
+    return sorted(rows, key=lambda c: -c.get("last_at", 0))

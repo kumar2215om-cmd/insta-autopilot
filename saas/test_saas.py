@@ -14,6 +14,7 @@ for k in ("UPSTASH_REDIS_REST_URL", "KV_REST_API_URL", "VERCEL"):
     os.environ.pop(k, None)
 
 import app as saas  # noqa: E402
+import demo  # noqa: E402
 import engine  # noqa: E402
 import store  # noqa: E402
 
@@ -301,7 +302,7 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(r["per_1k"], 0.5)
         self.assertTrue(r["has_rule"])
         self.assertIn("50 comments and no automation", reels["555"]["tips"][0])
-        self.assertEqual(self.c.get("/report").status_code, 200)
+        self.assertEqual(self.c.get("/app/report").status_code, 200)
 
     def test_mcp_server(self):
         self.login()
@@ -328,6 +329,43 @@ class SaasTest(unittest.TestCase):
         self.assertIn("result", self.c.post(f"/mcp?key={key}", json={"jsonrpc": "2.0", "id": 5, "method": "ping"}).get_json())
         self.c.delete("/api/mcp-key", json={})
         self.assertEqual(self.c.post("/mcp", headers=H, json={}).status_code, 401)
+
+    def test_demo_mode(self):
+        r = self.c.get("/demo")
+        self.assertTrue(r.location.endswith("/app"))
+        for path in ("/app", "/app/automations", "/app/report", "/app/links", "/app/contacts", "/app/apps", "/app/settings"):
+            self.assertEqual(self.c.get(path).status_code, 200, path)
+        report = self.c.get("/api/report").get_json()
+        self.assertEqual(len(report["reels"]), 5)
+        self.assertEqual(self.c.get("/api/contacts").get_json()["contacts"][0]["username"], "rahul.creates")
+        self.assertIn("demo.creator", self.c.get("/demo.creator").get_data(as_text=True))
+        self.assertEqual(len(self.ig.calls), 0)  # the demo never calls Instagram
+        self.c.post("/api/disconnect", json={})
+        self.assertIsNotNone(store.load_account(demo.DEMO_ID))  # demo data isn't deleted, just logged out
+
+    def test_link_page_contacts_and_apps(self):
+        self.login()
+        body = {"name": "Creator", "bio": "Hi", "theme": "mint", "socials": {"youtube": "https://yt.com"},
+                "items": [{"type": "product", "title": "Pack", "url": "https://shop.com/p", "price": "₹149", "featured": True},
+                          {"type": "link", "title": "Bad", "url": "javascript:alert(1)"}]}
+        page = self.c.put("/api/page", json=body).get_json()["page"]
+        self.assertEqual([i["title"] for i in page["items"]], ["Pack"])  # unsafe link dropped
+        html = self.c.get("/creator").get_data(as_text=True)
+        self.assertIn("Pack", html)
+        self.assertIn("mint", html)
+        go = self.c.get(f"/creator/go/{page['items'][0]['id']}")
+        self.assertEqual(go.location, "https://shop.com/p")
+        self.assertEqual(list(self.c.get("/api/page").get_json()["clicks"].values()), [1])
+        self.assertEqual(self.c.get("/nobody").status_code, 404)
+        # contacts come from the automation
+        self.put_rule("555")
+        self.hook(comment("PROMPTS"))
+        c = self.c.get("/api/contacts").get_json()["contacts"]
+        self.assertEqual((c[0]["username"], c[0]["keyword"]), ("fan", "PROMPTS"))
+        self.assertIn("fan,", self.c.get("/api/contacts.csv").get_data(as_text=True))
+        # apps switch sections off
+        self.c.put("/api/apps", json={"contacts": False})
+        self.assertNotIn('href="/app/contacts"', self.c.get("/app").get_data(as_text=True))
 
     def test_pages_render(self):
         for path in ("/", "/privacy", "/terms", "/data-deletion"):

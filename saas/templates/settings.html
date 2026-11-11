@@ -1,0 +1,102 @@
+{% extends "_base.html" %}
+{% block title %}Settings{% endblock %}
+{% block heading %}Settings{% endblock %}
+{% block head %}
+<style>
+  form.grid1 { display:grid; gap:12px; margin-top:12px; }
+  .two { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+  .copy { display:flex; gap:8px; }
+  .copy input { flex:1; min-width:0; }
+</style>
+{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="row"><h2 style="margin-right:auto">Auto-setup new reels</h2><span class="badge" id="autoStatus">off</span></div>
+  <p class="muted small" style="margin:6px 0 0">Post a reel whose caption says <b>"Comment GUIDE"</b> (a word in capitals or quotes) and its automation is created from this template. Only reels posted after you turn it on.</p>
+  <form class="grid1" id="autoForm">
+    <label><input type="checkbox" name="enabled"> <b>Auto-setup on</b></label>
+    <div><label class="f" for="a_reply">Public reply <span class="hint">one per line · empty = no reply</span></label><textarea id="a_reply" name="comment_reply" rows="2"></textarea></div>
+    <div class="two"><div><label class="f" for="a_open">First DM</label><textarea id="a_open" name="opening_dm" rows="2"></textarea></div>
+      <div><label class="f" for="a_btn">Button</label><input id="a_btn" type="text" name="button_text" maxlength="20"></div></div>
+    <label><input type="checkbox" name="require_follow"> Only send the link to people who follow me</label>
+    <div class="two"><div><label class="f" for="a_follow">Follow message</label><textarea id="a_follow" name="follow_dm" rows="2"></textarea></div>
+      <div><label class="f" for="a_fbtn">"I followed" button</label><input id="a_fbtn" type="text" name="followed_button_text" maxlength="20"></div></div>
+    <div><label class="f" for="a_dm">Final DM <span class="hint">required · {keyword} = the word from the caption</span></label>
+      <textarea id="a_dm" name="dm" rows="2" placeholder="Here you go 🎁 https://yoursite.com/free?k={keyword}"></textarea></div>
+    <div class="row"><button class="btn sm" type="submit">Save template</button><span class="small" id="autoMsg"></span></div>
+  </form>
+</section>
+
+<section class="card">
+  <div class="row"><h2 style="margin-right:auto">Connect Claude</h2><span class="badge" id="mcpStatus">not connected</span></div>
+  <p class="muted small" style="margin:6px 0 12px">Run {{ brand }} from Claude: <i>"Set up DMs on my latest reel for GUIDE"</i>, <i>"Which reel got me the most followers?"</i>, <i>"Pause everything"</i>.</p>
+  <div class="row"><button class="btn sm" type="button" id="mcpNew">Create Claude link</button><button class="btn danger sm" type="button" id="mcpOff">Disconnect Claude</button></div>
+  <div id="mcpOut" hidden>
+    <p class="small" style="margin:14px 0 8px"><b>Copy it now:</b> it's shown only once and works like a password. A new link turns off the old one.</p>
+    <div style="display:grid; gap:10px">
+      <div><label class="f" for="mcpUrl">claude.ai: Settings → Connectors → Add custom connector → URL</label><div class="copy"><input id="mcpUrl" type="text" readonly></div></div>
+      <div><label class="f" for="mcpHdr">Request header (safer than putting the key in the URL): name <code>Authorization</code>, value</label><div class="copy"><input id="mcpHdr" type="text" readonly></div></div>
+      <div><label class="f" for="mcpCmd">Claude Code</label><div class="copy"><input id="mcpCmd" type="text" readonly></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Automation</h2>
+  <p class="muted small" style="margin:6px 0 12px">Pausing stops all replies and DMs until you resume. Your automations are kept.</p>
+  <button class="btn ghost sm" type="button" id="pause">Pause automation</button>
+</section>
+
+<section class="card">
+  <h2>Account</h2>
+  <p class="muted small" style="margin:6px 0 12px">Disconnecting deletes your automations, contacts, page and activity from {{ brand }}, and stops the automation.</p>
+  <button class="btn danger sm" type="button" id="disconnect">Disconnect Instagram and delete my data</button>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const DEFAULTS = {comment_reply: "@{username} Check your DM 📩\n@{username} Sent! Check your inbox 📥", opening_dm: "Hey {username}! 👋 Tap the button below and I'll send it to you.",
+  button_text: "Send me the link", follow_dm: 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.', followed_button_text: "I followed ✅", require_follow: true, dm: ""};
+let me = null;
+function setBadge(el, on, yes, no) { el.className = "badge" + (on ? " on" : ""); el.textContent = on ? yes : no; }
+
+async function loadAuto() {
+  const {settings} = await api("/api/auto-setup");
+  const f = $("autoForm"), t = {...DEFAULTS, ...(settings.template || {})};
+  f.enabled.checked = !!settings.enabled;
+  for (const k of ["comment_reply", "opening_dm", "button_text", "follow_dm", "followed_button_text", "dm"]) f[k].value = t[k] ?? "";
+  f.require_follow.checked = !!t.require_follow;
+  setBadge($("autoStatus"), settings.enabled, "on", "off");
+}
+$("autoForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const template = {comment_reply: f.comment_reply.value, opening_dm: f.opening_dm.value, button_text: f.button_text.value,
+    require_follow: f.require_follow.checked, follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value};
+  try {
+    await api("/api/auto-setup", {method: "PUT", body: JSON.stringify({enabled: f.enabled.checked, template})});
+    $("autoMsg").className = "small ok"; $("autoMsg").textContent = "Saved."; setBadge($("autoStatus"), f.enabled.checked, "on", "off");
+  } catch (err) { $("autoMsg").className = "small err"; $("autoMsg").textContent = err.message; }
+});
+
+api("/api/mcp-key").then(d => setBadge($("mcpStatus"), d.active, "link active", "not connected")).catch(() => {});
+$("mcpNew").onclick = async () => {
+  if ($("mcpNew").dataset.sure !== "1") { $("mcpNew").dataset.sure = "1"; $("mcpNew").textContent = "Click again: old link stops working"; return; }
+  $("mcpNew").dataset.sure = ""; $("mcpNew").textContent = "Create Claude link";
+  const d = await api("/api/mcp-key", {method: "POST", body: "{}"});
+  $("mcpUrl").value = d.endpoint; $("mcpHdr").value = "Bearer " + d.key;
+  $("mcpCmd").value = `claude mcp add --transport http replyinbox ${d.endpoint} --header "Authorization: Bearer ${d.key}"`;
+  $("mcpOut").hidden = false; setBadge($("mcpStatus"), true, "link active", "not connected");
+};
+$("mcpOff").onclick = async () => { await api("/api/mcp-key", {method: "DELETE", body: "{}"}); $("mcpOut").hidden = true; setBadge($("mcpStatus"), false, "", "not connected"); toast("Claude disconnected"); };
+
+async function loadMe() { me = await loadBanners(); if (me) $("pause").textContent = me.account.paused ? "Resume automation" : "Pause automation"; }
+$("pause").onclick = async () => { await api("/api/pause", {method: "POST", body: JSON.stringify({paused: !me.account.paused})}); toast(me.account.paused ? "Automation resumed" : "Automation paused"); loadMe(); };
+$("disconnect").onclick = async () => {
+  const b = $("disconnect");
+  if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Click again to delete everything"; return; }
+  await api("/api/disconnect", {method: "POST", body: "{}"}); location.href = "/";
+};
+loadAuto(); loadMe();
+</script>
+{% endblock %}

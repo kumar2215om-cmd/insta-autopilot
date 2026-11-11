@@ -15,6 +15,15 @@ It's a separate Flask app from the one in the repo root (Om's own site, courses 
 - `templates/`: landing page, dashboard, privacy/terms/data-deletion pages, owner page.
 - `test_saas.py`: tests with Instagram mocked: `cd saas && python3 -m unittest test_saas`.
 
+## App sections (new design, 12 Nov 2026)
+Sidebar app built on `templates/_base.html` (violet look from the design canvas): Home (`/app`), Automations
+(`/app/automations`), Reel report (`/app/report`), Link in bio (`/app/links`, public page at `/<username>`, clicks via
+`/<username>/go/<id>`), Contacts (`/app/contacts`, CSV at `/api/contacts.csv`), Apps (`/app/apps`, switches sections on/off
+in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Claude, pause, disconnect).
+- **Demo mode:** `/demo` logs into a sample account (`demo.py`) with made-up reels, automations, contacts and a link page.
+  The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
+- Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
+
 ## Auto-setup and Reel report
 - **Auto-setup new reels** (dashboard card): the creator saves a template once (reply, DM, follow gate, final DM with
   `{keyword}`). When a reel posted *after* switching it on says "Comment GUIDE" (a word in capitals or quotes after

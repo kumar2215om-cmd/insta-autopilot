@@ -5,6 +5,9 @@ each creator connects their Instagram, sets keyword rules per reel, and gets the
 comment reply → DM → follow check → link flow on their own account.
 """
 import base64
+import csv
+import io
+import re
 import hashlib
 import hmac
 import json
@@ -19,6 +22,7 @@ from urllib.parse import urlencode
 import requests
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 
+import demo
 import engine
 import store
 
@@ -58,12 +62,40 @@ def base_url():
 
 
 def current_account():
-    return store.load_account(session.get("uid"))
+    uid = session.get("uid")
+    acc = store.load_account(uid)
+    if not acc and uid == demo.DEMO_ID:  # demo data lives in memory without a database: recreate it
+        acc = demo.seed()
+    return acc
 
 
 def public_account(acc):
     """What the dashboard may see: never the token."""
-    return {k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused")}
+    return {k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused", "demo")}
+
+
+# Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.
+SECTIONS = [
+    ("home", "/app", "Home", True), ("automations", "/app/automations", "Automations", True),
+    ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
+    ("contacts", "/app/contacts", "Contacts", False), ("apps", "/app/apps", "Apps", True),
+    ("settings", "/app/settings", "Settings", True),
+]
+DEFAULT_APPS = {"report": True, "links": True, "contacts": True}
+
+
+def apps_of(acc):
+    return {**DEFAULT_APPS, **(acc.get("apps") or {})}
+
+
+def render_app(template, active, **extra):
+    acc = current_account()
+    if not acc:
+        return redirect(url_for("landing"))
+    on = apps_of(acc)
+    nav = [(key, href, label) for key, href, label, core in SECTIONS if core or on.get(key)]
+    return render_template(template, acc=public_account(acc), active=active, nav=nav, apps=on,
+                           page_url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}", **extra)
 
 
 @app.context_processor
@@ -93,10 +125,41 @@ def landing():
 
 @app.get("/app")
 def dashboard():
-    acc = current_account()
-    if not acc:
-        return redirect(url_for("landing"))
-    return render_template("app.html", acc=public_account(acc))
+    return render_app("home.html", "home")
+
+
+@app.get("/app/automations")
+def automations_page():
+    return render_app("automations.html", "automations")
+
+
+@app.get("/app/links")
+def links_page():
+    return render_app("links_edit.html", "links")
+
+
+@app.get("/app/contacts")
+def contacts_page():
+    return render_app("contacts.html", "contacts")
+
+
+@app.get("/app/apps")
+def apps_page():
+    return render_app("apps.html", "apps")
+
+
+@app.get("/app/settings")
+def settings_page():
+    return render_app("settings.html", "settings")
+
+
+@app.get("/demo")
+def demo_login():
+    """Opens the app with a sample account (no Instagram login), to preview everything."""
+    demo.seed()
+    session.clear()
+    session["uid"] = demo.DEMO_ID
+    return redirect(url_for("dashboard"))
 
 
 @app.get("/privacy")
@@ -187,6 +250,9 @@ def logout():
 @app.post("/api/disconnect")
 def api_disconnect():
     acc = current_account()
+    if demo.is_demo(acc):
+        session.clear()
+        return jsonify(ok=True)
     try:  # stop Instagram sending this account's events; best effort
         requests.delete(f"{engine.GRAPH}/me/subscribed_apps", params={"access_token": acc["token"]}, timeout=10)
     except Exception:
@@ -350,12 +416,14 @@ def build_report(acc, fresh=False):
     return data
 
 
-@app.get("/report")
+@app.get("/app/report")
 def report_page():
-    acc = current_account()
-    if not acc:
-        return redirect(url_for("landing"))
-    return render_template("report.html", acc=public_account(acc))
+    return render_app("report.html", "report")
+
+
+@app.get("/report")
+def old_report_page():
+    return redirect(url_for("report_page"))
 
 
 @app.get("/api/rules")
@@ -422,6 +490,89 @@ def api_pause():
     acc["paused"] = bool(request.get_json(force=True).get("paused"))
     store.save_account(acc)
     return jsonify(paused=acc["paused"])
+
+
+# ---------- apps, link-in-bio page, contacts ----------
+
+@app.get("/api/apps")
+def api_get_apps():
+    return jsonify(apps_of(current_account()))
+
+
+@app.put("/api/apps")
+def api_put_apps():
+    acc = current_account()
+    data = request.get_json(force=True)
+    acc["apps"] = {k: bool(data.get(k, v)) for k, v in DEFAULT_APPS.items()}
+    store.save_account(acc)
+    return jsonify(acc["apps"])
+
+
+THEMES = ["violet", "sunset", "midnight", "mint", "mono"]
+SOCIALS = ["instagram", "youtube", "whatsapp", "email", "website"]
+
+
+def safe_url(url):
+    url = str(url or "").strip()
+    return url if url.startswith(("https://", "http://", "mailto:", "tel:")) else ""
+
+
+def clean_page(data, acc):
+    items = []
+    for i, it in enumerate((data.get("items") or [])[:30]):
+        title, url = str(it.get("title", "")).strip()[:80], safe_url(it.get("url"))
+        if not title or not url:
+            continue
+        image = str(it.get("image", "")).strip()
+        items.append({"id": re.sub(r"[^a-z0-9]", "", str(it.get("id", "")).lower())[:12] or f"i{i}{secrets.token_hex(3)}",
+                      "type": "product" if it.get("type") == "product" else "link", "title": title, "url": url,
+                      "subtitle": str(it.get("subtitle", "")).strip()[:120], "price": str(it.get("price", "")).strip()[:20],
+                      "image": image if image.startswith("https://") else "",
+                      "featured": bool(it.get("featured")), "enabled": it.get("enabled", True) is not False})
+    socials = data.get("socials") or {}
+    return {"name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
+            "bio": str(data.get("bio", "")).strip()[:300],
+            "theme": data.get("theme") if data.get("theme") in THEMES else "violet",
+            "socials": {k: str(socials.get(k, "")).strip()[:200] for k in SOCIALS}, "items": items}
+
+
+def default_page(acc):
+    return {"name": acc.get("name") or acc.get("username", ""), "bio": "", "theme": "violet",
+            "socials": {"instagram": acc.get("username", "")}, "items": []}
+
+
+@app.get("/api/page")
+def api_get_page():
+    acc = current_account()
+    return jsonify(page=store.load_page(acc["id"]) or default_page(acc), clicks=store.clicks(acc["id"]),
+                   url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}")
+
+
+@app.put("/api/page")
+def api_put_page():
+    acc = current_account()
+    page = clean_page(request.get_json(force=True), acc)
+    store.save_page(acc["id"], page)
+    return jsonify(page=page)
+
+
+@app.get("/api/contacts")
+def api_contacts():
+    return jsonify(contacts=store.contacts(current_account()["id"]))
+
+
+@app.get("/api/contacts.csv")
+def api_contacts_csv():
+    acc = current_account()
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["username", "email", "followed", "keyword", "interactions", "first_seen", "last_seen"])
+    for c in store.contacts(acc["id"]):
+        fmt = lambda t: datetime.fromtimestamp(t or 0, timezone.utc).strftime("%Y-%m-%d %H:%M")
+        w.writerow([c.get("username", ""), c.get("email", ""), "yes" if c.get("followed") else "no", c.get("keyword", ""),
+                    c.get("interactions", 0), fmt(c.get("first_at")), fmt(c.get("last_at"))])
+    return out.getvalue(), 200, {"Content-Type": "text/csv; charset=utf-8",
+                                 "Content-Disposition": f"attachment; filename={acc.get('username', 'contacts')}-contacts.csv"}
 
 
 # ---------- MCP server: creators run ReplyInbox from Claude ----------
@@ -587,6 +738,40 @@ def owner():
                          "rules": len(store.load_rules(ig_id).get("reels", {}))})
     rows.sort(key=lambda r: -(r.get("created") or 0))
     return render_template("owner.html", rows=rows)
+
+
+# ---------- public link-in-bio page: replyinbox.in/<username> ----------
+
+USERNAME_RE = re.compile(r"[A-Za-z0-9._]{1,30}")
+
+
+def public_page(username):
+    if not USERNAME_RE.fullmatch(username or ""):
+        abort(404)
+    acc = store.account_by_username(username)
+    page = store.load_page(acc["id"]) if acc else None
+    if not acc or not page:
+        abort(404)
+    return acc, page
+
+
+@app.get("/<username>")
+def bio_page(username):
+    acc, page = public_page(username)
+    items = [it for it in page.get("items", []) if it.get("enabled", True)]
+    items.sort(key=lambda it: not it.get("featured"))
+    socials = [(k, v) for k, v in (page.get("socials") or {}).items() if v]
+    return render_template("bio.html", acc=public_account(acc), page=page, items=items, socials=socials)
+
+
+@app.get("/<username>/go/<item_id>")
+def bio_click(username, item_id):
+    acc, page = public_page(username)
+    item = next((it for it in page.get("items", []) if it.get("id") == item_id and it.get("enabled", True)), None)
+    if not item:
+        abort(404)
+    store.count_click(acc["id"], item_id)
+    return redirect(item["url"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,161 @@
+{% extends "_base.html" %}
+{% block title %}Automations{% endblock %}
+{% block heading %}Automations{% endblock %}
+{% block actions %}<button class="btn ghost" type="button" id="refresh">↻ Refresh reels</button><button class="btn" type="button" id="addKw">＋ Keyword automation</button>{% endblock %}
+{% block head %}
+<style>
+  .item { display:flex; gap:14px; align-items:center; padding:12px 0; border-top:1px solid var(--line2); }
+  .item:first-child { border-top:0; }
+  .thumb { width:48px; height:64px; border-radius:10px; background:var(--accent-soft); object-fit:cover; flex:none;
+           display:grid; place-items:center; font:700 18px var(--display); color:var(--accent-ink); }
+  .item .txt { flex:1; min-width:0; }
+  .item .cap { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+  .item .meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:4px; font-size:13px; color:var(--mute); }
+  form.rule { display:grid; gap:12px; padding:16px; margin:4px 0 14px; background:#FAFAF8; border:1px solid var(--line); border-radius:14px; }
+  form.rule .step { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin-top:4px; }
+  form.rule .two { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+  .preview { background:var(--accent-soft); border-radius:12px; padding:10px 12px; font-size:13px; color:var(--accent-ink); }
+</style>
+{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Keyword automations</h2>
+  <p class="muted small" style="margin:0 0 8px">Work on <b>every reel</b> and when someone <b>DMs</b> you the word.</p>
+  <div id="kwRules"></div>
+</section>
+
+<section class="card">
+  <h2>Your reels</h2>
+  <p class="muted small" style="margin:0 0 8px">Set up a keyword for one reel. Reels whose caption says "Comment WORD" are set up automatically when auto-setup is on (Settings).</p>
+  <div id="reels"><div class="empty">Loading your reels…</div></div>
+</section>
+
+<section class="card">
+  <h2>All reels (fallback)</h2>
+  <p class="muted small" style="margin:0 0 8px">Used on reels without their own automation. Leave it off unless you want every reel covered.</p>
+  <div id="fallback"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const DEFAULTS = {
+  comment_reply: "@{username} Check your DM 📩\n@{username} Sent! Check your inbox 📥\n@{username} Done ✅ check your DMs",
+  opening_dm: "Hey {username}! 👋 Tap the button below and I'll send it to you.", button_text: "Send me the link",
+  follow_dm: 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.', followed_button_text: "I followed ✅",
+};
+let rules = {reels: {}}, reels = [], open = new Set(), newKw = new Set();
+
+function badge(key) {
+  const r = rules.reels[key];
+  if (!r) return `<span class="badge">no automation</span>`;
+  return (r.enabled !== false ? `<span class="badge on">on</span>` : `<span class="badge warn">paused</span>`)
+    + (r.auto ? ` <span class="badge accent">✨ auto-setup</span>` : "")
+    + ((r.keywords || []).length ? ` <span class="badge accent">${esc(r.keywords.join(", "))}</span>` : "");
+}
+
+function ruleForm(key) {
+  const r = {enabled: key !== "*", keywords: key.startsWith("kw:") ? [key.slice(3)] : [], require_follow: true, comments: true, dm: "",
+             ...DEFAULTS, ...(rules.reels[key] || {})};
+  const kw = key.startsWith("kw:");
+  return `<form class="rule" data-key="${esc(key)}">
+    <div class="row"><label><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> <b>Automation on</b></label>
+      ${kw ? `<label><input type="checkbox" name="comments" ${r.comments !== false ? "checked" : ""}> Also answer comments on every reel</label>` : ""}</div>
+    <div class="step">When</div>
+    <div><label class="f" for="kw-${esc(key)}">Keywords <span class="hint">comma separated · spelling mistakes still match${kw ? "" : " · empty = every comment"}</span></label>
+      <input id="kw-${esc(key)}" type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="PROMPTS, LINK"></div>
+    <div class="step">Step 1 · Reply to the comment</div>
+    <div><label class="f" for="cr-${esc(key)}">Public replies <span class="hint">one per line, a random one is used · {username} = their name · empty = no reply</span></label>
+      <textarea id="cr-${esc(key)}" name="comment_reply" rows="3">${esc(r.comment_reply)}</textarea></div>
+    <div class="step">Step 2 · DM with a button</div>
+    <div class="two"><div><label class="f" for="od-${esc(key)}">Message</label><textarea id="od-${esc(key)}" name="opening_dm" rows="2">${esc(r.opening_dm)}</textarea></div>
+      <div><label class="f" for="bt-${esc(key)}">Button</label><input id="bt-${esc(key)}" type="text" name="button_text" maxlength="20" value="${esc(r.button_text)}"></div></div>
+    <div class="step">Step 3 · Follow to unlock</div>
+    <label><input type="checkbox" name="require_follow" ${r.require_follow ? "checked" : ""}> Only send the link to people who follow me</label>
+    <div class="two"><div><label class="f" for="fd-${esc(key)}">Follow message</label><textarea id="fd-${esc(key)}" name="follow_dm" rows="2">${esc(r.follow_dm)}</textarea></div>
+      <div><label class="f" for="fb-${esc(key)}">"I followed" button</label><input id="fb-${esc(key)}" type="text" name="followed_button_text" maxlength="20" value="${esc(r.followed_button_text)}"></div></div>
+    <div class="step">Step 4 · Deliver</div>
+    <div><label class="f" for="dm-${esc(key)}">Final DM: your message and link <span class="hint">required</span></label>
+      <textarea id="dm-${esc(key)}" name="dm" rows="3" placeholder="Here you go 🎁 https://...">${esc(r.dm)}</textarea></div>
+    <div class="row"><button class="btn sm" type="submit">Save</button>
+      ${rules.reels[key] ? `<button class="btn danger sm" type="button" data-del="${esc(key)}">Delete</button>` : ""}
+      <span class="err small" data-msg></span></div>
+  </form>`;
+}
+
+function itemRow(key, thumb, title, meta, isNew) {
+  const btn = open.has(key) ? "Close" : rules.reels[key] ? "Edit" : "Set up";
+  return `<div class="item" id="row-${esc(key)}">${thumb}<div class="txt"><div class="cap">${esc(title)}</div><div class="meta">${badge(key)}${meta}</div></div>
+    <button class="btn ${rules.reels[key] || isNew ? "ghost" : ""} sm" type="button" data-toggle="${esc(key)}">${btn}</button></div>${open.has(key) ? ruleForm(key) : ""}`;
+}
+
+function render() {
+  const kws = [...new Set([...Object.keys(rules.reels).filter(k => k.startsWith("kw:")), ...newKw])];
+  $("kwRules").innerHTML = kws.map(k => itemRow(k, `<span class="thumb">#</span>`, k.slice(3), "", true)).join("")
+    || `<div class="empty">No keyword automations yet. Add one with "＋ Keyword automation".</div>`;
+  $("reels").innerHTML = reels.length ? reels.map(m => itemRow(m.id,
+      m.thumbnail_url || m.media_url ? `<img class="thumb" src="${esc(m.thumbnail_url || m.media_url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="thumb">▶</span>`,
+      (m.caption || "(no caption)").split("\n")[0],
+      `<span>${new Date(m.timestamp).toLocaleDateString()}</span><span>💬 ${fmt(m.comments_count ?? 0)}</span>`)).join("")
+    : `<div class="empty">No reels found yet.</div>`;
+  $("fallback").innerHTML = itemRow("*", `<span class="thumb">∗</span>`, "All reels", "");
+}
+
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-toggle]");
+  if (t) { const k = t.dataset.toggle; open.has(k) ? open.delete(k) : open.add(k); render(); return; }
+  const d = e.target.closest("[data-del]");
+  if (d) {
+    if (!d.dataset.sure) { d.dataset.sure = "1"; d.textContent = "Click again to delete"; return; }
+    rules = await api(`/api/rules/${encodeURIComponent(d.dataset.del)}`, {method: "DELETE", body: "{}"});
+    open.delete(d.dataset.del); newKw.delete(d.dataset.del); render(); toast("Automation deleted");
+  }
+});
+
+document.addEventListener("submit", async (e) => {
+  const f = e.target.closest("form.rule");
+  if (!f) return;
+  e.preventDefault();
+  const key = f.dataset.key, msg = f.querySelector("[data-msg]");
+  const body = {enabled: f.enabled.checked, keywords: f.keywords.value.split(","), comment_reply: f.comment_reply.value,
+    opening_dm: f.opening_dm.value, button_text: f.button_text.value, require_follow: f.require_follow.checked,
+    follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value,
+    comments: f.comments ? f.comments.checked : true, label: rules.reels[key]?.label || ""};
+  try {
+    rules = await api(`/api/rules/${encodeURIComponent(key)}`, {method: "PUT", body: JSON.stringify(body)});
+    open.delete(key); newKw.delete(key); render(); toast("Automation saved");
+  } catch (err) { msg.textContent = err.message; }
+});
+
+$("addKw").onclick = () => {
+  const box = document.createElement("form");
+  if ($("kwNew")) return $("kwNew").querySelector("input").focus();
+  box.id = "kwNew"; box.className = "row"; box.style.margin = "8px 0";
+  box.innerHTML = `<label class="f" for="kwWord" style="margin:0">New keyword</label><input id="kwWord" type="text" placeholder="PROMPTS" style="max-width:220px">
+    <button class="btn sm" type="submit">Add</button>`;
+  $("kwRules").before(box);
+  box.querySelector("input").focus();
+  box.onsubmit = (ev) => {
+    ev.preventDefault();
+    const word = box.querySelector("input").value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "");
+    if (!word) return;
+    const key = "kw:" + word;
+    if (!rules.reels[key]) newKw.add(key);
+    open.add(key); box.remove(); render();
+  };
+};
+
+async function loadReels(fresh) {
+  try {
+    const data = await api("/api/reels" + (fresh ? "?fresh=1" : ""));
+    reels = (data.reels || []).filter(m => m.media_product_type === "REELS" || m.media_type === "VIDEO");
+    if ((data.auto_created || []).length) { rules = await api("/api/rules"); toast("Auto-setup created new automations"); }
+  } catch (err) { $("reels").innerHTML = `<div class="empty err">Couldn't load reels: ${esc(err.message)}</div>`; return; }
+  render();
+  const want = location.hash.slice(1);
+  if (want && !open.has(want)) { open.add(want); render(); $("row-" + want)?.scrollIntoView({block: "center"}); }
+}
+$("refresh").onclick = () => loadReels(true);
+
+(async () => { loadBanners(); rules = await api("/api/rules"); render(); loadReels(false); })();
+</script>
+{% endblock %}

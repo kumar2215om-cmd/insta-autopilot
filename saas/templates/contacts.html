@@ -1,0 +1,45 @@
+{% extends "_base.html" %}
+{% block title %}Contacts{% endblock %}
+{% block heading %}Contacts{% endblock %}
+{% block actions %}<a class="btn ghost" href="/api/contacts.csv">Download CSV</a>{% endblock %}
+{% block content %}
+<div class="grid">
+  <div class="card tile"><div class="k">People</div><div class="n" id="cAll">–</div><div class="d">commented, DMed or tapped a button</div></div>
+  <div class="card tile"><div class="k">Followed you</div><div class="n" id="cFol">–</div><div class="d">through the follow gate</div></div>
+  <div class="card tile"><div class="k">With email</div><div class="n" id="cMail">–</div><div class="d">collected by your DMs</div></div>
+</div>
+<section class="card">
+  <div class="row" style="margin-bottom:10px">
+    <label class="f" for="q" style="margin:0">Search</label>
+    <input id="q" type="search" placeholder="Username, keyword or email" style="flex:1; min-width:180px; max-width:360px">
+    <select id="kw" aria-label="Filter by keyword" style="width:auto"><option value="">All keywords</option></select>
+  </div>
+  <div class="scroll"><table style="min-width:640px">
+    <thead><tr><th scope="col">Person</th><th scope="col">Keyword</th><th scope="col">Followed</th><th scope="col">Email</th><th scope="col">Interactions</th><th scope="col">Last seen</th></tr></thead>
+    <tbody id="rows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody></table></div>
+  <p class="muted small" style="margin:10px 0 0">Everyone who interacts with your automations is saved here, so you keep your audience even outside Instagram.</p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let all = [];
+function draw() {
+  const q = $("q").value.trim().toLowerCase(), kw = $("kw").value;
+  const rows = all.filter(c => (!kw || c.keyword === kw) && (!q || [c.username, c.keyword, c.email].join(" ").toLowerCase().includes(q)));
+  $("rows").innerHTML = rows.map(c => `<tr><td><b>@${esc(c.username || "(DM)")}</b></td><td>${c.keyword ? `<span class="badge accent">${esc(c.keyword)}</span>` : ""}</td>
+    <td>${c.followed ? `<span class="badge on">Yes</span>` : `<span class="badge">No</span>`}</td><td>${esc(c.email || "")}</td>
+    <td>${fmt(c.interactions || 0)}</td><td class="muted">${new Date((c.last_at || 0) * 1000).toLocaleString()}</td></tr>`).join("")
+    || `<tr><td colspan="6" class="muted">No contacts yet. They appear when people comment your keyword or DM you.</td></tr>`;
+}
+(async () => {
+  loadBanners();
+  all = (await api("/api/contacts")).contacts;
+  $("cAll").textContent = fmt(all.length);
+  $("cFol").textContent = fmt(all.filter(c => c.followed).length);
+  $("cMail").textContent = fmt(all.filter(c => c.email).length);
+  [...new Set(all.map(c => c.keyword).filter(Boolean))].sort().forEach(k => $("kw").insertAdjacentHTML("beforeend", `<option>${esc(k)}</option>`));
+  draw();
+})();
+$("q").oninput = draw; $("kw").onchange = draw;
+</script>
+{% endblock %}

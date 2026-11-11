@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.name or acc.username }} | {{ brand }}</title>
+<meta name="description" content="{{ page.bio }}">
+<meta property="og:title" content="{{ page.name or acc.username }}">
+<meta property="og:description" content="{{ page.bio }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+<style>
+  .violet   { --bg:#F4F2FF; --ink:#15151A; --sub:#4A4A55; --card:#fff; --accent:#5B3DF5; --accent-ink:#fff; --chip:#fff; }
+  .sunset   { --bg:linear-gradient(165deg,#4f5bd5,#962fbf 35%,#d62976 65%,#fa7e1e); --ink:#fff; --sub:rgba(255,255,255,.88); --card:#fff;
+              --accent:#C2185B; --accent-ink:#fff; --chip:rgba(255,255,255,.2); }
+  .midnight { --bg:#141221; --ink:#F0EEF8; --sub:#B9B5CC; --card:#211E33; --accent:#9C8BFF; --accent-ink:#141221; --chip:#211E33; }
+  .mint     { --bg:#EAF7F1; --ink:#0F2A20; --sub:#3D5A4E; --card:#fff; --accent:#0F8A5F; --accent-ink:#fff; --chip:#fff; }
+  .mono     { --bg:#FAFAFA; --ink:#111; --sub:#555; --card:#fff; --accent:#111; --accent-ink:#fff; --chip:#fff; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; min-height:100%; }
+  body { background:var(--bg); background-attachment:fixed; color:var(--ink); font:15px/1.5 Inter, system-ui, sans-serif; }
+  .wrap { max-width:520px; margin:0 auto; padding:36px 16px 48px; display:flex; flex-direction:column; gap:12px; }
+  header { text-align:center; display:grid; justify-items:center; gap:6px; }
+  .av { width:92px; height:92px; border-radius:50%; object-fit:cover; border:3px solid var(--accent); background:var(--chip); }
+  h1 { font:700 24px "Space Grotesk", Inter, sans-serif; margin:4px 0 0; }
+  .handle { color:var(--sub); font-size:14px; }
+  .bio { color:var(--sub); margin:2px 0 0; white-space:pre-line; max-width:420px; }
+  .follow { display:block; text-align:center; padding:14px; border-radius:14px; background:var(--ink); color:var(--bg); font-weight:700; text-decoration:none; }
+  .sunset .follow { background:#fff; color:#962fbf; }
+  .socials { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+  .socials a { padding:7px 14px; border-radius:99px; background:var(--chip); color:var(--ink); text-decoration:none; font-weight:600; font-size:14px; border:1px solid rgba(127,127,127,.25); }
+  a.item { display:flex; gap:12px; align-items:center; padding:14px 16px; border-radius:16px; background:var(--card); color:var(--ink); text-decoration:none;
+           box-shadow:0 8px 24px rgba(20,18,40,.08); }
+  .midnight a.item, .sunset a.item { color:var(--ink); }
+  .sunset a.item { color:#1d1530; }
+  a.item.featured { outline:2px solid var(--accent); }
+  .item img { width:64px; height:64px; border-radius:12px; object-fit:cover; flex:none; }
+  .item .txt { flex:1; min-width:0; }
+  .item b { display:block; }
+  .item small { opacity:.75; font-size:13px; }
+  .price { flex:none; font-weight:700; padding:8px 12px; border-radius:10px; background:var(--accent); color:var(--accent-ink); }
+  .item.link { justify-content:center; text-align:center; }
+  footer { text-align:center; font-size:13px; color:var(--sub); margin-top:16px; }
+  footer a { color:inherit; font-weight:700; }
+</style>
+</head>
+<body class="{{ page.theme or 'violet' }}">
+<main class="wrap">
+  <header>
+    {% if acc.pic %}<img class="av" src="{{ acc.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}
+    <h1>{{ page.name or acc.username }}</h1>
+    <div class="handle">@{{ acc.username }}</div>
+    {% if page.bio %}<p class="bio">{{ page.bio }}</p>{% endif %}
+  </header>
+  <a class="follow" href="https://www.instagram.com/{{ (page.socials or {}).get('instagram') or acc.username }}/" target="_blank" rel="noopener">Follow on Instagram</a>
+  {% set others = socials|rejectattr(0, "equalto", "instagram")|list %}
+  {% if others %}<nav class="socials" aria-label="Social links">
+    {% for k, v in others %}<a href="{{ v if v.startswith('http') else 'mailto:' ~ v }}" target="_blank" rel="noopener">{{ {"youtube": "YouTube", "whatsapp": "WhatsApp", "email": "Email", "website": "Website"}.get(k, k) }}</a>{% endfor %}
+  </nav>{% endif %}
+  {% for it in items %}
+    <a class="item {{ 'link' if it.type == 'link' }} {{ 'featured' if it.featured }}" href="/{{ acc.username }}/go/{{ it.id }}" rel="noopener">
+      {% if it.image %}<img src="{{ it.image }}" alt="" loading="lazy">{% endif %}
+      <span class="txt"><b>{{ it.title }}</b>{% if it.subtitle %}<small>{{ it.subtitle }}</small>{% endif %}</span>
+      {% if it.type == 'product' and it.price %}<span class="price">{{ it.price }}</span>{% endif %}
+    </a>
+  {% endfor %}
+  <footer>Made with <a href="/">{{ brand }}</a></footer>
+</main>
+</body>
+</html>
