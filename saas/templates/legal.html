@@ -19,7 +19,7 @@
   <nav><a href="/"><b>{{ brand }}</b></a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/data-deletion">Data deletion</a></nav>
 
   {% if page == "privacy" %}
-  <div class="label">Last updated 8 Nov 2026</div>
+  <div class="label">Last updated 11 Nov 2026</div>
   <h1>Privacy policy</h1>
   <p>{{ brand }} helps Instagram creators reply to comments and send direct messages automatically. This policy explains what we store and why.</p>
   <h2>What we collect</h2>
@@ -28,23 +28,25 @@
     <li><b>Your settings:</b> keyword rules, reply texts, DM texts and links you write.</li>
     <li><b>Activity:</b> the last 100 automation events (for example the commenter's username, the comment text and whether a DM was sent), so you can see what happened. Older events are removed automatically.</li>
     <li><b>Counts:</b> how many DMs, replies and links were sent.</li>
+    <li><b>AI Inbox (only if you turn on AI replies):</b> the last 40 messages of each DM conversation, so the AI can answer in context and you can read them in the inbox.</li>
   </ul>
   <h2>How we use it</h2>
   <p>Only to run the automation you set up: reading comments and messages on your account, replying, sending DMs and checking whether someone follows you before sending your link. We don't sell data, show ads or use it for anything else.</p>
   <h2>Where it's stored</h2>
-  <p>On Vercel (hosting) and Upstash (database), service providers that process data on our behalf.</p>
+  <p>On Vercel (hosting) and Upstash (database), service providers that process data on our behalf. If you turn on AI replies, the DM conversation and the details you give the AI (your FAQ, products and links) are sent to Anthropic, which runs the Claude AI model, to write each reply. Anthropic processes it on our behalf and doesn't use it to train its models.</p>
   <h2>Your choices</h2>
   <p>Use <b>Disconnect Instagram and delete my data</b> in the dashboard, or remove {{ brand }} in Instagram (Settings → Apps and websites). Either way we delete your account data. See <a href="/data-deletion">Data deletion</a>.</p>
   {% if contact_email %}<h2>Contact</h2><p><a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>{% endif %}
 
   {% elif page == "terms" %}
-  <div class="label">Last updated 8 Nov 2026</div>
+  <div class="label">Last updated 11 Nov 2026</div>
   <h1>Terms of use</h1>
   <ol>
     <li>{{ brand }} works with Instagram Business and Creator accounts through Instagram's official API. You need the right to manage the account you connect.</li>
     <li>You're responsible for what your rules send. Don't send spam, misleading content or anything that breaks Instagram's Terms of Use and Community Guidelines.</li>
     <li>Instagram sets limits (for example one DM per comment, within 7 days, and hourly request limits). Messages can be delayed or refused by Instagram, and we can't guarantee delivery.</li>
     <li>The free plan includes a monthly number of DMs shown in your dashboard. We may change plans and limits with notice.</li>
+    <li>AI replies are written by an AI model from what you give it. They can be wrong: check your AI Inbox, keep your FAQ up to date, and turn AI replies off any time.</li>
     <li>We may pause accounts that abuse the service or put it at risk.</li>
     <li>The service is provided as is. You can stop using it and delete your data at any time.</li>
   </ol>
@@ -58,7 +60,7 @@
     <li>In Instagram, go to <b>Settings → Apps and websites</b> and remove {{ brand }}. Instagram tells us, and we delete your data automatically.</li>
     {% if contact_email %}<li>Email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> from the address linked to your account, with your Instagram username.</li>{% endif %}
   </ol>
-  <p>Deletion covers your account details, access token, rules, activity and counts.</p>
+  <p>Deletion covers your account details, access token, rules, activity, counts and AI Inbox conversations.</p>
 
   {% else %}
   <h1>Deletion status</h1>

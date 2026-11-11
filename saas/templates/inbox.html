@@ -1,0 +1,225 @@
+{% extends "_base.html" %}
+{% block title %}AI Inbox{% endblock %}
+{% block heading %}AI Inbox{% endblock %}
+{% block actions %}<span class="badge" id="aiStatus" style="margin-left:auto">AI off</span>{% endblock %}
+{% block head %}
+<style>
+  .inbox { display:grid; grid-template-columns:320px 1fr; min-height:520px; padding:0; overflow:hidden; }
+  .list { border-right:1px solid var(--line); display:flex; flex-direction:column; min-width:0; }
+  .filters { display:flex; gap:6px; padding:12px; border-bottom:1px solid var(--line2); flex-wrap:wrap; }
+  .filters button { border:1px solid var(--line); background:var(--card); border-radius:99px; padding:6px 12px; font:500 13px var(--text); color:var(--body); cursor:pointer; }
+  .filters button[aria-pressed="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .threads { overflow-y:auto; max-height:640px; }
+  .t { display:flex; gap:10px; width:100%; text-align:left; padding:12px 14px; border:0; border-bottom:1px solid var(--line2); background:none; cursor:pointer; font:inherit; color:inherit; }
+  .t:hover { background:#FAFAF7; }
+  .t[aria-current="true"] { background:var(--accent-soft); }
+  .t .av { width:38px; height:38px; border-radius:50%; flex:none; display:grid; place-items:center; font:700 14px var(--display); background:var(--line2); color:var(--body); }
+  .t .body { flex:1; min-width:0; }
+  .t .top1 { display:flex; gap:6px; align-items:center; }
+  .t .top1 b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .t .when { margin-left:auto; font-size:12px; color:var(--mute); flex:none; }
+  .t .last { display:block; font-size:13px; color:var(--mute); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
+  .t.unread b { color:var(--ink); } .t.unread .last { color:var(--ink); font-weight:500; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); flex:none; }
+  .chat { display:flex; flex-direction:column; min-width:0; }
+  .chat-head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line2); }
+  .chat-head h2 { margin:0 auto 0 0; font-size:17px; }
+  .msgs { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:8px; max-height:460px; background:#FBFBF9; }
+  .m { max-width:78%; padding:9px 13px; border-radius:16px; line-height:1.45; font-size:14.5px; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .m.fan { align-self:flex-start; background:var(--card); border:1px solid var(--line); border-bottom-left-radius:6px; }
+  .m.ai, .m.you { align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:6px; }
+  .m.you { background:var(--ink); }
+  .m small { display:block; font-size:11px; opacity:.7; margin-top:3px; }
+  .needs { margin:12px 18px 0; padding:12px 14px; border-radius:12px; background:var(--warn-soft); color:var(--warn); font-size:14px; }
+  .needs .sug { margin-top:8px; padding:10px 12px; background:var(--card); border-radius:10px; color:var(--ink); white-space:pre-wrap; }
+  .composer { display:flex; gap:8px; padding:12px 18px 16px; align-items:flex-end; }
+  .composer textarea { flex:1; min-width:0; resize:vertical; }
+  .placeholder { margin:auto; text-align:center; color:var(--mute); padding:40px 20px; }
+  .back { display:none; }
+  form.grid1 { display:grid; gap:12px; margin-top:12px; }
+  .two { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
+  .try { display:flex; gap:8px; } .try input { flex:1; min-width:0; }
+  .answer { margin-top:10px; padding:12px 14px; border-radius:12px; background:var(--bg); border:1px solid var(--line2); white-space:pre-wrap; font-size:14px; }
+  details.card > summary { cursor:pointer; font:700 17px var(--display); list-style-position:inside; }
+  @media (max-width: 760px) {
+    .inbox { grid-template-columns:1fr; }
+    .list { border-right:0; }
+    .inbox.open .list { display:none; }
+    .inbox:not(.open) .chat { display:none; }
+    .back { display:inline-flex; }
+    .m { max-width:88%; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div id="setupNote"></div>
+<div class="grid">
+  <div class="card tile"><div class="k">Needs you</div><div class="n" id="nWait">–</div><div class="d">the AI handed these over</div></div>
+  <div class="card tile"><div class="k">Conversations</div><div class="n" id="nAll">–</div><div class="d">people who DMed you</div></div>
+  <div class="card tile"><div class="k">AI replies this month</div><div class="n" id="nUsed">–</div><div class="bar"><i id="usedBar" style="width:0"></i></div><div class="d" id="nLimit"></div></div>
+</div>
+
+<section class="card inbox" id="inbox" aria-label="Conversations">
+  <div class="list">
+    <div class="filters" role="group" aria-label="Show">
+      <button type="button" data-f="all" aria-pressed="true">All</button>
+      <button type="button" data-f="needs_you" aria-pressed="false">Needs you</button>
+      <button type="button" data-f="ai" aria-pressed="false">AI handling</button>
+      <button type="button" data-f="you" aria-pressed="false">You</button>
+    </div>
+    <div class="threads" id="threads"><p class="empty" style="padding:14px">Loading…</p></div>
+  </div>
+  <div class="chat" id="chat"><div class="placeholder">Pick a conversation to read it.<br><span class="small">Keyword DMs still go to your automations. Every other DM comes here and the AI answers it.</span></div></div>
+</section>
+
+<details class="card" id="setup">
+  <summary>Teach your AI</summary>
+  <p class="muted small" style="margin:8px 0 0">It already knows the products and links on your <a href="/app/links">Link in bio</a> page and your automation links. It never makes up prices or links, and hands the chat to you when it isn't sure.</p>
+  <form class="grid1" id="aiForm">
+    <label><input type="checkbox" name="enabled"> <b>AI replies on</b> <span class="hint">answers DMs that aren't one of your keywords</span></label>
+    <div class="two">
+      <div><label class="f" for="ai_lang">Language</label>
+        <select id="ai_lang" name="language">
+          <option value="match">Same as the fan (Hinglish, Hindi or English)</option>
+          <option value="hinglish">Always Hinglish</option><option value="hindi">Always Hindi</option><option value="english">Always English</option>
+        </select></div>
+      <div><label class="f" for="ai_hand">Hand these to me <span class="hint">one per line</span></label><textarea id="ai_hand" name="handoff" rows="3"></textarea></div>
+    </div>
+    <div><label class="f" for="ai_about">About you <span class="hint">who you are, what you make, how you talk</span></label>
+      <textarea id="ai_about" name="about" rows="3" placeholder="I make Hindi reels about AI tools for creators. Friendly, bhai-style tone. I reply personally to collab requests."></textarea></div>
+    <div><label class="f" for="ai_faq">FAQ <span class="hint">questions fans ask, with your answers</span></label>
+      <textarea id="ai_faq" name="faq" rows="6" placeholder="Q: Payment kaise karu? A: Link pe UPI, card ya netbanking. Download turant milta hai.&#10;Q: Refund? A: Mujhe DM karo, main dekh lunga."></textarea></div>
+    <label><input type="checkbox" name="send_hold"> When it hands a chat to me, send this so they're not left waiting:</label>
+    <textarea name="hold_message" rows="2" aria-label="Message sent when the AI hands a chat to you"></textarea>
+    <div class="row"><button class="btn sm" type="submit">Save</button><span class="small" id="aiMsg"></span></div>
+  </form>
+  <hr style="border:0; border-top:1px solid var(--line2); margin:18px 0 14px">
+  <label class="f" for="tryIn">Try it <span class="hint">see what the AI would answer; nothing is sent</span></label>
+  <form class="try" id="tryForm"><input id="tryIn" type="text" placeholder="Bhai ye pack kitne ka hai?" maxlength="1000"><button class="btn sm" type="submit">Ask</button></form>
+  <div id="tryOut"></div>
+</details>
+{% endblock %}
+{% block scripts %}
+<script>
+let state = null, threads = [], filter = "all", openId = null, current = null;
+const ago = (t) => { const s = Date.now() / 1000 - t; return s < 60 ? "now" : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`; };
+const STATUS = {needs_you: `<span class="badge warn">Needs you</span>`, ai: `<span class="badge accent">AI</span>`, you: `<span class="badge">You</span>`};
+
+function drawList() {
+  const rows = threads.filter(t => filter === "all" || t.status === filter);
+  $("threads").innerHTML = rows.map(t => `<button type="button" class="t ${t.unread ? "unread" : ""}" data-id="${esc(t.igsid)}" aria-current="${t.igsid === openId}">
+      <span class="av" aria-hidden="true">${esc((t.username || "?")[0].toUpperCase())}</span>
+      <span class="body"><span class="top1"><b>@${esc(t.username || "instagram user")}</b>${STATUS[t.status] || ""}<span class="when">${ago(t.last_at)}</span>${t.unread ? `<span class="dot" aria-label="unread"></span>` : ""}</span>
+      <span class="last">${t.last_role === "fan" ? "" : t.last_role === "ai" ? "AI: " : "You: "}${esc(t.last_text)}</span></span></button>`).join("")
+    || `<p class="empty" style="padding:14px">${filter === "needs_you" ? "Nothing waiting for you 🎉" : "No conversations yet. They appear when people DM you."}</p>`;
+}
+
+function drawChat() {
+  const t = current.thread, inWindow = Date.now() / 1000 - (t.last_fan_at || 0) < 86400;
+  $("chat").innerHTML = `
+    <div class="chat-head"><button type="button" class="btn ghost sm back" id="back" aria-label="Back to conversations">←</button>
+      <h2>@${esc(t.username || "instagram user")}</h2>${STATUS[t.status] || ""}
+      ${t.status === "ai" ? `<button type="button" class="btn ghost sm" data-status="you">Keep AI out</button>` : `<button type="button" class="btn ghost sm" data-status="ai">Hand back to AI</button>`}</div>
+    ${t.status === "needs_you" ? `<div class="needs"><b>The AI handed this to you:</b> ${esc(t.reason || "needs your answer")}
+      ${t.suggestion ? `<div class="sug">${esc(t.suggestion)}</div><button type="button" class="btn sm" id="useSug" style="margin-top:8px">Use this reply</button>` : ""}</div>` : ""}
+    <div class="msgs" id="msgs">${current.messages.map(m => `<div class="m ${m.role}">${esc(m.text)}<small>${m.role === "ai" ? "AI · " : m.role === "you" ? "You · " : ""}${new Date(m.at * 1000).toLocaleString([], {dateStyle: "short", timeStyle: "short"})}</small></div>`).join("")}</div>
+    <form class="composer" id="composer">
+      <textarea id="reply" rows="2" maxlength="1000" aria-label="Your reply" placeholder="${inWindow ? "Write your reply…" : "More than 24 hours since their last message: Instagram won't deliver a reply until they write again."}" ${inWindow ? "" : "disabled"}></textarea>
+      <button class="btn" type="submit" ${inWindow ? "" : "disabled"}>Send</button></form>
+    <p class="muted small" style="margin:-6px 18px 14px">When you reply, the AI stays out of this chat until you hand it back.</p>`;
+  const box = $("msgs"); box.scrollTop = box.scrollHeight;
+}
+
+async function openThread(id) {
+  openId = id;
+  current = await api(`/api/inbox/${encodeURIComponent(id)}`);
+  const t = threads.find(x => x.igsid === id); if (t) t.unread = false;
+  $("inbox").classList.add("open");
+  drawList(); drawChat();
+}
+
+function drawState() {
+  const s = state.settings;
+  $("aiStatus").className = `badge ${s.enabled ? "on" : ""}`; $("aiStatus").textContent = s.enabled ? "AI on" : "AI off";
+  $("nAll").textContent = fmt(threads.length);
+  const waiting = threads.filter(t => t.status === "needs_you").length, nav = $("navWaiting");
+  $("nWait").textContent = fmt(waiting);
+  if (nav) { nav.hidden = !waiting; nav.textContent = waiting; }
+  $("nUsed").textContent = fmt(state.used);
+  $("nLimit").textContent = state.limit ? `of ${fmt(state.limit)} on your plan` : "no limit";
+  $("usedBar").style.width = state.limit ? `${Math.min(100, 100 * state.used / state.limit)}%` : "0";
+  $("setupNote").innerHTML = !state.ready ? `<div class="banner info">The AI isn't switched on for ${"{{ brand }}"} yet. It will be ready soon.</div>`
+    : !s.enabled ? `<div class="banner info">AI replies are off. Open <b>Teach your AI</b> below, add your FAQ and turn it on.</div>`
+    : state.demo ? `<div class="banner info">Demo: the AI here gives sample answers. Try asking "price kya hai?" or "refund chahiye" in <b>Teach your AI → Try it</b>.</div>` : "";
+}
+
+function fillForm() {
+  const s = state.settings, f = $("aiForm");
+  f.enabled.checked = s.enabled; f.language.value = s.language; f.handoff.value = s.handoff.join("\n");
+  f.about.value = s.about; f.faq.value = s.faq; f.send_hold.checked = s.send_hold; f.hold_message.value = s.hold_message;
+}
+
+async function load() {
+  const data = await api("/api/inbox");
+  threads = data.threads; state = data;
+  drawList(); drawState(); fillForm();
+  if (!threads.length || !state.settings.enabled) $("setup").open = true;
+}
+
+document.addEventListener("click", async (e) => {
+  const f = e.target.closest("[data-f]");
+  if (f) { filter = f.dataset.f; document.querySelectorAll("[data-f]").forEach(b => b.setAttribute("aria-pressed", String(b === f))); drawList(); return; }
+  const t = e.target.closest(".t");
+  if (t) return openThread(t.dataset.id);
+  if (e.target.closest("#back")) { $("inbox").classList.remove("open"); openId = null; drawList(); return; }
+  if (e.target.closest("#useSug")) { $("reply").value = current.thread.suggestion; $("reply").focus(); return; }
+  const st = e.target.closest("[data-status]");
+  if (st) {
+    try {
+      const r = await api(`/api/inbox/${encodeURIComponent(openId)}/status`, {method: "POST", body: JSON.stringify({status: st.dataset.status})});
+      current.thread = r.thread; Object.assign(threads.find(x => x.igsid === openId), r.thread);
+      drawList(); drawChat(); drawState();
+      toast(st.dataset.status === "ai" ? "The AI will answer their next message." : "The AI won't reply in this chat.");
+    } catch (err) { toast(err.message); }
+  }
+});
+
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "composer") return;
+  e.preventDefault();
+  const text = $("reply").value.trim(); if (!text) return;
+  const btn = e.target.querySelector("button"); btn.disabled = true;
+  try {
+    current = await api(`/api/inbox/${encodeURIComponent(openId)}/send`, {method: "POST", body: JSON.stringify({text})});
+    Object.assign(threads.find(x => x.igsid === openId), current.thread);
+    drawList(); drawChat(); drawState(); toast("Sent");
+  } catch (err) { toast(err.message); btn.disabled = false; }
+});
+
+$("aiForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const f = e.target, msg = $("aiMsg");
+  try {
+    state = {...state, ...await api("/api/ai", {method: "PUT", body: JSON.stringify({
+      enabled: f.enabled.checked, language: f.language.value, handoff: f.handoff.value, about: f.about.value,
+      faq: f.faq.value, send_hold: f.send_hold.checked, hold_message: f.hold_message.value})})};
+    drawState(); fillForm(); msg.className = "small ok"; msg.textContent = "Saved ✓";
+  } catch (err) { msg.className = "small err"; msg.textContent = err.message; }
+};
+
+$("tryForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const message = $("tryIn").value.trim(); if (!message) return;
+  $("tryOut").innerHTML = `<div class="answer muted">Thinking…</div>`;
+  try {
+    const a = await api("/api/ai/test", {method: "POST", body: JSON.stringify({message})});
+    $("tryOut").innerHTML = a.needs_human
+      ? `<div class="answer"><b>Hands it to you:</b> ${esc(a.reason)}${a.suggested_reply ? `\n\n<b>Suggested reply:</b> ${esc(a.suggested_reply)}` : ""}</div>`
+      : `<div class="answer"><b>AI would send:</b> ${esc(a.reply || "(no reply needed)")}</div>`;
+    state.used += 1; drawState();
+  } catch (err) { $("tryOut").innerHTML = `<div class="answer err">${esc(err.message)}</div>`; }
+};
+
+(async () => { loadBanners(); await load(); })();
+</script>
+{% endblock %}

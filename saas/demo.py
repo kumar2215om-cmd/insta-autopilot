@@ -57,7 +57,11 @@ def seed():
            "auto_setup": {"enabled": True, "since": "2026-01-01T00:00:00+0000",
                           "template": {"comment_reply": "@{username} Check your DM 📩", "require_follow": True,
                                        "dm": "Here you go 🎁 https://example.com/free?k={keyword}"}},
-           "apps": {"links": True, "contacts": True, "report": True}}
+           "apps": {"inbox": True, "links": True, "contacts": True, "report": True},
+           "ai": {"enabled": True, "language": "match",
+                  "about": "I make Hindi reels about AI tools for creators. Friendly, bhai-style tone.",
+                  "faq": "Q: Payment kaise karu? A: Link pe UPI, card ya netbanking. Download turant milta hai.\n"
+                         "Q: Beginners ke liye hai? A: Haan, har pack mein step-by-step guide hai."}}
     store.save_account(acc)
     store.redis("SET", f"s:user:{USERNAME}", DEMO_ID)
     store.save_rules(DEMO_ID, {"reels": {
@@ -69,7 +73,10 @@ def seed():
         "kw:AUDIT": {"enabled": True, "keywords": ["AUDIT"], "comments": True, "require_follow": False,
                      "comment_reply": "", "dm": "Send me your handle and I'll audit your page 🙌"},
     }})
-    for key in ("activity", "counts", "autos", "contacts", "page"):
+    import ai_agent
+    for t in ai_agent.threads(DEMO_ID):
+        store.redis("DEL", store.account_key(DEMO_ID, f"chat:{t['igsid']}"))
+    for key in ("activity", "counts", "autos", "contacts", "page", "threads"):
         store.redis("DEL", store.account_key(DEMO_ID, key))
     for mid, c in (("18000000000000001", {"keyword": 389, "dm": 352, "link": 301, "follow": 290}),
                    ("18000000000000002", {"keyword": 120, "dm": 118, "link": 96, "follow": 93})):
@@ -97,6 +104,27 @@ def seed():
     ]):
         store.save_contact(DEMO_ID, {"username": user, "first_at": now - (i + 1) * 5400, "last_at": now - i * 3600,
                                      "keyword": kw, "followed": followed, "email": email, "interactions": 1 + i % 3})
+    for igsid, user, chat, extra in [
+        ("900001", "ankit.edits", [("fan", "Bhai ye prompt pack kitne ka hai?"),
+                                   ("ai", "Abhi sirf ₹149 hai 🙌 Saare 39 packs, lifetime access. Yahan se le lo 👉 https://example.com/prompts"),
+                                   ("fan", "UPI se ho jayega?"),
+                                   ("ai", "Haan bilkul! Link pe UPI, card ya netbanking sab chalta hai. Download turant milta hai 😊")], {}),
+        ("900002", "meera.designs", [("fan", "Hi! I run a skincare brand, want to collab on 2 reels. What are your rates?"),
+                                     ("ai", "Thanks for your message! I'll get back to you personally soon 🙏")],
+         {"status": "needs_you", "reason": "Brand collaboration request", "hold_sent": True,
+          "suggestion": "Hi Meera! Thanks for reaching out 😊 Please share your brand page and what you have in mind, and I'll send my rates."}),
+        ("900003", "rohit_9", [("fan", "Payment ho gaya but download link nahi aaya 😟")],
+         {"status": "needs_you", "reason": "Payment problem", "unread": True,
+          "suggestion": "Sorry for the trouble! Apna payment screenshot bhej do, main abhi link bhejta hoon 🙏"}),
+        ("900004", "sana.creates", [("fan", "Guide mil gayi, thank you so much!! ❤️"),
+                                    ("ai", "Bahut khushi hui 😊 Koi doubt ho to yahin pooch lena!"),
+                                    ("you", "Aur haan, next reel mein part 2 aa raha hai 🔥")], {"status": "you"}),
+    ]:
+        for i, (role, text) in enumerate(chat):
+            ai_agent.add_message(DEMO_ID, igsid, role, text, user)
+        ai_agent.update_thread(DEMO_ID, igsid, **{"unread": False, **extra})
+    store.count(DEMO_ID, f"ai:{ai_agent.month()}", 37)
+    store.count(DEMO_ID, "ai_replies", 37)
     store.save_page(DEMO_ID, {
         "name": "Demo Creator", "bio": "AI tools and tips you can use today. New reel every day 👇", "theme": "violet",
         "socials": {"instagram": USERNAME, "youtube": "https://youtube.com", "email": "", "website": ""},

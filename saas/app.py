@@ -22,6 +22,7 @@ from urllib.parse import urlencode
 import requests
 from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
 
+import ai_agent
 import demo
 import engine
 import store
@@ -77,11 +78,12 @@ def public_account(acc):
 # Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Automations", True),
+    ("inbox", "/app/inbox", "AI Inbox", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
     ("contacts", "/app/contacts", "Contacts", False), ("apps", "/app/apps", "Apps", True),
     ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"report": True, "links": True, "contacts": True}
+DEFAULT_APPS = {"inbox": True, "report": True, "links": True, "contacts": True}
 
 
 def apps_of(acc):
@@ -141,6 +143,11 @@ def links_page():
 @app.get("/app/contacts")
 def contacts_page():
     return render_app("contacts.html", "contacts")
+
+
+@app.get("/app/inbox")
+def inbox_page():
+    return render_app("inbox.html", "inbox")
 
 
 @app.get("/app/apps")
@@ -270,7 +277,8 @@ def api_me():
     c = store.counts(acc["id"])
     return jsonify(account=public_account(acc), blocked=engine.is_blocked(acc),
                    dms_this_month=c.get(f"dms:{engine.month()}", 0), dm_limit=engine.monthly_limit(acc),
-                   totals={k: c.get(k, 0) for k in ("dms", "links_sent", "comment_replies", "gate_follows")})
+                   totals={k: c.get(k, 0) for k in ("dms", "links_sent", "comment_replies", "gate_follows", "ai_replies")},
+                   inbox_waiting=sum(t.get("status") == "needs_you" for t in ai_agent.threads(acc["id"])))
 
 
 @app.get("/api/reels")
@@ -506,6 +514,100 @@ def api_put_apps():
     acc["apps"] = {k: bool(data.get(k, v)) for k, v in DEFAULT_APPS.items()}
     store.save_account(acc)
     return jsonify(acc["apps"])
+
+
+# ---------- AI DM agent and inbox ----------
+
+LANGUAGES = ["match", "hinglish", "hindi", "english"]
+
+
+def ai_state(acc):
+    return {"settings": ai_agent.settings(acc), "ready": ai_agent.ready(acc), "demo": bool(acc.get("demo")),
+            "used": ai_agent.used_this_month(acc["id"]), "limit": ai_agent.monthly_limit(acc)}
+
+
+@app.get("/api/inbox")
+def api_inbox():
+    acc = current_account()
+    return jsonify(threads=ai_agent.threads(acc["id"]), **ai_state(acc))
+
+
+@app.put("/api/ai")
+def api_put_ai():
+    acc = current_account()
+    data = request.get_json(force=True)
+    old = ai_agent.settings(acc)
+    handoff = [h.strip()[:120] for h in str(data.get("handoff", "")).splitlines() if h.strip()][:10] \
+        if "handoff" in data else old["handoff"]
+    acc["ai"] = {"enabled": bool(data.get("enabled", old["enabled"])),
+                 "language": data.get("language") if data.get("language") in LANGUAGES else old["language"],
+                 "about": str(data.get("about", old["about"]))[:1500], "faq": str(data.get("faq", old["faq"]))[:6000],
+                 "handoff": handoff, "hold_message": str(data.get("hold_message", old["hold_message"]))[:500],
+                 "send_hold": bool(data.get("send_hold", old["send_hold"]))}
+    if acc["ai"]["enabled"] and not ai_agent.ready(acc):
+        return jsonify(error="The AI isn't set up on the server yet (ANTHROPIC_API_KEY)."), 400
+    store.save_account(acc)
+    return jsonify(ai_state(acc))
+
+
+@app.post("/api/ai/test")
+def api_ai_test():
+    """Shows what the AI would answer, without sending anything."""
+    acc = current_account()
+    text = str(request.get_json(force=True).get("message", "")).strip()[:1000]
+    if not text:
+        return jsonify(error="Type a message to test."), 400
+    if not ai_agent.ready(acc):
+        return jsonify(error="The AI isn't set up on the server yet (ANTHROPIC_API_KEY)."), 400
+    if ai_agent.over_quota(acc):
+        return jsonify(error="This month's AI replies are used up."), 400
+    try:
+        answer = ai_agent.answer(acc, [{"role": "fan", "text": text}], ai_agent.settings(acc))
+    except Exception as e:
+        return jsonify(error=f"The AI couldn't answer: {str(e)[:200]}"), 502
+    ai_agent.note_use(acc)
+    return jsonify(answer)
+
+
+@app.get("/api/inbox/<igsid>")
+def api_thread(igsid):
+    acc = current_account()
+    thread = ai_agent.update_thread(acc["id"], igsid, unread=False)
+    if not thread:
+        return jsonify(error="Conversation not found."), 404
+    return jsonify(thread=thread, messages=ai_agent.messages(acc["id"], igsid))
+
+
+@app.post("/api/inbox/<igsid>/send")
+def api_thread_send(igsid):
+    """The creator answers by hand. The AI then stays quiet in this chat until they hand it back."""
+    acc = current_account()
+    thread = ai_agent.get_thread(acc["id"], igsid)
+    text = str(request.get_json(force=True).get("text", "")).strip()[:1000]
+    if not thread or not text:
+        return jsonify(error="Write a message first."), 400
+    if time.time() - thread.get("last_fan_at", 0) > 24 * 3600:
+        return jsonify(error="Instagram only allows replies within 24 hours of their last message."), 400
+    try:
+        engine.Instagram(acc).send_dm({"id": igsid}, {"text": text})
+    except Exception as e:
+        return jsonify(error=f"Instagram didn't send it: {str(e)[:200]}"), 502
+    ai_agent.add_message(acc["id"], igsid, "you", text, status="you", reason="", suggestion="", unread=False)
+    store.log_activity(acc["id"], "ai", thread.get("username") or igsid, text, "inbox_reply", "ok")
+    return jsonify(thread=ai_agent.get_thread(acc["id"], igsid), messages=ai_agent.messages(acc["id"], igsid))
+
+
+@app.post("/api/inbox/<igsid>/status")
+def api_thread_status(igsid):
+    """status "ai" hands the chat back to the AI; "you" keeps the AI out of it."""
+    acc = current_account()
+    status = request.get_json(force=True).get("status")
+    if status not in ("ai", "you"):
+        return jsonify(error="Unknown status."), 400
+    thread = ai_agent.update_thread(acc["id"], igsid, status=status, reason="", suggestion="", hold_sent=False)
+    if not thread:
+        return jsonify(error="Conversation not found."), 404
+    return jsonify(thread=thread)
 
 
 THEMES = ["violet", "sunset", "midnight", "mint", "mono"]

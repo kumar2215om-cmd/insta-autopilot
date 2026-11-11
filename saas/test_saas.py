@@ -13,6 +13,7 @@ os.environ.update(IG_APP_ID="123", IG_APP_SECRET="shh", CRON_SECRET="cron", OWNE
 for k in ("UPSTASH_REDIS_REST_URL", "KV_REST_API_URL", "VERCEL"):
     os.environ.pop(k, None)
 
+import ai_agent  # noqa: E402
 import app as saas  # noqa: E402
 import demo  # noqa: E402
 import engine  # noqa: E402
@@ -87,6 +88,26 @@ def signed(body):
     raw = json.dumps(body).encode()
     return raw, {"X-Hub-Signature-256": "sha256=" + hmac.new(b"shh", raw, hashlib.sha256).hexdigest(),
                  "Content-Type": "application/json"}
+
+
+class FakeClaude:
+    """Stands in for the Anthropic client: returns the queued answers and records each request."""
+
+    def __init__(self):
+        self.requests, self.answers = [], []
+        self.beta = self
+        self.messages = self
+
+    def create(self, **kw):
+        self.requests.append(kw)
+        answer = self.answers.pop(0) if self.answers else {"reply": "Hi!", "needs_human": False, "reason": "", "suggested_reply": ""}
+        if answer == "refusal":
+            return mock.Mock(stop_reason="refusal", content=[])
+        return mock.Mock(stop_reason="end_turn", content=[mock.Mock(type="text", text=json.dumps(answer))])
+
+
+def dm(text, sender="88", mid=""):
+    return {"entry": [{"id": "1789", "messaging": [{"sender": {"id": sender}, "message": {"text": text, "mid": mid or text}}]}]}
 
 
 def comment(text, cid="c1", media="555", who="fan"):
@@ -366,6 +387,87 @@ class SaasTest(unittest.TestCase):
         # apps switch sections off
         self.c.put("/api/apps", json={"contacts": False})
         self.assertNotIn('href="/app/contacts"', self.c.get("/app").get_data(as_text=True))
+
+    def test_ai_agent_replies_and_hands_over(self):
+        self.login()
+        # without the server's Claude key the AI can't be switched on
+        with mock.patch.object(ai_agent, "client", lambda: None):
+            self.assertEqual(self.c.put("/api/ai", json={"enabled": True}).status_code, 400)
+        claude = FakeClaude()
+        self.enterContext(mock.patch.object(ai_agent, "client", lambda: claude))
+        self.c.put("/api/page", json={"items": [{"type": "product", "title": "Prompt Pack", "url": "https://shop.com/p", "price": "₹149"}]})
+        self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="")
+        state = self.c.put("/api/ai", json={"enabled": True, "faq": "Q: UPI? A: Yes", "language": "hinglish"}).get_json()
+        self.assertTrue(state["settings"]["enabled"])
+        # keyword DMs still go to the automation, not the AI
+        self.hook(dm("GUIDE"))
+        self.assertEqual(claude.requests, [])
+        # anything else: Claude answers from the creator's products and FAQ
+        claude.answers.append({"reply": "Sirf ₹149 👉 https://shop.com/p", "needs_human": False, "reason": "", "suggested_reply": ""})
+        self.hook(dm("price kya hai?"))
+        system = claude.requests[0]["system"][0]["text"]
+        self.assertIn("Prompt Pack", system)
+        self.assertIn("₹149", system)
+        self.assertIn("Q: UPI? A: Yes", system)
+        self.assertIn("Hinglish", system)
+        self.assertEqual(claude.requests[0]["messages"][-1], {"role": "user", "content": "price kya hai?"})
+        self.assertEqual(self.ig.messages()[-1], {"recipient": {"id": "88"}, "message": {"text": "Sirf ₹149 👉 https://shop.com/p"}})
+        self.hook(dm("price kya hai?"))  # Instagram delivering the same message again
+        self.assertEqual(len(claude.requests), 1)
+        # a refund: handed over with a suggestion and one holding message, then the AI stays quiet
+        claude.answers.append({"reply": "", "needs_human": True, "reason": "Refund", "suggested_reply": "Sorry! Sending it now"})
+        sent = len(self.ig.messages())
+        self.hook(dm("refund chahiye", mid="m2"))
+        self.assertEqual(self.ig.messages()[-1]["message"]["text"], ai_agent.DEFAULT_HOLD)
+        self.hook(dm("hello??", mid="m3"))
+        self.assertEqual(len(self.ig.messages()), sent + 1)
+        self.assertEqual(len(claude.requests), 2)
+        inbox = self.c.get("/api/inbox").get_json()
+        t = inbox["threads"][0]
+        self.assertEqual((t["status"], t["reason"], t["suggestion"], t["username"]), ("needs_you", "Refund", "Sorry! Sending it now", "fan"))
+        self.assertEqual(self.c.get("/api/me").get_json()["inbox_waiting"], 1)
+        # the creator answers: the AI stays out until it's handed back
+        r = self.c.post("/api/inbox/88/send", json={"text": "Bhej diya 🙏"}).get_json()
+        self.assertEqual(r["thread"]["status"], "you")
+        self.assertEqual([m["role"] for m in r["messages"]], ["fan", "ai", "fan", "ai", "fan", "you"])
+        self.hook(dm("thanks", mid="m4"))
+        self.assertEqual(len(claude.requests), 2)
+        self.c.post("/api/inbox/88/status", json={"status": "ai"})
+        self.hook(dm("one more question", mid="m5"))
+        self.assertEqual(len(claude.requests), 3)
+        self.assertEqual(claude.requests[2]["messages"][-1]["role"], "user")
+        # refusals and errors hand over instead of sending anything
+        claude.answers.append("refusal")
+        sent = len(self.ig.messages())
+        self.hook(dm("hmm", sender="99"))
+        self.assertEqual(ai_agent.get_thread("1789", "99")["status"], "needs_you")
+        # try-it box doesn't send
+        sent = len(self.ig.messages())
+        self.assertEqual(self.c.post("/api/ai/test", json={"message": "hi"}).get_json()["reply"], "Hi!")
+        self.assertEqual(len(self.ig.messages()), sent)
+        # monthly AI limit
+        acc = store.load_account("1789")
+        acc["ai_limit"] = 1
+        store.save_account(acc)
+        self.c.post("/api/inbox/88/status", json={"status": "ai"})
+        self.hook(dm("are you there", mid="m6"))
+        self.assertIn("limit", ai_agent.get_thread("1789", "88")["reason"])
+        # disconnect removes the conversations
+        self.c.post("/api/disconnect", json={})
+        self.assertEqual(ai_agent.threads("1789"), [])
+        self.assertIsNone(store.redis("GET", store.account_key("1789", "chat:88")))
+        self.assertEqual(store.redis("LRANGE", store.account_key("1789", "chat:88"), 0, -1), [])
+
+    def test_demo_inbox(self):
+        self.c.get("/demo")
+        self.assertEqual(self.c.get("/app/inbox").status_code, 200)
+        inbox = self.c.get("/api/inbox").get_json()
+        self.assertTrue(inbox["ready"])
+        self.assertEqual(sum(t["status"] == "needs_you" for t in inbox["threads"]), 2)
+        self.assertTrue(self.c.post("/api/ai/test", json={"message": "refund chahiye"}).get_json()["needs_human"])
+        self.hook({"entry": [{"id": demo.DEMO_ID, "messaging": [{"sender": {"id": "5"}, "message": {"text": "kitne ka hai", "mid": "d1"}}]}]})
+        self.assertIn("₹149", ai_agent.messages(demo.DEMO_ID, "5")[-1]["text"])
+        self.assertEqual(len(self.ig.calls), 0)
 
     def test_pages_render(self):
         for path in ("/", "/privacy", "/terms", "/data-deletion"):

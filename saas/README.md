@@ -35,6 +35,20 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   Per-reel counts are stored in `s:t:<id>:m:<media_id>` from the moment a reel's automation runs; button payloads now carry
   the reel (`GET|<rule>|<media_id>`). Cached 10 minutes; ↻ Refresh fetches again.
 
+## AI DM agent and AI Inbox (`/app/inbox`)
+DMs that aren't one of the creator's keywords go to the AI (`engine.handle_ai_dm`, `ai_agent.py`) when it's switched on.
+- Claude (`AI_MODEL`, default `claude-opus-5-5`, effort low, server-side fallbacks) reads the last 12 messages and answers from the
+  creator's Link-in-bio products/prices, automation links, "About you" and FAQ, in the fan's language (or a fixed one). It returns
+  JSON `{reply, needs_human, reason, suggested_reply}`; it never invents prices or links.
+- **Hand-over:** refunds, collabs and anything unsure (the creator's list) mark the chat **Needs you** with a suggested reply; one
+  holding message is sent; the AI then stays quiet in that chat. Refusals, errors and the monthly limit hand over too.
+- When the creator replies from the inbox, the chat becomes **You** (AI out) until **Hand back to AI**. Replies only within
+  Instagram's 24 hours of the fan's last message.
+- Storage: `s:t:<id>:threads` (hash igsid → row), `s:t:<id>:chat:<igsid>` (last 40 messages); removed on disconnect.
+- **Try it** box (`/api/ai/test`) shows an answer without sending. Demo account: sample answers, no API call.
+- Env: `ANTHROPIC_API_KEY` (required; without it AI can't be switched on), optional `AI_MODEL`, `FREE_MONTHLY_AI_REPLIES`
+  (default 100; per account `"ai_limit": N`). Each AI reply is one Claude request (~2–3K input tokens, mostly cached).
+
 ## Connect Claude (MCP server)
 `POST /mcp` is a Model Context Protocol server (Streamable HTTP, JSON responses, stateless), so creators can run
 ReplyInbox from claude.ai (Settings → Connectors → Add custom connector), Claude Desktop or Claude Code.

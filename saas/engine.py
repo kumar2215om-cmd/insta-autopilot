@@ -2,6 +2,7 @@
 
 Same flow and matching as the single-account app (../app.py), with every call tied to one account.
 """
+import hashlib
 import os
 import random
 import re
@@ -10,6 +11,7 @@ from datetime import datetime, timezone
 
 import requests
 
+import ai_agent
 import store
 
 API_VERSION = os.environ.get("IG_API_VERSION", "v23.0")
@@ -259,15 +261,19 @@ def handle_comment(acc, value):
     return True
 
 
-def handle_dm_text(acc, igsid, text):
-    """Someone DMed a keyword: start the same flow inside that chat (works even when comment DMs are refused)."""
+def handle_dm_text(acc, igsid, text, mid=""):
+    """Someone DMed a keyword: start the same flow inside that chat (works even when comment DMs are refused).
+    Any other message goes to the AI DM agent when it's on."""
     if is_blocked(acc):
         return
     rules = store.load_rules(acc["id"]).get("reels", {})
     ordered = sorted(rules.items(), key=lambda kv: not is_keyword_rule(kv[0]))
     match = next(((k, r) for k, r in ordered if r.get("enabled", True)
                   and any(keyword_matches(w, text) for w in keywords_of(r))), None)
-    if not match or not store.claim(f"s:seen:{acc['id']}:dm:{igsid}:{match[0]}:{int(time.time() // 600)}"):
+    if not match:
+        handle_ai_dm(acc, igsid, text, mid)
+        return
+    if not store.claim(f"s:seen:{acc['id']}:dm:{igsid}:{match[0]}:{int(time.time() // 600)}"):
         return
     key, rule = match
     ig = Instagram(acc)
@@ -291,6 +297,61 @@ def handle_dm_text(acc, igsid, text):
         store.log_activity(acc["id"], key, username or igsid, text, "dm_keyword", "ok")
     except Exception as e:
         store.log_activity(acc["id"], key, username or igsid, text, "dm_keyword", "error", str(e))
+
+
+def handle_ai_dm(acc, igsid, text, mid=""):
+    """The AI DM agent: answers from the creator's products, links and FAQ, or hands the chat to them."""
+    s = ai_agent.settings(acc)
+    if not s["enabled"]:
+        return
+    once = mid or hashlib.sha1(f"{igsid}|{text}".encode()).hexdigest()[:16] + f":{int(time.time() // 300)}"
+    if not store.claim(f"s:seen:{acc['id']}:ai:{once}", 86400):
+        return  # Instagram sometimes delivers a message twice
+    ig = Instagram(acc)
+    try:
+        username = ig.get(igsid, fields="username").get("username", "")
+    except Exception:
+        username = ""
+    store.touch_contact(acc["id"], username, igsid, source="dm")
+    thread = ai_agent.add_message(acc["id"], igsid, "fan", text, username, unread=True)
+    if thread.get("status") == "you":
+        return  # the creator took over this chat
+    who = username or igsid
+
+    def hand_over(reason, suggestion=""):
+        thread = ai_agent.update_thread(acc["id"], igsid, status="needs_you", reason=reason[:200], suggestion=suggestion)
+        store.log_activity(acc["id"], "ai", who, text, "ai_handoff", "ok", reason)
+        if s["send_hold"] and s["hold_message"] and not thread.get("hold_sent"):
+            try:
+                ig.send_dm({"id": igsid}, {"text": s["hold_message"]})
+                ai_agent.add_message(acc["id"], igsid, "ai", s["hold_message"], hold_sent=True)
+            except Exception as e:
+                store.log_activity(acc["id"], "ai", who, text, "ai_reply", "error", str(e))
+
+    if thread.get("status") == "needs_you":
+        return  # still waiting for the creator: don't answer around them
+    if not ai_agent.ready(acc):
+        return hand_over("AI isn't set up on the server yet.")
+    if ai_agent.over_quota(acc):
+        return hand_over(f"Monthly AI reply limit reached ({ai_agent.monthly_limit(acc)}).")
+    try:
+        answer = ai_agent.answer(acc, ai_agent.messages(acc["id"], igsid), s)
+    except Exception as e:
+        return hand_over(f"The AI couldn't answer ({str(e)[:120]}).")
+    ai_agent.note_use(acc)
+    if answer["needs_human"]:
+        return hand_over(answer["reason"] or "Needs your answer.", answer["suggested_reply"])
+    if not answer["reply"]:
+        return
+    try:
+        ig.send_dm({"id": igsid}, {"text": answer["reply"][:1000]})
+        ai_agent.add_message(acc["id"], igsid, "ai", answer["reply"])
+        store.count(acc["id"], "ai_replies")
+        store.log_activity(acc["id"], "ai", who, text, "ai_reply", "ok")
+    except Exception as e:
+        ai_agent.update_thread(acc["id"], igsid, status="needs_you", reason="Instagram didn't deliver the AI reply.",
+                               suggestion=answer["reply"])
+        store.log_activity(acc["id"], "ai", who, text, "ai_reply", "error", str(e))
 
 
 def handle_button(acc, igsid, payload):
@@ -452,4 +513,4 @@ def dispatch(body, run):
             if payload:
                 run(handle_button, acc, sender, payload)
             elif msg.get("text"):
-                run(handle_dm_text, acc, sender, msg["text"])
+                run(handle_dm_text, acc, sender, msg["text"], msg.get("mid", ""))

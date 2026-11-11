@@ -65,6 +65,8 @@
     width:100%; border:1px solid #D6D6CF; border-radius:10px; padding:10px 12px; font:15px var(--text); background:#fff; color:var(--ink); }
   textarea { resize:vertical; line-height:1.5; }
   input[type=checkbox] { accent-color:var(--accent); width:16px; height:16px; }
+  .nbadge { margin-left:auto; min-width:20px; height:20px; padding:0 6px; border-radius:99px; background:var(--bad); color:#fff; font-size:11.5px; font-weight:700; display:inline-grid; place-items:center; }
+  .nbadge[hidden] { display:none; }
   .banner { border-radius:12px; padding:12px 16px; font-weight:500; }
   .banner.info { background:var(--accent-soft); color:var(--accent-ink); }
   .banner.bad { background:var(--bad-soft); color:var(--bad); }
@@ -102,13 +104,14 @@
       {% set icons = {
         "home": '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path>',
         "automations": '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path>',
+        "inbox": '<path d="M22 12h-6l-2 3h-4l-2-3H2"></path><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"></path>',
         "report": '<path d="M4 19V10M10 19V5M16 19v-7M22 19H2"></path>',
         "links": '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path>',
         "contacts": '<circle cx="9" cy="8" r="4"></circle><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"></path><path d="M16 4a4 4 0 0 1 0 8M22 21c0-3-1.8-5.6-4.5-6.6"></path>',
         "apps": '<rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect>',
         "settings": '<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"></path>'} %}
       {% for key, href, label in nav %}
-        <a href="{{ href }}" {% if key == active %}aria-current="page"{% endif %}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icons[key]|safe }}</svg>{{ label }}</a>
+        <a href="{{ href }}" {% if key == active %}aria-current="page"{% endif %}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{{ icons[key]|safe }}</svg>{{ label }}{% if key == "inbox" %}<span class="nbadge" id="navWaiting" hidden></span>{% endif %}</a>
       {% endfor %}
     </nav>
     <div class="who">
@@ -148,6 +151,8 @@ async function loadBanners() {
     if (me.account.paused) b.push(`<div class="banner info">Automation is paused: comments and DMs aren't answered. Resume it in Settings.</div>`);
     if (me.dm_limit && me.dms_this_month >= me.dm_limit) b.push(`<div class="banner bad">You've used this month's ${fmt(me.dm_limit)} free DMs. New comments still get the public reply.</div>`);
     $("banners").innerHTML = b.join("");
+    const w = $("navWaiting");
+    if (w) { w.hidden = !me.inbox_waiting; w.textContent = me.inbox_waiting; w.title = `${me.inbox_waiting} chats need you`; }
     return me;
   } catch (e) { return null; }
 }
