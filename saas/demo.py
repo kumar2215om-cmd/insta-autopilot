@@ -44,6 +44,12 @@ def ig_get(path, params):
     if path == "me":
         return {"id": "demo", "user_id": DEMO_ID, "username": USERNAME, "name": "Demo Creator",
                 "profile_picture_url": "", "followers_count": 15330, "media_count": 48}
+    if path.endswith("/comments"):
+        now = time.time()
+        stamp = lambda h: time.strftime("%Y-%m-%dT%H:%M:%S+0000", time.gmtime(now - h * 3600))
+        return {"data": [{"id": f"{path.split('/')[0]}{i}", "text": text, "timestamp": stamp(h), "from": {"id": f"5{i}", "username": u}}
+                         for i, (u, text, h) in enumerate([("neha.reels", "PROMPTS please", 5), ("arjun.ai", "prompts 🔥", 30),
+                                                           ("old.fan", "PROMPTS", 24 * 9), ("random.guy", "nice video", 2)])]}
     media = next((m for m in _media() if m["id"] == path), None)
     if media:
         return media
@@ -84,7 +90,7 @@ def seed():
     import ai_agent
     for t in ai_agent.threads(DEMO_ID):
         store.redis("DEL", store.account_key(DEMO_ID, f"chat:{t['igsid']}"))
-    for key in ("activity", "counts", "autos", "contacts", "page", "threads"):
+    for key in ("activity", "counts", "autos", "contacts", "page", "threads", "retry"):
         store.redis("DEL", store.account_key(DEMO_ID, key))
     for mid, c in (("18000000000000001", {"keyword": 389, "dm": 352, "link": 301, "follow": 290}),
                    ("18000000000000002", {"keyword": 120, "dm": 118, "link": 96, "follow": 93})):
@@ -131,6 +137,9 @@ def seed():
         for i, (role, text) in enumerate(chat):
             ai_agent.add_message(DEMO_ID, igsid, role, text, user)
         ai_agent.update_thread(DEMO_ID, igsid, **{"unread": False, **extra})
+    for cid, user in (("c901", "priya.ai"), ("c902", "vikas.codes")):
+        store.redis("HSET", store.account_key(DEMO_ID, "retry"), cid, json.dumps(
+            {"key": "18000000000000001", "media_id": "18000000000000001", "username": user, "text": "PROMPTS", "at": int(time.time()) - 7200}))
     store.count(DEMO_ID, f"ai:{ai_agent.month()}", 37)
     store.count(DEMO_ID, "ai_replies", 37)
     store.save_page(DEMO_ID, {

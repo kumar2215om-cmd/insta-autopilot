@@ -18,6 +18,7 @@
 </style>
 {% endblock %}
 {% block content %}
+<div id="retryBox"></div>
 <section class="card">
   <h2>Keyword automations</h2>
   <p class="muted small" style="margin:0 0 8px">Work on <b>every reel</b> and when someone <b>DMs</b> you the word.</p>
@@ -104,6 +105,7 @@ function ruleForm(key) {
     <p class="hint" style="margin:0">Sent once per person, only within Instagram's 24 hours after they last messaged you.</p>
     <div class="row"><button class="btn sm" type="submit">Save</button>
       ${rules.reels[key] ? `<button class="btn danger sm" type="button" data-del="${esc(key)}">Delete</button>` : ""}
+      ${/^\d+$/.test(key) && rules.reels[key] ? `<button class="btn ghost sm" type="button" data-past="${esc(key)}" title="Comments from the last 7 days that came before this automation">Send to past comments</button>` : ""}
       <span class="err small" data-msg></span></div>
   </form>`;
 }
@@ -137,6 +139,33 @@ document.addEventListener("click", async (e) => {
     rules = await api(`/api/rules/${encodeURIComponent(d.dataset.del)}`, {method: "DELETE", body: "{}"});
     open.delete(d.dataset.del); newKw.delete(d.dataset.del); render(); toast("Automation deleted");
   }
+});
+
+async function loadRetry() {
+  try {
+    const r = await api("/api/retry");
+    $("retryBox").innerHTML = r.waiting ? `<div class="banner info row" style="justify-content:space-between">
+      <span><b>${fmt(r.waiting)} DMs</b> were refused by Instagram (it sometimes won't open a new chat from a comment). They're tried again once a day for 6 days.</span>
+      <button class="btn sm" type="button" id="retryNow">Retry now</button></div>` : "";
+  } catch (e) {}
+}
+
+document.addEventListener("click", async (e) => {
+  if (e.target.closest("#retryNow")) {
+    const b = e.target.closest("#retryNow"); b.disabled = true; b.textContent = "Sending…";
+    try { const r = await api("/api/retry", {method: "POST", body: "{}"});
+      toast(r.skipped || `${r.sent} sent · ${r.still_failing} still refused`); } catch (err) { toast(err.message); }
+    return loadRetry();
+  }
+  const p = e.target.closest("[data-past]");
+  if (!p) return;
+  if (!p.dataset.sure) { p.dataset.sure = "1"; p.textContent = "Click again: this sends real DMs"; return; }
+  p.disabled = true; p.textContent = "Sending…";
+  try {
+    const r = await api(`/api/reels/${encodeURIComponent(p.dataset.past)}/past-comments`, {method: "POST", body: "{}"});
+    toast(`${r.sent} sent${r.more_left ? " · more left, click again" : ""} · ${r.too_old} older than 7 days`);
+  } catch (err) { toast(err.message); }
+  p.disabled = false; p.textContent = "Send to past comments"; delete p.dataset.sure;
 });
 
 document.addEventListener("submit", async (e) => {
@@ -187,6 +216,6 @@ async function loadReels(fresh) {
 }
 $("refresh").onclick = () => loadReels(true);
 
-(async () => { loadBanners(); rules = await api("/api/rules"); render(); loadReels(false); })();
+(async () => { loadBanners(); loadRetry(); rules = await api("/api/rules"); render(); loadReels(false); })();
 </script>
 {% endblock %}

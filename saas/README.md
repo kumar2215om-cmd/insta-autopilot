@@ -46,6 +46,14 @@ automation (30 days), and skipped if Instagram's 24-hour window (counted as 23 h
   **On Vercel Pro, add an hourly cron for `/cron/followups`** (Hobby only allows daily crons) so quiet accounts get theirs on time.
 - A rule with a follow-up (or email capture) always uses the DM button, which opens the chat the follow-up needs.
 
+## Send to past comments and retry refused DMs
+- **Send to past comments** (button in a reel's automation form, `POST /api/reels/<id>/past-comments`, MCP
+  `send_to_past_comments`): runs the automation on that reel's comments from the last 7 days (Instagram's private-reply
+  window), up to 50 per click; each comment is still handled only once.
+- **Refused DMs:** when Instagram won't open a chat from a comment (error 2534001), the comment goes to `s:t:<id>:retry`
+  (max 500). The daily cron and **Retry now** on the Automations page (`POST /api/retry`, MCP `retry_refused_dms`) try again
+  for 6 days, then drop it.
+
 ## Auto-setup and Reel report
 - **Auto-setup new reels** (dashboard card): the creator saves a template once (reply, DM, follow gate, final DM with
   `{keyword}`). When a reel posted *after* switching it on says "Comment GUIDE" (a word in capitals or quotes after

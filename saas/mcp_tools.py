@@ -115,7 +115,26 @@ def tools_for(acc, save_rule, build_report):
         store.save_account(fresh)
         return {"paused": fresh["paused"]}
 
+    def send_past(args):
+        rid = str(args.get("reel_id", ""))
+        if not rid.isdigit():
+            raise ToolError("reel_id must be a reel id from list_reels.")
+        try:
+            return engine.backfill_comments(acc, rid)
+        except RuntimeError as e:
+            raise ToolError(str(e)[:300])
+
+    def retry(_):
+        return {**engine.retry_failed_dms(acc), "waiting": len(engine.pending_retries(acc))}
+
     return [
+        {"name": "send_to_past_comments", "title": "Send to past comments", "destructive": True, "fn": send_past,
+         "description": "Runs a reel's automation on comments from the last 7 days that came before it was set up (public reply "
+                        "+ DM, up to 50 per call; call again if more_left). Ask the user first: it sends real DMs.",
+         "input_schema": {"type": "object", "required": ["reel_id"], "properties": {"reel_id": _STR}}},
+        {"name": "retry_refused_dms", "title": "Retry refused DMs", "fn": retry,
+         "description": "Sends again the comment DMs Instagram refused earlier, while its 7-day window is open (up to 30).",
+         "input_schema": {"type": "object", "properties": {}}},
         {"name": "get_account_summary", "title": "Account summary", "read_only": True, "fn": summary,
          "description": "Followers, DMs this month and the monthly limit, links sent, follows won by the DM follow gate, "
                         "automations on, and whether anything is blocking the account.",

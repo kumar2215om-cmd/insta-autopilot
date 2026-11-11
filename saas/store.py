@@ -72,6 +72,8 @@ class MemoryRedis:
             if cmd == "HDEL":
                 h = self.data.get(a[0], {})
                 return sum(1 for f in a[1:] if h.pop(str(f), None) is not None)
+            if cmd == "HLEN":
+                return len(self.data.get(a[0], {}))
             if cmd == "HGETALL":
                 h = self.data.get(a[0], {})
                 return [x for kv in h.items() for x in kv]
@@ -185,7 +187,7 @@ def account_ids():
 def delete_account(ig_id):
     """Removes an account and everything stored for it (used by Disconnect and Meta's deletion callback)."""
     parts = ["", "rules", "activity", "counts", "rate_limited", "token_dead", "stats", "report", "autos", "medias",
-             "page", "contacts", "clicks"]
+             "page", "contacts", "clicks", "retry"]
     medias = redis("SMEMBERS", account_key(ig_id, "medias")) or []
     acc = load_account(ig_id) or {}
     if acc.get("mcp_key_hash"):

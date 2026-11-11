@@ -499,6 +499,28 @@ def api_delete_rule(key):
     return jsonify(rules)
 
 
+@app.post("/api/reels/<media_id>/past-comments")
+def api_past_comments(media_id):
+    """Sends the reel's automation to comments from the last 7 days that came before it was set up."""
+    if not media_id.isdigit():
+        return jsonify(error="Bad reel id"), 400
+    try:
+        return jsonify(engine.backfill_comments(current_account(), media_id))
+    except RuntimeError as e:
+        return jsonify(error=str(e)[:300]), 400
+
+
+@app.get("/api/retry")
+def api_retry_count():
+    return jsonify(waiting=len(engine.pending_retries(current_account())))
+
+
+@app.post("/api/retry")
+def api_retry():
+    acc = current_account()
+    return jsonify(**engine.retry_failed_dms(acc), waiting=len(engine.pending_retries(acc)))
+
+
 @app.get("/api/activity")
 def api_activity():
     return jsonify(store.recent_activity(current_account()["id"]))
@@ -833,6 +855,13 @@ def cron_refresh_tokens():
     if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
         abort(401)
     engine.send_due_followups(100)
+    for ig_id in store.account_ids():  # refused comment DMs get another try once a day
+        acc = store.load_account(ig_id)
+        if acc and not acc.get("demo") and engine.pending_retries(acc):
+            try:
+                engine.retry_failed_dms(acc)
+            except Exception:
+                pass
     done = failed = 0
     for ig_id in store.account_ids():
         acc = store.load_account(ig_id)

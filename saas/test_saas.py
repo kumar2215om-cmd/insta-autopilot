@@ -38,7 +38,7 @@ class FakeInstagram:
     """Records every call; answers like the Instagram API."""
 
     def __init__(self):
-        self.calls, self.follows, self.fail_dm, self.dead = [], True, False, False
+        self.calls, self.follows, self.fail_dm, self.dead, self.comments = [], True, False, False, []
         self.media = [
             {"id": "777", "caption": "Naya reel! Comment GUIDE and I'll DM you", "timestamp": "2999-01-01T00:00:00+0000",
              "media_product_type": "REELS", "comments_count": 30, "thumbnail_url": "t.jpg"},
@@ -56,6 +56,8 @@ class FakeInstagram:
         if url.endswith("/refresh_access_token"):
             return Resp({"access_token": "NEWER"})
         fields = (params or {}).get("fields", "")
+        if url.endswith("/comments"):
+            return Resp({"data": self.comments})
         if url.endswith("/me/media"):
             return Resp({"data": self.media})
         if url.endswith("/insights"):
@@ -585,6 +587,33 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(len(self.ig.messages()), sent)
         # the cron also sends them
         self.assertEqual(self.c.get("/cron/followups", headers={"Authorization": "Bearer cron"}).get_json(), {"sent": 0})
+
+    def test_past_comments_and_retries(self):
+        self.login()
+        self.assertEqual(self.c.post("/api/reels/555/past-comments", json={}).status_code, 400)  # no automation yet
+        self.put_rule("555", require_follow=False, comment_reply="Sent!", dm="Here https://x.com")
+        stamp = lambda h: engine.datetime.fromtimestamp(engine.time.time() - h * 3600, engine.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S%z")
+        self.ig.comments = [{"id": "p1", "text": "PROMPTS", "timestamp": stamp(5), "from": {"id": "11", "username": "a"}},
+                            {"id": "p2", "text": "nice", "timestamp": stamp(5), "from": {"id": "12", "username": "b"}},
+                            {"id": "p3", "text": "PROMPTS", "timestamp": stamp(24 * 8), "from": {"id": "13", "username": "c"}}]
+        r = self.c.post("/api/reels/555/past-comments", json={}).get_json()
+        self.assertEqual((r["sent"], r["too_old"], r["already_done_or_no_match"]), (1, 1, 1))
+        self.assertEqual(self.ig.messages()[-1], {"recipient": {"comment_id": "p1"}, "message": {"text": "Here https://x.com"}})
+        self.assertEqual(self.c.post("/api/reels/555/past-comments", json={}).get_json()["sent"], 0)  # never twice
+        # Instagram refuses to open the chat: queued, then retried
+        self.ig.fail_dm = True
+        self.hook(comment("PROMPTS", cid="c9"))
+        self.assertEqual(self.c.get("/api/retry").get_json(), {"waiting": 1})
+        r = self.c.post("/api/retry", json={}).get_json()
+        self.assertEqual((r["sent"], r["still_failing"], r["waiting"]), (0, 1, 1))
+        self.ig.fail_dm = False
+        store.redis("DEL", store.account_key("1789", "counts"))  # tests run with a 3-DM monthly limit
+        r = self.c.post("/api/retry", json={}).get_json()
+        self.assertEqual((r["sent"], r["waiting"]), (1, 0))
+        self.assertEqual(self.ig.messages()[-1]["recipient"], {"comment_id": "c9"})
+        # too old to retry: dropped
+        engine.add_retry(store.load_account("1789"), "old", {"key": "555", "media_id": "555", "username": "z", "text": "x", "at": 1})
+        self.assertEqual(self.c.post("/api/retry", json={}).get_json()["expired"], 1)
 
     def test_demo_inbox(self):
         self.c.get("/demo")

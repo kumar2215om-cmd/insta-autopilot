@@ -248,20 +248,7 @@ def handle_comment(acc, value):
         store.log_activity(acc["id"], media_id, username, text, "dm", "error",
                            f"Monthly DM limit reached ({monthly_limit(acc)}). Upgrade to keep sending.")
     else:
-        action = "opening_dm" if uses_button_flow(rule) else "dm"
-        try:
-            if uses_button_flow(rule):
-                ig.send_buttons({"comment_id": comment_id}, fill(rule.get("opening_dm") or DEFAULT_OPENING),
-                                postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}|{media_id}")])
-            elif rule.get("dm"):
-                ig.send_dm({"comment_id": comment_id}, {"text": fill(rule["dm"])})
-                store.count(acc["id"], "links_sent")
-                store.media_count(acc["id"], media_id, "link")
-            note_dm(acc)
-            store.media_count(acc["id"], media_id, "dm")
-            store.log_activity(acc["id"], media_id, username, text, action, "ok")
-        except Exception as e:
-            store.log_activity(acc["id"], media_id, username, text, action, "error", str(e))
+        send_comment_dm(acc, ig, comment_id, key, rule, media_id, username, text)
 
     reply = rule.get("comment_reply", DEFAULT_COMMENT_REPLY)
     if reply.strip():
@@ -272,6 +259,107 @@ def handle_comment(acc, value):
         except Exception as e:
             store.log_activity(acc["id"], media_id, username, text, "comment_reply", "error", str(e))
     return True
+
+
+def send_comment_dm(acc, ig, comment_id, key, rule, media_id, username, text, retry=False):
+    """The private-reply DM to a comment. When Instagram refuses to open the chat, the comment is queued for a retry."""
+    fill = lambda s: s.replace("{username}", username)
+    action = "opening_dm" if uses_button_flow(rule) else "dm"
+    try:
+        if uses_button_flow(rule):
+            ig.send_buttons({"comment_id": comment_id}, fill(rule.get("opening_dm") or DEFAULT_OPENING),
+                            postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}|{media_id}")])
+        elif rule.get("dm"):
+            ig.send_dm({"comment_id": comment_id}, {"text": fill(rule["dm"])})
+            store.count(acc["id"], "links_sent")
+            store.media_count(acc["id"], media_id, "link")
+        note_dm(acc)
+        store.media_count(acc["id"], media_id, "dm")
+        store.log_activity(acc["id"], media_id, username, text, action, "ok", "sent on retry" if retry else "")
+        return True
+    except Exception as e:
+        store.log_activity(acc["id"], media_id, username, text, action, "error", str(e))
+        if CANT_OPEN_THREAD in str(e) and not retry:
+            add_retry(acc, comment_id, {"key": key, "media_id": media_id, "username": username, "text": text[:300],
+                                        "at": int(time.time())})
+        return False
+
+
+# ---------- refused DMs and comments from before the automation ----------
+
+PRIVATE_REPLY_WINDOW = 7 * 86400  # Instagram allows a DM reply to a comment only within 7 days
+MAX_RETRIES = 500
+
+
+def retry_key(acc):
+    return store.account_key(acc["id"], "retry")
+
+
+def add_retry(acc, comment_id, item):
+    if int(store.redis("HLEN", retry_key(acc)) or 0) < MAX_RETRIES:
+        store.redis("HSET", retry_key(acc), comment_id, json.dumps(item, ensure_ascii=False))
+
+
+def pending_retries(acc):
+    flat = store.redis("HGETALL", retry_key(acc)) or []
+    return {flat[i]: json.loads(flat[i + 1]) for i in range(0, len(flat), 2)}
+
+
+def retry_failed_dms(acc, max_sends=30):
+    """Tries refused comment DMs again while Instagram's 7-day window is open (with a day of margin)."""
+    counts = {"sent": 0, "still_failing": 0, "expired": 0, "skipped": ""}
+    if is_blocked(acc) or acc.get("paused"):
+        counts["skipped"] = "The automation is paused or Instagram is blocking requests right now."
+        return counts
+    rules = store.load_rules(acc["id"]).get("reels", {})
+    ig = Instagram(acc)
+    for comment_id, item in pending_retries(acc).items():
+        rule = rules.get(item["key"])
+        if not rule or not rule.get("enabled", True) or time.time() - item["at"] > PRIVATE_REPLY_WINDOW - 86400:
+            store.redis("HDEL", retry_key(acc), comment_id)
+            counts["expired"] += 1
+        elif counts["sent"] + counts["still_failing"] >= max_sends or over_limit(acc) or is_blocked(acc):
+            break
+        elif send_comment_dm(acc, ig, comment_id, item["key"], rule, item["media_id"], item["username"], item["text"], retry=True):
+            store.redis("HDEL", retry_key(acc), comment_id)
+            counts["sent"] += 1
+        else:
+            counts["still_failing"] += 1
+    return counts
+
+
+def backfill_comments(acc, media_id, max_sends=50):
+    """Runs a reel's automation on comments posted before it was set up (last 7 days only)."""
+    reels = store.load_rules(acc["id"]).get("reels", {})
+    if not (media_id in reels or "*" in reels or any(is_keyword_rule(k) for k in reels)):
+        raise RuntimeError("This reel has no automation yet.")
+    counts = {"sent": 0, "too_old": 0, "already_done_or_no_match": 0, "more_left": False}
+    ig = Instagram(acc)
+    params = {"fields": "id,text,timestamp,from,username", "limit": 50}
+    for _ in range(20):  # up to 1,000 comments
+        page = ig.get(f"{media_id}/comments", **params)
+        for c in page.get("data", []):
+            if counts["sent"] >= max_sends or over_limit(acc) or is_blocked(acc):
+                counts["more_left"] = True
+                return counts
+            try:
+                age = time.time() - datetime.strptime(c["timestamp"], "%Y-%m-%dT%H:%M:%S%z").timestamp()
+            except (KeyError, ValueError):
+                age = 0
+            if age > PRIVATE_REPLY_WINDOW - 3600:
+                counts["too_old"] += 1
+                continue
+            sender = c.get("from") or {"username": c.get("username", "")}
+            value = {"id": c["id"], "text": c.get("text", ""), "from": sender, "media": {"id": media_id}}
+            if handle_comment(acc, value):
+                counts["sent"] += 1
+            else:
+                counts["already_done_or_no_match"] += 1
+        after = (page.get("paging") or {}).get("cursors", {}).get("after")
+        if not after or not (page.get("paging") or {}).get("next"):
+            break
+        params["after"] = after
+    return counts
 
 
 def dm_keyword_match(rules, text):
