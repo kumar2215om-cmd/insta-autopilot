@@ -32,6 +32,16 @@
 </section>
 
 <section class="card">
+  <div class="row"><h2 style="margin-right:auto">Chat menu</h2><span class="badge" id="iceStatus">off</span></div>
+  <p class="muted small" style="margin:0 0 8px">Up to 4 questions people see when they open your DMs for the first time. Tapping one sends your answer or starts an automation.</p>
+  <form id="iceForm" class="rule" style="margin-top:6px">
+    <label><input type="checkbox" name="enabled"> <b>Show the chat menu on Instagram</b></label>
+    <div id="iceItems" style="display:grid; gap:12px"></div>
+    <div class="row"><button class="btn sm" type="submit">Save and publish</button><button class="btn ghost sm" type="button" id="iceAdd">＋ Question</button><span class="small" id="iceMsg"></span></div>
+  </form>
+</section>
+
+<section class="card">
   <h2>Your reels</h2>
   <p class="muted small" style="margin:0 0 8px">Set up a keyword for one reel. Reels whose caption says "Comment WORD" are set up automatically when auto-setup is on (Settings).</p>
   <div id="reels"><div class="empty">Loading your reels…</div></div>
@@ -145,6 +155,43 @@ document.addEventListener("click", async (e) => {
   }
 });
 
+let ice = {enabled: false, items: []};
+const ICE_EXAMPLES = [{question: "How do I buy the prompt pack?", answer: "", rule: ""}, {question: "Free guides kahan milenge?", answer: "", rule: ""}];
+
+function drawIce() {
+  $("iceStatus").className = `badge ${ice.enabled ? "on" : ""}`; $("iceStatus").textContent = ice.enabled ? "on" : "off";
+  $("iceForm").enabled.checked = ice.enabled;
+  const kws = Object.keys(rules.reels).filter(k => k.startsWith("kw:"));
+  const items = ice.items.length ? ice.items : ICE_EXAMPLES;
+  $("iceItems").innerHTML = items.map((it, i) => `<div class="ice two" data-i="${i}" style="padding:12px; border:1px solid var(--line2); border-radius:12px; background:var(--card)">
+      <div><label class="f" for="iq${i}">Question ${i + 1} <span class="hint">up to 80 characters</span></label><input id="iq${i}" type="text" maxlength="80" data-k="question" value="${esc(it.question)}">
+        <label class="f" for="ir${i}" style="margin-top:8px">When tapped</label><select id="ir${i}" data-k="rule"><option value="">Send this answer →</option>
+        ${kws.map(k => `<option value="${esc(k)}" ${it.rule === k ? "selected" : ""}>Start the ${esc(k.slice(3))} automation</option>`).join("")}</select></div>
+      <div><label class="f" for="ia${i}">Answer <span class="hint">{username} = their name</span></label><textarea id="ia${i}" rows="3" data-k="answer" ${it.rule ? "disabled" : ""}>${esc(it.answer)}</textarea>
+        <button class="btn danger sm" type="button" data-icedel="${i}" style="margin-top:8px">Remove</button></div></div>`).join("");
+  $("iceAdd").hidden = items.length >= 4;
+}
+
+function readIce() {
+  return [...document.querySelectorAll(".ice")].map(row => Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el => [el.dataset.k, el.value])));
+}
+
+$("iceAdd").onclick = () => { ice.items = [...readIce(), {question: "", answer: "", rule: ""}]; drawIce(); };
+document.addEventListener("click", (e) => {
+  const d = e.target.closest("[data-icedel]");
+  if (d) { const items = readIce(); items.splice(+d.dataset.icedel, 1); ice.items = items; drawIce(); }
+});
+document.addEventListener("change", (e) => {
+  if (e.target.matches(".ice select")) e.target.closest(".ice").querySelector("textarea").disabled = !!e.target.value;
+});
+$("iceForm").onsubmit = async (e) => {
+  e.preventDefault(); e.stopPropagation();
+  try {
+    ice = await api("/api/ice", {method: "PUT", body: JSON.stringify({enabled: e.target.enabled.checked, items: readIce()})});
+    drawIce(); $("iceMsg").className = "small ok"; $("iceMsg").textContent = ice.enabled ? "Published on Instagram ✓" : "Saved (not shown on Instagram)";
+  } catch (err) { $("iceMsg").className = "small err"; $("iceMsg").textContent = err.message; }
+};
+
 async function loadRetry() {
   try {
     const r = await api("/api/retry");
@@ -173,7 +220,7 @@ document.addEventListener("click", async (e) => {
 });
 
 document.addEventListener("submit", async (e) => {
-  const f = e.target.closest("form.rule");
+  const f = e.target.closest("form.rule[data-key]");
   if (!f) return;
   e.preventDefault();
   const key = f.dataset.key, msg = f.querySelector("[data-msg]");
@@ -221,6 +268,6 @@ async function loadReels(fresh) {
 }
 $("refresh").onclick = () => loadReels(true);
 
-(async () => { loadBanners(); loadRetry(); rules = await api("/api/rules"); render(); loadReels(false); })();
+(async () => { loadBanners(); loadRetry(); rules = await api("/api/rules"); render(); ice = await api("/api/ice"); drawIce(); loadReels(false); })();
 </script>
 {% endblock %}

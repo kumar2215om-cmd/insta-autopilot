@@ -64,6 +64,9 @@ def seed():
                           "template": {"comment_reply": "@{username} Check your DM 📩", "require_follow": True,
                                        "dm": "Here you go 🎁 https://example.com/free?k={keyword}"}},
            "plan": "pro",
+           "ice": {"enabled": True, "items": [
+               {"question": "How do I buy the prompt pack?", "answer": "Yahan se le lo 👉 https://example.com/prompts (₹149, instant download)", "rule": ""},
+               {"question": "Free guide kahan milega?", "answer": "", "rule": "kw:AUDIT"}]},
            "apps": {"inbox": True, "links": True, "contacts": True, "report": True},
            "ai": {"enabled": True, "language": "match",
                   "about": "I make Hindi reels about AI tools for creators. Friendly, bhai-style tone.",

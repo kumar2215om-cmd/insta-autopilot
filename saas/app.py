@@ -524,6 +524,38 @@ def api_retry():
     return jsonify(**engine.retry_failed_dms(acc), waiting=len(engine.pending_retries(acc)))
 
 
+@app.get("/api/ice")
+def api_get_ice():
+    return jsonify(engine.ice_settings(current_account()))
+
+
+@app.put("/api/ice")
+def api_put_ice():
+    """Saves the chat menu and puts it on Instagram."""
+    acc = current_account()
+    data = request.get_json(force=True)
+    rules = store.load_rules(acc["id"]).get("reels", {})
+    items = []
+    for it in (data.get("items") or [])[:engine.MAX_ICE]:
+        question = str(it.get("question", "")).strip()[:80]
+        rule = str(it.get("rule", "")) if str(it.get("rule", "")) in rules else ""
+        answer = str(it.get("answer", "")).strip()[:1000]
+        if not question:
+            continue
+        if not rule and not answer:
+            return jsonify(error=f'Write an answer for "{question}" or pick an automation.'), 400
+        items.append({"question": question, "answer": answer, "rule": rule})
+    old = acc.get("ice")
+    acc["ice"] = {"enabled": bool(data.get("enabled")) and bool(items), "items": items}
+    try:
+        engine.publish_ice(acc)
+    except RuntimeError as e:
+        acc["ice"] = old
+        return jsonify(error=f"Instagram didn't accept the chat menu: {str(e)[:200]}"), 502
+    store.save_account(acc)
+    return jsonify(engine.ice_settings(acc))
+
+
 @app.get("/api/activity")
 def api_activity():
     return jsonify(store.recent_activity(current_account()["id"]))

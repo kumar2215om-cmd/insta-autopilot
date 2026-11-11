@@ -650,6 +650,29 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Guide https://g.com"})
         self.assertEqual(store.counts("1789").get("phones"), 1)
 
+    def test_chat_menu(self):
+        self.login()
+        self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", dm="Guide https://g.com")
+        bad = self.c.put("/api/ice", json={"enabled": True, "items": [{"question": "Price?", "answer": ""}]})
+        self.assertEqual(bad.status_code, 400)
+        r = self.c.put("/api/ice", json={"enabled": True, "items": [
+            {"question": "How do I buy?", "answer": "Here {username}: https://shop.com"},
+            {"question": "Free guide?", "answer": "", "rule": "kw:GUIDE"}, {"question": "", "answer": "x"}]}).get_json()
+        self.assertEqual(len(r["items"]), 2)
+        profile = [c for c in self.ig.calls if c[1].endswith("/me/messenger_profile")][-1][2]
+        self.assertEqual(profile["ice_breakers"][0]["call_to_actions"][1], {"question": "Free guide?", "payload": "ICE|1"})
+        tap = lambda p: {"entry": [{"id": "1789", "messaging": [{"sender": {"id": "41"}, "postback": {"payload": p}}]}]}
+        self.hook(tap("ICE|0"))
+        self.assertEqual(self.ig.messages()[-1], {"recipient": {"id": "41"}, "message": {"text": "Here fan: https://shop.com"}})
+        self.hook(tap("ICE|1"))
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Guide https://g.com"})
+        self.hook(tap("ICE|9"))  # unknown question: nothing
+        self.assertEqual(len(self.ig.messages()), 2)
+        deleted = []
+        with mock.patch.object(engine.requests, "delete", lambda url, **k: deleted.append((url, k.get("json"))) or Resp({})):
+            self.assertFalse(self.c.put("/api/ice", json={"enabled": False, "items": []}).get_json()["enabled"])
+        self.assertEqual(deleted[0][1], {"platform": "instagram", "fields": ["ice_breakers"]})
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

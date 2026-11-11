@@ -24,6 +24,12 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Chat menu (ice breakers)
+Automations → Chat menu: up to 4 questions (80 chars) shown when someone opens the creator's DMs for the first time
+(`acc["ice"]`, published with `POST me/messenger_profile` `{"platform": "instagram", "ice_breakers": [...]}`, removed with
+`DELETE me/messenger_profile` `fields=["ice_breakers"]`). Tapping one sends a postback `ICE|<n>` → the written answer, or the
+chosen keyword automation (`engine.handle_ice`).
+
 ## Story replies and mentions
 - Rule `story:reply` (Automations → Stories): someone replies to a story → the same DM flow (button, follow gate, link).
   Keywords optional (empty = every story reply); once per person per story. A keyword automation in the reply wins;

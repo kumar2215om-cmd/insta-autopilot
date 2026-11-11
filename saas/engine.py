@@ -70,6 +70,12 @@ class Instagram:
         params["access_token"] = self.acc["token"]
         return self._check(requests.post(f"{GRAPH}/{path}", params=params, json=payload, timeout=20))
 
+    def delete(self, path, payload=None, **params):
+        if self.acc.get("demo"):
+            return {"success": True}
+        params["access_token"] = self.acc["token"]
+        return self._check(requests.delete(f"{GRAPH}/{path}", params=params, json=payload, timeout=20))
+
     def reply_to_comment(self, comment_id, text):
         return self.post(f"{comment_id}/replies", {"message": text})
 
@@ -507,9 +513,54 @@ def handle_ai_dm(acc, igsid, text, mid=""):
         store.log_activity(acc["id"], "ai", who, text, "ai_reply", "error", str(e))
 
 
+# ---------- chat menu: ice breakers shown when someone opens the creator's DMs ----------
+
+MAX_ICE = 4  # Instagram's limit
+
+
+def ice_settings(acc):
+    ice = acc.get("ice") or {}
+    return {"enabled": bool(ice.get("enabled")), "items": ice.get("items") or []}
+
+
+def publish_ice(acc):
+    """Puts the questions on the creator's Instagram chat (or removes them). Raises when Instagram refuses."""
+    ice, ig = ice_settings(acc), Instagram(acc)
+    if ice["enabled"] and ice["items"]:
+        ig.post("me/messenger_profile", {"platform": "instagram", "ice_breakers": [{"locale": "default", "call_to_actions": [
+            {"question": it["question"], "payload": f"ICE|{i}"} for i, it in enumerate(ice["items"][:MAX_ICE])]}]})
+    else:
+        ig.delete("me/messenger_profile", {"platform": "instagram", "fields": ["ice_breakers"]})
+
+
+def handle_ice(acc, igsid, index):
+    """They tapped one of the chat menu questions: send the answer, or start the chosen keyword automation."""
+    items = ice_settings(acc)["items"]
+    if not index.isdigit() or int(index) >= len(items) or is_blocked(acc):
+        return
+    item = items[int(index)]
+    if not store.claim(f"s:seen:{acc['id']}:ice:{igsid}:{index}:{int(time.time() // 60)}", 120):
+        return
+    ig = Instagram(acc)
+    username = username_of(ig, igsid)
+    store.touch_contact(acc["id"], username, igsid, source="chat_menu")
+    rule = store.load_rules(acc["id"]).get("reels", {}).get(item.get("rule", ""))
+    if rule and rule.get("enabled", True):
+        send_rule_dm(acc, ig, igsid, item["rule"], rule, username, item["question"], "chat_menu")
+        return
+    try:
+        ig.send_dm({"id": igsid}, {"text": item.get("answer", "").replace("{username}", username)})
+        store.count(acc["id"], "chat_menu_answers")
+        store.log_activity(acc["id"], "chat_menu", username or igsid, item["question"], "chat_menu", "ok")
+    except Exception as e:
+        store.log_activity(acc["id"], "chat_menu", username or igsid, item["question"], "chat_menu", "error", str(e))
+
+
 def handle_button(acc, igsid, payload):
     """They tapped "Send me the link" or "I followed": check the follow, then send the link or ask again."""
     step, key, media_id = (payload.split("|") + ["", ""])[:3]
+    if step == "ICE":
+        return handle_ice(acc, igsid, key)
     media_id = media_id or (key if key.isdigit() else "")  # older buttons carried only the rule key
     rule = store.load_rules(acc["id"]).get("reels", {}).get(key)
     if step not in ("GET", "FOLLOWED", *SKIP_STEPS) or not rule or is_blocked(acc):
