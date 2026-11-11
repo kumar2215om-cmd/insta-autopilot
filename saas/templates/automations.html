@@ -25,6 +25,12 @@
 </section>
 
 <section class="card">
+  <h2>Stories</h2>
+  <p class="muted small" style="margin:0 0 8px">Post a story saying <i>"Reply GUIDE"</i> and everyone who replies gets your DM. Keyword automations above work in story replies too.</p>
+  <div id="stories"></div>
+</section>
+
+<section class="card">
   <h2>Your reels</h2>
   <p class="muted small" style="margin:0 0 8px">Set up a keyword for one reel. Reels whose caption says "Comment WORD" are set up automatically when auto-setup is on (Settings).</p>
   <div id="reels"><div class="empty">Loading your reels…</div></div>
@@ -56,24 +62,29 @@ function badge(key) {
 function ruleForm(key) {
   const r = {enabled: key !== "*", keywords: key.startsWith("kw:") ? [key.slice(3)] : [], require_follow: true, comments: true, dm: "",
              ...DEFAULTS, ...(rules.reels[key] || {})};
-  const kw = key.startsWith("kw:");
+  const kw = key.startsWith("kw:"), story = key.startsWith("story:"), mention = key === "story:mention";
+  if (story && !rules.reels[key]) Object.assign(r, {require_follow: false, comment_reply: ""},
+    mention ? {opening_dm: "", dm: "Thank you so much for the shoutout {username}! 🙏❤️"} : {});
+  let n = 0;
   return `<form class="rule" data-key="${esc(key)}">
     <div class="row"><label><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> <b>Automation on</b></label>
       ${kw ? `<label><input type="checkbox" name="comments" ${r.comments !== false ? "checked" : ""}> Also answer comments on every reel</label>` : ""}</div>
+    ${mention ? `<input type="hidden" name="keywords" value=""><p class="muted small" style="margin:0">Sent once a day to each person who mentions you in their story.</p>` : `
     <div class="step">When</div>
-    <div><label class="f" for="kw-${esc(key)}">Keywords <span class="hint">comma separated · spelling mistakes still match${kw ? "" : " · empty = every comment"}</span></label>
-      <input id="kw-${esc(key)}" type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="PROMPTS, LINK"></div>
-    <div class="step">Step 1 · Reply to the comment</div>
+    <div><label class="f" for="kw-${esc(key)}">Keywords <span class="hint">comma separated · spelling mistakes still match${kw ? "" : story ? " · empty = every story reply" : " · empty = every comment"}</span></label>
+      <input id="kw-${esc(key)}" type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="PROMPTS, LINK"></div>`}
+    ${story ? `<input type="hidden" name="comment_reply" value="">` : `
+    <div class="step">Step ${++n} · Reply to the comment</div>
     <div><label class="f" for="cr-${esc(key)}">Public replies <span class="hint">one per line, a random one is used · {username} = their name · empty = no reply</span></label>
-      <textarea id="cr-${esc(key)}" name="comment_reply" rows="3">${esc(r.comment_reply)}</textarea></div>
-    <div class="step">Step 2 · DM with a button</div>
+      <textarea id="cr-${esc(key)}" name="comment_reply" rows="3">${esc(r.comment_reply)}</textarea></div>`}
+    <div class="step">Step ${++n} · DM with a button${story ? ` <span class="hint" style="text-transform:none; letter-spacing:0">optional: empty message = send the final DM straight away</span>` : ""}</div>
     <div class="two"><div><label class="f" for="od-${esc(key)}">Message</label><textarea id="od-${esc(key)}" name="opening_dm" rows="2">${esc(r.opening_dm)}</textarea></div>
       <div><label class="f" for="bt-${esc(key)}">Button</label><input id="bt-${esc(key)}" type="text" name="button_text" maxlength="20" value="${esc(r.button_text)}"></div></div>
-    <div class="step">Step 3 · Follow to unlock</div>
+    <div class="step">Step ${++n} · Follow to unlock</div>
     <label><input type="checkbox" name="require_follow" ${r.require_follow ? "checked" : ""}> Only send the link to people who follow me</label>
     <div class="two"><div><label class="f" for="fd-${esc(key)}">Follow message</label><textarea id="fd-${esc(key)}" name="follow_dm" rows="2">${esc(r.follow_dm)}</textarea></div>
       <div><label class="f" for="fb-${esc(key)}">"I followed" button</label><input id="fb-${esc(key)}" type="text" name="followed_button_text" maxlength="20" value="${esc(r.followed_button_text)}"></div></div>
-    <div class="step">Step 4 · Deliver</div>
+    <div class="step">Step ${++n} · Deliver</div>
     <div><label class="f" for="dm-${esc(key)}">Final DM: your message and link <span class="hint">required</span></label>
       <textarea id="dm-${esc(key)}" name="dm" rows="3" placeholder="Here you go 🎁 https://...">${esc(r.dm)}</textarea></div>
     <div class="row"><button class="btn sm" type="submit">Save</button>
@@ -92,6 +103,8 @@ function render() {
   const kws = [...new Set([...Object.keys(rules.reels).filter(k => k.startsWith("kw:")), ...newKw])];
   $("kwRules").innerHTML = kws.map(k => itemRow(k, `<span class="thumb">#</span>`, k.slice(3), "", true)).join("")
     || `<div class="empty">No keyword automations yet. Add one with "＋ Keyword automation".</div>`;
+  $("stories").innerHTML = itemRow("story:reply", `<span class="thumb">◎</span>`, "Story replies", "")
+    + itemRow("story:mention", `<span class="thumb">@</span>`, "Mentions in their story", "");
   $("reels").innerHTML = reels.length ? reels.map(m => itemRow(m.id,
       m.thumbnail_url || m.media_url ? `<img class="thumb" src="${esc(m.thumbnail_url || m.media_url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="thumb">▶</span>`,
       (m.caption || "(no caption)").split("\n")[0],

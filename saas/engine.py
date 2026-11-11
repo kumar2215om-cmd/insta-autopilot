@@ -175,6 +175,13 @@ def is_keyword_rule(key):
     return str(key).startswith("kw:")
 
 
+def is_story_rule(key):
+    return str(key).startswith("story:")
+
+
+STORY_KEYS = ("story:reply", "story:mention")
+
+
 def keywords_of(rule):
     return [k.strip() for k in rule.get("keywords", []) if k.strip()]
 
@@ -261,30 +268,26 @@ def handle_comment(acc, value):
     return True
 
 
-def handle_dm_text(acc, igsid, text, mid=""):
-    """Someone DMed a keyword: start the same flow inside that chat (works even when comment DMs are refused).
-    Any other message goes to the AI DM agent when it's on."""
-    if is_blocked(acc):
-        return
-    rules = store.load_rules(acc["id"]).get("reels", {})
-    ordered = sorted(rules.items(), key=lambda kv: not is_keyword_rule(kv[0]))
-    match = next(((k, r) for k, r in ordered if r.get("enabled", True)
-                  and any(keyword_matches(w, text) for w in keywords_of(r))), None)
-    if not match:
-        handle_ai_dm(acc, igsid, text, mid)
-        return
-    if not store.claim(f"s:seen:{acc['id']}:dm:{igsid}:{match[0]}:{int(time.time() // 600)}"):
-        return
-    key, rule = match
-    ig = Instagram(acc)
+def dm_keyword_match(rules, text):
+    """(key, rule) of the first keyword automation a DM matches: keyword rules first, then reel rules."""
+    ordered = sorted(((k, r) for k, r in rules.items() if not is_story_rule(k)), key=lambda kv: not is_keyword_rule(kv[0]))
+    return next(((k, r) for k, r in ordered if r.get("enabled", True)
+                 and any(keyword_matches(w, text) for w in keywords_of(r))), (None, None))
+
+
+def username_of(ig, igsid):
     try:
-        username = ig.get(igsid, fields="username").get("username", "")
+        return ig.get(igsid, fields="username").get("username", "")
     except Exception:
-        username = ""
-    store.touch_contact(acc["id"], username, igsid, keyword=(keywords_of(rule) or [""])[0], source="dm")
+        return ""
+
+
+def send_rule_dm(acc, ig, igsid, key, rule, username, text, action):
+    """Starts a rule's DM flow inside an open chat: the button (and follow gate) or the final DM straight away."""
+    who = username or igsid
     if over_limit(acc):
-        store.log_activity(acc["id"], key, username or igsid, text, "dm_keyword", "error", "Monthly DM limit reached.")
-        return
+        store.log_activity(acc["id"], key, who, text, action, "error", "Monthly DM limit reached.")
+        return False
     fill = lambda s: s.replace("{username}", username)
     try:
         if uses_button_flow(rule):
@@ -294,9 +297,63 @@ def handle_dm_text(acc, igsid, text, mid=""):
             ig.send_dm({"id": igsid}, {"text": fill(rule.get("dm", ""))})
             store.count(acc["id"], "links_sent")
         note_dm(acc)
-        store.log_activity(acc["id"], key, username or igsid, text, "dm_keyword", "ok")
+        store.log_activity(acc["id"], key, who, text, action, "ok")
+        return True
     except Exception as e:
-        store.log_activity(acc["id"], key, username or igsid, text, "dm_keyword", "error", str(e))
+        store.log_activity(acc["id"], key, who, text, action, "error", str(e))
+        return False
+
+
+def handle_dm_text(acc, igsid, text, mid=""):
+    """Someone DMed a keyword: start the same flow inside that chat (works even when comment DMs are refused).
+    Any other message goes to the AI DM agent when it's on."""
+    if is_blocked(acc):
+        return
+    key, rule = dm_keyword_match(store.load_rules(acc["id"]).get("reels", {}), text)
+    if not rule:
+        handle_ai_dm(acc, igsid, text, mid)
+        return
+    if not store.claim(f"s:seen:{acc['id']}:dm:{igsid}:{key}:{int(time.time() // 600)}"):
+        return
+    ig = Instagram(acc)
+    username = username_of(ig, igsid)
+    store.touch_contact(acc["id"], username, igsid, keyword=(keywords_of(rule) or [""])[0], source="dm")
+    send_rule_dm(acc, ig, igsid, key, rule, username, text, "dm_keyword")
+
+
+def handle_story_reply(acc, igsid, text, story_id="", mid=""):
+    """Someone replied to a story: a keyword automation if the reply has one, else the story rule, else the AI."""
+    if is_blocked(acc):
+        return
+    rules = store.load_rules(acc["id"]).get("reels", {})
+    if dm_keyword_match(rules, text)[1]:
+        return handle_dm_text(acc, igsid, text, mid)
+    rule = rules.get("story:reply")
+    words = keywords_of(rule or {})
+    if not rule or not rule.get("enabled", True) or (words and not any(keyword_matches(w, text) for w in words)):
+        return handle_ai_dm(acc, igsid, text, mid)
+    # once per person per story (or per day when Instagram doesn't say which story)
+    if not store.claim(f"s:seen:{acc['id']}:story:{igsid}:{story_id or int(time.time() // 86400)}", 2 * 86400):
+        return
+    ig = Instagram(acc)
+    username = username_of(ig, igsid)
+    store.touch_contact(acc["id"], username, igsid, keyword=(words or ["STORY"])[0], source="story")
+    if send_rule_dm(acc, ig, igsid, "story:reply", rule, username, text, "story_reply"):
+        store.count(acc["id"], "story_replies")
+
+
+def handle_story_mention(acc, igsid):
+    """Someone mentioned the creator in their story: one thank-you DM per person per day."""
+    rule = store.load_rules(acc["id"]).get("reels", {}).get("story:mention")
+    if not rule or not rule.get("enabled", True) or is_blocked(acc):
+        return
+    if not store.claim(f"s:seen:{acc['id']}:mention:{igsid}:{int(time.time() // 86400)}", 2 * 86400):
+        return
+    ig = Instagram(acc)
+    username = username_of(ig, igsid)
+    store.touch_contact(acc["id"], username, igsid, source="story_mention")
+    if send_rule_dm(acc, ig, igsid, "story:mention", rule, username, "(mentioned you in their story)", "story_mention"):
+        store.count(acc["id"], "story_mentions")
 
 
 def handle_ai_dm(acc, igsid, text, mid=""):
@@ -510,7 +567,12 @@ def dispatch(body, run):
                 continue
             payload = event.get("postback", {}).get("payload") or msg.get("quick_reply", {}).get("payload")
             sender = event.get("sender", {}).get("id")
+            story = (msg.get("reply_to") or {}).get("story")
             if payload:
                 run(handle_button, acc, sender, payload)
+            elif any(a.get("type") == "story_mention" for a in msg.get("attachments") or []):
+                run(handle_story_mention, acc, sender)
+            elif story and msg.get("text"):
+                run(handle_story_reply, acc, sender, msg["text"], str(story.get("id", "")), msg.get("mid", ""))
             elif msg.get("text"):
                 run(handle_dm_text, acc, sender, msg["text"], msg.get("mid", ""))

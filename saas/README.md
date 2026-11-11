@@ -24,6 +24,14 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Story replies and mentions
+- Rule `story:reply` (Automations → Stories): someone replies to a story → the same DM flow (button, follow gate, link).
+  Keywords optional (empty = every story reply); once per person per story. A keyword automation in the reply wins;
+  replies the rule doesn't cover go to the AI agent. Webhook: `message.reply_to.story`.
+- Rule `story:mention`: someone mentions the creator in their story (`attachments[].type == "story_mention"`) → one DM per
+  person per day (usually a thank-you). Counters `story_replies`, `story_mentions`; contacts get source `story` / `story_mention`.
+- Story rules never answer ordinary DMs (`engine.dm_keyword_match` skips `story:` keys).
+
 ## Auto-setup and Reel report
 - **Auto-setup new reels** (dashboard card): the creator saves a template once (reply, DM, follow gate, final DM with
   `{keyword}`). When a reel posted *after* switching it on says "Comment GUIDE" (a word in capitals or quotes after

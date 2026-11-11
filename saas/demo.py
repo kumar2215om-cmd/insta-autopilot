@@ -71,6 +71,10 @@ def seed():
         "18000000000000002": {"enabled": True, "keywords": ["GUIDE"], "auto": True, "comment_reply": "@{username} Sent 📥",
                               "require_follow": True, "dm": "Full setup guide 👉 https://example.com/guide",
                               "label": "Claude se Instagram grow karo"},
+        "story:reply": {"enabled": True, "keywords": ["LINK"], "comment_reply": "", "require_follow": True,
+                        "opening_dm": "Hey {username}! 👋 Tap below for the link.", "dm": "Here's the link 👉 https://example.com/prompts"},
+        "story:mention": {"enabled": True, "keywords": [], "comment_reply": "", "require_follow": False, "opening_dm": "",
+                          "dm": "Thank you so much for the shoutout {username}! 🙏❤️"},
         "kw:AUDIT": {"enabled": True, "keywords": ["AUDIT"], "comments": True, "require_follow": False,
                      "comment_reply": "", "dm": "Send me your handle and I'll audit your page 🙌"},
     }})

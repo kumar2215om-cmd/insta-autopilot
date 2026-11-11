@@ -12,7 +12,8 @@ _STR = {"type": "string"}
 
 
 def _rule_view(key, r):
-    kind = "keyword (any reel + DMs)" if engine.is_keyword_rule(key) else ("all reels" if key == "*" else "reel")
+    kind = ("keyword (any reel + DMs)" if engine.is_keyword_rule(key) else "all reels" if key == "*"
+            else {"story:reply": "story replies", "story:mention": "story mentions"}.get(key, "reel"))
     return {"automation_id": key, "type": kind, "enabled": r.get("enabled", True) is not False,
             "keywords": r.get("keywords", []), "final_dm": r.get("dm", ""), "require_follow": bool(r.get("require_follow")),
             "comment_reply": r.get("comment_reply", ""), "auto_setup": bool(r.get("auto")), "label": r.get("label", "")}

@@ -440,7 +440,7 @@ def api_rules():
 
 
 def valid_rule_key(key):
-    return key == "*" or key.isdigit() or (engine.is_keyword_rule(key) and key[3:].replace("_", "").isalnum())
+    return key == "*" or key.isdigit() or key in engine.STORY_KEYS or (engine.is_keyword_rule(key) and key[3:].replace("_", "").isalnum())
 
 
 @app.put("/api/rules/<key>")

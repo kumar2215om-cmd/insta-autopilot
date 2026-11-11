@@ -483,6 +483,45 @@ class SaasTest(unittest.TestCase):
             self.hook(dm("question 4", sender="74"))
         self.assertEqual(claude.requests[-1]["fallbacks"], "default")
 
+    def test_story_replies_and_mentions(self):
+        self.login()
+        story = lambda text, sender="61", sid="st1": {"entry": [{"id": "1789", "messaging": [{"sender": {"id": sender}, "message": {
+            "mid": f"{sender}{sid}{text}", "text": text, "reply_to": {"story": {"id": sid, "url": "https://x"}}}}]}]}
+        self.hook(story("GUIDE"))  # nothing set up: nothing sent
+        self.assertEqual(self.ig.messages(), [])
+        self.assertEqual(self.put_rule("story:reply", keywords=[], require_follow=False, dm="Story link https://s.com").status_code, 200)
+        self.hook(story("🔥🔥"))
+        self.assertEqual(self.ig.messages()[-1], {"recipient": {"id": "61"}, "message": {"text": "Story link https://s.com"}})
+        self.hook(story("again"))  # once per person per story
+        self.assertEqual(len(self.ig.messages()), 1)
+        # a keyword automation wins over the story rule
+        self.put_rule("kw:PROMPTS", keywords=["PROMPTS"], require_follow=False, comment_reply="", dm="Prompts https://p.com")
+        self.hook(story("PROMPTS", sender="62"))
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Prompts https://p.com"})
+        # story rule with a keyword and the follow gate: button first, then the usual follow check
+        self.put_rule("story:reply", keywords=["LINK"], require_follow=True, dm="Gated https://g.com")
+        self.hook(story("hello", sender="63"))
+        self.assertEqual(len(self.ig.messages()), 2)  # no keyword: not answered
+        self.hook(story("link please", sender="63"))
+        self.assertEqual(self.ig.messages()[-1]["message"]["attachment"]["payload"]["buttons"][0]["payload"], "GET|story:reply")
+        self.hook({"entry": [{"id": "1789", "messaging": [{"sender": {"id": "63"}, "postback": {"payload": "GET|story:reply"}}]}]})
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Gated https://g.com"})
+        # the story rule doesn't answer plain DMs
+        self.hook(dm("link", sender="64"))
+        self.assertFalse(any(m["recipient"] == {"id": "64"} for m in self.ig.messages()))
+        # mentions: thank-you once a day
+        store.redis("DEL", store.account_key("1789", "counts"))  # tests run with a 3-DM monthly limit
+        self.put_rule("story:mention", keywords=[], require_follow=False, dm="Thanks {username}! 🙏")
+        mention = {"entry": [{"id": "1789", "messaging": [{"sender": {"id": "65"}, "message": {
+            "mid": "mm", "attachments": [{"type": "story_mention", "payload": {"url": "https://x"}}]}}]}]}
+        self.hook(mention)
+        self.hook(mention)
+        sent = [m for m in self.ig.messages() if m["recipient"] == {"id": "65"}]
+        self.assertEqual(sent, [{"recipient": {"id": "65"}, "message": {"text": "Thanks fan! 🙏"}}])
+        self.assertEqual(store.counts("1789").get("story_mentions"), 1)
+        c = {x["username"]: x for x in self.c.get("/api/contacts").get_json()["contacts"]}
+        self.assertIn("fan", c)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)
