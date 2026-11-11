@@ -336,7 +336,8 @@ function openWizard({key, duplicate, template, mediaId}) {
              opening_dm: r.opening_dm ?? DEF.opening_dm, button_text: r.button_text || DEF.button_text,
              follow_dm: r.follow_dm || DEF.follow_dm, followed_button_text: r.followed_button_text || DEF.followed_button_text,
              email_dm: r.email_dm || DEF.email_dm, phone_dm: r.phone_dm || DEF.phone_dm, dm: r.dm || DEF.dm,
-             btn_on: !!r.dm_button_url, keywords: [...(r.keywords || [])]}};
+             btn_on: !!r.dm_button_url, keywords: [...(r.keywords || [])], exclude: [...(r.exclude || [])],
+             once_per_person: key || template ? !!r.once_per_person : true, delay_min: +r.delay_min || 0}};
   if (!key && !template) wiz.r.require_follow = true;
   drawWizard(); $("wiz").showModal();
 }
@@ -385,12 +386,21 @@ function drawWizard() {
         <div class="kwbox">${R.keywords.map((k, i) => `<span class="chip kw">${esc(k)}<button type="button" data-kwdel="${i}" aria-label="Remove ${esc(k)}">×</button></span>`).join("")}
           <input id="kwIn" type="text" placeholder="Type a keyword and press Enter" aria-label="Add a keyword"></div>
         <p class="hint" style="margin-top:6px">Not case-sensitive. Spelling mistakes, plurals and emojis still match (GUIDE matches "guides 🔥").</p></div>`;
+    h += R.exclude.length || wiz.showEx ? `<div><span class="lbl">Don't reply when it includes:</span>
+        <div class="kwbox">${R.exclude.map((k, i) => `<span class="chip">${esc(k)}<button type="button" data-exdel="${i}" aria-label="Remove ${esc(k)}">×</button></span>`).join("")}
+          <input id="exIn" type="text" placeholder="e.g. scam, fake, price" aria-label="Add an excluded word"></div></div>`
+      : `<button class="dmbtn" type="button" data-showex style="text-align:left; border:0; padding:0">＋ Add excluded keywords</button>`;
+    if (wiz.trigger === "comment") h += `<div class="blk"><div class="hd"><b>Only once per person</b>${toggle("once_per_person", R.once_per_person)}</div>
+        <p class="hint">Someone who comments 5 times gets one DM, not 5. Safer for your account.</p></div>`;
     if (wiz.trigger === "comment") h += `<div class="blk"><div class="hd"><b>Auto-reply to comments on the post</b>${toggle("replies_on", R.replies_on !== false)}</div>
         ${R.replies_on !== false ? `<p class="hint">Write 3 replies. A random one is used each time so your replies don't look like a bot.</p>
           ${R.replies.map((t, i) => `<div><label class="lbl" for="rp${i}">Comment response ${i + 1}</label><input id="rp${i}" type="text" maxlength="140" data-reply="${i}" value="${esc(t)}"></div>`).join("")}` : ""}</div>`;
   }
   if (s === "dms") {
     h = acctHtml();
+    if (wiz.trigger === "comment") h += `<div><label class="lbl" for="wDelay">Wait before the first DM</label>
+      <select id="wDelay" data-f="delay_min">${[0, 1, 2, 5, 10].map(x => `<option value="${x}" ${+R.delay_min === x ? "selected" : ""}>${x ? `${x} minute${x > 1 ? "s" : ""}` : "No wait (send right away)"}</option>`).join("")}</select>
+      <p class="hint" style="margin-top:6px">A short wait feels more human. The public reply still goes right away.</p></div>`;
     if (wiz.trigger !== "mention") h += `<div class="blk"><div class="hd"><b>Opening message with a button</b>${toggle("opening_on", R.opening_on)}</div>
       ${R.opening_on ? `<p class="hint">The tap opens the chat, which Instagram needs before it lets us check follows or ask for details.</p>
         <textarea rows="3" data-f="opening_dm" maxlength="640" aria-label="Opening message">${esc(R.opening_dm)}</textarea>
@@ -442,6 +452,7 @@ function reviewHtml() {
   } else if (wiz.trigger === "dm") h += `<div class="bub">${esc(R.keywords[0] || "KEYWORD")}</div>`;
   else if (wiz.trigger === "story") h += `<div class="note">◎ Replies to your story${wiz.match === "keyword" ? ` with <b>${esc(R.keywords[0] || "")}</b>` : ""}</div>`;
   else h += `<div class="note">@ Mentions you in their story</div>`;
+  if (wiz.trigger === "comment" && +R.delay_min) h += `<div class="note">🕒 then wait ${R.delay_min} minute${+R.delay_min > 1 ? "s" : ""}</div>`;
   h += `<div class="note" style="margin-top:6px">Message to @${who}</div>`;
   const gate = R.require_follow || R.ask_email || R.ask_phone || R.followup_on;
   if (wiz.trigger !== "mention" && (R.opening_on || gate)) h += `<div class="bub me">${fill(R.opening_on ? R.opening_dm : DEF.opening_dm)}<span class="b">${esc(R.button_text)}</span></div>`;
@@ -462,10 +473,18 @@ $("wizBody").addEventListener("input", (e) => {
 });
 $("wizBody").addEventListener("change", (e) => { if (e.target.dataset.c) wiz.r[e.target.dataset.c] = e.target.checked; if (e.target.dataset.f) wiz.r[e.target.dataset.f] = e.target.value; });
 $("wizBody").addEventListener("keydown", (e) => {
-  if (e.target.id !== "kwIn" || !["Enter", ","].includes(e.key)) return;
-  e.preventDefault(); addKw(e.target.value);
+  if (!["kwIn", "exIn"].includes(e.target.id) || !["Enter", ","].includes(e.key)) return;
+  e.preventDefault(); e.target.id === "kwIn" ? addKw(e.target.value) : addEx(e.target.value);
 });
-$("wizBody").addEventListener("focusout", (e) => { if (e.target.id === "kwIn" && e.target.value.trim()) addKw(e.target.value); });
+$("wizBody").addEventListener("focusout", (e) => {
+  if (e.target.id === "kwIn" && e.target.value.trim()) addKw(e.target.value);
+  if (e.target.id === "exIn" && e.target.value.trim()) addEx(e.target.value);
+});
+function addEx(v) {
+  const w = v.trim().toLowerCase().slice(0, 40);
+  if (w && !wiz.r.exclude.includes(w)) wiz.r.exclude.push(w);
+  drawWizard(); $("exIn")?.focus();
+}
 function addKw(v) {
   const w = v.trim().toUpperCase().replace(/[^A-Z0-9_\s]/g, "").trim();
   if (w && !wiz.r.keywords.includes(w)) wiz.r.keywords.push(w);
@@ -479,6 +498,8 @@ $("wizBody").addEventListener("click", (e) => {
   const md = e.target.closest("[data-media]"); if (md) { wiz.mediaId = md.dataset.media; return drawWizard(); }
   const mt = e.target.closest("[data-match]"); if (mt) { wiz.match = mt.dataset.match; return drawWizard(); }
   const kd = e.target.closest("[data-kwdel]"); if (kd) { wiz.r.keywords.splice(+kd.dataset.kwdel, 1); return drawWizard(); }
+  const xd = e.target.closest("[data-exdel]"); if (xd) { wiz.r.exclude.splice(+xd.dataset.exdel, 1); return drawWizard(); }
+  if (e.target.closest("[data-showex]")) { wiz.showEx = true; drawWizard(); return $("exIn")?.focus(); }
   const sw = e.target.closest("[data-tg]"); if (sw) { const n = sw.dataset.tg; wiz.r[n] = !(n === "replies_on" ? wiz.r[n] !== false : wiz.r[n]); return drawWizard(); }
   if (e.target.closest("[data-btnon]")) { wiz.r.btn_on = true; return drawWizard(); }
   if (e.target.closest("[data-btnoff]")) { Object.assign(wiz.r, {btn_on: false, dm_button_url: "", dm_button_text: ""}); return drawWizard(); }
@@ -520,6 +541,7 @@ function bodyOf() {
     ask_email: !!R.ask_email, email_dm: R.email_dm, email_required: !!R.email_required,
     ask_phone: !!R.ask_phone, phone_dm: R.phone_dm, phone_required: !!R.phone_required,
     followup_on: !!R.followup_on, followup_dm: R.followup_dm || "", followup_hours: +R.followup_hours || 3, followup_url: R.followup_url || "", followup_button: R.followup_button || "",
+    exclude: R.exclude, once_per_person: wiz.trigger === "comment" && !!R.once_per_person, delay_min: wiz.trigger === "comment" ? +R.delay_min || 0 : 0,
     comments: wiz.trigger !== "dm", label: R.label || "", tags: R.tags || "", starts_at: R.starts_at || 0, ends_at: R.ends_at || 0, since: R.since || ""};
 }
 $("wizBack").onclick = () => { wiz.step = Math.max(0, wiz.step - 1); if (stepsFor()[wiz.step] === "trigger" && wiz.origKey) wiz.step = 1; drawWizard(); };

@@ -217,27 +217,39 @@ def keywords_of(rule):
     return [k.strip() for k in rule.get("keywords", []) if k.strip()]
 
 
+def excluded(rule, text):
+    """True when the comment or DM has one of the automation's excluded words ("scam", "fake"…)."""
+    return any(keyword_matches(w, text) for w in rule.get("exclude") or [] if str(w).strip())
+
+
 def find_rule(rules, media_id, text):
     """(key, rule) for a comment: the reel's own rule, then keyword rules, then the all-reels rule "*"."""
     reels = rules.get("reels", {})
     own = reels.get(media_id) if media_id and media_id != "*" and not is_keyword_rule(media_id) else None
-    if own and is_live(own):
+    if own and is_live(own) and not excluded(own, text):
         words = keywords_of(own)
         if not words or any(keyword_matches(k, text) for k in words):
             return media_id, own
     for key, rule in reels.items():
-        if (is_keyword_rule(key) and is_live(rule) and rule.get("comments", True)
+        if (is_keyword_rule(key) and is_live(rule) and rule.get("comments", True) and not excluded(rule, text)
                 and any(keyword_matches(k, text) for k in keywords_of(rule))):
             return key, rule
     if own:  # a reel with its own rule never falls through to the all-reels rule
         return None, None
     rule = reels.get("*")
-    if not rule or not is_live(rule):
+    if not rule or not is_live(rule) or excluded(rule, text):
         return None, None
     words = keywords_of(rule)
     if words and not any(keyword_matches(k, text) for k in words):
         return None, None
     return "*", rule
+
+
+DELAYS = (0, 1, 2, 5, 10)
+
+
+def delay_minutes(rule):
+    return int(rule.get("delay_min") or 0) if int(rule.get("delay_min") or 0) in DELAYS else 0
 
 
 def uses_button_flow(rule):
@@ -270,6 +282,10 @@ def handle_comment(acc, value):
     key, rule = find_rule(store.load_rules(acc["id"]), media_id, text)
     if not rule or is_blocked(acc) or not store.claim(f"s:seen:{acc['id']}:{comment_id}"):
         return False
+    if rule.get("once_per_person") and sender.get("id") and not store.claim(
+            f"s:seen:{acc['id']}:once:{key}:{media_id}:{sender['id']}", 60 * 86400):
+        store.log_activity(acc["id"], media_id, username, text, "dm", "ok", "Skipped: already sent to this person for this post")
+        return False
     store.media_count(acc["id"], media_id, "keyword")
     store.touch_contact(acc["id"], username, keyword=(keywords_of(rule) or [""])[0], source=media_id, tags=rule_tags(rule))
     ig = Instagram(acc)
@@ -278,6 +294,10 @@ def handle_comment(acc, value):
     if over_limit(acc):
         store.log_activity(acc["id"], media_id, username, text, "dm", "error",
                            f"Monthly DM limit reached ({monthly_limit(acc)}). Upgrade to keep sending.")
+    elif delay_minutes(rule):
+        store.schedule(time.time() + delay_minutes(rule) * 60, {"kind": "comment_dm", "acc": acc["id"], "comment_id": comment_id,
+                                                                "key": key, "media_id": media_id, "username": username, "text": text[:300]})
+        store.log_activity(acc["id"], media_id, username, text, "dm", "ok", f"DM queued for {delay_minutes(rule)} min")
     else:
         send_comment_dm(acc, ig, comment_id, key, rule, media_id, username, text)
 
@@ -290,6 +310,48 @@ def handle_comment(acc, value):
         except Exception as e:
             store.log_activity(acc["id"], media_id, username, text, "comment_reply", "error", str(e))
     return True
+
+
+# ---------- integrations: new leads to Google Sheets, Zapier, Make or any webhook ----------
+
+def safe_hook_url(url):
+    """The URL if it's https to a public address, else "" (so it can't reach the server's own network)."""
+    import ipaddress
+    import socket
+    from urllib.parse import urlparse
+    url = str(url or "").strip()
+    parts = urlparse(url)
+    if parts.scheme != "https" or not parts.hostname or len(url) > 500:
+        return ""
+    try:
+        addrs = {a[4][0] for a in socket.getaddrinfo(parts.hostname, parts.port or 443)}
+    except OSError:
+        return ""
+    for a in addrs:
+        ip = ipaddress.ip_address(a)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            return ""
+    return url
+
+
+def send_hook(acc, event, data, test=False):
+    """POSTs {"event", "account", "at", ...data} to the creator's webhook. Never raises; returns an error text or ""."""
+    hook = acc.get("hook") or {}
+    if not (hook.get("enabled") or test) or not hook.get("url") or acc.get("demo"):
+        return "" if not test else ("" if acc.get("demo") else "Add a webhook URL first.")
+    url = safe_hook_url(hook["url"])
+    if not url:
+        return "The webhook URL must be https and reach the public internet."
+    payload = {"event": event, "account": acc.get("username", ""), "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **data}
+    try:
+        r = requests.post(url, json=payload, timeout=4, allow_redirects=False)
+        if r.status_code >= 400:
+            raise RuntimeError(f"HTTP {r.status_code}")
+        store.count(acc["id"], "hook_sent")
+        return ""
+    except Exception as e:
+        store.log_activity(acc["id"], "integration", data.get("username", ""), event, "integration", "error", str(e)[:200])
+        return f"Couldn't reach the webhook: {str(e)[:120]}"
 
 
 # ---------- A/B test of the first DM ----------
@@ -508,7 +570,7 @@ def pick_winners(acc, media_id, winners=1, keyword="", min_mentions=0, followed_
 def dm_keyword_match(rules, text):
     """(key, rule) of the first keyword automation a DM matches: keyword rules first, then reel rules."""
     ordered = sorted(((k, r) for k, r in rules.items() if not is_story_rule(k) and k != "next"), key=lambda kv: not is_keyword_rule(kv[0]))
-    return next(((k, r) for k, r in ordered if is_live(r)
+    return next(((k, r) for k, r in ordered if is_live(r) and not excluded(r, text)
                  and any(keyword_matches(w, text) for w in keywords_of(r))), (None, None))
 
 
@@ -569,7 +631,7 @@ def handle_story_reply(acc, igsid, text, story_id="", mid=""):
         return handle_dm_text(acc, igsid, text, mid)
     rule = rules.get("story:reply")
     words = keywords_of(rule or {})
-    if not rule or not is_live(rule) or (words and not any(keyword_matches(w, text) for w in words)):
+    if not rule or not is_live(rule) or excluded(rule, text) or (words and not any(keyword_matches(w, text) for w in words)):
         return handle_ai_dm(acc, igsid, text, mid)
     # once per person per story (or per day when Instagram doesn't say which story)
     if not store.claim(f"s:seen:{acc['id']}:story:{igsid}:{story_id or int(time.time() // 86400)}", 2 * 86400):
@@ -730,6 +792,7 @@ def handle_button(acc, igsid, payload):
             if step == "FOLLOWED" and rule.get("require_follow") and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
                 store.count(acc["id"], "gate_follows")
                 store.rule_count(acc["id"], key, "follows")
+                send_hook(acc, "follow", {"username": username, "automation": key})
                 store.media_count(acc["id"], media_id, "follow")
                 ab_count(acc, key, ab_variant(acc, igsid, key), "follow")
             store.touch_contact(acc["id"], username, igsid, followed=bool(rule.get("require_follow") and follows))
@@ -781,6 +844,13 @@ def send_due_followups(limit=25):
     sent = 0
     for item in store.take_due(limit):
         acc = store.load_account(item["acc"])
+        if item.get("kind") == "comment_dm":  # a first DM held back by the automation's delay
+            rule = (store.load_rules(item["acc"]).get("reels", {}).get(item["key"]) if acc else None) or {}
+            if acc and rule and not acc.get("paused") and not is_blocked(acc) and not over_limit(acc):
+                if send_comment_dm(acc, Instagram(acc), item["comment_id"], item["key"], rule, item["media_id"],
+                                   item["username"], item["text"]):
+                    sent += 1
+            continue
         rule = (store.load_rules(item["acc"]).get("reels", {}).get(item["key"]) if acc else None) or {}
         if not acc or acc.get("paused") or is_blocked(acc) or not rule.get("followup_on") or not rule.get("followup_dm"):
             continue
@@ -887,6 +957,7 @@ def handle_email_reply(acc, igsid, text):
         store.redis("DEL", pending_key(acc, igsid))
         store.touch_contact(acc["id"], username, igsid, source=field, **{field: value})
         store.count(acc["id"], f"{field}s")
+        send_hook(acc, "lead", {"username": username, field: value, "automation": wait["key"]})
         if not ask_next(acc, ig, igsid, wait["key"], rule, wait.get("media_id", ""), username, after=field):
             deliver(acc, ig, igsid, wait["key"], rule, username, wait.get("media_id", ""), f"({field})")
     except Exception as e:

@@ -35,6 +35,7 @@
   <p>Only to run the automation you set up: reading comments and messages on your account, replying, sending DMs and checking whether someone follows you before sending your link. We don't sell data, show ads or use it for anything else.</p>
   <h2>Where it's stored</h2>
   <p>On Vercel (hosting) and Upstash (database), service providers that process data on our behalf. If you turn on AI replies, the DM conversation and the details you give the AI (your FAQ, products and links) are sent to Anthropic, which runs the Claude AI model, to write each reply. Anthropic processes it on our behalf and doesn't use it to train its models.</p>
+  <p>If you turn on <b>Integrations</b>, new leads (username, email or phone, the automation) are also sent to the webhook address you choose, such as your own Google Sheet or Zapier. That service then handles them under its own terms.</p>
   <h2>Your choices</h2>
   <p>Use <b>Disconnect Instagram and delete my data</b> in the dashboard, or remove {{ brand }} in Instagram (Settings → Apps and websites). Either way we delete your account data. See <a href="/data-deletion">Data deletion</a>.</p>
   {% if contact_email %}<h2>Contact</h2><p><a href="mailto:{{ contact_email }}">{{ contact_email }}</a></p>{% endif %}

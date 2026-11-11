@@ -62,6 +62,31 @@
   <button class="btn ghost sm" type="button" id="pause">Pause automation</button>
 </section>
 
+<section class="card" {% if role != "owner" %}hidden{% endif %}>
+  <div class="row"><h2 style="margin-right:auto">Integrations</h2><span class="badge" id="hookStatus">off</span></div>
+  <p class="muted small" style="margin:6px 0 12px">Send every new lead (email, WhatsApp number, link-page signup) and every follow from your DMs to
+    Google Sheets, Zapier, Make, Pabbly or your own app, the moment it happens.</p>
+  <form id="hookForm" style="display:grid; gap:10px">
+    <label><input type="checkbox" name="enabled"> <b>Send leads to my webhook</b></label>
+    <div><label class="f" for="hookUrl">Webhook URL <span class="hint">https:// · from Zapier/Make "Catch hook", or a Google Apps Script web app</span></label>
+      <input id="hookUrl" name="url" type="url" placeholder="https://hooks.zapier.com/hooks/catch/…"></div>
+    <div class="row"><button class="btn sm" type="submit">Save</button><button class="btn ghost sm" type="button" id="hookTest">Send a test lead</button><span class="small" id="hookMsg"></span></div>
+  </form>
+  <details style="margin-top:12px"><summary class="small"><b>Google Sheets in 2 minutes</b></summary>
+    <ol class="small" style="margin:10px 0 0; padding-left:18px; display:grid; gap:6px">
+      <li>Open a new Google Sheet → Extensions → Apps Script.</li>
+      <li>Paste this, then Deploy → New deployment → Web app → "Who has access: Anyone" → Deploy, and copy the URL:
+        <pre style="white-space:pre-wrap; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; font:12px var(--mono); margin:6px 0 0">function doPost(e) {
+  var d = JSON.parse(e.postData.contents);
+  SpreadsheetApp.getActiveSheet().appendRow([d.at, d.event, d.username, d.email || "", d.phone || "", d.automation || ""]);
+  return ContentService.createTextOutput("ok");
+}</pre></li>
+      <li>Paste the URL above, tick the box, Save, then "Send a test lead". A row appears in your sheet.</li>
+    </ol>
+    <p class="small muted" style="margin:8px 0 0">Each lead is sent as JSON: <code>event</code> (lead / follow / test), <code>account</code>, <code>at</code>, <code>username</code>, <code>email</code>, <code>phone</code>, <code>automation</code>.</p>
+  </details>
+</section>
+
 <section class="card" id="invite" {% if role != "owner" or acc.demo %}hidden{% endif %}>
   <div class="row"><h2 style="margin-right:auto">Invite creators, get Pro free</h2><span class="badge" id="refPlan"></span></div>
   <p class="muted small" style="margin:6px 0 12px">Share your link. When a creator joins {{ brand }} through it, <b>you both get 1 month of Pro free</b>
@@ -161,6 +186,27 @@ $("g_try").oninput = () => { clearTimeout(gTimer); gTimer = setTimeout(async () 
   $("g_tryOut").className = `small ${r.reason ? "err" : "ok"}`; $("g_tryOut").textContent = r.reason ? `Hidden (${r.reason})` : "Kept";
 }, 300); };
 loadGuard();
+{% if role == "owner" %}
+async function loadHook() {
+  try {
+    const h = await api("/api/integrations"), f = $("hookForm");
+    f.url.value = h.url; f.enabled.checked = h.enabled;
+    $("hookStatus").className = `badge ${h.enabled ? "on" : ""}`; $("hookStatus").textContent = h.enabled ? `on · ${fmt(h.sent)} sent` : "off";
+  } catch (e) {}
+}
+$("hookForm").onsubmit = async (e) => {
+  e.preventDefault();
+  try { await api("/api/integrations", {method: "PUT", body: JSON.stringify({url: e.target.url.value, enabled: e.target.enabled.checked})});
+    $("hookMsg").className = "small ok"; $("hookMsg").textContent = "Saved ✓"; loadHook(); }
+  catch (err) { $("hookMsg").className = "small err"; $("hookMsg").textContent = err.message; }
+};
+$("hookTest").onclick = async () => {
+  try { await api("/api/integrations", {method: "PUT", body: JSON.stringify({url: $("hookForm").url.value, enabled: $("hookForm").enabled.checked})});
+    await api("/api/integrations/test", {method: "POST", body: "{}"}); $("hookMsg").className = "small ok"; $("hookMsg").textContent = "Test lead sent ✓"; loadHook(); }
+  catch (err) { $("hookMsg").className = "small err"; $("hookMsg").textContent = err.message; }
+};
+loadHook();
+{% endif %}
 {% if role == "owner" and not acc.demo %}
 api("/api/referrals").then(r => {
   $("refLink").value = r.link;

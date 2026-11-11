@@ -204,6 +204,17 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
 - New rule fields: `replies_on`, `dm_button_text`, `dm_button_url` (the final DM is sent as a button template), `since`.
 - `/app/automations#<key>` opens that automation in the wizard (used by the Reel report and Home).
 
+## Excluded keywords, once per person, delay, integrations
+- `rule["exclude"]`: words that stop the automation (`engine.excluded`), checked for comments, keyword DMs and story replies.
+- `rule["once_per_person"]` (on by default in the wizard): one DM per person per automation and post for 60 days.
+- `rule["delay_min"]` (0/1/2/5/10): the first comment DM is queued in `s:followups` as `{"kind": "comment_dm"}` and sent by
+  `send_due_followups` (after webhooks / cron, like follow-ups; on Vercel Hobby it can run late on quiet accounts). The
+  public reply goes right away.
+- **Integrations** (Settings, owner only): `acc["hook"] = {url, enabled}`. New leads (email/phone from DMs, link-page signups)
+  and DM-gate follows are POSTed as JSON (`event`, `account`, `at`, `username`, `email`, `phone`, `automation`) by
+  `engine.send_hook` (4 s timeout, no redirects). `safe_hook_url` only allows https to public IPs. `/api/integrations`,
+  `/api/integrations/test`. The card includes a Google Apps Script snippet for Google Sheets.
+
 ## Contact tags
 Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
 to 5) adds tags to everyone who goes through it (comments, keyword DMs, story replies and mentions). Creators edit tags

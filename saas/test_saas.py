@@ -69,7 +69,7 @@ class FakeInstagram:
             return Resp({"username": "fan", "is_user_follow_business": self.follows})
         return Resp({"username": "fan"})
 
-    def post(self, url, params=None, json=None, data=None, timeout=None):
+    def post(self, url, params=None, json=None, data=None, timeout=None, **kw):
         self.calls.append(("POST", url, json or data))
         if self.dead and "graph.instagram.com" in url:
             return Resp({"error": {"code": 190, "message": "Session invalidated"}}, 400)
@@ -949,6 +949,44 @@ class SaasTest(unittest.TestCase):
         # deleting removes its numbers
         self.c.delete("/api/rules/555", json={})
         self.assertNotIn("555", self.c.get("/api/rules").get_json()["stats"])
+
+    def test_exclude_once_delay(self):
+        self.login()
+        self.put_rule("555", keywords=["PROMPTS"], require_follow=False, comment_reply="", dm="Here", exclude=["scam"],
+                      once_per_person=True)
+        self.hook(comment("PROMPTS scam?", cid="x1"))
+        self.assertEqual(self.ig.messages(), [])  # excluded word
+        self.hook(comment("PROMPTS", cid="x2"))
+        self.hook(comment("PROMPTS again", cid="x3"))  # same person, same post
+        self.assertEqual(len(self.ig.messages()), 1)
+        # delay: queued, then sent when due
+        self.put_rule("777", keywords=["GUIDE"], require_follow=False, comment_reply="Sent!", dm="Guide", delay_min=5)
+        self.hook(comment("GUIDE", cid="x4", media="777"))
+        self.assertEqual(len(self.ig.messages()), 1)
+        self.assertEqual(len(self.ig.replies()), 1)  # the public reply doesn't wait
+        later = engine.time.time() + 5 * 60 + 5
+        with mock.patch.object(engine.time, "time", lambda: later), mock.patch.object(store.time, "time", lambda: later):
+            self.assertEqual(engine.send_due_followups(), 1)
+        self.assertEqual(self.ig.messages()[-1], {"recipient": {"comment_id": "x4"}, "message": {"text": "Guide"}})
+        self.assertEqual(self.put_rule("778", dm="x", delay_min=7).get_json()["reels"]["778"]["delay_min"], 0)
+
+    def test_integrations_webhook(self):
+        self.login()
+        self.assertEqual(self.c.put("/api/integrations", json={"url": "http://x.com/h", "enabled": True}).status_code, 400)
+        self.assertEqual(self.c.put("/api/integrations", json={"url": "https://127.0.0.1/h", "enabled": True}).status_code, 400)
+        public = lambda host, port: [(2, 1, 6, "", ("93.184.216.34", port))]
+        with mock.patch("socket.getaddrinfo", public):
+            r = self.c.put("/api/integrations", json={"url": "https://hooks.example.com/catch/1", "enabled": True}).get_json()
+            self.assertTrue(r["enabled"])
+            self.assertEqual(self.c.post("/api/integrations/test", json={}).status_code, 200)
+            # a lead from the DM flow is sent too
+            self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", ask_email=True, dm="Guide")
+            tap = {"entry": [{"id": "1789", "messaging": [{"sender": {"id": "71"}, "postback": {"payload": "GET|kw:GUIDE"}}]}]}
+            self.hook(tap)
+            self.hook(dm("me@x.com", sender="71", mid="h1"))
+        hooks = [c[2] for c in self.ig.calls if c[1] == "https://hooks.example.com/catch/1"]
+        self.assertEqual([h["event"] for h in hooks], ["test", "lead"])
+        self.assertEqual((hooks[1]["email"], hooks[1]["automation"], hooks[1]["account"]), ("me@x.com", "kw:GUIDE", "creator"))
 
     def test_demo_inbox(self):
         self.c.get("/demo")

@@ -75,7 +75,7 @@ def current_account():
 # ---------- team: managers and viewers who log in with an invite link ----------
 
 ROLES = {"manager": "Manager", "viewer": "Viewer"}
-OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key")
+OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations")
 MAX_TEAM = 5
 
 
@@ -674,6 +674,9 @@ def save_rule(acc, key, data):
         "dm_button_text": str(data.get("dm_button_text", ""))[:20].strip(),
         "dm_button_url": safe_url(data.get("dm_button_url")),
         "replies_on": data.get("replies_on", True) is not False,
+        "exclude": [k.strip()[:40] for k in data.get("exclude", []) if str(k).strip()][:20],
+        "once_per_person": bool(data.get("once_per_person")),
+        "delay_min": int(data.get("delay_min") or 0) if int(data.get("delay_min") or 0) in engine.DELAYS else 0,
         "since": str(data.get("since", "")) if key == "next" else "",
         "tags": ", ".join(store.clean_tags(str(data.get("tags", "")).split(","))[:5]),
         "ask_email": bool(data.get("ask_email")),
@@ -940,6 +943,33 @@ def api_onboarding_mark():
         marks["dismissed"] = bool(data["dismissed"])
     store.save_account(acc)
     return api_onboarding()
+
+
+@app.get("/api/integrations")
+def api_integrations():
+    acc = current_account()
+    hook = acc.get("hook") or {}
+    return jsonify(url=hook.get("url", ""), enabled=bool(hook.get("enabled")), sent=store.counts(acc["id"]).get("hook_sent", 0))
+
+
+@app.put("/api/integrations")
+def api_put_integrations():
+    acc = current_account()
+    data = request.get_json(force=True)
+    url = str(data.get("url", "")).strip()
+    if url and not engine.safe_hook_url(url):
+        return jsonify(error="Use an https:// webhook URL that's reachable on the internet."), 400
+    acc["hook"] = {"url": url, "enabled": bool(data.get("enabled")) and bool(url)}
+    store.save_account(acc)
+    return api_integrations()
+
+
+@app.post("/api/integrations/test")
+def api_test_integration():
+    acc = current_account()
+    err = engine.send_hook(acc, "test", {"username": "test.fan", "email": "test@example.com", "phone": "+919876543210",
+                                         "automation": "test"}, test=True)
+    return (jsonify(error=err), 400) if err else jsonify(ok=True)
 
 
 @app.get("/api/activity")
@@ -1409,6 +1439,7 @@ def bio_signup(username):
     handle = clean_ref(request.form.get("instagram", ""))
     store.touch_contact(acc["id"], handle, "" if handle else f"web:{email or phone}", source="bio_page", email=email, phone=phone)
     store.count(acc["id"], "page_signups")
+    engine.send_hook(acc, "lead", {"username": handle, "email": email, "phone": phone, "automation": "link page"})
     return redirect(f"/{username}?joined=1#join")
 
 
