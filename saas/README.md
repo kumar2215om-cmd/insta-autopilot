@@ -15,6 +15,14 @@ It's a separate Flask app from the one in the repo root (Om's own site, courses 
 - `templates/`: landing page, dashboard, privacy/terms/data-deletion pages, owner page.
 - `test_saas.py`: tests with Instagram mocked: `cd saas && python3 -m unittest test_saas`.
 
+## Brand (11 Nov 2026)
+- **Logo:** `templates/_logo.html` (`logo.mark(size, id)`, `logo.wordmark(size, id, dark)`, `logo.favicon`): a message bubble
+  holding a reply arrow, on a violet → coral gradient tile (#7B5CFF → #B05CE8 → #FF7A59). Wordmark "Reply" + violet "Inbox".
+- **Type:** Geist (UI and headings), Instrument Serif italic for one accent phrase per headline, Geist Mono for labels.
+- **Colour:** ink #0C0B10, paper #F7F5F0, violet #6A4CFF (ink #4B2FE6, lavender #B9A8FF), coral #FF7A59.
+- **Landing** (`landing.html`): dark hero with the product UI, stat strip, bento feature grid, how it works, pricing + compare
+  table, FAQ, final CTA, footer. Entrance animations run once and are off under `prefers-reduced-motion`.
+
 ## App sections (new design, 12 Nov 2026)
 Sidebar app built on `templates/_base.html` (violet look from the design canvas): Home (`/app`), Automations
 (`/app/automations`), Reel report (`/app/report`), Link in bio (`/app/links`, public page at `/<username>`, clicks via

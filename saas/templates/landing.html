@@ -1,181 +1,433 @@
-<!doctype html>
+{% import "_logo.html" as logo %}<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ brand }}: Instagram DM automation for creators</title>
-<meta name="description" content="Comment-to-DM with follow to unlock, story replies, an AI that answers DMs in Hinglish, email and phone capture, follow-up offers, link in bio and reel reports. Free to start.">
-{% include "_style.html" %}
+<meta name="description" content="Turn Instagram comments into followers, leads and sales. Comment-to-DM with follow to unlock, story replies, email and WhatsApp capture, follow-up offers, and an AI that answers DMs in Hinglish. Free to start.">
+<meta name="theme-color" content="#0C0B10">
+<link rel="icon" href="{{ logo.favicon }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
-  header.top { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:18px 0; }
-  header nav { display:flex; gap:18px; align-items:center; }
-  header nav a:not(.btn) { color:var(--ink); text-decoration:none; font-weight:600; font-size:14px; }
-  .logo { font-weight:900; font-size:22px; }
-  .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:32px; align-items:center; padding:36px 0 48px; }
-  .hero h1 { font-size:clamp(34px, 5.6vw, 58px); margin:12px 0 16px; }
-  .hero p.lead { font-size:18px; color:#4a453f; max-width:540px; }
-  .cta { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:24px; }
-  .invite { display:flex; gap:8px; max-width:420px; }
-  .proof { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:18px; font-size:14px; color:var(--mute); }
-  .flow { display:grid; gap:12px; }
-  .bubble { background:#fff; border:1px solid var(--line); border-radius:18px; padding:12px 16px; box-shadow:var(--shadow); max-width:330px; font-size:14px; }
-  .bubble.me { margin-left:auto; background:var(--ink); color:#fff; border-color:var(--ink); }
-  .bubble b { display:block; font-size:12px; color:var(--mute); margin-bottom:2px; }
-  .bubble.me b { color:#d6d0c6; }
-  .chip { display:inline-block; margin-top:8px; padding:6px 12px; border-radius:999px; background:var(--rose); color:#fff; font-weight:800; font-size:13px; }
-  section { padding:44px 0; }
-  section > h2 { font-size:clamp(26px, 3.6vw, 36px); margin:8px 0 6px; }
-  section > p.sub { color:var(--mute); margin:0; max-width:620px; }
-  .grid3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-top:22px; }
-  .grid3 .card h3 { font-size:18px; margin:8px 0 6px; }
-  .step { font-weight:900; font-size:40px; color:var(--rose); line-height:1; }
-  .group { margin-top:26px; }
-  .group h3 { font-size:15px; text-transform:uppercase; letter-spacing:.1em; color:var(--mute); font-weight:800; margin:0 0 12px; }
-  .feats { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
-  .feat { background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px; }
-  .feat .ic { font-size:22px; line-height:1; }
-  .feat b { display:block; margin:8px 0 4px; font-size:16px; }
-  .feat p { margin:0; font-size:14px; color:var(--mute); }
-  .feat .tag { display:inline-block; margin-left:6px; font-size:11px; font-weight:800; color:var(--rose); background:#EEEAFE; border-radius:99px; padding:2px 8px; vertical-align:2px; }
-  .plans { display:grid; grid-template-columns:repeat(2, 1fr); gap:18px; margin-top:22px; max-width:820px; }
-  .plan { position:relative; }
-  .plan.pro { border:2px solid var(--rose); }
-  .plan .ribbon { position:absolute; top:-12px; right:18px; background:var(--rose); color:#fff; font-size:12px; font-weight:800; padding:4px 10px; border-radius:99px; }
-  .price { font-size:40px; font-weight:900; margin:6px 0 0; }
-  .price small { font-size:15px; font-weight:600; color:var(--mute); }
-  .plan ul { list-style:none; padding:0; margin:14px 0 18px; display:grid; gap:8px; font-size:15px; }
-  .plan li::before { content:"✓"; color:var(--ok); font-weight:900; margin-right:8px; }
-  .plan li.big { font-weight:700; }
-  .table { overflow-x:auto; margin-top:22px; max-width:820px; }
-  .table table { width:100%; border-collapse:collapse; min-width:520px; background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden; font-size:14.5px; }
-  .table th, .table td { padding:11px 14px; border-top:1px solid var(--line); text-align:left; }
-  .table thead th { border-top:0; background:#FAFAF7; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); }
-  .table td:not(:first-child), .table th:not(:first-child) { text-align:center; width:22%; }
-  .alert { background:#fff1e6; border:1px solid #fed7aa; color:var(--bad); border-radius:12px; padding:10px 14px; margin-top:16px; }
-  details { background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-top:10px; max-width:820px; }
-  summary { font-weight:800; cursor:pointer; }
-  .final { text-align:center; background:var(--ink); color:#fff; border-radius:24px; padding:40px 20px; margin:20px 0; }
-  .final h2 { font-size:clamp(26px, 3.6vw, 38px); margin:0 0 10px; }
-  .final p { color:#d6d0c6; margin:0 0 20px; }
-  .final .btn.ghost { color:#fff; border-color:#6b6660; }
-  footer { padding:24px 0 48px; color:var(--mute); font-size:14px; display:flex; flex-wrap:wrap; gap:16px; }
-  @media (max-width: 760px) {
-    .hero, .grid3, .plans { grid-template-columns:1fr; } .hero { padding-top:12px; }
-    header nav a:not(.btn) { display:none; }
+  :root {
+    --ink:#0C0B10; --ink2:#14121B; --ink3:#1D1A27; --paper:#F7F5F0; --card:#FFFFFF; --line:#E7E3DA; --line-d:#2A2635;
+    --text:#17151E; --muted:#66636F; --muted-d:#A19DAD; --violet:#6A4CFF; --violet-ink:#4B2FE6; --lav:#B9A8FF; --coral:#FF7A59;
+    --mint:#3DDC97; --grad:linear-gradient(120deg, #7B5CFF 0%, #B05CE8 55%, #FF7A59 100%);
+    --sans:Geist, Inter, system-ui, -apple-system, "Segoe UI", sans-serif; --serif:"Instrument Serif", Georgia, serif;
+    --mono:"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  html, body { margin:0; }
+  body { background:var(--paper); color:var(--text); font:16px/1.6 var(--sans); -webkit-font-smoothing:antialiased; }
+  a { color:inherit; }
+  img, svg { display:block; }
+  .wrap { max-width:1160px; margin:0 auto; padding:0 20px; }
+  .serif { font-family:var(--serif); font-style:italic; font-weight:400; letter-spacing:-.01em; }
+  .eyebrow { font:500 12px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--violet); }
+  .dark .eyebrow { color:var(--lav); }
+  h1, h2, h3 { margin:0; font-weight:600; letter-spacing:-.035em; line-height:1.04; }
+  h2 { font-size:clamp(32px, 4.6vw, 56px); }
+  .lede { font-size:18px; color:var(--muted); max-width:620px; margin:16px 0 0; }
+  .dark .lede { color:var(--muted-d); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid transparent; border-radius:12px;
+         padding:13px 20px; font:600 15px/1 var(--sans); text-decoration:none; cursor:pointer; transition:transform .2s, box-shadow .2s, background .2s; }
+  .btn.primary { background:#fff; color:var(--ink); box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 10px 30px -10px rgba(123,92,255,.7); }
+  .btn.primary:hover { transform:translateY(-1px); box-shadow:0 1px 0 rgba(255,255,255,.4) inset, 0 16px 40px -12px rgba(123,92,255,.9); }
+  .btn.brand { background:var(--violet); color:#fff; box-shadow:0 10px 30px -12px rgba(106,76,255,.8); }
+  .btn.brand:hover { background:var(--violet-ink); transform:translateY(-1px); }
+  .btn.ghost { background:rgba(255,255,255,.06); color:#fff; border-color:rgba(255,255,255,.16); }
+  .btn.ghost:hover { background:rgba(255,255,255,.12); }
+  .btn.line { background:transparent; color:var(--text); border-color:var(--line); }
+  .btn.line:hover { border-color:var(--text); }
+  .btn:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible { outline:2px solid var(--coral); outline-offset:3px; }
+
+  /* nav */
+  .nav { position:sticky; top:0; z-index:20; background:rgba(12,11,16,.72); backdrop-filter:saturate(160%) blur(14px); -webkit-backdrop-filter:saturate(160%) blur(14px);
+         border-bottom:1px solid rgba(255,255,255,.07); color:#fff; }
+  .nav .wrap { display:flex; align-items:center; gap:28px; height:64px; }
+  .nav .links { display:flex; gap:24px; margin-left:12px; }
+  .nav .links a { color:#C9C5D3; text-decoration:none; font-size:14.5px; font-weight:500; }
+  .nav .links a:hover { color:#fff; }
+  .nav .right { margin-left:auto; display:flex; gap:10px; align-items:center; }
+  .nav .right .login { color:#C9C5D3; text-decoration:none; font-size:14.5px; font-weight:500; padding:0 8px; }
+  .nav .btn { padding:10px 16px; font-size:14px; border-radius:10px; }
+
+  /* hero */
+  .dark { background:var(--ink); color:#fff; }
+  .hero { position:relative; overflow:hidden; padding:72px 0 0; }
+  .hero::before { content:""; position:absolute; inset:-30% -10% auto; height:900px; pointer-events:none;
+    background:radial-gradient(40% 45% at 30% 30%, rgba(123,92,255,.42), transparent 70%), radial-gradient(35% 40% at 75% 20%, rgba(255,122,89,.28), transparent 70%); }
+  .hero::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background-image:linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size:64px 64px; mask-image:radial-gradient(70% 60% at 50% 20%, #000 30%, transparent 75%); -webkit-mask-image:radial-gradient(70% 60% at 50% 20%, #000 30%, transparent 75%); }
+  .hero .wrap { position:relative; z-index:1; text-align:center; }
+  .pill { display:inline-flex; align-items:center; gap:10px; padding:6px 14px 6px 6px; border-radius:99px; background:rgba(255,255,255,.06);
+          border:1px solid rgba(255,255,255,.12); font-size:13.5px; color:#DCD8E6; text-decoration:none; }
+  .pill b { background:var(--grad); color:#fff; font:600 11px/1 var(--mono); letter-spacing:.08em; padding:6px 9px; border-radius:99px; }
+  .hero h1 { font-size:clamp(44px, 7.6vw, 96px); margin:26px auto 0; max-width:980px; }
+  .hero h1 .serif { background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; padding-right:.06em; }
+  .hero .lede { margin:22px auto 0; font-size:clamp(17px, 2vw, 20px); }
+  .cta { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:34px; }
+  .invite { display:flex; gap:8px; }
+  .invite input { border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#fff; border-radius:12px; padding:12px 14px; font:15px var(--sans); width:170px; }
+  .trust { display:flex; flex-wrap:wrap; justify-content:center; gap:10px 26px; margin-top:22px; font:500 13px var(--mono); color:#8F8A9C; letter-spacing:.02em; }
+  .trust span::before { content:"◆"; color:var(--violet); margin-right:8px; font-size:9px; vertical-align:2px; }
+  .alert { display:inline-block; margin-top:18px; background:rgba(255,122,89,.12); border:1px solid rgba(255,122,89,.4); color:#FFB39F; border-radius:12px; padding:10px 14px; font-size:14px; }
+
+  /* product stage */
+  .stage { position:relative; max-width:1040px; margin:64px auto 0; padding-bottom:0; }
+  .window { position:relative; border-radius:20px 20px 0 0; background:linear-gradient(180deg, #1A1724, #121019); border:1px solid rgba(255,255,255,.1); border-bottom:0;
+            box-shadow:0 -20px 80px -20px rgba(123,92,255,.45); overflow:hidden; text-align:left; }
+  .window .bar { display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.07); }
+  .window .bar i { width:10px; height:10px; border-radius:50%; background:#3A3646; }
+  .window .bar span { margin-left:10px; font:500 12px var(--mono); color:#8F8A9C; }
+  .app { display:grid; grid-template-columns:200px minmax(0, 1fr) 300px; min-height:400px; }
+  .side { border-right:1px solid rgba(255,255,255,.07); padding:16px 12px; display:grid; align-content:start; gap:4px; }
+  .side div { display:flex; gap:10px; align-items:center; padding:8px 10px; border-radius:8px; font-size:13.5px; color:#A19DAD; }
+  .side div.on { background:rgba(123,92,255,.16); color:#fff; }
+  .side div em { margin-left:auto; font:600 10.5px var(--mono); font-style:normal; background:var(--coral); color:#1A0E0A; border-radius:99px; padding:2px 7px; }
+  .side .dot { width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.6; }
+  .thread { padding:20px 22px; display:flex; flex-direction:column; gap:10px; }
+  .thread .who { display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:14px; }
+  .av { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #FFB199, #FF7A59); flex:none; }
+  .msg { max-width:78%; padding:10px 14px; border-radius:16px; font-size:14px; line-height:1.45; }
+  .msg.in { background:#25212F; color:#E9E6F0; border-bottom-left-radius:5px; align-self:flex-start; }
+  .msg.out { background:var(--violet); color:#fff; border-bottom-right-radius:5px; align-self:flex-end; }
+  .msg .btnchip { display:inline-block; margin-top:8px; background:#fff; color:var(--violet-ink); font-weight:600; font-size:12.5px; border-radius:8px; padding:6px 10px; }
+  .msg small { display:block; font:500 10.5px var(--mono); opacity:.7; margin-bottom:4px; letter-spacing:.04em; }
+  .panel { border-left:1px solid rgba(255,255,255,.07); padding:18px; display:grid; align-content:start; gap:14px; }
+  .mini { background:#1C1926; border:1px solid rgba(255,255,255,.07); border-radius:14px; padding:14px; }
+  .mini .k { font:500 11px var(--mono); color:#8F8A9C; letter-spacing:.06em; text-transform:uppercase; }
+  .mini .n { font-size:28px; font-weight:600; letter-spacing:-.03em; margin-top:4px; }
+  .mini .n span { font:500 12px var(--mono); color:var(--mint); margin-left:6px; letter-spacing:0; }
+  .funnel { display:grid; gap:7px; margin-top:10px; }
+  .funnel div { display:grid; grid-template-columns:72px 1fr 34px; gap:8px; align-items:center; font-size:12px; color:#A19DAD; }
+  .funnel i { display:block; height:8px; border-radius:4px; background:var(--grad); }
+  .funnel b { font:500 11.5px var(--mono); color:#E9E6F0; text-align:right; }
+  .float { position:absolute; z-index:2; background:#fff; color:var(--text); border-radius:14px; padding:12px 14px; box-shadow:0 24px 60px -18px rgba(12,11,16,.55);
+           display:flex; gap:10px; align-items:center; font-size:13.5px; text-align:left; }
+  .float b { display:block; font-size:13.5px; } .float span { color:var(--muted); font-size:12.5px; }
+  .float .ic { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-size:17px; flex:none; }
+  .f1 { left:-46px; top:380px; } .f1 .ic { background:#EEEAFF; }
+  .f2 { right:-40px; top:300px; } .f2 .ic { background:#FFEDE6; }
+
+  /* sections */
+  section.block { padding:120px 0; }
+  .head { max-width:760px; }
+  .head.center { text-align:center; margin:0 auto; }
+  .head.center .lede { margin-left:auto; margin-right:auto; }
+  .strip { border-top:1px solid var(--line); border-bottom:1px solid var(--line); background:var(--card); }
+  .strip .wrap { display:grid; grid-template-columns:repeat(4, 1fr); }
+  .strip div { padding:26px 22px; border-left:1px solid var(--line); }
+  .strip div:first-child { border-left:0; }
+  .strip b { display:block; font-size:30px; font-weight:600; letter-spacing:-.03em; }
+  .strip span { font-size:14px; color:var(--muted); }
+
+  /* bento */
+  .bento { display:grid; grid-template-columns:repeat(6, 1fr); gap:16px; margin-top:56px; }
+  .tile { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:26px; position:relative; overflow:hidden; display:flex; flex-direction:column; }
+  .tile h3 { font-size:22px; letter-spacing:-.025em; }
+  .tile p { color:var(--muted); font-size:15px; margin:8px 0 0; }
+  .tile .vis { margin-top:auto; padding-top:22px; }
+  .s3 { grid-column:span 3; } .s2 { grid-column:span 2; } .s4 { grid-column:span 4; }
+  .tile.inkt { background:var(--ink2); color:#fff; border-color:var(--ink3); } .tile.inkt p { color:var(--muted-d); }
+  .tag { display:inline-block; font:500 10.5px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--violet); background:#EEEAFF; border-radius:99px; padding:4px 9px; margin-bottom:14px; align-self:flex-start; }
+  .inkt .tag { background:rgba(185,168,255,.14); color:var(--lav); }
+  .flowv { display:grid; gap:8px; }
+  .flowv div { display:flex; align-items:center; gap:10px; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:10px 12px; font-size:14px; }
+  .flowv div i { font:600 11px var(--mono); font-style:normal; width:22px; height:22px; border-radius:7px; display:grid; place-items:center; background:var(--ink); color:#fff; flex:none; }
+  .flowv div.hl { border-color:var(--violet); box-shadow:0 0 0 3px #EEEAFF; }
+  .chat2 { display:grid; gap:8px; }
+  .chat2 .msg { max-width:88%; font-size:13.5px; }
+  .handoff { background:rgba(255,122,89,.12); border:1px solid rgba(255,122,89,.35); color:#FFC4B3; border-radius:12px; padding:10px 12px; font-size:13px; }
+  .bars { display:flex; align-items:flex-end; gap:6px; height:110px; }
+  .bars i { flex:1; border-radius:6px 6px 0 0; background:#E4DEFF; }
+  .bars i.top { background:var(--grad); }
+  .fields { display:grid; gap:8px; }
+  .fields div { display:flex; justify-content:space-between; gap:10px; background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:9px 12px; font-size:13.5px; }
+  .fields div span:last-child { font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+  .timeline { position:relative; display:grid; gap:12px; padding-left:22px; }
+  .timeline::before { content:""; position:absolute; left:6px; top:6px; bottom:6px; width:2px; background:linear-gradient(var(--violet), var(--coral)); border-radius:2px; }
+  .timeline div { position:relative; font-size:13.5px; } .timeline div::before { content:""; position:absolute; left:-21px; top:5px; width:10px; height:10px; border-radius:50%; background:#fff; border:2px solid var(--violet); }
+  .timeline b { font:500 11.5px var(--mono); color:var(--muted); display:block; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:56px; justify-content:center; }
+  .chips span { background:var(--card); border:1px solid var(--line); border-radius:99px; padding:9px 15px; font-size:14px; }
+
+  /* steps */
+  .steps { display:grid; grid-template-columns:repeat(3, 1fr); gap:0; margin-top:56px; border:1px solid var(--line-d); border-radius:22px; overflow:hidden; }
+  .steps div { padding:32px 28px; border-left:1px solid var(--line-d); }
+  .steps div:first-child { border-left:0; }
+  .steps b { font:500 13px var(--mono); color:var(--lav); }
+  .steps h3 { font-size:24px; margin:14px 0 8px; }
+  .steps p { color:var(--muted-d); margin:0; font-size:15px; }
+
+  /* pricing */
+  .plans { display:grid; grid-template-columns:repeat(2, 1fr); gap:18px; margin:56px auto 0; max-width:900px; }
+  .plan { background:var(--card); border:1px solid var(--line); border-radius:24px; padding:32px; display:flex; flex-direction:column; }
+  .plan.pro { background:var(--ink); color:#fff; border-color:var(--ink); position:relative; overflow:hidden; }
+  .plan.pro::before { content:""; position:absolute; inset:-40% -20% auto auto; width:360px; height:360px; background:radial-gradient(closest-side, rgba(123,92,255,.55), transparent); pointer-events:none; }
+  .plan .name { font:500 13px var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); display:flex; gap:10px; align-items:center; }
+  .plan.pro .name { color:var(--lav); }
+  .plan .name em { font-style:normal; background:var(--grad); color:#fff; border-radius:99px; padding:4px 9px; font-size:10.5px; letter-spacing:.08em; }
+  .price { font-size:58px; font-weight:600; letter-spacing:-.04em; margin:16px 0 4px; position:relative; }
+  .price small { font-size:16px; color:var(--muted); font-weight:500; letter-spacing:0; }
+  .plan.pro .price small, .plan.pro .sub { color:var(--muted-d); }
+  .plan .sub { color:var(--muted); font-size:15px; margin:0; }
+  .plan ul { list-style:none; margin:24px 0 28px; padding:0; display:grid; gap:11px; font-size:15px; position:relative; }
+  .plan li { display:flex; gap:10px; }
+  .plan li::before { content:""; flex:none; width:18px; height:18px; margin-top:3px; border-radius:50%; background:#EEEAFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M5 9.3l2.6 2.5L13 6.5' fill='none' stroke='%236A4CFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/18px no-repeat; }
+  .plan.pro li::before { background-color:rgba(185,168,255,.18); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M5 9.3l2.6 2.5L13 6.5' fill='none' stroke='%23B9A8FF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+  .plan li.big { font-weight:600; }
+  .plan .btn { margin-top:auto; width:100%; position:relative; }
+  .compare { max-width:900px; margin:28px auto 0; overflow-x:auto; }
+  .compare table { width:100%; min-width:540px; border-collapse:collapse; font-size:14.5px; }
+  .compare th, .compare td { padding:13px 6px; border-bottom:1px solid var(--line); text-align:left; }
+  .compare th { font:500 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .compare td + td, .compare th + th { text-align:center; width:24%; }
+  .note { max-width:900px; margin:10px auto 0; font-size:13px; color:var(--muted); }
+
+  /* faq */
+  .faq { display:grid; grid-template-columns:minmax(0, .8fr) minmax(0, 1.2fr); gap:56px; }
+  details { border-bottom:1px solid var(--line); padding:20px 0; }
+  details:first-child { border-top:1px solid var(--line); }
+  summary { cursor:pointer; list-style:none; font-size:18px; font-weight:600; letter-spacing:-.015em; display:flex; justify-content:space-between; gap:16px; }
+  summary::-webkit-details-marker { display:none; }
+  summary::after { content:"+"; font:400 24px/1 var(--sans); color:var(--muted); transition:transform .2s; }
+  details[open] summary::after { transform:rotate(45deg); }
+  details p { color:var(--muted); margin:12px 0 0; max-width:620px; }
+
+  /* final + footer */
+  .final { position:relative; overflow:hidden; border-radius:32px; padding:88px 24px; text-align:center; margin:0 0 96px; }
+  .final::before { content:""; position:absolute; inset:0; background:radial-gradient(50% 80% at 50% 0%, rgba(123,92,255,.5), transparent 70%), radial-gradient(40% 60% at 80% 100%, rgba(255,122,89,.35), transparent 70%); pointer-events:none; }
+  .final > * { position:relative; }
+  .final h2 { max-width:820px; margin:0 auto; }
+  footer { border-top:1px solid var(--line); padding:48px 0 56px; }
+  footer .wrap { display:grid; grid-template-columns:1.4fr repeat(3, 1fr); gap:28px; }
+  footer h4 { margin:0 0 12px; font:500 12px var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  footer a { display:block; color:var(--text); text-decoration:none; font-size:14.5px; padding:4px 0; }
+  footer a:hover { color:var(--violet); }
+  footer p { color:var(--muted); font-size:14px; max-width:300px; }
+
+  /* motion: entrance only, once, never under reduced motion */
+  @media (prefers-reduced-motion: no-preference) {
+    .rise { opacity:0; transform:translateY(14px); animation:rise .8s cubic-bezier(.2, .7, .2, 1) forwards; }
+    .d1 { animation-delay:.08s; } .d2 { animation-delay:.16s; } .d3 { animation-delay:.24s; } .d4 { animation-delay:.36s; } .d5 { animation-delay:.5s; }
+    @keyframes rise { to { opacity:1; transform:none; } }
+    .float { animation:bob 7s ease-in-out infinite; } .f2 { animation-delay:-3.5s; }
+    @keyframes bob { 50% { transform:translateY(-8px); } }
+  }
+  @media (min-width: 721px) { h1 .serif, h2 .serif { white-space:nowrap; } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto; } * { transition:none !important; } }
+
+  @media (max-width: 1080px) { .f1 { left:12px; top:auto; bottom:22px; } .f2 { display:none; } }
+  @media (max-width: 960px) {
+    .app { grid-template-columns:minmax(0, 1fr); } .side, .panel { display:none; }
+    .bento { grid-template-columns:repeat(2, 1fr); } .s2, .s3, .s4 { grid-column:span 2; }
+    .steps { grid-template-columns:1fr; } .steps div { border-left:0; border-top:1px solid var(--line-d); } .steps div:first-child { border-top:0; }
+    .faq { grid-template-columns:1fr; gap:24px; }
+    .strip .wrap { grid-template-columns:repeat(2, 1fr); } .strip div:nth-child(3) { border-left:0; } .strip div:nth-child(n+3) { border-top:1px solid var(--line); }
+    footer .wrap { grid-template-columns:1fr 1fr; }
+  }
+  @media (max-width: 720px) {
+    .nav .links, .nav .right .login { display:none; }
+    section.block { padding:80px 0; }
+    .plans { grid-template-columns:1fr; }
+    .hero { padding-top:48px; }
+    .f1 { display:none; }
+    .msg { max-width:90%; }
+    .invite { flex-wrap:wrap; justify-content:center; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="logo">{{ brand }}<span class="hl">.</span></div>
-    <nav aria-label="Main"><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a class="btn dark small" href="#start">Get started</a></nav>
-  </header>
 
-  <div class="hero">
-    <div>
-      <div class="label">For Instagram creators</div>
-      <h1>Turn every comment into a <span class="hl">follower, lead or sale.</span></h1>
-      <p class="lead">People comment your keyword. {{ brand }} replies, sends the DM, checks they follow you, collects their email or
-        WhatsApp number, sends the link, and follows up with your offer. An AI answers the rest of your DMs in Hinglish. 24/7.</p>
-      <div class="cta" id="start">
-        {% if invite_only %}
-          <form class="invite" action="/login" method="get">
-            <input type="text" name="invite" placeholder="Invite code" required aria-label="Invite code">
-            <button class="btn">Continue with Instagram</button>
-          </form>
-        {% else %}
-          <a class="btn" href="/login">Continue with Instagram</a>
-        {% endif %}
-        <a class="btn ghost" href="/demo">See a live demo</a>
-      </div>
-      <div class="proof"><span>✓ Free to start, no card</span><span>✓ Official Instagram API, approved by Meta</span><span>✓ No password sharing</span></div>
-      {% if error %}
-        <div class="alert">
-          {% if error == "invite" %}That invite code doesn't work. Check it and try again.
-          {% elif error == "denied" %}Instagram login was cancelled. Try again whenever you're ready.
-          {% elif error == "setup" %}Login isn't set up yet. Please try again later.
-          {% else %}Instagram login didn't finish. Please try again. Your account must be a Business or Creator account.{% endif %}
-        </div>
+<header class="nav">
+  <div class="wrap">
+    <a href="/" aria-label="{{ brand }} home" style="text-decoration:none">{{ logo.wordmark(28, "nav", dark=true) }}</a>
+    <nav class="links" aria-label="Main"><a href="#features">Features</a><a href="#ai">AI agent</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+    <div class="right"><a class="login" href="/login">Log in</a><a class="btn primary" href="#start">Start free</a></div>
+  </div>
+</header>
+
+<div class="dark hero">
+  <div class="wrap">
+    <a class="pill rise" href="#ai"><b>NEW</b> An AI that answers your DMs in Hinglish →</a>
+    <h1 class="rise d1">Every comment, <span class="serif">a customer.</span></h1>
+    <p class="lede rise d2">People comment your keyword. {{ brand }} replies, checks they follow you, collects their email or WhatsApp,
+      sends the link and follows up with your offer. Automatically, 24/7.</p>
+    <div class="cta rise d3" id="start">
+      {% if invite_only %}
+        <form class="invite" action="/login" method="get">
+          <input type="text" name="invite" placeholder="Invite code" required aria-label="Invite code">
+          <button class="btn primary">Continue with Instagram</button>
+        </form>
+      {% else %}
+        <a class="btn primary" href="/login">Continue with Instagram</a>
       {% endif %}
+      <a class="btn ghost" href="/demo">Explore the live demo</a>
     </div>
-    <div class="flow" aria-hidden="true">
-      <div class="bubble"><b>@rahul.creates commented</b>PROMPTS 🔥</div>
-      <div class="bubble me"><b>You replied</b>@rahul.creates Check your DM 📩</div>
-      <div class="bubble me"><b>DM</b>Hey rahul.creates! 👋 Follow me and tap below to unlock it.<br><span class="chip">I followed ✅</span></div>
-      <div class="bubble me"><b>DM</b>Here you go 🎁 https://your-link.com</div>
-      <div class="bubble me"><b>3 hours later</b>Prompts try kiye? 🙌 Full pack is just ₹149 today.<br><span class="chip">Get the full pack</span></div>
+    <div class="trust rise d4"><span>Free to start, no card</span><span>Official Instagram API</span><span>Meta-approved app</span><span>No password sharing</span></div>
+    {% if error %}
+      <div><div class="alert">
+        {% if error == "invite" %}That invite code doesn't work. Check it and try again.
+        {% elif error == "denied" %}Instagram login was cancelled. Try again whenever you're ready.
+        {% elif error == "setup" %}Login isn't set up yet. Please try again later.
+        {% else %}Instagram login didn't finish. Please try again. Your account must be a Business or Creator account.{% endif %}
+      </div></div>
+    {% endif %}
+
+    <div class="stage rise d5" aria-label="A preview of the {{ brand }} app">
+      <div class="float f1"><span class="ic" aria-hidden="true">✉️</span><div><b>New lead: priya@gmail.com</b><span>from your GUIDE reel · just now</span></div></div>
+      <div class="float f2"><span class="ic" aria-hidden="true">🔁</span><div><b>Follow-up sent</b><span>"Full pack is ₹149 today" · 3 h later</span></div></div>
+      <div class="window">
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>replyinbox.in/app/inbox</span></div>
+        <div class="app">
+          <div class="side" aria-hidden="true">
+            <div><span class="dot"></span>Home</div><div><span class="dot"></span>Automations</div>
+            <div class="on"><span class="dot"></span>AI Inbox <em>2</em></div><div><span class="dot"></span>Reel report</div>
+            <div><span class="dot"></span>Contacts</div><div><span class="dot"></span>Link in bio</div><div><span class="dot"></span>Giveaway</div>
+          </div>
+          <div class="thread">
+            <div class="who"><span class="av" aria-hidden="true"></span><div><b>@rahul.creates</b><br><span style="color:#8F8A9C; font-size:12.5px">commented PROMPTS on your reel</span></div></div>
+            <div class="msg out"><small>REPLY · INSTANT</small>Hey rahul! 👋 Follow me and tap below to unlock the prompts.<br><span class="btnchip">I followed ✅</span></div>
+            <div class="msg out"><small>EMAIL · ASKED ONCE</small>One last step ✉️ Reply with your email and it's yours.</div>
+            <div class="msg in">rahul.creates@gmail.com</div>
+            <div class="msg out"><small>LINK</small>Here you go 🎁 replyinbox.in/rahul/prompts</div>
+            <div class="msg in">bhai price kya hai full pack ka?</div>
+            <div class="msg out"><small>AI · HINGLISH</small>Sirf ₹149 hai 🙌 39 packs + master guide, lifetime access. Yahan se le lo 👉 link</div>
+          </div>
+          <div class="panel" aria-hidden="true">
+            <div class="mini"><div class="k">Followers from DMs</div><div class="n">1,284<span>▲ 39%</span></div></div>
+            <div class="mini"><div class="k">Reel funnel</div>
+              <div class="funnel"><div>Comments<i style="width:100%"></i><b>842</b></div><div>Got DM<i style="width:86%"></i><b>724</b></div>
+                <div>Got link<i style="width:68%"></i><b>571</b></div><div>Followed<i style="width:41%"></i><b>346</b></div></div></div>
+            <div class="mini"><div class="k">Needs you</div><div style="font-size:13.5px; margin-top:6px">@meera.designs · brand collab</div></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+</div>
 
-  <section>
-    <div class="label">How it works</div>
-    <h2>Live in 2 minutes</h2>
-    <div class="grid3">
-      <div class="card"><div class="step">1</div><h3>Connect Instagram</h3><p class="muted">Log in with Instagram's official login. No password sharing, no bots, no ban risk.</p></div>
-      <div class="card"><div class="step">2</div><h3>Pick a template</h3><p class="muted">Free guide, lead magnet, course launch, giveaway… Add your keyword and link, Save.</p></div>
-      <div class="card"><div class="step">3</div><h3>Post and relax</h3><p class="muted">Every matching comment, story reply or DM gets answered, and you see the numbers per reel.</p></div>
+<div class="strip" aria-label="What you get">
+  <div class="wrap">
+    <div><b>2 min</b><span>from login to your first automation</span></div>
+    <div><b>24/7</b><span>replies, DMs and follow-ups while you sleep</span></div>
+    <div><b>21</b><span>features in one dashboard</span></div>
+    <div><b>₹0</b><span>to start, with 1,000 DMs every month</span></div>
+  </div>
+</div>
+
+<section class="block" id="features">
+  <div class="wrap">
+    <div class="head center">
+      <div class="eyebrow">Everything in one place</div>
+      <h2 style="margin-top:14px">More than comment-to-DM. <span class="serif">A growth engine.</span></h2>
+      <p class="lede">Built for Indian creators who sell guides, courses and products from Instagram.</p>
     </div>
-  </section>
+    <div class="bento">
+      <div class="tile s4">
+        <span class="tag">Grow</span>
+        <h3>Comment to DM, with follow to unlock</h3>
+        <p>Every comment gets a public reply and a DM. The link arrives only after they follow you, so every freebie brings followers. Typos, plurals and emojis still match.</p>
+        <div class="vis flowv">
+          <div><i>1</i>@neha commented <b>&nbsp;GUIDE 🔥</b></div>
+          <div><i>2</i>Replied publicly and sent the DM</div>
+          <div class="hl"><i>3</i>Checked she follows you ✅</div>
+          <div><i>4</i>Sent the link · saved to Contacts</div>
+        </div>
+      </div>
+      <div class="tile s2 inkt" id="ai">
+        <span class="tag">AI agent</span>
+        <h3>Answers DMs in Hinglish</h3>
+        <p>From your FAQ and products only. Hands refunds and collabs to you.</p>
+        <div class="vis chat2">
+          <div class="msg in">Payment ho gaya, link nahi aaya 😟</div>
+          <div class="handoff"><b>Needs you</b> · payment issue<br>Suggested: "Sorry! Screenshot bhejo, abhi bhejta hoon 🙏"</div>
+        </div>
+      </div>
+      <div class="tile s2">
+        <span class="tag">Insights</span>
+        <h3>Reel report</h3>
+        <p>Which reel actually brings followers, and what to fix.</p>
+        <div class="vis bars" aria-hidden="true"><i style="height:38%"></i><i style="height:55%"></i><i style="height:30%"></i><i class="top" style="height:96%"></i><i style="height:62%"></i><i style="height:44%"></i></div>
+      </div>
+      <div class="tile s2">
+        <span class="tag">Sell</span>
+        <h3>Email and WhatsApp capture</h3>
+        <p>Ask before the link. Export to CSV any time.</p>
+        <div class="vis fields"><div><span>@priya.ai</span><span>priya@gmail.com</span></div><div><span>@jay_k</span><span>+91 98123 45678</span></div><div><span>@sana.creates</span><span>sana@yahoo.in</span></div></div>
+      </div>
+      <div class="tile s2">
+        <span class="tag">Sell</span>
+        <h3>Follow-up offers</h3>
+        <p>Freebie now, your paid product a few hours later.</p>
+        <div class="vis timeline"><div><b>0:00</b>Free guide sent 🎁</div><div><b>+3 h</b>"Full pack is ₹149 today" 🔁</div><div><b>+3 h 12 m</b>Tapped "Get the pack" 💸</div></div>
+      </div>
+      <div class="tile s3 inkt">
+        <span class="tag">Stories</span>
+        <h3>Story replies and mentions</h3>
+        <p>Post "Reply LINK" on a story and everyone who replies gets it. People who mention you get a thank-you.</p>
+      </div>
+      <div class="tile s3">
+        <span class="tag">Automatic</span>
+        <h3>Auto-setup from your caption</h3>
+        <p>Write "Comment GUIDE" in a new reel's caption and its automation creates itself. No dashboard needed.</p>
+      </div>
+    </div>
+    <div class="chips" aria-label="Also included">
+      <span>🧩 Templates</span><span>🆎 A/B test your first DM</span><span>🗓️ Schedules</span><span>🔗 Link in bio</span><span>👥 Contacts</span>
+      <span>🎁 Giveaway picker</span><span>🛡️ Comment guard</span><span>❓ Chat menu</span><span>⏪ Past comments</span><span>🔄 Auto retries</span>
+      <span>📈 Weekly summary</span><span>🤝 Team access</span><span>✦ Connect Claude</span>
+    </div>
+  </div>
+</section>
 
-  <section id="features">
-    <div class="label">Everything in one place</div>
-    <h2>More than comment-to-DM</h2>
-    <p class="sub">Built for creators who sell guides, courses and products from Instagram.</p>
+<section class="block dark">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">How it works</div>
+      <h2 style="margin-top:14px">Live in two minutes. <span class="serif">Then it runs itself.</span></h2>
+    </div>
+    <div class="steps">
+      <div><b>01</b><h3>Connect Instagram</h3><p>Official Instagram login. No password sharing, no bots, nothing that risks your account.</p></div>
+      <div><b>02</b><h3>Pick a template</h3><p>Free guide, lead magnet, course launch, giveaway. Add your keyword and link, save.</p></div>
+      <div><b>03</b><h3>Post and relax</h3><p>Comments, story replies and DMs get answered. You watch followers and leads come in.</p></div>
+    </div>
+  </div>
+</section>
 
-    <div class="group"><h3>Grow</h3><div class="feats">
-      <div class="feat"><span class="ic">💬</span><b>Comment to DM</b><p>Reply to the comment and DM the link. Typos, plurals and emojis still match your keyword.</p></div>
-      <div class="feat"><span class="ic">➕</span><b>Follow to unlock</b><p>The link is sent only after they follow you, so every freebie brings followers.</p></div>
-      <div class="feat"><span class="ic">📲</span><b>Story replies and mentions</b><p>DM everyone who replies to your story, and thank people who mention you.</p></div>
-      <div class="feat"><span class="ic">✨</span><b>Auto-setup from your caption</b><p>Write "Comment GUIDE" in a new reel's caption and its automation creates itself.</p></div>
-      <div class="feat"><span class="ic">⏪</span><b>Past comments and retries</b><p>Send to comments from before you set it up, and retry DMs Instagram refused.</p></div>
-      <div class="feat"><span class="ic">🎁</span><b>Giveaway picker</b><p>Fair random winners from a post's comments, with keyword, tag and follower rules.</p></div>
-      <div class="feat"><span class="ic">🛡️</span><b>Comment guard</b><p>Hides spam links and words you block, on every post, automatically.</p></div>
-    </div></div>
-
-    <div class="group"><h3>Sell</h3><div class="feats">
-      <div class="feat"><span class="ic">✉️</span><b>Email and WhatsApp capture</b><p>Ask for their email or number before the link. Saved in Contacts, export to CSV.</p></div>
-      <div class="feat"><span class="ic">🔁</span><b>Follow-up offer</b><p>A second DM hours later with your paid product, inside Instagram's 24-hour window.</p></div>
-      <div class="feat"><span class="ic">🔗</span><b>Link in bio page</b><p>Your products and links on one page, with click counts. Five themes.</p></div>
-      <div class="feat"><span class="ic">👥</span><b>Contacts</b><p>Everyone who commented, DMed or followed, with keyword, email and phone.</p></div>
-      <div class="feat"><span class="ic">🆎</span><b>A/B test your first DM</b><p>Two versions, see which gets more taps, links and follows.</p></div>
-      <div class="feat"><span class="ic">🗓️</span><b>Schedules</b><p>Start and end dates for launches and limited-time offers.</p></div>
-    </div></div>
-
-    <div class="group"><h3>AI and insights</h3><div class="feats">
-      <div class="feat"><span class="ic">🤖</span><b>AI DM agent<span class="tag">NEW</span></b><p>Answers fans in Hinglish, Hindi or English from your FAQ and products. Hands refunds and collabs to you.</p></div>
-      <div class="feat"><span class="ic">📥</span><b>AI Inbox</b><p>Every conversation in one place, with "needs you" chats and suggested replies.</p></div>
-      <div class="feat"><span class="ic">🩺</span><b>Reel report</b><p>Views → comments → DMs → links → follows for every reel, with tips on what to fix.</p></div>
-      <div class="feat"><span class="ic">📈</span><b>Weekly summary</b><p>This week against last week, at a glance on your home page.</p></div>
-      <div class="feat"><span class="ic">✦</span><b>Connect Claude</b><p>Run {{ brand }} by chatting with Claude: "set up DMs on my latest reel for GUIDE".</p></div>
-    </div></div>
-
-    <div class="group"><h3>Work smarter</h3><div class="feats">
-      <div class="feat"><span class="ic">🧩</span><b>Templates</b><p>Ready-made automations for guides, launches, giveaways and brand deals.</p></div>
-      <div class="feat"><span class="ic">❓</span><b>Chat menu</b><p>Questions people can tap when they first open your DMs, each with your answer.</p></div>
-      <div class="feat"><span class="ic">🤝</span><b>Team access</b><p>Invite your manager or editor. No Instagram password needed, remove any time.</p></div>
-    </div></div>
-  </section>
-
-  <section id="pricing">
-    <div class="label">Pricing</div>
-    <h2>Start free. Upgrade when you grow.</h2>
-    <p class="sub">Every feature is on the free plan. Pro removes the limits.</p>
+<section class="block" id="pricing">
+  <div class="wrap">
+    <div class="head center">
+      <div class="eyebrow">Pricing</div>
+      <h2 style="margin-top:14px">Start free. <span class="serif">Upgrade when you grow.</span></h2>
+      <p class="lede">Every feature is on the free plan. Pro removes the limits.</p>
+    </div>
     <div class="plans">
-      <div class="card plan"><div class="label">Free</div><div class="price">₹0 <small>forever</small></div>
-        <ul><li class="big">1,000 DMs every month</li><li>25 AI replies to try the AI agent</li><li>All automations, story replies, follow-ups</li>
+      <div class="plan">
+        <div class="name">Free</div>
+        <div class="price">₹0 <small>forever</small></div>
+        <p class="sub">For creators getting started.</p>
+        <ul><li class="big">1,000 DMs every month</li><li>25 AI replies to try the AI agent</li><li>All automations, story replies and follow-ups</li>
           <li>Email and WhatsApp capture, Contacts</li><li>Link in bio, reel report, giveaway picker</li><li>Team access</li></ul>
-        <a class="btn ghost" href="#start" style="width:100%">Start free</a></div>
-      <div class="card plan pro"><span class="ribbon">Launching soon</span><div class="label">Pro</div><div class="price">₹299 <small>/ month</small></div>
+        <a class="btn line" href="#start">Start free</a>
+      </div>
+      <div class="plan pro">
+        <div class="name">Pro <em>LAUNCHING SOON</em></div>
+        <div class="price">₹299 <small>/ month</small></div>
+        <p class="sub">For creators whose reels go viral.</p>
         <ul><li class="big">No monthly DM limit</li><li class="big">1,000 AI replies every month</li><li>Everything in Free</li>
           <li>Priority support on WhatsApp</li><li>New features first</li></ul>
-        <a class="btn" href="#start" style="width:100%">Start free, upgrade later</a></div>
+        <a class="btn primary" href="#start">Start free, upgrade later</a>
+      </div>
     </div>
-    <div class="label" style="margin-top:28px">Compare plans</div>
-    <div class="table" style="margin-top:10px">
+    <div class="compare">
       <table aria-label="Compare plans">
-        <thead><tr><th scope="col">Feature</th><th scope="col">Free</th><th scope="col">Pro</th></tr></thead>
+        <thead><tr><th scope="col">Compare plans</th><th scope="col">Free</th><th scope="col">Pro</th></tr></thead>
         <tbody>
           <tr><td>DMs per month</td><td>1,000</td><td>No limit*</td></tr>
           <tr><td>AI DM replies</td><td>25 to try</td><td>1,000 / month</td></tr>
@@ -188,35 +440,47 @@
           <tr><td>Support</td><td>Email</td><td>Priority, WhatsApp</td></tr>
         </tbody>
       </table>
-      <p class="muted" style="font-size:13px; margin:8px 0 0">* Instagram's own limits still apply: one DM per comment within 7 days, and hourly request limits on very busy reels.</p>
     </div>
-  </section>
+    <p class="note">* Instagram's own limits still apply: one DM per comment within 7 days, and hourly request limits on very busy reels.</p>
+  </div>
+</section>
 
-  <section id="faq">
-    <div class="label">Questions</div>
-    <h2>FAQ</h2>
-    <details><summary>Which accounts work?</summary><p>Instagram Business or Creator accounts (free to switch in Instagram: Settings → Account type and tools).</p></details>
-    <details><summary>Is it safe for my account?</summary><p>Yes. {{ brand }} uses Instagram's official API, approved by Meta. We never ask for your password, and you can disconnect any time.</p></details>
-    <details><summary>How does the AI DM agent work?</summary><p>It answers DMs that aren't one of your keywords, using only your FAQ, products and links, in the language the fan writes in. It never makes up prices or links, and anything like refunds or brand deals is handed to you with a suggested reply. You can switch it off any time.</p></details>
-    <details><summary>Why do people tap a button before getting the link?</summary><p>Instagram only lets apps check whether someone follows you after they reply to your DM. The button tap is that reply.</p></details>
-    <details><summary>What are Instagram's limits?</summary><p>An app can DM someone who commented once per comment, within 7 days. Follow-ups must go within 24 hours of the person's last message. Very busy reels can hit Instagram's hourly limit; {{ brand }} then waits and continues.</p></details>
-    <details><summary>When can I buy Pro?</summary><p>Pro is launching soon. Start on Free today: everything you set up stays when you upgrade.</p></details>
-    <details><summary>Can my team use it?</summary><p>Yes. Invite up to 5 people as Manager or Viewer from Settings. They don't need your Instagram password.</p></details>
-  </section>
-
-  <div class="final">
-    <h2>Your next reel can grow your list while you sleep.</h2>
-    <p>Free to start. Set up your first automation in 2 minutes.</p>
-    <div class="cta" style="justify-content:center; margin:0">
-      <a class="btn" href="{{ '#start' if invite_only else '/login' }}">Continue with Instagram</a><a class="btn ghost" href="/demo">See a live demo</a>
+<section class="block" id="faq" style="padding-top:40px">
+  <div class="wrap faq">
+    <div class="head">
+      <div class="eyebrow">FAQ</div>
+      <h2 style="margin-top:14px">Questions, <span class="serif">answered.</span></h2>
+      <p class="lede">Something else? {% if contact_email %}<a href="mailto:{{ contact_email }}">Email us</a>{% else %}Write to us{% endif %}, we're happy to help.</p>
+    </div>
+    <div>
+      <details><summary>Which accounts work?</summary><p>Instagram Business or Creator accounts. Switching is free in Instagram: Settings → Account type and tools.</p></details>
+      <details><summary>Is it safe for my account?</summary><p>Yes. {{ brand }} uses Instagram's official API through a Meta-approved app. We never ask for your password, and you can disconnect any time.</p></details>
+      <details><summary>How does the AI DM agent work?</summary><p>It answers DMs that aren't one of your keywords, using only your FAQ, products and links, in the language the fan writes in. It never makes up prices or links. Refunds, brand deals and anything it's unsure about are handed to you with a suggested reply.</p></details>
+      <details><summary>Why do people tap a button before getting the link?</summary><p>Instagram only lets apps check whether someone follows you after they reply to your DM. The button tap is that reply.</p></details>
+      <details><summary>What are Instagram's limits?</summary><p>An app can DM someone who commented once per comment, within 7 days. Follow-ups must go within 24 hours of the person's last message. Very busy reels can hit Instagram's hourly limit; {{ brand }} then waits and continues.</p></details>
+      <details><summary>When can I buy Pro?</summary><p>Pro is launching soon. Start on Free today: everything you set up stays when you upgrade.</p></details>
+      <details><summary>Can my team use it?</summary><p>Yes. Invite up to 5 people as Manager or Viewer from Settings. They don't need your Instagram password.</p></details>
     </div>
   </div>
+</section>
 
-  <footer>
-    <span>© {{ brand }}</span>
-    <a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/data-deletion">Data deletion</a>
-    {% if contact_email %}<a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% endif %}
-  </footer>
+<div class="wrap">
+  <div class="final dark">
+    <div class="eyebrow">Ready when you are</div>
+    <h2 style="margin-top:16px">Your next reel can grow your list <span class="serif">while you sleep.</span></h2>
+    <p class="lede" style="margin:18px auto 0">Free to start. Your first automation takes two minutes.</p>
+    <div class="cta"><a class="btn primary" href="{{ '#start' if invite_only else '/login' }}">Continue with Instagram</a><a class="btn ghost" href="/demo">Explore the live demo</a></div>
+  </div>
 </div>
+
+<footer>
+  <div class="wrap">
+    <div>{{ logo.wordmark(26, "foot") }}<p>Instagram DM automation for creators. Made in India.</p></div>
+    <div><h4>Product</h4><a href="#features">Features</a><a href="#ai">AI agent</a><a href="#pricing">Pricing</a><a href="/demo">Live demo</a></div>
+    <div><h4>Company</h4>{% if contact_email %}<a href="mailto:{{ contact_email }}">Contact</a>{% endif %}<a href="#faq">FAQ</a></div>
+    <div><h4>Legal</h4><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/data-deletion">Data deletion</a></div>
+  </div>
+  <div class="wrap" style="display:block; margin-top:36px; font:500 12.5px var(--mono); color:var(--muted)">© {{ brand }}</div>
+</footer>
 </body>
 </html>
