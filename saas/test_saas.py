@@ -919,6 +919,37 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.c.get("/api/contacts.csv?tag=nobody").get_data(as_text=True).count("\n"), 1)
         self.assertEqual(self.c.put("/api/contacts/tags", json={"key": "nope", "tags": "x"}).status_code, 404)
 
+    def test_autodm_wizard_backend(self):
+        self.login()
+        # primary DM with a button, comment replies switched off, per-automation numbers
+        self.put_rule("555", require_follow=True, comment_reply="Thanks!", replies_on=False, dm="Here you go",
+                      dm_button_text="Open", dm_button_url="https://x.com/p")
+        self.assertEqual(self.put_rule("556", dm="x", dm_button_url="javascript:1").status_code, 400)
+        self.hook(comment("PROMPTS", cid="w1"))
+        self.assertEqual(self.ig.replies(), [])  # replies switched off
+        payload = self.ig.messages()[-1]["message"]["attachment"]["payload"]["buttons"][0]["payload"]
+        tap = lambda p: {"entry": [{"id": "1789", "messaging": [{"sender": {"id": "31"}, "postback": {"payload": p}}]}]}
+        self.hook(tap(payload))
+        final = self.ig.messages()[-1]["message"]["attachment"]["payload"]
+        self.assertEqual((final["text"], final["buttons"][0]["url"]), ("Here you go", "https://x.com/p"))
+        st = self.c.get("/api/rules").get_json()["stats"]["555"]
+        self.assertEqual((st["runs"], st["clicks"]), (1, 1))
+        summary = self.c.get("/api/autodm-summary").get_json()
+        self.assertEqual(len(summary["daily"]["dms"]), 14)
+        # "next post": waits, then moves onto the first reel posted after it was created
+        self.assertEqual(self.put_rule("next", keywords=["GUIDE"], require_follow=False, comment_reply="", dm="Guide!").status_code, 200)
+        since = store.load_rules("1789")["reels"]["next"]["since"]
+        self.assertTrue(since)
+        self.ig.media[0]["timestamp"] = "2999-01-01T00:00:00+0000"  # reel 777 is newer
+        self.hook(comment("GUIDE pls", cid="w2", media="777"))
+        reels = store.load_rules("1789")["reels"]
+        self.assertNotIn("next", reels)
+        self.assertEqual(reels["777"]["dm"], "Guide!")
+        self.assertEqual(self.ig.messages()[-1]["recipient"], {"comment_id": "w2"})
+        # deleting removes its numbers
+        self.c.delete("/api/rules/555", json={})
+        self.assertNotIn("555", self.c.get("/api/rules").get_json()["stats"])
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

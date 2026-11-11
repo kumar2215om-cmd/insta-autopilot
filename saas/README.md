@@ -190,6 +190,20 @@ No Meta webhook change needed.
 If Meta asks for **Access verification (Tech Provider)** in the app dashboard, complete it: it's required
 for apps used by businesses other than the app owner.
 
+## Auto DM page (`/app/automations`, sidebar "Auto DM")
+Laid out like SuperProfile's AutoDM: stat cards (DMs sent, leads collected, followers gained, with 14-day sparklines from
+`GET /api/autodm-summary`), tabs (Automations · Chat menu · Templates), search and filter, and one row per automation with
+followers gained / runs / button clicks (`store.rule_count`, hash `s:t:<id>:rs:<rule>`; `GET /api/rules` returns them as
+`stats`) and a ⋮ menu (edit, rename, pause, duplicate, comment replies on/off, send to past comments, view on Instagram,
+delete). "Create automation" opens a step-by-step wizard: trigger (comment / DM keyword / story reply / story mention) → post
+(specific, any, or **next post**) → keywords and 3 rotating public replies → DMs (opening message + button, follow check,
+email, WhatsApp, primary DM with an optional link button, follow-up, more options) → review → launch.
+- Wizard → rule key: specific post = media id; any post = `kw:WORD` (or `*` for any comment); next post = `next`
+  (`engine.attach_next` moves it onto the first reel posted after `since`); DM = `kw:WORD` with `comments: false`; stories
+  `story:reply` / `story:mention`. Editing that changes the key deletes the old rule.
+- New rule fields: `replies_on`, `dm_button_text`, `dm_button_url` (the final DM is sent as a button template), `since`.
+- `/app/automations#<key>` opens that automation in the wizard (used by the Reel report and Home).
+
 ## Contact tags
 Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
 to 5) adds tags to everyone who goes through it (comments, keyword DMs, story replies and mentions). Creators edit tags

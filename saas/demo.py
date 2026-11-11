@@ -156,6 +156,13 @@ def seed():
         for i, (role, text) in enumerate(chat):
             ai_agent.add_message(DEMO_ID, igsid, role, text, user)
         ai_agent.update_thread(DEMO_ID, igsid, **{"unread": False, **extra})
+    for key, (runs, clicks, follows) in {"18000000000000001": (352, 318, 290), "18000000000000002": (118, 104, 93),
+                                         "kw:AUDIT": (41, 0, 0), "story:reply": (63, 55, 21), "story:mention": (17, 0, 0)}.items():
+        store.redis("DEL", store.account_key(DEMO_ID, f"rs:{key}"))
+        for field, n in (("runs", runs), ("clicks", clicks), ("follows", follows)):
+            store.rule_count(DEMO_ID, key, field, n)
+    for field, n in (("emails", 29), ("phones", 18)):
+        store.count(DEMO_ID, field, n)
     store.redis("DEL", store.account_key(DEMO_ID, "ab:18000000000000001"))
     for field, n in (("sent_A", 176), ("tap_A", 118), ("link_A", 97), ("follow_A", 41),
                      ("sent_B", 181), ("tap_B", 139), ("link_B", 121), ("follow_B", 52)):

@@ -164,6 +164,16 @@ def take_due(limit=25):
     return out
 
 
+# ---------- per-automation numbers (Auto DM list) ----------
+
+def rule_count(ig_id, key, field, n=1):
+    redis("HINCRBY", account_key(ig_id, f"rs:{key}"), field, n)
+
+
+def rule_stats(ig_id, keys):
+    return {k: hash_all(account_key(ig_id, f"rs:{k}")) for k in keys}
+
+
 # ---------- plans ----------
 
 def is_pro(acc):
@@ -211,7 +221,7 @@ def delete_account(ig_id):
     if acc.get("username") and redis("GET", f"s:user:{acc['username'].lower()}") == ig_id:
         redis("DEL", f"s:user:{acc['username'].lower()}")
     redis("DEL", *[account_key(ig_id, f"day:{day_str(i)}") for i in range(41)])
-    abs_ = [account_key(ig_id, f"ab:{k}") for k in load_rules(ig_id).get("reels", {})]
+    abs_ = [account_key(ig_id, f"{p}:{k}") for k in load_rules(ig_id).get("reels", {}) for p in ("ab", "rs")]
     if abs_:
         redis("DEL", *abs_)
     threads = redis("HGETALL", account_key(ig_id, "threads")) or []

@@ -281,7 +281,7 @@ def handle_comment(acc, value):
     else:
         send_comment_dm(acc, ig, comment_id, key, rule, media_id, username, text)
 
-    reply = rule.get("comment_reply", DEFAULT_COMMENT_REPLY)
+    reply = rule.get("comment_reply", DEFAULT_COMMENT_REPLY) if rule.get("replies_on", True) else ""
     if reply.strip():
         try:
             ig.reply_to_comment(comment_id, fill(pick_reply(reply)))
@@ -335,6 +335,7 @@ def send_comment_dm(acc, ig, comment_id, key, rule, media_id, username, text, re
             store.count(acc["id"], "links_sent")
             store.media_count(acc["id"], media_id, "link")
         note_dm(acc)
+        store.rule_count(acc["id"], key, "runs")
         store.media_count(acc["id"], media_id, "dm")
         store.log_activity(acc["id"], media_id, username, text, action, "ok", "sent on retry" if retry else "")
         return True
@@ -506,7 +507,7 @@ def pick_winners(acc, media_id, winners=1, keyword="", min_mentions=0, followed_
 
 def dm_keyword_match(rules, text):
     """(key, rule) of the first keyword automation a DM matches: keyword rules first, then reel rules."""
-    ordered = sorted(((k, r) for k, r in rules.items() if not is_story_rule(k)), key=lambda kv: not is_keyword_rule(kv[0]))
+    ordered = sorted(((k, r) for k, r in rules.items() if not is_story_rule(k) and k != "next"), key=lambda kv: not is_keyword_rule(kv[0]))
     return next(((k, r) for k, r in ordered if is_live(r)
                  and any(keyword_matches(w, text) for w in keywords_of(r))), (None, None))
 
@@ -535,6 +536,7 @@ def send_rule_dm(acc, ig, igsid, key, rule, username, text, action):
         else:
             deliver(acc, ig, igsid, key, rule, username, "", text, action)
         note_dm(acc)
+        store.rule_count(acc["id"], key, "runs")
         return True
     except Exception as e:
         store.log_activity(acc["id"], key, who, text, action, "error", str(e))
@@ -696,6 +698,8 @@ def handle_button(acc, igsid, payload):
     step, key, media_id, variant = (payload.split("|") + ["", "", ""])[:4]
     if step == "ICE":
         return handle_ice(acc, igsid, key)
+    if step == "GET" and store.claim(f"s:seen:{acc['id']}:click:{igsid}:{key}", 30 * 86400):
+        store.rule_count(acc["id"], key, "clicks")
     if step == "GET" and variant in ("A", "B"):
         store.redis("SET", store.account_key(acc["id"], f"abv:{igsid}:{key}"), variant, "EX", 7 * 86400)
         if store.claim(f"s:seen:{acc['id']}:abtap:{igsid}:{key}", 7 * 86400):
@@ -725,6 +729,7 @@ def handle_button(acc, igsid, payload):
             deliver(acc, ig, igsid, key, rule, username, media_id, payload)
             if step == "FOLLOWED" and rule.get("require_follow") and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
                 store.count(acc["id"], "gate_follows")
+                store.rule_count(acc["id"], key, "follows")
                 store.media_count(acc["id"], media_id, "follow")
                 ab_count(acc, key, ab_variant(acc, igsid, key), "follow")
             store.touch_contact(acc["id"], username, igsid, followed=bool(rule.get("require_follow") and follows))
@@ -742,7 +747,11 @@ def deliver(acc, ig, igsid, key, rule, username, media_id, detail, action="dm"):
     """Sends the rule's final DM (message and link). Raises when Instagram refuses."""
     if not rule.get("dm"):
         raise RuntimeError("The final DM is empty: add your message and link to this rule")
-    ig.send_dm({"id": igsid}, {"text": rule["dm"].replace("{username}", username)})
+    text = rule["dm"].replace("{username}", username)
+    if rule.get("dm_button_url"):
+        ig.send_buttons({"id": igsid}, text, links=[(rule.get("dm_button_text") or "Open", rule["dm_button_url"])])
+    else:
+        ig.send_dm({"id": igsid}, {"text": text})
     store.count(acc["id"], "links_sent")
     store.media_count(acc["id"], media_id, "link")
     store.log_activity(acc["id"], key, username or igsid, detail, action, "ok")
@@ -917,8 +926,28 @@ def auto_settings(acc):
     return acc.get("auto_setup") or {}
 
 
+def attach_next(acc, media):
+    """A "next post" automation moves onto the first reel posted after it was created."""
+    rules = store.load_rules(acc["id"])
+    reels = rules.get("reels", {})
+    nxt = reels.get("next")
+    if not nxt or media["id"] in reels or (media.get("timestamp") or "") < nxt.get("since", ""):
+        return False
+    rule = reels.pop("next")
+    rule["label"] = rule.get("label") or (media.get("caption") or "").strip().split("\n")[0][:120]
+    reels[media["id"]] = rule
+    store.save_rules(acc["id"], rules)
+    for f, n in store.hash_all(store.account_key(acc["id"], "rs:next")).items():
+        store.rule_count(acc["id"], media["id"], f, n)
+    store.redis("DEL", store.account_key(acc["id"], "rs:next"))
+    store.log_activity(acc["id"], media["id"], "", rule["label"], "auto_setup", "ok", "Next-post automation is now on this reel")
+    return True
+
+
 def auto_setup(acc, media):
     """Creates the rule for one new reel from the account's template. Returns the keyword, or ""."""
+    if attach_next(acc, media):
+        return (store.load_rules(acc["id"])["reels"][media["id"]].get("keywords") or ["any comment"])[0]
     cfg = auto_settings(acc)
     if not cfg.get("enabled") or not (cfg.get("template") or {}).get("dm"):
         return ""
@@ -946,7 +975,8 @@ def auto_setup(acc, media):
 
 def auto_setup_from_comment(acc, media_id):
     """First comment on a reel without a rule: read its caption once and set it up if it asks for a keyword."""
-    if not auto_settings(acc).get("enabled") or media_id in store.load_rules(acc["id"]).get("reels", {}):
+    reels = store.load_rules(acc["id"]).get("reels", {})
+    if not (auto_settings(acc).get("enabled") or "next" in reels) or media_id in reels:
         return ""
     if not store.claim(f"s:seen:{acc['id']}:autolook:{media_id}", 86400):
         return ""  # looked at this reel recently

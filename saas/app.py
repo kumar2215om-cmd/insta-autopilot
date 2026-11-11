@@ -110,7 +110,7 @@ def public_account(acc):
 
 # Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.
 SECTIONS = [
-    ("home", "/app", "Home", True), ("automations", "/app/automations", "Automations", True),
+    ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
@@ -619,11 +619,25 @@ def old_report_page():
 
 @app.get("/api/rules")
 def api_rules():
-    return jsonify(store.load_rules(current_account()["id"]))
+    acc = current_account()
+    rules = store.load_rules(acc["id"])
+    return jsonify({**rules, "stats": store.rule_stats(acc["id"], rules.get("reels", {}).keys())})
+
+
+@app.get("/api/autodm-summary")
+def api_autodm_summary():
+    """Totals and a 14-day series for the Auto DM page's cards."""
+    acc = current_account()
+    c = store.counts(acc["id"])
+    rows = store.days(acc["id"], 14)
+    series = lambda *fields: [sum(int(d.get(f, 0)) for f in fields) for _, d in rows]
+    return jsonify(dms=c.get("dms", 0), leads=c.get("emails", 0) + c.get("phones", 0) + c.get("page_signups", 0),
+                   follows=c.get("gate_follows", 0), daily={"dms": series("dms"), "leads": series("emails", "phones", "page_signups"),
+                                                         "follows": series("gate_follows")})
 
 
 def valid_rule_key(key):
-    return key == "*" or key.isdigit() or key in engine.STORY_KEYS or (engine.is_keyword_rule(key) and key[3:].replace("_", "").isalnum())
+    return key in ("*", "next") or key.isdigit() or key in engine.STORY_KEYS or (engine.is_keyword_rule(key) and key[3:].replace("_", "").isalnum())
 
 
 @app.put("/api/rules/<key>")
@@ -657,6 +671,10 @@ def save_rule(acc, key, data):
         "follow_dm": str(data.get("follow_dm", ""))[:640].strip(),
         "followed_button_text": str(data.get("followed_button_text", ""))[:20].strip(),
         "dm": str(data.get("dm", ""))[:1000].strip(),
+        "dm_button_text": str(data.get("dm_button_text", ""))[:20].strip(),
+        "dm_button_url": safe_url(data.get("dm_button_url")),
+        "replies_on": data.get("replies_on", True) is not False,
+        "since": str(data.get("since", "")) if key == "next" else "",
         "tags": ", ".join(store.clean_tags(str(data.get("tags", "")).split(","))[:5]),
         "ask_email": bool(data.get("ask_email")),
         "followup_on": bool(data.get("followup_on")),
@@ -676,6 +694,10 @@ def save_rule(acc, key, data):
     }
     if rule["enabled"] and not rule["dm"]:
         raise ValueError("Add the final DM (your message and link) before turning the rule on.")
+    if key == "next" and not rule["since"]:
+        rule["since"] = (store.load_rules(acc["id"]).get("reels", {}).get("next") or {}).get("since") or ig_now()
+    if data.get("dm_button_url") and not rule["dm_button_url"]:
+        raise ValueError("The button link must start with https://")
     if rule["starts_at"] and rule["ends_at"] and rule["ends_at"] <= rule["starts_at"]:
         raise ValueError("The end time must be after the start time.")
     if rule["followup_on"] and not rule["followup_dm"]:
@@ -726,6 +748,7 @@ def api_delete_rule(key):
     rules = store.load_rules(acc["id"])
     rules.get("reels", {}).pop(key, None)
     store.save_rules(acc["id"], rules)
+    store.redis("DEL", store.account_key(acc["id"], f"rs:{key}"), store.account_key(acc["id"], f"ab:{key}"))
     return jsonify(rules)
 
 

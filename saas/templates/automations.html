@@ -1,80 +1,551 @@
 {% extends "_base.html" %}
-{% block title %}Automations{% endblock %}
-{% block heading %}Automations{% endblock %}
-{% block actions %}<button class="btn ghost" type="button" id="refresh">↻ Refresh reels</button><button class="btn" type="button" id="addKw">＋ Keyword automation</button>{% endblock %}
+{% block title %}Auto DM{% endblock %}
+{% block heading %}Auto DM{% endblock %}
+{% block actions %}<button class="btn" type="button" id="create">＋ Create automation</button>{% endblock %}
 {% block head %}
 <style>
-  #tplBox > summary { cursor:pointer; font:600 16px var(--display); }
-  .tpls { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; margin-top:14px; }
-  .tpl { border:1px solid var(--line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px; background:var(--card); }
-  .tpl b { font-size:15px; } .tpl p { margin:0; font-size:13px; color:var(--mute); flex:1; }
-  .tpl .row input { flex:1; min-width:0; max-width:none; }
-</style>
-<style>
-  .item { display:flex; gap:14px; align-items:center; padding:12px 0; border-top:1px solid var(--line2); }
-  .item:first-child { border-top:0; }
-  .thumb { width:48px; height:64px; border-radius:10px; background:var(--accent-soft); object-fit:cover; flex:none;
-           display:grid; place-items:center; font:700 18px var(--display); color:var(--accent-ink); }
-  .item .txt { flex:1; min-width:0; }
-  .item .cap { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
-  .item .meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:4px; font-size:13px; color:var(--mute); }
-  form.rule { display:grid; gap:12px; padding:16px; margin:4px 0 14px; background:#FAFAF8; border:1px solid var(--line); border-radius:14px; }
-  form.rule .step { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin-top:4px; }
-  form.rule .two { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
-  .preview { background:var(--accent-soft); border-radius:12px; padding:10px 12px; font-size:13px; color:var(--accent-ink); }
+  /* stats */
+  .stats { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; }
+  .stat { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; }
+  .stat .k { font:500 11.5px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
+  .stat .n { font:600 32px var(--display); letter-spacing:-.04em; margin-top:8px; font-variant-numeric:tabular-nums; }
+  .stat svg { width:130px; height:44px; flex:none; }
+  /* tabs + toolbar */
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .tabs button { border:1px solid var(--line); background:var(--card); border-radius:99px; padding:9px 16px; font:600 14px var(--text); color:var(--body); cursor:pointer; }
+  .tabs button[aria-selected="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .toolbar { display:flex; gap:10px; flex-wrap:wrap; }
+  .toolbar input { flex:1; min-width:200px; }
+  .toolbar select { width:auto; }
+  /* list */
+  .thead, .arow { display:grid; grid-template-columns:minmax(0, 1fr) 120px 80px 110px 110px 44px; gap:12px; align-items:center; }
+  .thead { padding:0 18px; font:500 11.5px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
+  .thead span:not(:first-child), .arow .num { text-align:center; }
+  .arow { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:12px 18px; box-shadow:var(--shadow); position:relative; }
+  .arow:hover { border-color:#D8D1C4; }
+  .who2 { display:flex; gap:14px; align-items:center; min-width:0; cursor:pointer; }
+  .thumb { width:54px; height:54px; border-radius:12px; object-fit:cover; flex:none; background:var(--accent-soft); display:grid; place-items:center;
+           font:600 20px var(--display); color:var(--accent-ink); }
+  .who2 .t { min-width:0; }
+  .who2 b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:15px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .chip { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; padding:3px 9px; border-radius:99px; background:var(--bg); border:1px solid var(--line2); color:var(--body); }
+  .chip.kw { background:var(--accent-soft); border-color:transparent; color:var(--accent-ink); font-weight:600; }
+  .fire { display:inline-flex; gap:4px; align-items:center; padding:4px 10px; border-radius:99px; border:1px solid var(--line); font-weight:600; font-variant-numeric:tabular-nums; }
+  .num { font-weight:600; font-variant-numeric:tabular-nums; }
+  .pill { display:inline-block; padding:4px 10px; border-radius:8px; font-size:12.5px; font-weight:600; }
+  .pill.on { background:var(--ok-soft); color:var(--ok); } .pill.off { background:var(--line2); color:var(--mute); }
+  .pill.wait { background:var(--accent-soft); color:var(--accent-ink); }
+  .dots { width:36px; height:36px; border:0; background:none; border-radius:10px; cursor:pointer; font-size:20px; color:var(--mute); }
+  .dots:hover { background:var(--bg); color:var(--ink); }
+  .menu { position:absolute; right:14px; top:56px; z-index:15; min-width:230px; background:var(--card); border:1px solid var(--line); border-radius:14px;
+          box-shadow:0 20px 50px -20px rgba(12,11,16,.35); padding:6px; display:grid; }
+  .menu button, .menu a { display:flex; gap:10px; align-items:center; padding:9px 12px; border:0; background:none; border-radius:9px; font:500 14px var(--text);
+          color:var(--ink); text-align:left; cursor:pointer; text-decoration:none; }
+  .menu button:hover, .menu a:hover { background:var(--bg); }
+  .menu .danger { color:var(--bad); }
+  .list { display:grid; gap:10px; }
+  .emptybox { text-align:center; padding:48px 20px; }
+  .emptybox h3 { font-size:20px; margin-bottom:6px; }
+  /* templates */
+  .tpls { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
+  .tpl { display:flex; flex-direction:column; gap:8px; }
+  .tpl b { font-size:16px; } .tpl p { margin:0; font-size:13.5px; color:var(--mute); flex:1; }
+  /* wizard */
+  dialog.wiz { width:min(560px, calc(100vw - 24px)); max-height:min(860px, calc(100vh - 32px)); padding:0; border:0; border-radius:22px; background:var(--card); color:var(--ink);
+               box-shadow:0 40px 100px -30px rgba(12,11,16,.6); overflow:hidden; }
+  dialog.wiz[open] { display:flex; flex-direction:column; }
+  dialog.wiz::backdrop { background:rgba(12,11,16,.55); backdrop-filter:blur(3px); }
+  .wh { display:flex; align-items:center; gap:10px; padding:18px 22px; border-bottom:1px solid var(--line2); }
+  .wh b { font-size:16px; margin-right:auto; }
+  .wh .x { width:34px; height:34px; border:0; background:none; border-radius:10px; font-size:22px; cursor:pointer; color:var(--mute); }
+  .wh .x:hover { background:var(--bg); color:var(--ink); }
+  .wb { padding:20px 22px; overflow-y:auto; display:grid; gap:16px; align-content:start; }
+  .wf { display:flex; align-items:center; gap:10px; padding:14px 22px; border-top:1px solid var(--line2); }
+  .wf .stp { margin-right:auto; font:500 12.5px var(--mono); color:var(--mute); }
+  .acct { text-align:center; display:grid; justify-items:center; gap:6px; }
+  .acct .ring { width:64px; height:64px; border-radius:50%; padding:3px; background:var(--grad); }
+  .acct .ring img, .acct .ring span { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; border:3px solid #fff; background:linear-gradient(135deg, #FFB199, #FF7A59); }
+  .opt { display:flex; gap:12px; align-items:center; width:100%; padding:14px 16px; border:1px solid var(--line); border-radius:14px; background:var(--card); text-align:left;
+         font:500 15px var(--text); color:var(--ink); cursor:pointer; }
+  .opt:hover { border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+  .opt:disabled { opacity:.5; cursor:default; box-shadow:none; border-color:var(--line); }
+  .opt .ic { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; flex:none; font-size:16px; }
+  .opt span.d { display:block; font-size:12.5px; color:var(--mute); font-weight:400; }
+  .seg { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; gap:8px; }
+  .seg button { padding:11px 10px; border:1px solid var(--line); border-radius:12px; background:var(--card); font:600 14px var(--text); color:var(--body); cursor:pointer; }
+  .seg button[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); color:var(--accent-ink); }
+  .grid3 { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); grid-auto-rows:max-content; align-content:start; gap:8px; max-height:330px; overflow-y:auto; padding:2px; }
+  .post { position:relative; display:block; width:100%; height:auto; border:2px solid transparent; border-radius:12px; padding:0; overflow:hidden; cursor:pointer; background:var(--accent-soft); aspect-ratio:1; }
+  .post img { width:100%; height:100%; object-fit:cover; display:block; }
+  .post[aria-pressed="true"] { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .post .has { position:absolute; left:6px; top:6px; font-size:11px; font-weight:600; background:rgba(12,11,16,.75); color:#fff; border-radius:6px; padding:2px 6px; }
+  .post .cap { position:absolute; inset:auto 0 0 0; padding:18px 6px 5px; font-size:11px; color:#fff; text-align:left; background:linear-gradient(transparent, rgba(0,0,0,.65));
+               white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .kwbox { display:flex; flex-wrap:wrap; gap:6px; align-items:center; border:1px solid var(--line); border-radius:12px; padding:6px; background:#FDFCFA; }
+  .kwbox input { border:0 !important; box-shadow:none !important; flex:1; min-width:140px; background:transparent !important; padding:6px !important; }
+  .kwbox .chip button { border:0; background:none; cursor:pointer; color:inherit; font-size:14px; line-height:1; padding:0 0 0 2px; }
+  .blk { border:1px solid var(--line2); background:#FBFAF7; border-radius:16px; padding:14px 16px; display:grid; gap:10px; }
+  .blk > .hd { display:flex; align-items:center; gap:10px; }
+  .blk > .hd b { margin-right:auto; font-size:15px; }
+  .blk .hint { margin:-4px 0 0; }
+  .tg { width:44px; height:26px; border-radius:99px; border:0; padding:3px; background:#CFC9BD; display:flex; cursor:pointer; flex:none; }
+  .tg span { width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); }
+  .tg[aria-checked="true"] { background:var(--accent); justify-content:flex-end; }
+  .lbl { font-weight:600; font-size:14px; margin:0 0 6px; display:block; }
+  .two2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .dmbtn { text-align:center; border:1px dashed var(--line); border-radius:12px; padding:10px; color:var(--accent-ink); background:none; font:600 14px var(--text); cursor:pointer; width:100%; }
+  /* review */
+  .review { display:grid; gap:10px; background:var(--bg); border-radius:16px; padding:16px; }
+  .review .note { font-size:13px; color:var(--mute); display:flex; gap:6px; align-items:center; }
+  .bub { max-width:85%; padding:10px 13px; border-radius:16px; background:#fff; border:1px solid var(--line2); font-size:14px; white-space:pre-wrap; }
+  .bub.me { justify-self:end; background:var(--accent); color:#fff; border-color:var(--accent); border-bottom-right-radius:5px; }
+  .bub .b { display:block; margin-top:8px; padding:7px; border-radius:9px; background:#fff; color:var(--accent-ink); text-align:center; font-weight:600; font-size:13px; }
+  .cmt { display:flex; gap:8px; font-size:14px; align-items:baseline; }
+  .cmt.rep { padding-left:28px; }
+  @media (max-width: 900px) {
+    .thead { display:none; }
+    .arow { grid-template-columns:minmax(0, 1fr) auto 44px; }
+    .arow .num, .arow .fcol { display:none; }
+    .stats { grid-template-columns:1fr; }
+  }
+  @media (max-width: 520px) { .grid3 { grid-template-columns:repeat(2, 1fr); } .two2 { grid-template-columns:1fr; } .stat svg { width:96px; } }
 </style>
 {% endblock %}
 {% block content %}
 <div id="retryBox"></div>
-<details class="card" id="tplBox">
-  <summary><b>Start from a template</b> <span class="muted small">ready-made automations, change the words and link</span></summary>
-  <div class="tpls" id="tpls"></div>
-</details>
-<section class="card">
-  <h2>Keyword automations</h2>
-  <p class="muted small" style="margin:0 0 8px">Work on <b>every reel</b> and when someone <b>DMs</b> you the word.</p>
-  <div id="kwRules"></div>
-</section>
+<div class="stats">
+  <div class="card stat"><div><div class="k">DMs sent</div><div class="n" id="sDms">–</div></div><span id="gDms"></span></div>
+  <div class="card stat"><div><div class="k">Leads collected</div><div class="n" id="sLeads">–</div></div><span id="gLeads"></span></div>
+  <div class="card stat"><div><div class="k">Followers gained</div><div class="n" id="sFol">–</div></div><span id="gFol"></span></div>
+</div>
+<div class="row" style="justify-content:space-between">
+  <div class="tabs" role="tablist" aria-label="Auto DM">
+    <button type="button" role="tab" data-tab="list" aria-selected="true" id="tabList">Automations</button>
+    <button type="button" role="tab" data-tab="ice" aria-selected="false">Chat menu</button>
+    <button type="button" role="tab" data-tab="tpl" aria-selected="false">Templates</button>
+  </div>
+  <button class="btn ghost sm" type="button" id="refresh">↻ Refresh posts</button>
+</div>
 
-<section class="card">
-  <h2>Stories</h2>
-  <p class="muted small" style="margin:0 0 8px">Post a story saying <i>"Reply GUIDE"</i> and everyone who replies gets your DM. Keyword automations above work in story replies too.</p>
-  <div id="stories"></div>
-</section>
+<div id="pList" style="display:grid; gap:12px">
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Search by name, keyword or message" aria-label="Search automations">
+    <select id="fType" aria-label="Filter"><option value="">All automations</option><option value="on">Enabled</option><option value="off">Paused</option>
+      <option value="post">Posts and reels</option><option value="dm">Keyword DMs</option><option value="story">Stories</option></select>
+  </div>
+  <div class="thead" aria-hidden="true"><span>Automations</span><span>Followers gained</span><span>Runs</span><span>Button clicks</span><span>Status</span><span></span></div>
+  <div class="list" id="list"><div class="card empty">Loading…</div></div>
+</div>
 
-<section class="card">
+<section class="card" id="pIce" hidden>
   <div class="row"><h2 style="margin-right:auto">Chat menu</h2><span class="badge" id="iceStatus">off</span></div>
-  <p class="muted small" style="margin:0 0 8px">Up to 4 questions people see when they open your DMs for the first time. Tapping one sends your answer or starts an automation.</p>
-  <form id="iceForm" class="rule" style="margin-top:6px">
+  <p class="muted small" style="margin:0 0 12px">Up to 4 questions people see when they open your DMs for the first time. Tapping one sends your answer or starts an automation.</p>
+  <form id="iceForm" style="display:grid; gap:12px">
     <label><input type="checkbox" name="enabled"> <b>Show the chat menu on Instagram</b></label>
     <div id="iceItems" style="display:grid; gap:12px"></div>
     <div class="row"><button class="btn sm" type="submit">Save and publish</button><button class="btn ghost sm" type="button" id="iceAdd">＋ Question</button><span class="small" id="iceMsg"></span></div>
   </form>
 </section>
 
-<section class="card">
-  <h2>Your reels</h2>
-  <p class="muted small" style="margin:0 0 8px">Set up a keyword for one reel. Reels whose caption says "Comment WORD" are set up automatically when auto-setup is on (Settings).</p>
-  <div id="reels"><div class="empty">Loading your reels…</div></div>
-</section>
+<div id="pTpl" hidden>
+  <p class="muted" style="margin:0 0 12px">Ready-made automations. Pick one, change the words and link, launch.</p>
+  <div class="tpls" id="tpls"></div>
+</div>
 
-<section class="card">
-  <h2>All reels (fallback)</h2>
-  <p class="muted small" style="margin:0 0 8px">Used on reels without their own automation. Leave it off unless you want every reel covered.</p>
-  <div id="fallback"></div>
-</section>
+<dialog class="wiz" id="wiz" aria-labelledby="wizTitle">
+  <div class="wh"><span id="wizIcon" aria-hidden="true"></span><b id="wizTitle">Create automation</b><button class="x" type="button" id="wizClose" aria-label="Close">×</button></div>
+  <div class="wb" id="wizBody"></div>
+  <div class="wf"><span class="stp" id="wizStep"></span><span class="err small" id="wizErr"></span>
+    <button class="btn ghost" type="button" id="wizBack">Back</button><button class="btn" type="button" id="wizNext">Next</button></div>
+</dialog>
 {% endblock %}
 {% block scripts %}
 <script>
-const DEFAULTS = {
-  comment_reply: "@{username} Check your DM 📩\n@{username} Sent! Check your inbox 📥\n@{username} Done ✅ check your DMs",
-  opening_dm: "Hey {username}! 👋 Tap the button below and I'll send it to you.", button_text: "Send me the link",
-  follow_dm: 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.', followed_button_text: "I followed ✅",
+const ME = {username: "{{ acc.username }}", pic: "{{ acc.pic or '' }}"};
+const DEF = {
+  replies: ["Thanks! Check your DMs 📩", "Sent you a message! Check it out 📥", "Done ✅ check your inbox"],
+  opening_dm: "Hey {username}! 👋 Thanks for stopping by. Tap below and I'll send it to you ✨", button_text: "Send me the access",
+  follow_dm: "Almost there! 👀 Please visit my profile and tap Follow to continue 😊", followed_button_text: "I'm following ✅",
+  email_dm: "One last step ✉️ Reply with your email and I'll send it right away.",
+  phone_dm: "Almost done 📱 Reply with your WhatsApp number and I'll send it right away.",
+  dm: "Hi {username}! Glad you commented 🙌 Here's the promised link ⬇️",
 };
-const EMAIL_ASK = "One last step ✉️ Reply with your email and I'll send it right away.";
-const PHONE_ASK = "Almost done 📱 Reply with your WhatsApp number and I'll send it right away.";
-let rules = {reels: {}}, reels = [], open = new Set(), newKw = new Set();
+const LINK = "https://your-link.com";
+const TEMPLATES = [
+  {name: "🎁 Free guide", what: "Comment a word → follow → get the guide. The classic follower magnet.", word: "GUIDE", trigger: "comment",
+   rule: {require_follow: true, opening_dm: "Hey {username}! 👋 Guide ready hai. Neeche button dabao.", dm: "Ye lo tumhari free guide 🎁", dm_button_text: "Open guide", dm_button_url: LINK}},
+  {name: "✉️ Lead magnet", what: "Get their email before the freebie, so you can reach them outside Instagram.", word: "CHECKLIST", trigger: "comment",
+   rule: {require_follow: false, ask_email: true, email_required: true, dm: "Here's your checklist ✅", dm_button_text: "Get checklist", dm_button_url: LINK}},
+  {name: "🚀 Course launch", what: "Details now, WhatsApp number for updates, and a reminder offer 6 hours later.", word: "COURSE", trigger: "comment",
+   rule: {require_follow: false, ask_phone: true, dm: "Course details + early-bird price 👇", dm_button_text: "See the course", dm_button_url: LINK,
+          followup_on: true, followup_hours: 6, followup_dm: "Early-bird price sirf kal raat tak hai {username} ⏳ Seat book kar lo!", followup_url: LINK, followup_button: "Join now"}},
+  {name: "🎉 Giveaway entry", what: "Confirms their entry publicly and makes sure they follow you. Pick winners in Giveaway.", word: "WIN", trigger: "comment",
+   rule: {require_follow: true, comment_reply: "You're in! 🤞\nEntry confirmed ✅ Good luck!\nAll the best 🍀", dm: "You're in the giveaway 🎉 Winners announced on my story this Sunday. Good luck!"}},
+  {name: "📲 Story link", what: "Post a story saying \"Reply LINK\" and everyone who replies gets it.", word: "LINK", trigger: "story",
+   rule: {require_follow: false, opening_dm: "", dm: "Here's the link from my story 👇", dm_button_text: "Open link", dm_button_url: LINK}},
+  {name: "🤝 Brand collabs", what: "When brands DM COLLAB, send your media kit and email right away.", word: "COLLAB", trigger: "dm",
+   rule: {require_follow: false, opening_dm: "", dm: "Thanks for reaching out! 🙌 Email me your brief at you@example.com", dm_button_text: "Media kit", dm_button_url: LINK}},
+];
+let rules = {reels: {}}, stats = {}, media = [], ab = {}, wiz = null, openMenu = null;
 
+/* ---------- helpers ---------- */
+const mediaById = (id) => media.find(m => m.id === id);
+const thumbOf = (m) => m && (m.thumbnail_url || m.media_url) || "";
+function triggerOf(key, r) {
+  if (/^\d+$/.test(key)) return {trigger: "comment", target: "specific", label: "Post or reel"};
+  if (key === "*") return {trigger: "comment", target: "any", label: "Any post"};
+  if (key === "next") return {trigger: "comment", target: "next", label: "Next post"};
+  if (key === "story:reply") return {trigger: "story", label: "Story replies"};
+  if (key === "story:mention") return {trigger: "mention", label: "Story mentions"};
+  if (key.startsWith("kw:")) return r.comments === false ? {trigger: "dm", label: "Keyword DM"} : {trigger: "comment", target: "any", label: "Any post + DMs"};
+  return {trigger: "comment", label: key};
+}
+function stateOf(r) {
+  const now = Date.now() / 1000;
+  if (r.enabled === false) return ["off", "Paused"];
+  if (r.ends_at && now >= r.ends_at) return ["off", "Ended"];
+  if (r.starts_at && now < r.starts_at) return ["wait", "Scheduled"];
+  return ["on", "Enabled"];
+}
+function spark(values) {
+  const v = values && values.length ? values : [0], max = Math.max(1, ...v), W = 130, H = 44;
+  const pts = v.map((x, i) => [i * (W / Math.max(v.length - 1, 1)), H - 4 - (x / max) * (H - 10)]);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6A4CFF" stop-opacity=".22"/><stop offset="1" stop-color="#6A4CFF" stop-opacity="0"/></linearGradient></defs>
+    <path d="${line} L${W},${H} L0,${H} Z" fill="url(#sg)"/><path d="${line}" fill="none" stroke="#6A4CFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+const short = (s, n) => (s || "").replace(/\s+/g, " ").trim().slice(0, n);
+
+/* ---------- list ---------- */
+const TKIND = {dm: "DM keyword", story: "Story replies", mention: "Story mentions"};
+function rowHtml(key) {
+  const r = rules.reels[key], t = triggerOf(key, r), m = mediaById(key), st = stats[key] || {}, [cls, lbl] = stateOf(r);
+  const icon = {comment: "∗", dm: "#", story: "◎", mention: "@"}[t.trigger] || "∗";
+  const thumb = thumbOf(m) ? `<img class="thumb" src="${esc(thumbOf(m))}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'), {className: 'thumb', textContent: '▶'}))">`
+    : `<span class="thumb" aria-hidden="true">${t.target === "next" ? "⏭" : /^\d+$/.test(key) ? "▶" : icon}</span>`;
+  const kind = TKIND[t.trigger];
+  const title = r.label || short((m?.caption || "").split("\n")[0], 70)
+    || (kind ? kind + ((r.keywords || [])[0] ? ": " + r.keywords[0] : "") : "")
+    || short((r.dm || "").replaceAll("{username}", "").replace(/\s+/g, " "), 60) || "Automation";
+  return `<div class="arow" data-key="${esc(key)}">
+    <div class="who2" data-edit="${esc(key)}" role="button" tabindex="0" aria-label="Edit ${esc(title)}">${thumb}<div class="t"><b>${esc(title)}</b>
+      <div class="chips"><span class="chip">${esc(t.label)}</span>${(r.keywords || []).slice(0, 4).map(k => `<span class="chip kw">${esc(k)}</span>`).join("")}
+        ${r.auto ? `<span class="chip">✨ auto-setup</span>` : ""}${r.opening_dm_b ? `<span class="chip">A/B</span>` : ""}</div></div></div>
+    <div class="num fcol"><span class="fire">🔥 ${fmt(st.follows || 0)}</span></div>
+    <div class="num">${fmt(st.runs || 0)}</div>
+    <div class="num">${fmt(st.clicks || 0)}</div>
+    <div class="num"><span class="pill ${cls}">${lbl}</span></div>
+    <button class="dots" type="button" data-menu="${esc(key)}" aria-label="More actions" aria-haspopup="true">⋮</button>
+  </div>`;
+}
+function drawList() {
+  const q = $("q").value.trim().toLowerCase(), f = $("fType").value;
+  const keys = Object.keys(rules.reels).filter(k => {
+    const r = rules.reels[k], t = triggerOf(k, r), on = stateOf(r)[0] !== "off";
+    if (f === "on" && !on) return false; if (f === "off" && on) return false;
+    if (f === "post" && t.trigger !== "comment") return false; if (f === "dm" && t.trigger !== "dm") return false;
+    if (f === "story" && !["story", "mention"].includes(t.trigger)) return false;
+    return !q || [r.label, r.opening_dm, r.dm, ...(r.keywords || []), mediaById(k)?.caption].join(" ").toLowerCase().includes(q);
+  }).sort((a, b) => (stats[b]?.runs || 0) - (stats[a]?.runs || 0));
+  $("tabList").textContent = `Automations (${Object.keys(rules.reels).length})`;
+  $("list").innerHTML = keys.map(rowHtml).join("") || (Object.keys(rules.reels).length
+    ? `<div class="card empty">No automations match.</div>`
+    : `<div class="card emptybox"><h3>Your first Auto DM</h3><p class="muted">People comment a word, get your link in DM, and follow you on the way.</p>
+       <button class="btn" type="button" data-new>＋ Create automation</button></div>`);
+}
+function menuHtml(key) {
+  const r = rules.reels[key], m = mediaById(key);
+  return `<div class="menu" role="menu">
+    <button type="button" data-act="edit">✏️ Edit</button>
+    <button type="button" data-act="rename">🏷️ Rename</button>
+    <button type="button" data-act="toggle">${r.enabled === false ? "▶️ Resume automation" : "⏸️ Pause automation"}</button>
+    ${!key.startsWith("story:") ? `<button type="button" data-act="dup">📄 Duplicate automation</button>` : ""}
+    ${triggerOf(key, r).trigger === "comment" ? `<button type="button" data-act="replies">${r.replies_on === false ? "💬 Turn on comment replies" : "🔕 Turn off comment replies"}</button>` : ""}
+    ${/^\d+$/.test(key) ? `<button type="button" data-act="past">⏪ Send to past comments</button>` : ""}
+    ${m && m.permalink ? `<a href="${esc(m.permalink)}" target="_blank" rel="noopener">↗️ View on Instagram</a>` : ""}
+    <button type="button" data-act="del" class="danger">🗑️ Delete automation</button></div>`;
+}
+function closeMenu() { document.querySelectorAll(".menu").forEach(x => x.remove()); openMenu = null; }
+
+async function saveRule(key, body) {
+  const res = await api(`/api/rules/${encodeURIComponent(key)}`, {method: "PUT", body: JSON.stringify(body)});
+  rules.reels = res.reels; return res;
+}
+async function reload() {
+  const r = await api("/api/rules"); stats = r.stats || {}; rules = {reels: r.reels || {}}; drawList();
+}
+
+document.addEventListener("click", async (e) => {
+  const m = e.target.closest("[data-menu]");
+  if (m) { const k = m.dataset.menu; const was = openMenu === k; closeMenu(); if (!was) { m.closest(".arow").insertAdjacentHTML("beforeend", menuHtml(k)); openMenu = k; } return; }
+  const a = e.target.closest("[data-act]");
+  if (a) {
+    const key = a.closest(".arow").dataset.key, r = rules.reels[key];
+    if (a.dataset.act === "del" && !a.dataset.sure) { a.dataset.sure = "1"; a.textContent = "🗑️ Click again to delete"; return; }
+    if (a.dataset.act === "past" && !a.dataset.sure) { a.dataset.sure = "1"; a.textContent = "⏪ Click again: sends real DMs"; return; }
+    closeMenu();
+    try {
+      if (a.dataset.act === "edit") return openWizard({key});
+      if (a.dataset.act === "dup") return openWizard({key, duplicate: true});
+      if (a.dataset.act === "rename") { const name = prompt("Name this automation", r.label || ""); if (name === null) return; await saveRule(key, {...r, label: name}); toast("Renamed"); }
+      if (a.dataset.act === "toggle") { await saveRule(key, {...r, enabled: r.enabled === false}); toast(r.enabled === false ? "Resumed" : "Paused"); }
+      if (a.dataset.act === "replies") { await saveRule(key, {...r, replies_on: r.replies_on === false}); toast(r.replies_on === false ? "Comment replies on" : "Comment replies off"); }
+      if (a.dataset.act === "del") { await api(`/api/rules/${encodeURIComponent(key)}`, {method: "DELETE", body: "{}"}); toast("Automation deleted"); return reload(); }
+      if (a.dataset.act === "past") { const res = await api(`/api/reels/${encodeURIComponent(key)}/past-comments`, {method: "POST", body: "{}"});
+        toast(`${res.sent} sent${res.more_left ? " · more left, run again" : ""} · ${res.too_old} older than 7 days`); return reload(); }
+      drawList();
+    } catch (err) { toast(err.message); }
+    return;
+  }
+  if (!e.target.closest(".menu")) closeMenu();
+  const ed = e.target.closest("[data-edit]");
+  if (ed) return openWizard({key: ed.dataset.edit});
+  if (e.target.closest("[data-new]")) return openWizard({});
+  const tab = e.target.closest("[data-tab]");
+  if (tab) {
+    document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b === tab)));
+    $("pList").hidden = tab.dataset.tab !== "list"; $("pIce").hidden = tab.dataset.tab !== "ice"; $("pTpl").hidden = tab.dataset.tab !== "tpl";
+  }
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("[data-edit]")) openWizard({key: e.target.dataset.edit}); });
+$("q").oninput = drawList; $("fType").onchange = drawList;
+$("create").onclick = () => openWizard({});
+
+/* ---------- wizard ---------- */
+const STEPS = {comment: ["trigger", "post", "when", "dms", "review"], dm: ["trigger", "when", "dms", "review"],
+               story: ["trigger", "when", "dms", "review"], mention: ["trigger", "dms", "review"]};
+const TITLES = {comment: "When someone comments on your post or reel", dm: "When someone sends you a DM", story: "When someone replies to your story",
+                mention: "When someone mentions you in their story"};
+
+function openWizard({key, duplicate, template, mediaId}) {
+  let r = {}, t = {trigger: "", target: "specific"}, start = 0;
+  if (key && rules.reels[key]) {
+    r = JSON.parse(JSON.stringify(rules.reels[key])); t = triggerOf(key, r); start = 1;
+    if (duplicate) { r.label = r.label ? r.label + " (copy)" : ""; delete r.auto; }
+  }
+  if (template) { r = {keywords: [template.word], ...template.rule}; t = {trigger: template.trigger, target: "any"}; start = 1; }
+  if (mediaId) { t = {trigger: "comment", target: "specific"}; start = 2; }
+  const replies = (r.comment_reply || "").split("\n").map(s => s.replace(/^@\{username\}\s*/, "").trim()).filter(Boolean);
+  wiz = {origKey: duplicate ? null : (key || null), step: start, trigger: t.trigger, target: t.target || "specific",
+         mediaId: mediaId || (/^\d+$/.test(key || "") && !duplicate ? key : ""),
+         match: (r.keywords || []).length || t.trigger === "dm" ? "keyword" : (key ? "any" : "keyword"),
+         r: {enabled: true, require_follow: true, replies_on: true, ...r,
+             replies: replies.length ? replies.concat(DEF.replies).slice(0, 3) : [...DEF.replies],
+             opening_on: key || template ? !!(r.opening_dm || r.require_follow) : true,
+             opening_dm: r.opening_dm ?? DEF.opening_dm, button_text: r.button_text || DEF.button_text,
+             follow_dm: r.follow_dm || DEF.follow_dm, followed_button_text: r.followed_button_text || DEF.followed_button_text,
+             email_dm: r.email_dm || DEF.email_dm, phone_dm: r.phone_dm || DEF.phone_dm, dm: r.dm || DEF.dm,
+             btn_on: !!r.dm_button_url, keywords: [...(r.keywords || [])]}};
+  if (!key && !template) wiz.r.require_follow = true;
+  drawWizard(); $("wiz").showModal();
+}
+$("wizClose").onclick = () => $("wiz").close();
+$("wiz").addEventListener("click", (e) => { if (e.target === $("wiz")) $("wiz").close(); });
+
+function toggle(name, on) { return `<button class="tg" type="button" role="switch" aria-checked="${!!on}" data-tg="${name}" aria-label="${name}"><span></span></button>`; }
+function acctHtml() {
+  return `<div class="acct"><span class="ring">${ME.pic ? `<img src="${esc(ME.pic)}" alt="">` : `<span></span>`}</span><b>${esc(ME.username)}</b></div>`;
+}
+function stepsFor() { return STEPS[wiz.trigger] || ["trigger"]; }
+
+function drawWizard() {
+  const steps = stepsFor(), s = steps[wiz.step], R = wiz.r;
+  $("wizTitle").textContent = s === "trigger" ? "Trigger Auto DM when someone…" : s === "review" ? "Review and launch" : TITLES[wiz.trigger];
+  $("wizErr").textContent = "";
+  $("wizStep").textContent = s === "trigger" ? "" : `Step ${wiz.step} of ${steps.length - 1}`;
+  $("wizBack").hidden = wiz.step === 0;
+  $("wizNext").hidden = s === "trigger";
+  $("wizNext").textContent = s === "review" ? (wiz.origKey ? "Save changes" : "Confirm & launch") : "Next";
+  let h = "";
+  if (s === "trigger") {
+    h = [["comment", "💬", "Comments on your post or reel", "Reply publicly and DM them your link"],
+         ["dm", "✈️", "Sends you a DM", "When someone messages you a keyword"],
+         ["story", "◎", "Replies to your story", "A story saying \"Reply LINK\""],
+         ["mention", "@", "Mentions you in their story", "Send a thank-you DM"]].map(([k, ic, t, d]) =>
+      `<button class="opt" type="button" data-trigger="${k}"><span class="ic" style="background:var(--accent-soft)">${ic}</span><span>${t}<span class="d">${d}</span></span></button>`).join("")
+      + `<button class="opt" type="button" disabled><span class="ic" style="background:var(--warn-soft)">🔴</span><span>Comments on your Live<span class="d">Coming soon</span></span></button>`;
+  }
+  if (s === "post") {
+    h = acctHtml() + `<div><span class="lbl">The comment is on…</span><div class="seg">
+        ${[["specific", "Specific post"], ["any", "Any post"], ["next", "Next post"]].map(([k, l]) => `<button type="button" data-target="${k}" aria-pressed="${wiz.target === k}">${l}</button>`).join("")}</div></div>`;
+    if (wiz.target === "specific") h += media.length ? `<div class="grid3">${media.map(m => `<button type="button" class="post" data-media="${esc(m.id)}" aria-pressed="${wiz.mediaId === m.id}" aria-label="${esc(short(m.caption, 60) || "Post")}">
+        ${thumbOf(m) ? `<img src="${esc(thumbOf(m))}" alt="" loading="lazy">` : ""}${rules.reels[m.id] && m.id !== wiz.origKey ? `<span class="has">has one</span>` : ""}<span class="cap">${esc(short(m.caption, 40))}</span></button>`).join("")}</div>`
+      : `<p class="muted">No posts loaded yet. Use ↻ Refresh posts.</p>`;
+    if (wiz.target === "any") h += `<p class="hint">Works on every post without its own automation. With a keyword it also answers people who DM you that word.</p>`;
+    if (wiz.target === "next") h += `<p class="hint">Goes live on the next reel or post you publish. Perfect when you set it up before posting.</p>`;
+  }
+  if (s === "when") {
+    const kwLabel = wiz.trigger === "dm" ? "The DM includes any of these words" : "Should include any of these";
+    h = acctHtml();
+    if (wiz.trigger !== "dm") h += `<div><span class="lbl">What should trigger it?</span><div class="seg">
+        <button type="button" data-match="keyword" aria-pressed="${wiz.match === "keyword"}">Specific keyword</button>
+        <button type="button" data-match="any" aria-pressed="${wiz.match === "any"}">Any ${wiz.trigger === "story" ? "reply" : "comment"}</button></div></div>`;
+    if (wiz.match === "keyword" || wiz.trigger === "dm") h += `<div><span class="lbl">${kwLabel}:</span>
+        <div class="kwbox">${R.keywords.map((k, i) => `<span class="chip kw">${esc(k)}<button type="button" data-kwdel="${i}" aria-label="Remove ${esc(k)}">×</button></span>`).join("")}
+          <input id="kwIn" type="text" placeholder="Type a keyword and press Enter" aria-label="Add a keyword"></div>
+        <p class="hint" style="margin-top:6px">Not case-sensitive. Spelling mistakes, plurals and emojis still match (GUIDE matches "guides 🔥").</p></div>`;
+    if (wiz.trigger === "comment") h += `<div class="blk"><div class="hd"><b>Auto-reply to comments on the post</b>${toggle("replies_on", R.replies_on !== false)}</div>
+        ${R.replies_on !== false ? `<p class="hint">Write 3 replies. A random one is used each time so your replies don't look like a bot.</p>
+          ${R.replies.map((t, i) => `<div><label class="lbl" for="rp${i}">Comment response ${i + 1}</label><input id="rp${i}" type="text" maxlength="140" data-reply="${i}" value="${esc(t)}"></div>`).join("")}` : ""}</div>`;
+  }
+  if (s === "dms") {
+    h = acctHtml();
+    if (wiz.trigger !== "mention") h += `<div class="blk"><div class="hd"><b>Opening message with a button</b>${toggle("opening_on", R.opening_on)}</div>
+      ${R.opening_on ? `<p class="hint">The tap opens the chat, which Instagram needs before it lets us check follows or ask for details.</p>
+        <textarea rows="3" data-f="opening_dm" maxlength="640" aria-label="Opening message">${esc(R.opening_dm)}</textarea>
+        <input type="text" data-f="button_text" maxlength="20" value="${esc(R.button_text)}" aria-label="Button text">
+        <details ${R.opening_dm_b ? "open" : ""}><summary class="small"><b>A/B test this message</b></summary>
+          <textarea rows="2" data-f="opening_dm_b" maxlength="640" placeholder="Version B: half your audience gets this one" style="margin-top:8px" aria-label="Version B">${esc(R.opening_dm_b || "")}</textarea>${abBox(wiz.origKey)}</details>` : ""}</div>`;
+    h += `<p class="lbl" style="margin:4px 0 -4px">Before the primary DM, send them…</p>`;
+    h += `<div class="blk"><div class="hd"><b>A DM asking to follow you</b>${toggle("require_follow", R.require_follow)}</div>
+      ${R.require_follow ? `<textarea rows="3" data-f="follow_dm" maxlength="640" aria-label="Follow check message">${esc(R.follow_dm)}</textarea>
+        <div class="two2"><input type="text" value="Visit Profile" disabled aria-label="Visit profile button"><input type="text" data-f="followed_button_text" maxlength="20" value="${esc(R.followed_button_text)}" aria-label="I'm following button"></div>
+        <p class="hint">The link is sent only after Instagram confirms they follow you.</p>` : ""}</div>`;
+    h += `<div class="blk"><div class="hd"><b>A DM asking for their email</b>${toggle("ask_email", R.ask_email)}</div>
+      ${R.ask_email ? `<textarea rows="2" data-f="email_dm" maxlength="640" aria-label="Email message">${esc(R.email_dm)}</textarea>
+        <label class="small"><input type="checkbox" data-c="email_required" ${R.email_required ? "checked" : ""}> Required (no "Skip" button)</label>` : ""}</div>`;
+    h += `<div class="blk"><div class="hd"><b>A DM asking for their WhatsApp number</b>${toggle("ask_phone", R.ask_phone)}</div>
+      ${R.ask_phone ? `<textarea rows="2" data-f="phone_dm" maxlength="640" aria-label="Phone message">${esc(R.phone_dm)}</textarea>
+        <label class="small"><input type="checkbox" data-c="phone_required" ${R.phone_required ? "checked" : ""}> Required (no "Skip" button)</label>` : ""}</div>`;
+    h += `<p class="lbl" style="margin:4px 0 -4px">Then send the primary DM…</p>
+      <div class="blk"><textarea rows="4" data-f="dm" maxlength="1000" aria-label="Primary DM">${esc(R.dm)}</textarea>
+        ${R.btn_on ? `<div class="two2"><input type="text" data-f="dm_button_text" maxlength="20" placeholder="Button text" value="${esc(R.dm_button_text || "")}" aria-label="Button text">
+          <input type="url" data-f="dm_button_url" placeholder="https://your-link" value="${esc(R.dm_button_url || "")}" aria-label="Button link"></div>
+          <button class="dmbtn" type="button" data-btnoff style="color:var(--bad)">Remove button</button>`
+          : `<button class="dmbtn" type="button" data-btnon>＋ Add a button</button><p class="hint">No button? Put your link in the message itself.</p>`}</div>`;
+    h += `<div class="blk"><div class="hd"><b>Follow-up message</b>${toggle("followup_on", R.followup_on)}</div>
+      ${R.followup_on ? `<textarea rows="2" data-f="followup_dm" maxlength="640" placeholder="Did you try it {username}? The full pack is just ₹149 today 🙌" aria-label="Follow-up message">${esc(R.followup_dm || "")}</textarea>
+        <div class="two2"><select data-f="followup_hours" aria-label="Send after">${[1, 3, 6, 12, 20].map(x => `<option value="${x}" ${(+R.followup_hours || 3) === x ? "selected" : ""}>after ${x} hour${x > 1 ? "s" : ""}</option>`).join("")}</select>
+          <input type="text" data-f="followup_button" maxlength="20" placeholder="Button text" value="${esc(R.followup_button || "")}" aria-label="Follow-up button text"></div>
+        <input type="url" data-f="followup_url" placeholder="https://your-paid-product" value="${esc(R.followup_url || "")}" aria-label="Follow-up button link">
+        <p class="hint">Sent once per person, within Instagram's 24-hour window.</p>` : ""}</div>`;
+    h += `<details class="blk"><summary><b>More options</b> <span class="hint">name, tags, schedule</span></summary>
+      <div style="display:grid; gap:10px; margin-top:10px">
+        <div><label class="lbl" for="wName">Name</label><input id="wName" type="text" data-f="label" maxlength="120" value="${esc(R.label || "")}" placeholder="e.g. Prompts reel"></div>
+        <div><label class="lbl" for="wTags">Tag these people in Contacts</label><input id="wTags" type="text" data-f="tags" maxlength="120" value="${esc(R.tags || "")}" placeholder="prompts-lead, launch"></div>
+        <div class="two2"><div><label class="lbl" for="wSa">Starts</label><input id="wSa" type="datetime-local" data-time="starts_at" value="${toLocal(R.starts_at)}"></div>
+          <div><label class="lbl" for="wEa">Ends</label><input id="wEa" type="datetime-local" data-time="ends_at" value="${toLocal(R.ends_at)}"></div></div></div></details>`;
+  }
+  if (s === "review") h = reviewHtml();
+  $("wizBody").innerHTML = h;
+  $("wizBody").scrollTop = 0;
+}
+
+function reviewHtml() {
+  const R = wiz.r, m = mediaById(wiz.mediaId), who = "priya.sharma", fill = (t) => esc((t || "").replaceAll("{username}", who));
+  let h = `<p style="margin:0; font-weight:600">Awesome! Let's review once before we launch.</p><div class="review">`;
+  if (wiz.trigger === "comment") {
+    h += `<div class="note">💬 ${wiz.target === "specific" ? `Comments on <b>${esc(short(m?.caption, 40) || "this post")}</b>` : wiz.target === "next" ? "Comments on your <b>next post</b>" : "Comments on <b>any post</b>"}</div>
+      <div class="cmt"><b>${who}</b> ${esc(wiz.match === "keyword" ? (R.keywords[0] || "KEYWORD") : "Interested!")}</div>`;
+    if (R.replies_on !== false) h += `<div class="cmt rep"><b>${esc(ME.username)}</b> @${who} ${fill(R.replies[0])}</div><div class="note">Replies rotate: 1 of 3</div>`;
+  } else if (wiz.trigger === "dm") h += `<div class="bub">${esc(R.keywords[0] || "KEYWORD")}</div>`;
+  else if (wiz.trigger === "story") h += `<div class="note">◎ Replies to your story${wiz.match === "keyword" ? ` with <b>${esc(R.keywords[0] || "")}</b>` : ""}</div>`;
+  else h += `<div class="note">@ Mentions you in their story</div>`;
+  h += `<div class="note" style="margin-top:6px">Message to @${who}</div>`;
+  const gate = R.require_follow || R.ask_email || R.ask_phone || R.followup_on;
+  if (wiz.trigger !== "mention" && (R.opening_on || gate)) h += `<div class="bub me">${fill(R.opening_on ? R.opening_dm : DEF.opening_dm)}<span class="b">${esc(R.button_text)}</span></div>`;
+  if (R.require_follow) h += `<div class="bub me">${fill(R.follow_dm)}<span class="b">Visit Profile</span><span class="b">${esc(R.followed_button_text)}</span></div><div class="note">Once they follow, then…</div>`;
+  if (R.ask_email) h += `<div class="bub me">${fill(R.email_dm)}</div>`;
+  if (R.ask_phone) h += `<div class="bub me">${fill(R.phone_dm)}</div>`;
+  h += `<div class="bub me">${fill(R.dm)}${R.btn_on && R.dm_button_url ? `<span class="b">${esc(R.dm_button_text || "Open")}</span>` : ""}</div>`;
+  if (R.followup_on) h += `<div class="note">🕒 ${+R.followup_hours || 3} hours later</div><div class="bub me">${fill(R.followup_dm)}${R.followup_url ? `<span class="b">${esc(R.followup_button || "Get it")}</span>` : ""}</div>`;
+  return h + `</div><label><input type="checkbox" data-c="enabled" ${R.enabled !== false ? "checked" : ""}> <b>Turn on now</b></label>`;
+}
+
+/* inputs inside the wizard keep wiz.r up to date */
+$("wizBody").addEventListener("input", (e) => {
+  const el = e.target, R = wiz.r;
+  if (el.dataset.f) R[el.dataset.f] = el.value;
+  if (el.dataset.reply) R.replies[+el.dataset.reply] = el.value;
+  if (el.dataset.time) R[el.dataset.time] = fromLocal(el.value);
+});
+$("wizBody").addEventListener("change", (e) => { if (e.target.dataset.c) wiz.r[e.target.dataset.c] = e.target.checked; if (e.target.dataset.f) wiz.r[e.target.dataset.f] = e.target.value; });
+$("wizBody").addEventListener("keydown", (e) => {
+  if (e.target.id !== "kwIn" || !["Enter", ","].includes(e.key)) return;
+  e.preventDefault(); addKw(e.target.value);
+});
+$("wizBody").addEventListener("focusout", (e) => { if (e.target.id === "kwIn" && e.target.value.trim()) addKw(e.target.value); });
+function addKw(v) {
+  const w = v.trim().toUpperCase().replace(/[^A-Z0-9_\s]/g, "").trim();
+  if (w && !wiz.r.keywords.includes(w)) wiz.r.keywords.push(w);
+  drawWizard(); $("kwIn")?.focus();
+}
+$("wizBody").addEventListener("click", (e) => {
+  const t = e.target.closest("[data-trigger]");
+  if (t) { wiz.trigger = t.dataset.trigger; wiz.step = 1; if (wiz.trigger === "mention") Object.assign(wiz.r, {opening_on: false, require_follow: false, dm: "Thank you so much for the shoutout {username}! 🙏❤️"});
+           if (wiz.trigger === "story") Object.assign(wiz.r, {opening_on: false, require_follow: false}); return drawWizard(); }
+  const tg = e.target.closest("[data-target]"); if (tg) { wiz.target = tg.dataset.target; return drawWizard(); }
+  const md = e.target.closest("[data-media]"); if (md) { wiz.mediaId = md.dataset.media; return drawWizard(); }
+  const mt = e.target.closest("[data-match]"); if (mt) { wiz.match = mt.dataset.match; return drawWizard(); }
+  const kd = e.target.closest("[data-kwdel]"); if (kd) { wiz.r.keywords.splice(+kd.dataset.kwdel, 1); return drawWizard(); }
+  const sw = e.target.closest("[data-tg]"); if (sw) { const n = sw.dataset.tg; wiz.r[n] = !(n === "replies_on" ? wiz.r[n] !== false : wiz.r[n]); return drawWizard(); }
+  if (e.target.closest("[data-btnon]")) { wiz.r.btn_on = true; return drawWizard(); }
+  if (e.target.closest("[data-btnoff]")) { Object.assign(wiz.r, {btn_on: false, dm_button_url: "", dm_button_text: ""}); return drawWizard(); }
+});
+
+function check(step) {
+  const R = wiz.r;
+  if (step === "post" && wiz.target === "specific" && !wiz.mediaId) return "Pick a post or reel.";
+  if (step === "when") {
+    if ((wiz.match === "keyword" || wiz.trigger === "dm") && !R.keywords.length) return "Add at least one keyword.";
+    if (wiz.trigger === "comment" && R.replies_on !== false && !R.replies.some(x => x.trim())) return "Write at least one comment reply, or turn replies off.";
+  }
+  if (step === "dms") {
+    if (!R.dm.trim()) return "Write the primary DM.";
+    if (R.btn_on && !/^https?:\/\//.test(R.dm_button_url || "")) return "Add the button's link (https://…).";
+    if (R.followup_on && !(R.followup_dm || "").trim()) return "Write the follow-up message, or turn it off.";
+    const all = [R.dm, R.dm_button_url, R.followup_url, R.opening_dm].join(" ");
+    if (all.includes("your-link.com")) return "Replace https://your-link.com with your real link.";
+  }
+  return "";
+}
+function targetKey() {
+  const R = wiz.r, kw = R.keywords[0] ? "kw:" + R.keywords[0].replace(/\s+/g, "_") : "";
+  if (wiz.trigger === "dm") return kw;
+  if (wiz.trigger === "story") return "story:reply";
+  if (wiz.trigger === "mention") return "story:mention";
+  if (wiz.target === "specific") return wiz.mediaId;
+  if (wiz.target === "next") return "next";
+  return wiz.match === "keyword" ? kw : "*";
+}
+function bodyOf() {
+  const R = wiz.r, gate = R.require_follow || R.ask_email || R.ask_phone || R.followup_on;
+  return {enabled: R.enabled !== false, keywords: wiz.match === "keyword" || wiz.trigger === "dm" ? R.keywords : [],
+    comment_reply: wiz.trigger === "comment" ? R.replies.filter(x => x.trim()).map(x => x.includes("{username}") ? x : "@{username} " + x).join("\n") : "",
+    replies_on: R.replies_on !== false, opening_dm: wiz.trigger !== "mention" && (R.opening_on || gate) ? (R.opening_on ? R.opening_dm : "") : "",
+    opening_dm_b: R.opening_on ? (R.opening_dm_b || "") : "", button_text: R.button_text, require_follow: !!R.require_follow,
+    follow_dm: R.follow_dm, followed_button_text: R.followed_button_text, dm: R.dm,
+    dm_button_text: R.btn_on ? R.dm_button_text : "", dm_button_url: R.btn_on ? R.dm_button_url : "",
+    ask_email: !!R.ask_email, email_dm: R.email_dm, email_required: !!R.email_required,
+    ask_phone: !!R.ask_phone, phone_dm: R.phone_dm, phone_required: !!R.phone_required,
+    followup_on: !!R.followup_on, followup_dm: R.followup_dm || "", followup_hours: +R.followup_hours || 3, followup_url: R.followup_url || "", followup_button: R.followup_button || "",
+    comments: wiz.trigger !== "dm", label: R.label || "", tags: R.tags || "", starts_at: R.starts_at || 0, ends_at: R.ends_at || 0, since: R.since || ""};
+}
+$("wizBack").onclick = () => { wiz.step = Math.max(0, wiz.step - 1); if (stepsFor()[wiz.step] === "trigger" && wiz.origKey) wiz.step = 1; drawWizard(); };
+$("wizNext").onclick = async () => {
+  const steps = stepsFor(), s = steps[wiz.step], err = check(s);
+  if (err) { $("wizErr").textContent = err; return; }
+  if (s !== "review") { wiz.step++; return drawWizard(); }
+  const key = targetKey();
+  if (!key) { $("wizErr").textContent = "Add a keyword."; return; }
+  if (key !== wiz.origKey && rules.reels[key] && !confirm("There's already an automation for this. Replace it?")) return;
+  $("wizNext").disabled = true;
+  try {
+    await saveRule(key, bodyOf());
+    if (wiz.origKey && wiz.origKey !== key) await api(`/api/rules/${encodeURIComponent(wiz.origKey)}`, {method: "DELETE", body: "{}"});
+    $("wiz").close(); toast(wiz.origKey ? "Automation saved" : "Auto DM is live 🚀"); await reload();
+  } catch (e) { $("wizErr").textContent = e.message; }
+  $("wizNext").disabled = false;
+};
+
+/* ---------- A/B numbers (shown in the wizard) ---------- */
+function abBox(key) {
+  const st = key && ab[key];
+  if (!st || !st.sent_A) return "";
+  const pct = (v, f) => st[`sent_${v}`] ? `${Math.round(100 * (st[`${f}_${v}`] || 0) / st[`sent_${v}`])}%` : "–";
+  return `<p class="hint" style="margin-top:8px">A: ${fmt(st.sent_A || 0)} sent · ${pct("A", "link")} got the link · B: ${fmt(st.sent_B || 0)} sent · ${pct("B", "link")} got the link</p>`;
+}
 function toLocal(t) {
   if (!t) return "";
   const d = new Date(t * 1000), pad = (n) => String(n).padStart(2, "0");
@@ -82,241 +553,39 @@ function toLocal(t) {
 }
 const fromLocal = (v) => v ? Math.floor(new Date(v).getTime() / 1000) : 0;
 
-const LINK = "https://your-link.com";
-const TEMPLATES = [
-  {id: "guide", name: "🎁 Free guide", what: "Comment a word → follow → get the guide. The classic follower magnet.", word: "GUIDE",
-   rule: {require_follow: true, opening_dm: "Hey {username}! 👋 Guide ready hai. Neeche button dabao.", dm: `Ye lo tumhari free guide 🎁 ${LINK}`}},
-  {id: "lead", name: "✉️ Lead magnet", what: "Get their email before the freebie, so you can reach them outside Instagram.", word: "CHECKLIST",
-   rule: {require_follow: false, opening_dm: "Hey {username}! Checklist ready hai 📋 Tap below.", ask_email: true, email_required: true,
-          dm: `Here's your checklist ✅ ${LINK}`}},
-  {id: "launch", name: "🚀 Course launch", what: "Details now, WhatsApp number for updates, and a reminder offer 6 hours later.", word: "COURSE",
-   rule: {require_follow: false, opening_dm: "Hey {username}! 🚀 Course details chahiye? Tap below.", ask_phone: true,
-          dm: `Course details + early-bird price 👉 ${LINK}`, followup_on: true, followup_hours: 6,
-          followup_dm: "Early-bird price sirf kal raat tak hai {username} ⏳ Seat book kar lo!", followup_url: LINK, followup_button: "Join now"}},
-  {id: "giveaway", name: "🎉 Giveaway entry", what: "Confirms their entry publicly and makes sure they follow you. Pick winners in Giveaway.", word: "WIN",
-   rule: {require_follow: true, comment_reply: "@{username} You're in! 🤞\n@{username} Entry confirmed ✅ Good luck!",
-          opening_dm: "Hey {username}! 🎉 Tap below to confirm your giveaway entry.",
-          dm: "You're in the giveaway 🎉 Winners announced on my story this Sunday. Good luck!"}},
-  {id: "story", name: "📲 Story link", what: "Post a story saying \"Reply LINK\" and everyone who replies gets it.", word: "LINK", story: true,
-   rule: {require_follow: false, opening_dm: "", dm: `Here's the link from my story 👉 ${LINK}`}},
-  {id: "collab", name: "🤝 Brand collabs", what: "When brands DM COLLAB, send your media kit and email right away.", word: "COLLAB",
-   rule: {require_follow: false, comments: false, opening_dm: "", comment_reply: "",
-          dm: `Thanks for reaching out! 🙌 Here's my media kit: ${LINK} · Email me your brief at you@example.com`}},
-];
-let drafts = {};
+/* ---------- templates tab ---------- */
+$("tpls").innerHTML = TEMPLATES.map((t, i) => `<div class="card tpl"><b>${esc(t.name)}</b><p>${esc(t.what)}</p>
+  <button class="btn sm" type="button" data-usetpl="${i}">Use template</button></div>`).join("");
+document.addEventListener("click", (e) => { const u = e.target.closest("[data-usetpl]"); if (u) openWizard({template: TEMPLATES[+u.dataset.usetpl]}); });
 
-function drawTemplates() {
-  $("tpls").innerHTML = TEMPLATES.map(t => `<form class="tpl" data-tpl="${t.id}"><b>${esc(t.name)}</b><p>${esc(t.what)}</p>
-    <div class="row">${t.story ? `<span class="small muted">Story replies with</span>` : `<label class="small muted" for="tw-${t.id}">Keyword</label>`}
-      <input id="tw-${t.id}" type="text" value="${esc(t.word)}" maxlength="24" aria-label="Keyword for ${esc(t.name)}"><button class="btn sm" type="submit">Use</button></div></form>`).join("");
-}
-
-document.addEventListener("submit", (e) => {
-  const f = e.target.closest("form.tpl");
-  if (!f) return;
-  e.preventDefault();
-  const t = TEMPLATES.find(x => x.id === f.dataset.tpl);
-  const word = f.querySelector("input").value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "");
-  if (!word) return;
-  const key = t.story ? "story:reply" : "kw:" + word;
-  if (rules.reels[key] && !confirm(`You already have an automation for ${t.story ? "story replies" : word}. Replace its settings with this template? (Nothing is saved until you click Save.)`)) return;
-  drafts[key] = {enabled: true, keywords: [word], ...t.rule};
-  if (!t.story && !rules.reels[key]) newKw.add(key);
-  open.add(key); $("tplBox").open = false; render();
-  const row = document.getElementById(`row-${key}`); if (row) row.scrollIntoView({block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
-  toast("Template added. Change the link and words, then Save.");
-});
-
-let ab = {};
-function abBox(key) {
-  const st = ab[key];
-  if (!st) return "";
-  const row = (v) => {
-    const sent = st[`sent_${v}`] || 0, pct = (n) => sent ? `${Math.round(100 * (n || 0) / sent)}%` : "–";
-    return `<tr><th scope="row">Version ${v}</th><td>${fmt(sent)}</td><td>${pct(st[`tap_${v}`])}</td><td>${pct(st[`link_${v}`])}</td><td>${fmt(st[`follow_${v}`] || 0)}</td></tr>`;
-  };
-  const rate = (v) => (st[`link_${v}`] || 0) / Math.max(st[`sent_${v}`] || 0, 1);
-  const enough = (st.sent_A || 0) >= 30 && (st.sent_B || 0) >= 30;
-  const lead = rate("A") === rate("B") ? "" : rate("A") > rate("B") ? "A" : "B";
-  return `<div class="scroll" style="margin-top:10px"><table class="small" style="min-width:420px"><thead><tr><th></th><th scope="col">Sent</th><th scope="col">Tapped</th><th scope="col">Got the link</th><th scope="col">Follows</th></tr></thead>
-    <tbody>${row("A")}${row("B")}</tbody></table></div>
-    <p class="hint" style="margin:6px 0 0">${!enough ? "Wait for at least 30 sends of each version before picking a winner." : lead === "A" ? "Version A is ahead. Try a new version B against it." : lead ? "Version B is ahead. Copy it into the main message above, then try a new version B." : "Both versions are doing the same."}</p>`;
-}
-
-function badge(key) {
-  const r = rules.reels[key];
-  if (!r) return `<span class="badge">no automation</span>`;
-  const now = Date.now() / 1000;
-  const state = r.enabled === false ? `<span class="badge warn">paused</span>`
-    : r.ends_at && now >= r.ends_at ? `<span class="badge">ended ${new Date(r.ends_at * 1000).toLocaleDateString()}</span>`
-    : r.starts_at && now < r.starts_at ? `<span class="badge accent">starts ${new Date(r.starts_at * 1000).toLocaleString([], {dateStyle: "medium", timeStyle: "short"})}</span>`
-    : `<span class="badge on">on</span>` + (r.ends_at ? ` <span class="badge">until ${new Date(r.ends_at * 1000).toLocaleString([], {dateStyle: "medium", timeStyle: "short"})}</span>` : "");
-  return state
-    + (r.auto ? ` <span class="badge accent">✨ auto-setup</span>` : "")
-    + ((r.keywords || []).length ? ` <span class="badge accent">${esc(r.keywords.join(", "))}</span>` : "");
-}
-
-function ruleForm(key) {
-  const r = {enabled: key !== "*", keywords: key.startsWith("kw:") ? [key.slice(3)] : [], require_follow: true, comments: true, dm: "",
-             ...DEFAULTS, ...(rules.reels[key] || {}), ...(drafts[key] || {})};
-  const kw = key.startsWith("kw:"), story = key.startsWith("story:"), mention = key === "story:mention";
-  if (story && !rules.reels[key]) Object.assign(r, {require_follow: false, comment_reply: ""},
-    mention ? {opening_dm: "", dm: "Thank you so much for the shoutout {username}! 🙏❤️"} : {});
-  let n = 0;
-  return `<form class="rule" data-key="${esc(key)}">
-    <div class="row"><label><input type="checkbox" name="enabled" ${r.enabled !== false ? "checked" : ""}> <b>Automation on</b></label>
-      ${kw ? `<label><input type="checkbox" name="comments" ${r.comments !== false ? "checked" : ""}> Also answer comments on every reel</label>` : ""}</div>
-    <div><label class="f" for="tg-${esc(key)}">Tag these people <span class="hint">optional · added in Contacts, comma separated</span></label>
-      <input id="tg-${esc(key)}" type="text" name="tags" value="${esc(r.tags || "")}" placeholder="prompts-lead, launch-2026" maxlength="120"></div>
-    <details class="sched" ${r.starts_at || r.ends_at ? "open" : ""}><summary class="small"><b>Schedule</b> <span class="hint">optional · for launches and limited-time offers</span></summary>
-      <div class="two" style="margin-top:8px"><div><label class="f" for="sa-${esc(key)}">Starts <span class="hint">empty = now</span></label><input id="sa-${esc(key)}" type="datetime-local" name="starts_at" value="${toLocal(r.starts_at)}"></div>
-        <div><label class="f" for="ea-${esc(key)}">Ends <span class="hint">empty = never</span></label><input id="ea-${esc(key)}" type="datetime-local" name="ends_at" value="${toLocal(r.ends_at)}"></div></div></details>
-    ${mention ? `<input type="hidden" name="keywords" value=""><p class="muted small" style="margin:0">Sent once a day to each person who mentions you in their story.</p>` : `
-    <div class="step">When</div>
-    <div><label class="f" for="kw-${esc(key)}">Keywords <span class="hint">comma separated · spelling mistakes still match${kw ? "" : story ? " · empty = every story reply" : " · empty = every comment"}</span></label>
-      <input id="kw-${esc(key)}" type="text" name="keywords" value="${esc(r.keywords.join(", "))}" placeholder="PROMPTS, LINK"></div>`}
-    ${story ? `<input type="hidden" name="comment_reply" value="">` : `
-    <div class="step">Step ${++n} · Reply to the comment</div>
-    <div><label class="f" for="cr-${esc(key)}">Public replies <span class="hint">one per line, a random one is used · {username} = their name · empty = no reply</span></label>
-      <textarea id="cr-${esc(key)}" name="comment_reply" rows="3">${esc(r.comment_reply)}</textarea></div>`}
-    <div class="step">Step ${++n} · DM with a button${story ? ` <span class="hint" style="text-transform:none; letter-spacing:0">optional: empty message = send the final DM straight away</span>` : ""}</div>
-    <div class="two"><div><label class="f" for="od-${esc(key)}">Message</label><textarea id="od-${esc(key)}" name="opening_dm" rows="2">${esc(r.opening_dm)}</textarea></div>
-      <div><label class="f" for="bt-${esc(key)}">Button</label><input id="bt-${esc(key)}" type="text" name="button_text" maxlength="20" value="${esc(r.button_text)}"></div></div>
-    <details ${r.opening_dm_b ? "open" : ""}><summary class="small"><b>A/B test this message</b> <span class="hint">half get version A, half get B · see which gets more taps, links and follows</span></summary>
-      <div style="margin-top:8px"><label class="f" for="ob-${esc(key)}">Version B <span class="hint">empty = no test</span></label>
-        <textarea id="ob-${esc(key)}" name="opening_dm_b" rows="2" placeholder="Bhai ye lo 🔥 Neeche button dabao, link turant milega">${esc(r.opening_dm_b || "")}</textarea>
-        ${abBox(key)}</div></details>
-    <div class="step">Step ${++n} · Follow to unlock</div>
-    <label><input type="checkbox" name="require_follow" ${r.require_follow ? "checked" : ""}> Only send the link to people who follow me</label>
-    <div class="two"><div><label class="f" for="fd-${esc(key)}">Follow message</label><textarea id="fd-${esc(key)}" name="follow_dm" rows="2">${esc(r.follow_dm)}</textarea></div>
-      <div><label class="f" for="fb-${esc(key)}">"I followed" button</label><input id="fb-${esc(key)}" type="text" name="followed_button_text" maxlength="20" value="${esc(r.followed_button_text)}"></div></div>
-    <div class="step">Step ${++n} · Ask for their email or phone <span class="hint" style="text-transform:none; letter-spacing:0">optional · saved in Contacts · asked only once per person</span></div>
-    <label><input type="checkbox" name="ask_email" ${r.ask_email ? "checked" : ""}> Ask for their <b>email</b> before sending the link</label>
-    <div class="two"><div><label class="f" for="em-${esc(key)}">Email message</label><textarea id="em-${esc(key)}" name="email_dm" rows="2">${esc(r.email_dm || EMAIL_ASK)}</textarea></div>
-      <div><label class="f">&nbsp;</label><label><input type="checkbox" name="email_required" ${r.email_required ? "checked" : ""}> Email required <span class="hint">off = they can tap "Skip"</span></label></div></div>
-    <label><input type="checkbox" name="ask_phone" ${r.ask_phone ? "checked" : ""}> Ask for their <b>phone / WhatsApp number</b> before sending the link</label>
-    <div class="two"><div><label class="f" for="ph-${esc(key)}">Phone message</label><textarea id="ph-${esc(key)}" name="phone_dm" rows="2">${esc(r.phone_dm || PHONE_ASK)}</textarea></div>
-      <div><label class="f">&nbsp;</label><label><input type="checkbox" name="phone_required" ${r.phone_required ? "checked" : ""}> Phone required <span class="hint">off = they can tap "Skip"</span></label></div></div>
-    <div class="step">Step ${++n} · Deliver</div>
-    <div><label class="f" for="dm-${esc(key)}">Final DM: your message and link <span class="hint">required</span></label>
-      <textarea id="dm-${esc(key)}" name="dm" rows="3" placeholder="Here you go 🎁 https://...">${esc(r.dm)}</textarea></div>
-    <div class="step">Step ${++n} · Follow-up offer <span class="hint" style="text-transform:none; letter-spacing:0">optional · turns a freebie into a sale</span></div>
-    <label><input type="checkbox" name="followup_on" ${r.followup_on ? "checked" : ""}> Send one more DM after the link</label>
-    <div class="two"><div><label class="f" for="fu-${esc(key)}">Message <span class="hint">{username} = their name</span></label>
-        <textarea id="fu-${esc(key)}" name="followup_dm" rows="3" placeholder="Did you try it {username}? 🙌 The full pack with 39 prompts is just ₹149 today.">${esc(r.followup_dm || "")}</textarea></div>
-      <div style="display:grid; gap:10px; align-content:start">
-        <div><label class="f" for="fh-${esc(key)}">Send after</label><select id="fh-${esc(key)}" name="followup_hours">
-          ${[1, 3, 6, 12, 20].map(h => `<option value="${h}" ${(r.followup_hours || 3) === h ? "selected" : ""}>${h} hour${h > 1 ? "s" : ""}</option>`).join("")}</select></div>
-        <div class="two"><div><label class="f" for="fl-${esc(key)}">Button link</label><input id="fl-${esc(key)}" type="url" name="followup_url" value="${esc(r.followup_url || "")}" placeholder="https://..."></div>
-          <div><label class="f" for="fbt-${esc(key)}">Button text</label><input id="fbt-${esc(key)}" type="text" name="followup_button" maxlength="20" value="${esc(r.followup_button || "")}" placeholder="Get it"></div></div></div></div>
-    <p class="hint" style="margin:0">Sent once per person, only within Instagram's 24 hours after they last messaged you.</p>
-    <div class="row"><button class="btn sm" type="submit">Save</button>
-      ${rules.reels[key] ? `<button class="btn danger sm" type="button" data-del="${esc(key)}">Delete</button>` : ""}
-      ${rules.reels[key] && !key.startsWith("story:") ? `<button class="btn ghost sm" type="button" data-copy="${esc(key)}">Copy to…</button>` : ""}
-      ${/^\d+$/.test(key) && rules.reels[key] ? `<button class="btn ghost sm" type="button" data-past="${esc(key)}" title="Comments from the last 7 days that came before this automation">Send to past comments</button>` : ""}
-      <span class="err small" data-msg></span></div>
-  </form>`;
-}
-
-function itemRow(key, thumb, title, meta, isNew) {
-  const btn = open.has(key) ? "Close" : rules.reels[key] ? "Edit" : "Set up";
-  return `<div class="item" id="row-${esc(key)}">${thumb}<div class="txt"><div class="cap">${esc(title)}</div><div class="meta">${badge(key)}${meta}</div></div>
-    <button class="btn ${rules.reels[key] || isNew ? "ghost" : ""} sm" type="button" data-toggle="${esc(key)}">${btn}</button></div>${open.has(key) ? ruleForm(key) : ""}`;
-}
-
-function render() {
-  const kws = [...new Set([...Object.keys(rules.reels).filter(k => k.startsWith("kw:")), ...newKw])];
-  $("kwRules").innerHTML = kws.map(k => itemRow(k, `<span class="thumb">#</span>`, k.slice(3), "", true)).join("")
-    || `<div class="empty">No keyword automations yet. Add one with "＋ Keyword automation".</div>`;
-  $("stories").innerHTML = itemRow("story:reply", `<span class="thumb">◎</span>`, "Story replies", "")
-    + itemRow("story:mention", `<span class="thumb">@</span>`, "Mentions in their story", "");
-  $("reels").innerHTML = reels.length ? reels.map(m => itemRow(m.id,
-      m.thumbnail_url || m.media_url ? `<img class="thumb" src="${esc(m.thumbnail_url || m.media_url)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : `<span class="thumb">▶</span>`,
-      (m.caption || "(no caption)").split("\n")[0],
-      `<span>${new Date(m.timestamp).toLocaleDateString()}</span><span>💬 ${fmt(m.comments_count ?? 0)}</span>`)).join("")
-    : `<div class="empty">No reels found yet.</div>`;
-  $("fallback").innerHTML = itemRow("*", `<span class="thumb">∗</span>`, "All reels", "");
-}
-
-document.addEventListener("click", async (e) => {
-  const t = e.target.closest("[data-toggle]");
-  if (t) { const k = t.dataset.toggle; open.has(k) ? open.delete(k) : open.add(k); render(); return; }
-  const d = e.target.closest("[data-del]");
-  if (d) {
-    if (!d.dataset.sure) { d.dataset.sure = "1"; d.textContent = "Click again to delete"; return; }
-    rules = await api(`/api/rules/${encodeURIComponent(d.dataset.del)}`, {method: "DELETE", body: "{}"});
-    open.delete(d.dataset.del); newKw.delete(d.dataset.del); render(); toast("Automation deleted");
-  }
-});
-
+/* ---------- chat menu tab ---------- */
 let ice = {enabled: false, items: []};
 const ICE_EXAMPLES = [{question: "How do I buy the prompt pack?", answer: "", rule: ""}, {question: "Free guides kahan milenge?", answer: "", rule: ""}];
-
 function drawIce() {
   $("iceStatus").className = `badge ${ice.enabled ? "on" : ""}`; $("iceStatus").textContent = ice.enabled ? "on" : "off";
   $("iceForm").enabled.checked = ice.enabled;
   const kws = Object.keys(rules.reels).filter(k => k.startsWith("kw:"));
   const items = ice.items.length ? ice.items : ICE_EXAMPLES;
-  $("iceItems").innerHTML = items.map((it, i) => `<div class="ice two" data-i="${i}" style="padding:12px; border:1px solid var(--line2); border-radius:12px; background:var(--card)">
-      <div><label class="f" for="iq${i}">Question ${i + 1} <span class="hint">up to 80 characters</span></label><input id="iq${i}" type="text" maxlength="80" data-k="question" value="${esc(it.question)}">
-        <label class="f" for="ir${i}" style="margin-top:8px">When tapped</label><select id="ir${i}" data-k="rule"><option value="">Send this answer →</option>
+  $("iceItems").innerHTML = items.map((it, i) => `<div class="ice blk" data-i="${i}">
+      <div><label class="lbl" for="iq${i}">Question ${i + 1}</label><input id="iq${i}" type="text" maxlength="80" data-k="question" value="${esc(it.question)}"></div>
+      <div><label class="lbl" for="ir${i}">When tapped</label><select id="ir${i}" data-k="rule"><option value="">Send this answer ↓</option>
         ${kws.map(k => `<option value="${esc(k)}" ${it.rule === k ? "selected" : ""}>Start the ${esc(k.slice(3))} automation</option>`).join("")}</select></div>
-      <div><label class="f" for="ia${i}">Answer <span class="hint">{username} = their name</span></label><textarea id="ia${i}" rows="3" data-k="answer" ${it.rule ? "disabled" : ""}>${esc(it.answer)}</textarea>
-        <button class="btn danger sm" type="button" data-icedel="${i}" style="margin-top:8px">Remove</button></div></div>`).join("");
+      <textarea rows="2" data-k="answer" aria-label="Answer" ${it.rule ? "disabled" : ""}>${esc(it.answer)}</textarea>
+      <div><button class="btn danger sm" type="button" data-icedel="${i}">Remove</button></div></div>`).join("");
   $("iceAdd").hidden = items.length >= 4;
 }
-
-function readIce() {
-  return [...document.querySelectorAll(".ice")].map(row => Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el => [el.dataset.k, el.value])));
-}
-
+const readIce = () => [...document.querySelectorAll(".ice")].map(row => Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el => [el.dataset.k, el.value])));
 $("iceAdd").onclick = () => { ice.items = [...readIce(), {question: "", answer: "", rule: ""}]; drawIce(); };
-document.addEventListener("click", (e) => {
-  const d = e.target.closest("[data-icedel]");
-  if (d) { const items = readIce(); items.splice(+d.dataset.icedel, 1); ice.items = items; drawIce(); }
-});
-document.addEventListener("change", (e) => {
-  if (e.target.matches(".ice select")) e.target.closest(".ice").querySelector("textarea").disabled = !!e.target.value;
-});
+document.addEventListener("click", (e) => { const d = e.target.closest("[data-icedel]"); if (d) { const items = readIce(); items.splice(+d.dataset.icedel, 1); ice.items = items; drawIce(); } });
+document.addEventListener("change", (e) => { if (e.target.matches(".ice select")) e.target.closest(".ice").querySelector("textarea").disabled = !!e.target.value; });
 $("iceForm").onsubmit = async (e) => {
-  e.preventDefault(); e.stopPropagation();
-  try {
-    ice = await api("/api/ice", {method: "PUT", body: JSON.stringify({enabled: e.target.enabled.checked, items: readIce()})});
+  e.preventDefault();
+  try { ice = await api("/api/ice", {method: "PUT", body: JSON.stringify({enabled: e.target.enabled.checked, items: readIce()})});
     drawIce(); $("iceMsg").className = "small ok"; $("iceMsg").textContent = ice.enabled ? "Published on Instagram ✓" : "Saved (not shown on Instagram)";
   } catch (err) { $("iceMsg").className = "small err"; $("iceMsg").textContent = err.message; }
 };
 
-function copyBox(key) {
-  const opts = reels.filter(m => m.id !== key).slice(0, 24).map(m => `<label class="small" style="display:flex; gap:8px; align-items:center; padding:4px 0">
-      <input type="checkbox" value="${esc(m.id)}"> ${esc((m.caption || "(no caption)").split("\n")[0].slice(0, 70))}
-      ${rules.reels[m.id] ? `<span class="badge">has one</span>` : ""}</label>`).join("");
-  return `<form class="copybox" data-from="${esc(key)}" style="border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; display:grid; gap:8px; background:var(--card)">
-    <b class="small">Copy this automation to:</b>
-    <div style="max-height:220px; overflow-y:auto">${opts || `<span class="muted small">No other reels loaded.</span>`}</div>
-    <div class="row"><label class="small" for="cpkw-${esc(key)}">New keywords</label><input id="cpkw-${esc(key)}" type="text" name="kw" placeholder="GUIDE2, LINK2" style="flex:1; min-width:140px"></div>
-    <label class="small"><input type="checkbox" name="replace"> Replace automations that already exist</label>
-    <div class="row"><button class="btn sm" type="submit">Copy</button><button class="btn ghost sm" type="button" data-copyclose>Cancel</button><span class="err small" data-cmsg></span></div></form>`;
-}
-document.addEventListener("click", (e) => {
-  const b = e.target.closest("[data-copy]");
-  if (b) { const f = b.closest("form.rule"); if (!f.nextElementSibling?.classList.contains("copybox")) f.insertAdjacentHTML("afterend", copyBox(b.dataset.copy)); return; }
-  const c = e.target.closest("[data-copyclose]");
-  if (c) c.closest(".copybox").remove();
-});
-document.addEventListener("submit", async (e) => {
-  const f = e.target.closest("form.copybox");
-  if (!f) return;
-  e.preventDefault();
-  const targets = [...f.querySelectorAll("input[type=checkbox][value]:checked")].map(x => x.value)
-    .concat(f.kw.value.split(",").map(w => w.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "")).filter(Boolean).map(w => "kw:" + w));
-  if (!targets.length) { f.querySelector("[data-cmsg]").textContent = "Pick a reel or type a keyword."; return; }
-  try {
-    const r = await api(`/api/rules/${encodeURIComponent(f.dataset.from)}/copy`, {method: "POST", body: JSON.stringify({targets, replace: f.replace.checked})});
-    rules = r.rules; render();
-    toast(`Copied to ${r.copied.length}${r.skipped.length ? ` · ${r.skipped.length} skipped (already had one)` : ""}`);
-  } catch (err) { f.querySelector("[data-cmsg]").textContent = err.message; }
-});
-
+/* ---------- retries ---------- */
 async function loadRetry() {
   try {
     const r = await api("/api/retry");
@@ -325,79 +594,40 @@ async function loadRetry() {
       <button class="btn sm" type="button" id="retryNow">Retry now</button></div>` : "";
   } catch (e) {}
 }
-
 document.addEventListener("click", async (e) => {
-  if (e.target.closest("#retryNow")) {
-    const b = e.target.closest("#retryNow"); b.disabled = true; b.textContent = "Sending…";
-    try { const r = await api("/api/retry", {method: "POST", body: "{}"});
-      toast(r.skipped || `${r.sent} sent · ${r.still_failing} still refused`); } catch (err) { toast(err.message); }
-    return loadRetry();
-  }
-  const p = e.target.closest("[data-past]");
-  if (!p) return;
-  if (!p.dataset.sure) { p.dataset.sure = "1"; p.textContent = "Click again: this sends real DMs"; return; }
-  p.disabled = true; p.textContent = "Sending…";
-  try {
-    const r = await api(`/api/reels/${encodeURIComponent(p.dataset.past)}/past-comments`, {method: "POST", body: "{}"});
-    toast(`${r.sent} sent${r.more_left ? " · more left, click again" : ""} · ${r.too_old} older than 7 days`);
-  } catch (err) { toast(err.message); }
-  p.disabled = false; p.textContent = "Send to past comments"; delete p.dataset.sure;
+  const b = e.target.closest("#retryNow"); if (!b) return;
+  b.disabled = true; b.textContent = "Sending…";
+  try { const r = await api("/api/retry", {method: "POST", body: "{}"}); toast(r.skipped || `${r.sent} sent · ${r.still_failing} still refused`); } catch (err) { toast(err.message); }
+  loadRetry();
 });
 
-document.addEventListener("submit", async (e) => {
-  const f = e.target.closest("form.rule[data-key]");
-  if (!f) return;
-  e.preventDefault();
-  const key = f.dataset.key, msg = f.querySelector("[data-msg]");
-  if ([...f.querySelectorAll("textarea, input[type=text], input[type=url]")].some(el => el.value.includes("your-link.com"))) {
-    msg.textContent = "Replace https://your-link.com with your real link first."; return;
-  }
-  const body = {enabled: f.enabled.checked, keywords: f.keywords.value.split(","), comment_reply: f.comment_reply.value,
-    opening_dm: f.opening_dm.value, opening_dm_b: f.opening_dm_b.value, button_text: f.button_text.value, require_follow: f.require_follow.checked,
-    follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value,
-    ask_email: f.ask_email.checked, email_dm: f.email_dm.value, email_required: f.email_required.checked,
-    starts_at: fromLocal(f.starts_at.value), ends_at: fromLocal(f.ends_at.value), tags: f.tags.value,
-    ask_phone: f.ask_phone.checked, phone_dm: f.phone_dm.value, phone_required: f.phone_required.checked,
-    followup_on: f.followup_on.checked, followup_dm: f.followup_dm.value, followup_hours: Number(f.followup_hours.value),
-    followup_url: f.followup_url.value, followup_button: f.followup_button.value,
-    comments: f.comments ? f.comments.checked : true, label: rules.reels[key]?.label || ""};
+/* ---------- load ---------- */
+async function loadSummary() {
   try {
-    rules = await api(`/api/rules/${encodeURIComponent(key)}`, {method: "PUT", body: JSON.stringify(body)});
-    ab = await api("/api/ab").catch(() => ab);
-    open.delete(key); newKw.delete(key); delete drafts[key]; render(); toast("Automation saved");
-  } catch (err) { msg.textContent = err.message; }
-});
-
-$("addKw").onclick = () => {
-  const box = document.createElement("form");
-  if ($("kwNew")) return $("kwNew").querySelector("input").focus();
-  box.id = "kwNew"; box.className = "row"; box.style.margin = "8px 0";
-  box.innerHTML = `<label class="f" for="kwWord" style="margin:0">New keyword</label><input id="kwWord" type="text" placeholder="PROMPTS" style="max-width:220px">
-    <button class="btn sm" type="submit">Add</button>`;
-  $("kwRules").before(box);
-  box.querySelector("input").focus();
-  box.onsubmit = (ev) => {
-    ev.preventDefault();
-    const word = box.querySelector("input").value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "");
-    if (!word) return;
-    const key = "kw:" + word;
-    if (!rules.reels[key]) newKw.add(key);
-    open.add(key); box.remove(); render();
-  };
-};
-
-async function loadReels(fresh) {
+    const s = await api("/api/autodm-summary");
+    $("sDms").textContent = fmt(s.dms); $("sLeads").textContent = fmt(s.leads); $("sFol").textContent = fmt(s.follows);
+    $("gDms").innerHTML = spark(s.daily.dms); $("gLeads").innerHTML = spark(s.daily.leads); $("gFol").innerHTML = spark(s.daily.follows);
+  } catch (e) {}
+}
+async function loadMedia(fresh) {
   try {
     const data = await api("/api/reels" + (fresh ? "?fresh=1" : ""));
-    reels = (data.reels || []).filter(m => m.media_product_type === "REELS" || m.media_type === "VIDEO");
-    if ((data.auto_created || []).length) { rules = await api("/api/rules"); toast("Auto-setup created new automations"); }
-  } catch (err) { $("reels").innerHTML = `<div class="empty err">Couldn't load reels: ${esc(err.message)}</div>`; return; }
-  render();
-  const want = location.hash.slice(1);
-  if (want && !open.has(want)) { open.add(want); render(); $("row-" + want)?.scrollIntoView({block: "center"}); }
+    media = data.reels || [];
+    if ((data.auto_created || []).length) { await reload(); toast("Auto-setup created new automations"); }
+  } catch (err) { toast("Couldn't load your posts: " + err.message); }
+  drawList();
+  if (wiz && $("wiz").open) drawWizard();
 }
-$("refresh").onclick = () => loadReels(true);
+$("refresh").onclick = () => loadMedia(true);
 
-(async () => { loadBanners(); loadRetry(); rules = await api("/api/rules"); try { ab = await api("/api/ab"); } catch (e) {} render(); drawTemplates(); ice = await api("/api/ice"); drawIce(); loadReels(false); })();
+(async () => {
+  loadBanners(); loadRetry(); loadSummary();
+  await reload();
+  try { ab = await api("/api/ab"); } catch (e) {}
+  ice = await api("/api/ice").catch(() => ice); drawIce();
+  await loadMedia(false);
+  const want = decodeURIComponent(location.hash.slice(1));
+  if (want) openWizard(rules.reels[want] ? {key: want} : /^\d+$/.test(want) ? {mediaId: want} : {});
+})();
 </script>
 {% endblock %}
