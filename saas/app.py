@@ -134,7 +134,7 @@ def render_app(template, active, **extra):
 
 @app.context_processor
 def brand():
-    return {"brand": BRAND, "contact_email": CONTACT_EMAIL}
+    return {"brand": BRAND, "contact_email": CONTACT_EMAIL, "public_url": base_url() if request else ""}
 
 
 @app.before_request

@@ -815,6 +815,8 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(engine.monthly_limit({"id": "1"}), 3)  # free (tests run with FREE_MONTHLY_DMS=3)
         self.assertEqual(engine.monthly_limit({"id": "1", "plan": "pro", "dm_limit": 50}), 50)
         html = self.c.get("/").get_data(as_text=True)
+        self.assertIn('property="og:image" content="http://localhost/static/og.png"', html)
+        self.assertEqual(self.c.get("/static/og.png").status_code, 200)
         for text in ("₹299", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
             self.assertIn(text, html)
 
