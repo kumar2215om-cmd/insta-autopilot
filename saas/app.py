@@ -556,6 +556,31 @@ def api_put_ice():
     return jsonify(engine.ice_settings(acc))
 
 
+@app.get("/api/guard")
+def api_get_guard():
+    acc = current_account()
+    hidden = [a for a in store.recent_activity(acc["id"]) if a["action"] == "comment_hidden"]
+    return jsonify(**engine.guard_settings(acc), hidden=hidden[:20], total=store.counts(acc["id"]).get("hidden_comments", 0))
+
+
+@app.put("/api/guard")
+def api_put_guard():
+    acc = current_account()
+    data = request.get_json(force=True)
+    words = data.get("words", [])
+    if isinstance(words, str):
+        words = re.split(r"[,\n]", words)
+    acc["guard"] = {"enabled": bool(data.get("enabled")), "links": bool(data.get("links")),
+                    "words": [w.strip()[:40] for w in words if w.strip()][:100]}
+    store.save_account(acc)
+    return jsonify(engine.guard_settings(acc))
+
+
+@app.post("/api/guard/test")
+def api_guard_test():
+    return jsonify(reason=engine.guard_reason(current_account(), str(request.get_json(force=True).get("text", ""))[:500]))
+
+
 @app.get("/api/activity")
 def api_activity():
     return jsonify(store.recent_activity(current_account()["id"]))

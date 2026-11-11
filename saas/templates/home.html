@@ -57,7 +57,10 @@
 <script>
 const NAME = {comment_reply: "replied to the comment", opening_dm: "sent the first DM", dm: "sent the link", dm_keyword: "answered a DM",
   follow_prompt: "asked to follow first", follow_check: "follow check", connect: "connected Instagram", token_refresh: "login renewal",
-  auto_setup: "auto-setup created an automation"};
+  auto_setup: "auto-setup created an automation", comment_hidden: "hid a comment", story_reply: "answered a story reply",
+  story_mention: "thanked a story mention", email_ask: "asked for their email", phone_ask: "asked for their phone number",
+  followup: "sent the follow-up offer", chat_menu: "answered a chat menu question", ai_reply: "AI replied",
+  ai_handoff: "AI handed a chat to you", inbox_reply: "you replied from the inbox"};
 
 async function loadTiles() {
   const me = await loadBanners();

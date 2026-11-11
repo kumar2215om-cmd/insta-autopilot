@@ -241,8 +241,12 @@ def handle_comment(acc, value):
     sender = value.get("from", {})
     username = sender.get("username", "")
     media_id = value.get("media", {}).get("id", "")
-    if not comment_id or sender.get("id") == acc["id"] or value.get("parent_id"):
-        return False  # own comments and replies inside threads
+    if not comment_id or sender.get("id") == acc["id"]:
+        return False  # own comments
+    if guard_hides(acc, value):
+        return False
+    if value.get("parent_id"):
+        return False  # replies inside threads
     if media_id and not is_blocked(acc):
         auto_setup_from_comment(acc, media_id)
     key, rule = find_rule(store.load_rules(acc["id"]), media_id, text)
@@ -369,6 +373,47 @@ def backfill_comments(acc, media_id, max_sends=50):
             break
         params["after"] = after
     return counts
+
+
+# ---------- comment guard: hide spam and blocked words ----------
+
+LINK_RE = re.compile(r"https?://|www\.|\b[a-z0-9-]+\.(?:com|in|net|org|io|me|ly|xyz|link|shop|site|online|co|app|info|biz)\b", re.I)
+
+
+def guard_settings(acc):
+    g = acc.get("guard") or {}
+    return {"enabled": bool(g.get("enabled")), "words": g.get("words") or [], "links": bool(g.get("links"))}
+
+
+def guard_reason(acc, text):
+    """Why a comment should be hidden, or "" to keep it."""
+    g = guard_settings(acc)
+    if not g["enabled"]:
+        return ""
+    if g["links"] and LINK_RE.search(text or ""):
+        return "link"
+    words = f" {' '.join(normalize_words(text))} "
+    for w in g["words"]:
+        phrase = " ".join(normalize_words(w))
+        if phrase and f" {phrase} " in words:
+            return f'blocked word "{w}"'
+    return ""
+
+
+def guard_hides(acc, value):
+    """Hides the comment when the guard catches it. True when hidden (the automation then skips it)."""
+    reason = guard_reason(acc, value.get("text", ""))
+    if not reason or is_blocked(acc) or not store.claim(f"s:seen:{acc['id']}:hide:{value['id']}"):
+        return bool(reason)
+    who = (value.get("from") or {}).get("username", "")
+    media_id = (value.get("media") or {}).get("id", "")
+    try:
+        Instagram(acc).post(value["id"], hide="true")
+        store.count(acc["id"], "hidden_comments")
+        store.log_activity(acc["id"], media_id, who, value.get("text", ""), "comment_hidden", "ok", reason)
+    except Exception as e:
+        store.log_activity(acc["id"], media_id, who, value.get("text", ""), "comment_hidden", "error", str(e))
+    return True
 
 
 def dm_keyword_match(rules, text):

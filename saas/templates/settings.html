@@ -28,6 +28,21 @@
 </section>
 
 <section class="card">
+  <div class="row"><h2 style="margin-right:auto">Comment guard</h2><span class="badge" id="guardStatus">off</span></div>
+  <p class="muted small" style="margin:6px 0 0">Hides comments with links or words you block, on every post, as soon as they arrive. The person who wrote a hidden comment can still see it, so it doesn't feel like a block.</p>
+  <form class="grid1" id="guardForm">
+    <label><input type="checkbox" name="enabled"> <b>Comment guard on</b></label>
+    <label><input type="checkbox" name="links"> Hide comments with links <span class="hint">spam like "DM me for promotion www…"</span></label>
+    <div><label class="f" for="g_words">Blocked words and phrases <span class="hint">comma or one per line</span></label>
+      <textarea id="g_words" name="words" rows="3" placeholder="promotion, follow back, crypto, cheap followers"></textarea></div>
+    <div class="row"><button class="btn sm" type="submit">Save</button><span class="small" id="guardMsg"></span></div>
+  </form>
+  <div class="row" style="margin-top:14px"><label class="f" for="g_try" style="margin:0">Test a comment</label>
+    <input id="g_try" type="text" placeholder="Check my page www.cheapfollowers.xyz" style="flex:1; min-width:180px"><span class="small" id="g_tryOut"></span></div>
+  <div id="guardHidden" style="margin-top:12px"></div>
+</section>
+
+<section class="card">
   <div class="row"><h2 style="margin-right:auto">Connect Claude</h2><span class="badge" id="mcpStatus">not connected</span></div>
   <p class="muted small" style="margin:6px 0 12px">Run {{ brand }} from Claude: <i>"Set up DMs on my latest reel for GUIDE"</i>, <i>"Which reel got me the most followers?"</i>, <i>"Pause everything"</i>.</p>
   <div class="row"><button class="btn sm" type="button" id="mcpNew">Create Claude link</button><button class="btn danger sm" type="button" id="mcpOff">Disconnect Claude</button></div>
@@ -98,5 +113,28 @@ $("disconnect").onclick = async () => {
   await api("/api/disconnect", {method: "POST", body: "{}"}); location.href = "/";
 };
 loadAuto(); loadMe();
+
+async function loadGuard() {
+  const g = await api("/api/guard"), f = $("guardForm");
+  f.enabled.checked = g.enabled; f.links.checked = g.links; f.words.value = g.words.join(", ");
+  $("guardStatus").className = `badge ${g.enabled ? "on" : ""}`; $("guardStatus").textContent = g.enabled ? `on · ${fmt(g.total)} hidden` : "off";
+  $("guardHidden").innerHTML = g.hidden.length ? `<div class="label small muted" style="margin-bottom:6px">Recently hidden</div>` + g.hidden.slice(0, 5).map(a =>
+    `<div class="small" style="padding:6px 0; border-top:1px solid var(--line2)"><b>@${esc(a.username || "someone")}</b> ${esc(a.comment)} <span class="muted">· ${esc(a.detail)}</span></div>`).join("") : "";
+}
+$("guardForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  try {
+    await api("/api/guard", {method: "PUT", body: JSON.stringify({enabled: f.enabled.checked, links: f.links.checked, words: f.words.value})});
+    $("guardMsg").className = "small ok"; $("guardMsg").textContent = "Saved ✓"; loadGuard();
+  } catch (err) { $("guardMsg").className = "small err"; $("guardMsg").textContent = err.message; }
+};
+let gTimer;
+$("g_try").oninput = () => { clearTimeout(gTimer); gTimer = setTimeout(async () => {
+  const text = $("g_try").value.trim(); if (!text) { $("g_tryOut").textContent = ""; return; }
+  const r = await api("/api/guard/test", {method: "POST", body: JSON.stringify({text})});
+  $("g_tryOut").className = `small ${r.reason ? "err" : "ok"}`; $("g_tryOut").textContent = r.reason ? `Hidden (${r.reason})` : "Kept";
+}, 300); };
+loadGuard();
 </script>
 {% endblock %}

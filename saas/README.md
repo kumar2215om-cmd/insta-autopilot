@@ -24,6 +24,11 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Comment guard
+Settings → Comment guard (`acc["guard"]`: `enabled`, `links`, `words`): every new comment and thread reply is checked first
+(`engine.guard_hides`); a match is hidden with `POST /<comment_id>?hide=true` and skips the automation. Counter
+`hidden_comments`, activity action `comment_hidden`; `/api/guard/test` checks a sample comment.
+
 ## Chat menu (ice breakers)
 Automations → Chat menu: up to 4 questions (80 chars) shown when someone opens the creator's DMs for the first time
 (`acc["ice"]`, published with `POST me/messenger_profile` `{"platform": "instagram", "ice_breakers": [...]}`, removed with

@@ -673,6 +673,26 @@ class SaasTest(unittest.TestCase):
             self.assertFalse(self.c.put("/api/ice", json={"enabled": False, "items": []}).get_json()["enabled"])
         self.assertEqual(deleted[0][1], {"platform": "instagram", "fields": ["ice_breakers"]})
 
+    def test_comment_guard(self):
+        self.login()
+        self.put_rule("555")
+        self.c.put("/api/guard", json={"enabled": True, "links": True, "words": "cheap followers, crypto"})
+        self.assertEqual(self.c.post("/api/guard/test", json={"text": "Buy CHEAP followers!!"}).get_json()["reason"],
+                         'blocked word "cheap followers"')
+        self.assertEqual(self.c.post("/api/guard/test", json={"text": "visit mysite.xyz"}).get_json()["reason"], "link")
+        self.assertEqual(self.c.post("/api/guard/test", json={"text": "great reel"}).get_json()["reason"], "")
+        self.hook(comment("PROMPTS crypto giveaway", cid="g1"))
+        hide = [c for c in self.ig.calls if c[1].endswith("/g1")]
+        self.assertEqual(hide[0][0], "POST")
+        self.assertEqual(self.ig.messages(), [])  # hidden comments don't get the automation
+        self.hook({"entry": [{"id": "1789", "changes": [{"field": "comments", "value": {
+            "id": "g2", "text": "DM me www.spam.com", "parent_id": "g0", "from": {"id": "8", "username": "spammer"}, "media": {"id": "555"}}}]}]})
+        self.assertTrue(any(c[1].endswith("/g2") for c in self.ig.calls))  # replies in threads are guarded too
+        g = self.c.get("/api/guard").get_json()
+        self.assertEqual((g["total"], g["hidden"][0]["username"]), (2, "spammer"))
+        self.hook(comment("PROMPTS", cid="g3"))
+        self.assertEqual(len(self.ig.messages()), 1)  # normal comments still work
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

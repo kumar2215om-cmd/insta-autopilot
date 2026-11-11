@@ -64,6 +64,7 @@ def seed():
                           "template": {"comment_reply": "@{username} Check your DM 📩", "require_follow": True,
                                        "dm": "Here you go 🎁 https://example.com/free?k={keyword}"}},
            "plan": "pro",
+           "guard": {"enabled": True, "links": True, "words": ["cheap followers", "promotion", "crypto"]},
            "ice": {"enabled": True, "items": [
                {"question": "How do I buy the prompt pack?", "answer": "Yahan se le lo 👉 https://example.com/prompts (₹149, instant download)", "rule": ""},
                {"question": "Free guide kahan milega?", "answer": "", "rule": "kw:AUDIT"}]},
@@ -101,7 +102,7 @@ def seed():
         for field, n in c.items():
             store.media_count(DEMO_ID, mid, field, n)
     from engine import month
-    for field, n in ((f"dms:{month()}", 412), ("dms", 1980), ("links_sent", 230), ("comment_replies", 398), ("gate_follows", 61)):
+    for field, n in (("hidden_comments", 14), (f"dms:{month()}", 412), ("dms", 1980), ("links_sent", 230), ("comment_replies", 398), ("gate_follows", 61)):
         store.count(DEMO_ID, field, n)
     store.log_auto(DEMO_ID, {"media_id": "18000000000000002", "keyword": "GUIDE", "label": "Claude se Instagram grow karo",
                              "at": int(time.time()) - 3600})
@@ -112,6 +113,7 @@ def seed():
         ("jay_kukadiya", "GET|18000000000000001", "follow_prompt", "ok", ""),
         ("jay_kukadiya", "FOLLOWED|18000000000000001", "dm", "ok", ""),
         ("techwithneha", "AUDIT", "dm_keyword", "ok", ""),
+        ("growth.hacks99", "Want 10K followers? DM me www.cheapfollowers.xyz", "comment_hidden", "ok", "link"),
     ]:
         store.log_activity(DEMO_ID, "18000000000000001", user, comment, action, status, detail)
     now = int(time.time())
