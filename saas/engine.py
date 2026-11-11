@@ -35,6 +35,8 @@ DEFAULT_FOLLOW = 'Almost there! 👀 Follow me first to unlock it, then tap "I f
 DEFAULT_FOLLOWED_BUTTON = "I followed ✅"
 DEFAULT_EMAIL_ASK = "One last step ✉️ Reply with your email and I'll send it right away."
 DEFAULT_EMAIL_RETRY = "Hmm, that doesn't look like an email 🤔 Please type it like name@gmail.com"
+DEFAULT_PHONE_ASK = "Almost done 📱 Reply with your WhatsApp number and I'll send it right away."
+DEFAULT_PHONE_RETRY = "Hmm, that doesn't look like a phone number 🤔 Please type your 10-digit number, like 98765 43210"
 SKIP_BUTTON = "Skip"
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
 
@@ -216,7 +218,8 @@ def find_rule(rules, media_id, text):
 
 def uses_button_flow(rule):
     # the email question and the follow-up need the chat the button opens
-    return rule.get("require_follow") or rule.get("opening_dm") or rule.get("ask_email") or rule.get("followup_on")
+    return (rule.get("require_follow") or rule.get("opening_dm") or rule.get("ask_email") or rule.get("ask_phone")
+            or rule.get("followup_on"))
 
 
 def pick_reply(replies):
@@ -509,7 +512,7 @@ def handle_button(acc, igsid, payload):
     step, key, media_id = (payload.split("|") + ["", ""])[:3]
     media_id = media_id or (key if key.isdigit() else "")  # older buttons carried only the rule key
     rule = store.load_rules(acc["id"]).get("reels", {}).get(key)
-    if step not in ("GET", "FOLLOWED", "SKIPMAIL") or not rule or is_blocked(acc):
+    if step not in ("GET", "FOLLOWED", *SKIP_STEPS) or not rule or is_blocked(acc):
         return
     ig = Instagram(acc)
     username, follows = "", True
@@ -521,12 +524,13 @@ def handle_button(acc, igsid, payload):
             store.log_activity(acc["id"], key, igsid, payload, "follow_check", "error", str(e))
     try:
         if follows:
-            if step != "SKIPMAIL" and rule.get("ask_email"):
-                username = username or username_of(ig, igsid)
-                if not (store.get_contact(acc["id"], username, igsid) or {}).get("email"):
-                    return ask_email(acc, ig, igsid, key, rule, media_id, username)
-            if step == "SKIPMAIL" and rule.get("email_required"):
+            skipped = SKIP_STEPS.get(step)
+            if skipped and rule.get(f"{skipped}_required"):
                 return
+            if rule.get("ask_email") or rule.get("ask_phone"):
+                username = username or username_of(ig, igsid)
+                if ask_next(acc, ig, igsid, key, rule, media_id, username, after=skipped):
+                    return
             store.redis("DEL", pending_key(acc, igsid))
             deliver(acc, ig, igsid, key, rule, username, media_id, payload)
             if step == "FOLLOWED" and rule.get("require_follow") and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
@@ -599,48 +603,90 @@ def send_due_followups(limit=25):
     return sent
 
 
-# ---------- email capture: ask for an email before sending the link ----------
+# ---------- email and phone capture: asked in the DM before the link ----------
+
+FIELDS = ("email", "phone")
+SKIP_STEPS = {"SKIPMAIL": "email", "SKIPPHONE": "phone"}
+ASK = {"email": (DEFAULT_EMAIL_ASK, DEFAULT_EMAIL_RETRY, "SKIPMAIL"), "phone": (DEFAULT_PHONE_ASK, DEFAULT_PHONE_RETRY, "SKIPPHONE")}
+PHONE_RE = re.compile(r"\+?\d[\d\s\-().]{7,18}\d")
+
+
+def parse_email(text):
+    found = EMAIL_RE.search(text)
+    return found.group(0).lower() if found else ""
+
+
+def parse_phone(text):
+    """A phone number in international form; 10-digit Indian mobiles get +91. "" when there isn't one."""
+    found = PHONE_RE.search(text)
+    if not found:
+        return ""
+    raw, digits = found.group(0), re.sub(r"\D", "", found.group(0))
+    if len(digits) == 10 and digits[0] in "6789":
+        return "+91" + digits
+    if len(digits) == 11 and digits[0] == "0" and digits[1] in "6789":
+        return "+91" + digits[1:]
+    if len(digits) == 12 and digits.startswith("91") and digits[2] in "6789":
+        return "+" + digits
+    if raw.startswith("+") and 8 <= len(digits) <= 15:
+        return "+" + digits
+    return ""
+
+
+PARSE = {"email": parse_email, "phone": parse_phone}
+
 
 def pending_key(acc, igsid):
     return store.account_key(acc["id"], f"wait_email:{igsid}")
 
 
-def ask_email(acc, ig, igsid, key, rule, media_id, username):
-    text = (rule.get("email_dm") or DEFAULT_EMAIL_ASK).replace("{username}", username)
-    if rule.get("email_required"):
-        ig.send_dm({"id": igsid}, {"text": text})
-    else:
-        ig.send_dm({"id": igsid}, {"text": text, "quick_replies": [
-            {"content_type": "text", "title": SKIP_BUTTON, "payload": f"SKIPMAIL|{key}|{media_id}"}]})
-    store.redis("SET", pending_key(acc, igsid), json.dumps({"key": key, "media_id": media_id, "username": username}), "EX", 86400)
-    store.log_activity(acc["id"], key, username or igsid, "", "email_ask", "ok")
+def ask_next(acc, ig, igsid, key, rule, media_id, username, after=None):
+    """Asks for the next detail the rule wants and the person hasn't given yet. False when nothing is left to ask."""
+    contact = store.get_contact(acc["id"], username, igsid) or {}
+    for field in FIELDS[FIELDS.index(after) + 1 if after else 0:]:
+        if rule.get(f"ask_{field}") and not contact.get(field):
+            ask_field(acc, ig, igsid, key, rule, media_id, username, field)
+            return True
+    return False
+
+
+def ask_field(acc, ig, igsid, key, rule, media_id, username, field):
+    default, _, skip_step = ASK[field]
+    message = {"text": (rule.get(f"{field}_dm") or default).replace("{username}", username)}
+    if not rule.get(f"{field}_required"):
+        message["quick_replies"] = [{"content_type": "text", "title": SKIP_BUTTON, "payload": f"{skip_step}|{key}|{media_id}"}]
+    ig.send_dm({"id": igsid}, message)
+    store.redis("SET", pending_key(acc, igsid), json.dumps({"key": key, "media_id": media_id, "username": username,
+                                                           "field": field}), "EX", 86400)
+    store.log_activity(acc["id"], key, username or igsid, "", f"{field}_ask", "ok")
 
 
 def handle_email_reply(acc, igsid, text):
-    """True when this DM answered our email question (and was handled)."""
+    """True when this DM answered our email or phone question (and was handled)."""
     raw = store.redis("GET", pending_key(acc, igsid))
     if not raw:
         return False
     wait = json.loads(raw)
+    field = wait.get("field", "email")
     rule = store.load_rules(acc["id"]).get("reels", {}).get(wait["key"])
     if not rule:
         store.redis("DEL", pending_key(acc, igsid))
         return False
     ig = Instagram(acc)
     username = wait.get("username", "")
-    found = EMAIL_RE.search(text)
+    value = PARSE[field](text)
     try:
-        if not found:
+        if not value:
             if dm_keyword_match(store.load_rules(acc["id"]).get("reels", {}), text)[1]:
                 return False  # they typed a keyword instead: start that automation
-            if store.claim(f"s:seen:{acc['id']}:mailretry:{igsid}:{int(time.time() // 600)}", 900):
-                ig.send_dm({"id": igsid}, {"text": DEFAULT_EMAIL_RETRY})
+            if store.claim(f"s:seen:{acc['id']}:{field}retry:{igsid}:{int(time.time() // 600)}", 900):
+                ig.send_dm({"id": igsid}, {"text": ASK[field][1]})
             return True
-        email = found.group(0).lower()
         store.redis("DEL", pending_key(acc, igsid))
-        store.touch_contact(acc["id"], username, igsid, email=email, source="email")
-        store.count(acc["id"], "emails")
-        deliver(acc, ig, igsid, wait["key"], rule, username, wait.get("media_id", ""), "(email)")
+        store.touch_contact(acc["id"], username, igsid, source=field, **{field: value})
+        store.count(acc["id"], f"{field}s")
+        if not ask_next(acc, ig, igsid, wait["key"], rule, wait.get("media_id", ""), username, after=field):
+            deliver(acc, ig, igsid, wait["key"], rule, username, wait.get("media_id", ""), f"({field})")
     except Exception as e:
         store.log_activity(acc["id"], wait["key"], username or igsid, text, "dm", "error", str(e))
     return True

@@ -32,7 +32,10 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   person per day (usually a thank-you). Counters `story_replies`, `story_mentions`; contacts get source `story` / `story_mention`.
 - Story rules never answer ordinary DMs (`engine.dm_keyword_match` skips `story:` keys).
 
-## Email capture
+## Email and phone capture
+Rule options **Ask for their phone / WhatsApp number** (`ask_phone`, `phone_dm`, `phone_required`) work like the email ones and
+are asked after the email. Phones are stored in international form (`engine.parse_phone`: 10-digit Indian mobiles get +91);
+Contacts links them to wa.me and the CSV has a phone column. Counter `phones`.
 Rule option **Ask for their email** (`ask_email`, `email_dm`, `email_required`): after the button / follow check, the DM asks
 for an email (with a "Skip" quick reply unless required) and waits 24 h (`s:t:<id>:wait_email:<igsid>`). The next DM with an
 email saves it to Contacts (`emails` counter) and sends the final DM; a non-email gets one "doesn't look like an email" per

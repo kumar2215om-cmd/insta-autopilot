@@ -473,6 +473,9 @@ def save_rule(acc, key, data):
         "followup_url": safe_url(data.get("followup_url")),
         "email_dm": str(data.get("email_dm", ""))[:640].strip(),
         "email_required": bool(data.get("email_required")),
+        "ask_phone": bool(data.get("ask_phone")),
+        "phone_dm": str(data.get("phone_dm", ""))[:640].strip(),
+        "phone_required": bool(data.get("phone_required")),
         "comments": bool(data.get("comments", True)),
         "label": str(data.get("label", ""))[:120],
     }
@@ -703,10 +706,10 @@ def api_contacts_csv():
     acc = current_account()
     out = io.StringIO()
     w = csv.writer(out)
-    w.writerow(["username", "email", "followed", "keyword", "interactions", "first_seen", "last_seen"])
+    w.writerow(["username", "email", "phone", "followed", "keyword", "interactions", "first_seen", "last_seen"])
     for c in store.contacts(acc["id"]):
         fmt = lambda t: datetime.fromtimestamp(t or 0, timezone.utc).strftime("%Y-%m-%d %H:%M")
-        w.writerow([c.get("username", ""), c.get("email", ""), "yes" if c.get("followed") else "no", c.get("keyword", ""),
+        w.writerow([c.get("username", ""), c.get("email", ""), c.get("phone", ""), "yes" if c.get("followed") else "no", c.get("keyword", ""),
                     c.get("interactions", 0), fmt(c.get("first_at")), fmt(c.get("last_at"))])
     return out.getvalue(), 200, {"Content-Type": "text/csv; charset=utf-8",
                                  "Content-Disposition": f"attachment; filename={acc.get('username', 'contacts')}-contacts.csv"}

@@ -28,6 +28,7 @@
     <li><b>Your settings:</b> keyword rules, reply texts, DM texts and links you write.</li>
     <li><b>Activity:</b> the last 100 automation events (for example the commenter's username, the comment text and whether a DM was sent), so you can see what happened. Older events are removed automatically.</li>
     <li><b>Counts:</b> how many DMs, replies and links were sent.</li>
+    <li><b>Contacts:</b> the Instagram usernames of people who interact with your automations, and the email address or phone number they choose to send in the DM when your automation asks for it. Only you can see and export them.</li>
     <li><b>AI Inbox (only if you turn on AI replies):</b> the last 40 messages of each DM conversation, so the AI can answer in context and you can read them in the inbox.</li>
   </ul>
   <h2>How we use it</h2>
@@ -60,7 +61,7 @@
     <li>In Instagram, go to <b>Settings → Apps and websites</b> and remove {{ brand }}. Instagram tells us, and we delete your data automatically.</li>
     {% if contact_email %}<li>Email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> from the address linked to your account, with your Instagram username.</li>{% endif %}
   </ol>
-  <p>Deletion covers your account details, access token, rules, activity, counts and AI Inbox conversations.</p>
+  <p>Deletion covers your account details, access token, rules, activity, counts, contacts and AI Inbox conversations.</p>
 
   {% else %}
   <h1>Deletion status</h1>

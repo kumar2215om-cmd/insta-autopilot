@@ -74,7 +74,7 @@ def seed():
     store.save_rules(DEMO_ID, {"reels": {
         "18000000000000001": {"enabled": True, "keywords": ["PROMPTS"], "comment_reply": "@{username} Check your DM 📩",
                               "require_follow": True, "dm": "Here are your 39 prompts 🎁 https://example.com/prompts",
-                              "ask_email": True, "followup_on": True, "followup_hours": 3,
+                              "ask_email": True, "ask_phone": True, "followup_on": True, "followup_hours": 3,
                               "followup_dm": "Prompts try kiye {username}? 🙌 Full pack with the master guide is just ₹149 today.",
                               "followup_url": "https://example.com/prompts", "followup_button": "Get the full pack"},
         "18000000000000002": {"enabled": True, "keywords": ["GUIDE"], "auto": True, "comment_reply": "@{username} Sent 📥",
@@ -112,12 +112,14 @@ def seed():
     ]:
         store.log_activity(DEMO_ID, "18000000000000001", user, comment, action, status, detail)
     now = int(time.time())
-    for i, (user, kw, followed, email) in enumerate([
-        ("rahul.creates", "PROMPTS", True, ""), ("priya.ai", "PROMPTS", False, ""), ("jay_kukadiya", "PROMPTS", True, "jay@example.com"),
-        ("techwithneha", "AUDIT", True, ""), ("sana.creates", "GUIDE", True, "sana@example.com"), ("kunal.ai", "GUIDE", False, ""),
+    for i, (user, kw, followed, email, phone) in enumerate([
+        ("rahul.creates", "PROMPTS", True, "", "+919876543210"), ("priya.ai", "PROMPTS", False, "", ""),
+        ("jay_kukadiya", "PROMPTS", True, "jay@example.com", "+919812345678"), ("techwithneha", "AUDIT", True, "", ""),
+        ("sana.creates", "GUIDE", True, "sana@example.com", ""), ("kunal.ai", "GUIDE", False, "", "+919900112233"),
     ]):
         store.save_contact(DEMO_ID, {"username": user, "first_at": now - (i + 1) * 5400, "last_at": now - i * 3600,
-                                     "keyword": kw, "followed": followed, "email": email, "interactions": 1 + i % 3})
+                                     "keyword": kw, "followed": followed, "email": email, "phone": phone,
+                                     "interactions": 1 + i % 3})
     for igsid, user, chat, extra in [
         ("900001", "ankit.edits", [("fan", "Bhai ye prompt pack kitne ka hai?"),
                                    ("ai", "Abhi sirf ₹149 hai 🙌 Saare 39 packs, lifetime access. Yahan se le lo 👉 https://example.com/prompts"),

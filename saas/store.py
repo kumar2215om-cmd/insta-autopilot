@@ -290,7 +290,7 @@ def get_contact(ig_id, username="", igsid=""):
     return json.loads(raw) if raw else None
 
 
-def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, source="", email=""):
+def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, source="", email="", phone=""):
     """Adds or updates one person who interacted with an automation."""
     if not username and not igsid:
         return
@@ -318,6 +318,8 @@ def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, sourc
         c["followed"] = True
     if email:
         c["email"] = email
+    if phone:
+        c["phone"] = phone
     redis("HSET", key, field, json.dumps(c, ensure_ascii=False))
 
 

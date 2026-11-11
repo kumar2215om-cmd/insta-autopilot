@@ -615,6 +615,41 @@ class SaasTest(unittest.TestCase):
         engine.add_retry(store.load_account("1789"), "old", {"key": "555", "media_id": "555", "username": "z", "text": "x", "at": 1})
         self.assertEqual(self.c.post("/api/retry", json={}).get_json()["expired"], 1)
 
+    def test_phone_capture(self):
+        for text, want in [("98765 43210", "+919876543210"), ("my no is +91-98765-43210", "+919876543210"),
+                           ("09876543210", "+919876543210"), ("+44 7700 900123", "+447700900123"),
+                           ("12345", ""), ("call me", ""), ("1234567890", "")]:
+            self.assertEqual(engine.parse_phone(text), want, text)
+        self.login()
+        self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", ask_email=True,
+                      ask_phone=True, phone_required=True, dm="Guide https://g.com")
+        tap = lambda p, who="71": {"entry": [{"id": "1789", "messaging": [{"sender": {"id": who}, "postback": {"payload": p}}]}]}
+        self.hook(tap("GET|kw:GUIDE"))
+        self.assertIn("email", self.ig.messages()[-1]["message"]["text"])
+        # skip the email: the phone is asked next, and it's required (no Skip button)
+        self.hook(tap("SKIPMAIL|kw:GUIDE|"))
+        ask = self.ig.messages()[-1]["message"]
+        self.assertIn("WhatsApp", ask["text"])
+        self.assertNotIn("quick_replies", ask)
+        self.hook(dm("abc", sender="71", mid="p0"))
+        self.assertIn("doesn't look like a phone number", self.ig.messages()[-1]["message"]["text"])
+        self.hook(dm("98765 43210", sender="71", mid="p1"))
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Guide https://g.com"})
+        c = self.c.get("/api/contacts").get_json()["contacts"][0]
+        self.assertEqual((c["phone"], c["email"]), ("+919876543210", ""))
+        self.assertIn("+919876543210", self.c.get("/api/contacts.csv").get_data(as_text=True))
+        sent = len(self.ig.messages())
+        self.hook(tap("SKIPPHONE|kw:GUIDE|", who="72"))  # a required phone can't be skipped
+        self.assertEqual(len(self.ig.messages()), sent)
+        # both given in a row: email, then phone, then the link
+        store.redis("DEL", store.account_key("1789", "contacts"), store.account_key("1789", "counts"))
+        self.hook(tap("GET|kw:GUIDE", who="73"))
+        self.hook(dm("me@x.com", sender="73", mid="p2"))
+        self.assertIn("WhatsApp", self.ig.messages()[-1]["message"]["text"])
+        self.hook(dm("+91 91234 56789", sender="73", mid="p3"))
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Guide https://g.com"})
+        self.assertEqual(store.counts("1789").get("phones"), 1)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)
