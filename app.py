@@ -7,6 +7,7 @@ import hmac
 import json
 import os
 import random
+import secrets
 import re
 import sys
 import sqlite3
@@ -1290,7 +1291,7 @@ def receive_webhook():
 def check_password():
     # The link page, its click redirects and the freebies are public; the editor (/links/edit) is not.
     public = (request.path in ("/links", "/links/", "/free", "/course", "/course/", "/terms", "/refund-policy", "/privacy-policy", "/contact", "/digital-products", "/digital-products/", "/courses", "/courses/", "/home") or (request.path == "/" and on_custom_domain())
-              or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")))
+              or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")) or request.path == "/mcp")
     if not DASHBOARD_PASSWORD or public:
         return
     auth = request.authorization
@@ -2016,12 +2017,19 @@ def api_undo_auto_setup(media_id):
 
 @app.get("/api/report")
 def api_report():
+    try:
+        return jsonify(build_report(bool(request.args.get("refresh"))))
+    except RuntimeError as e:
+        return jsonify(error=str(e), reels=[]), 502
+
+
+def build_report(refresh=False):
     if not _stats_cache["data"]:
         saved = kv_get("stats_cache")
         if saved:
             _stats_cache.update(json.loads(saved))
     stale = time.time() - _stats_cache["at"] > STATS_CACHE_SECONDS
-    forced = request.args.get("refresh") and time.time() - _stats_cache["at"] > 30
+    forced = refresh and time.time() - _stats_cache["at"] > 30
     if (stale or forced or not _stats_cache["data"]) and not token_is_dead() and not rate_limited_until():
         try:
             _stats_cache["data"] = fetch_stats()
@@ -2030,7 +2038,7 @@ def api_report():
             record_growth(_stats_cache["data"])
         except Exception as e:
             if not _stats_cache["data"]:
-                return jsonify(error=str(e), reels=[]), 502
+                raise RuntimeError(str(e))
     stats = _stats_cache["data"] or {"reels": []}
     rules = load_rules().get("reels", {})
     counts = {f: counter_all(f"media_{f}") for f in ("keyword", "dm", "link")}
@@ -2056,8 +2064,192 @@ def api_report():
     for r in rows:
         r["tips"] = reel_tips(r, avg)
         r["rank"] = next((i + 1 for i, x in enumerate(ranked) if x["id"] == r["id"]), None)
-    return jsonify(reels=rows, avg_per_1k=avg, ranked_count=len(ranked), steps=REPORT_STEPS,
-                   fetched_at=stats.get("fetched_at"))
+    return {"reels": rows, "avg_per_1k": avg, "ranked_count": len(ranked), "steps": REPORT_STEPS,
+            "fetched_at": stats.get("fetched_at"), "followers": (stats.get("account") or {}).get("followers_count")}
+
+
+# ---------- MCP server: run the automation from Claude (claude.ai connector, Claude Code) ----------
+
+from mcp_protocol import ToolError, handle_http  # noqa: E402
+
+
+def _rule_view(key, r):
+    kind = "keyword (any reel + DMs)" if is_keyword_rule(key) else ("all reels" if key == "*" else "reel")
+    return {"automation_id": key, "type": kind, "enabled": r.get("enabled", True) is not False,
+            "keywords": r.get("keywords", []), "final_dm": r.get("dm", ""), "require_follow": bool(r.get("require_follow")),
+            "comment_reply": r.get("comment_reply", ""), "auto_setup": bool(r.get("auto"))}
+
+
+def mcp_summary(_):
+    report = build_report()
+    growth = growth_summary(1)
+    return {"account": my_username(), "followers": report.get("followers"),
+            "followers_gained_today": growth[0]["gained"] if growth else None,
+            "links_sent_total": sum(counter_all("media_link").values()),
+            "follows_from_dms_total": sum(counter_all("gate_follows").values()),
+            "automations_on": sum(1 for r in load_rules().get("reels", {}).values() if r.get("enabled", True) is not False),
+            "auto_setup_on": bool(auto_settings().get("enabled")),
+            "instagram_logged_out": token_is_dead(), "rate_limited": bool(rate_limited_until()),
+            "avg_follows_per_1k_views": report.get("avg_per_1k")}
+
+
+def mcp_list_reels(args):
+    rows = build_report()["reels"][: int(args.get("limit") or 12)]
+    return {"reels": [{k: r[k] for k in ("id", "caption", "timestamp", "views", "comments", "has_rule", "keywords", "per_1k", "permalink")}
+                      for r in rows]}
+
+
+def mcp_reel_report(args):
+    data = build_report(bool(args.get("refresh")))
+    rid = str(args.get("reel_id") or "")
+    if rid:
+        row = next((r for r in data["reels"] if r["id"] == rid), None)
+        if not row:
+            raise ToolError("That reel isn't among the latest 12 reels.")
+        return row
+    return {"avg_follows_per_1k_views": data["avg_per_1k"], "reels": data["reels"]}
+
+
+def mcp_list_automations(_):
+    return {"automations": [_rule_view(k, r) for k, r in load_rules().get("reels", {}).items()]}
+
+
+def mcp_save_automation(args):
+    target = str(args.get("target") or "").strip()
+    keywords = [str(k).strip() for k in args.get("keywords") or [] if str(k).strip()]
+    if target == "keyword":
+        if not keywords:
+            raise ToolError("A keyword automation needs at least one keyword.")
+        key = "kw:" + re.sub(r"[^A-Za-z0-9_-]", "", keywords[0].upper())[:32]
+    elif target == "all":
+        key = "*"
+    elif target.isdigit():
+        key = target
+    else:
+        raise ToolError('target must be a reel id (from list_reels), "keyword" or "all".')
+    old = load_rules().get("reels", {}).get(key, {})
+    data = dict(old)  # updating keeps the fields Claude didn't mention
+    for field in ("comment_reply", "opening_dm", "button_text", "follow_dm", "require_follow"):
+        if args.get(field) is not None:
+            data[field] = args[field]
+    if args.get("final_dm") is not None:
+        data["dm"] = args["final_dm"]
+    data["keywords"] = keywords or old.get("keywords", [])
+    data.setdefault("comment_reply", DEFAULT_COMMENT_REPLY)
+    data.setdefault("require_follow", True)
+    data["enabled"] = args.get("enabled", old.get("enabled", True)) is not False
+    if data["enabled"] and not str(data.get("dm", "")).strip():
+        raise ToolError("final_dm is required: the message with the link people get.")
+    try:
+        rule = save_rule(key, data)
+    except ValueError as e:
+        raise ToolError(str(e))
+    return {"saved": _rule_view(key, rule)}
+
+
+def mcp_set_enabled(args):
+    key = str(args.get("automation_id", ""))
+    rules = load_rules()
+    if key not in rules.get("reels", {}):
+        raise ToolError("No automation with that id. Use list_automations.")
+    rules["reels"][key]["enabled"] = bool(args.get("enabled"))
+    save_rules(rules)
+    return {"automation_id": key, "enabled": rules["reels"][key]["enabled"]}
+
+
+def mcp_delete(args):
+    key = str(args.get("automation_id", ""))
+    rules = load_rules()
+    if rules.get("reels", {}).pop(key, None) is None:
+        raise ToolError("No automation with that id.")
+    save_rules(rules)
+    return {"deleted": key}
+
+
+def mcp_activity(args):
+    items = recent_activity()[: min(int(args.get("limit") or 20), 100)]
+    return {"activity": [{k: a.get(k) for k in ("at", "username", "comment", "action", "status", "detail")} for a in items]}
+
+
+def mcp_send_past(args):
+    rid = str(args.get("reel_id", ""))
+    if not rid.isdigit():
+        raise ToolError("reel_id must be a reel id from list_reels.")
+    if rate_limited_until():
+        raise ToolError("Instagram's hourly limit was reached. Try again in 15 minutes.")
+    return backfill_comments(rid)
+
+
+_STR = {"type": "string"}
+MCP_TOOLS = [
+    {"name": "get_account_summary", "title": "Account summary", "read_only": True, "fn": mcp_summary,
+     "description": "Followers, followers gained today, links sent, follows won by the DM follow gate, how many automations are on, and whether Instagram is connected.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "list_reels", "title": "List reels", "read_only": True, "fn": mcp_list_reels,
+     "description": "The latest reels with id, caption, views, comments and whether a comment-to-DM automation is on. Use the id in other tools.",
+     "input_schema": {"type": "object", "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 12}}}},
+    {"name": "get_reel_report", "title": "Reel report", "read_only": True, "fn": mcp_reel_report,
+     "description": "Per-reel funnel (views, comments, used the keyword, got the DM, link sent, followed to unlock), follows per 1K views, rank and tips. Give reel_id for one reel, or nothing for all.",
+     "input_schema": {"type": "object", "properties": {"reel_id": _STR, "refresh": {"type": "boolean"}}}},
+    {"name": "list_automations", "title": "List automations", "read_only": True, "fn": mcp_list_automations,
+     "description": "All comment-to-DM automations: id, type (reel / keyword / all reels), keywords, final DM, follow gate, on or off.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "save_automation", "title": "Create or update an automation", "fn": mcp_save_automation,
+     "description": ("Creates or updates a comment-to-DM automation. target: a reel id (from list_reels), \"keyword\" (works on every reel "
+                     "and when someone DMs the word), or \"all\" (every reel without its own rule). When people comment a keyword "
+                     "they get a public reply and a DM; with require_follow they must follow before final_dm (the link) is sent. "
+                     "Use {username} for the commenter's name. Don't set up reels another tool (like SuperProfile) already handles."),
+     "input_schema": {"type": "object", "required": ["target"], "properties": {
+         "target": _STR, "keywords": {"type": "array", "items": _STR}, "final_dm": _STR,
+         "comment_reply": {"type": "string", "description": "Public replies, one per line; empty = no public reply"},
+         "opening_dm": _STR, "button_text": {"type": "string", "maxLength": 20},
+         "require_follow": {"type": "boolean"}, "follow_dm": _STR, "enabled": {"type": "boolean"}}}},
+    {"name": "set_automation_enabled", "title": "Pause or resume an automation", "fn": mcp_set_enabled,
+     "description": "Turns one automation on or off without deleting it.",
+     "input_schema": {"type": "object", "required": ["automation_id", "enabled"],
+                      "properties": {"automation_id": _STR, "enabled": {"type": "boolean"}}}},
+    {"name": "delete_automation", "title": "Delete an automation", "destructive": True, "fn": mcp_delete,
+     "description": "Deletes one automation for good.",
+     "input_schema": {"type": "object", "required": ["automation_id"], "properties": {"automation_id": _STR}}},
+    {"name": "get_recent_activity", "title": "Recent activity", "read_only": True, "fn": mcp_activity,
+     "description": "The latest automation events (comment replies, DMs, follow checks, errors), newest first.",
+     "input_schema": {"type": "object", "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 100}}}},
+    {"name": "send_to_past_comments", "title": "Send to past comments", "fn": mcp_send_past,
+     "description": "Runs a reel's automation on comments left before it was set up (last 7 days, up to 50 per call). Sends real DMs.",
+     "input_schema": {"type": "object", "required": ["reel_id"], "properties": {"reel_id": _STR}}},
+]
+MCP_INSTRUCTIONS = ("Instagram comment-to-DM automation for @aiwith.om: reels, automations, reports and activity. "
+                    "Ask before deleting automations or sending to past comments.")
+
+
+def mcp_key_ok():
+    saved = kv_get("mcp_key_hash")
+    header = request.headers.get("Authorization", "")
+    key = header[7:].strip() if header.lower().startswith("bearer ") else request.args.get("key", "")
+    return bool(saved and key) and hmac.compare_digest(hashlib.sha256(key.encode()).hexdigest(), saved)
+
+
+@app.route("/mcp", methods=["GET", "POST", "DELETE"])
+def mcp_endpoint():
+    if not mcp_key_ok():
+        return jsonify(error="Missing or wrong key. Copy the Claude link again from Reel report → Connect Claude."), 401
+    if request.method != "POST":
+        return "", 405, {"Allow": "POST"}
+    status, body = handle_http(request.get_data(), MCP_TOOLS, "autopilot", MCP_INSTRUCTIONS)
+    return (jsonify(body), status) if body is not None else ("", status)
+
+
+@app.route("/api/mcp-key", methods=["GET", "POST", "DELETE"])
+def api_mcp_key():
+    if request.method == "GET":
+        return jsonify(active=bool(kv_get("mcp_key_hash")))
+    if request.method == "DELETE":
+        kv_set("mcp_key_hash", "")
+        return jsonify(active=False)
+    key = "ri_" + secrets.token_urlsafe(32)  # shown once; only its hash is stored
+    kv_set("mcp_key_hash", hashlib.sha256(key.encode()).hexdigest())
+    base = request.host_url.rstrip("/").replace("http://", "https://")
+    return jsonify(active=True, key=key, url=f"{base}/mcp?key={key}", endpoint=f"{base}/mcp")
 
 
 @app.get("/api/activity")
@@ -2107,13 +2299,22 @@ def api_switch_domain():
 
 @app.put("/api/rules/<media_id>")
 def api_put_rule(media_id):
-    data = request.get_json(force=True)
+    try:
+        return jsonify(save_rule(media_id, request.get_json(force=True)))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+def save_rule(media_id, data):
+    """Creates or replaces one rule (a reel id, "kw:WORD" or "*"). Raises ValueError on bad input."""
     keywords = [k.strip() for k in data.get("keywords", []) if k.strip()]
     if is_keyword_rule(media_id):
         if not re.fullmatch(r"kw:[A-Za-z0-9_-]{1,32}", media_id):
-            return jsonify({"error": "Bad keyword rule id"}), 400
+            raise ValueError("Bad keyword rule id")
         if not keywords:
-            return jsonify({"error": "A keyword rule needs at least one keyword"}), 400
+            raise ValueError("A keyword rule needs at least one keyword")
+    elif media_id != "*" and not media_id.isdigit():
+        raise ValueError("Bad reel id")
     rules = load_rules()
     rules.setdefault("reels", {})[media_id] = {
         "enabled": bool(data.get("enabled", True)),
@@ -2130,7 +2331,7 @@ def api_put_rule(media_id):
     if is_keyword_rule(media_id):
         rules["reels"][media_id]["comments"] = data.get("comments", True) is not False
     save_rules(rules)
-    return jsonify(rules["reels"][media_id])
+    return rules["reels"][media_id]
 
 
 @app.post("/api/backfill/<media_id>")

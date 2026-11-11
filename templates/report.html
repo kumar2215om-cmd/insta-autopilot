@@ -79,6 +79,25 @@
       </div>
     </section>
 
+    <section class="card" style="margin-bottom:18px">
+      <div class="card-h"><h2>🤖 Connect Claude</h2><span class="badge off" id="mcpStatus">not connected</span></div>
+      <div class="card-b">
+        <p class="hint" style="margin-top:0">Run your automations from Claude: <i>"Set up DMs on my latest reel for GUIDE"</i>,
+          <i>"Which reel got me the most followers?"</i>, <i>"Pause all automations"</i>.</p>
+        <div style="display:flex; flex-wrap:wrap; gap:8px">
+          <button class="primary" type="button" id="mcpNew">Create Claude link</button>
+          <button class="danger" type="button" id="mcpOff">Disconnect</button>
+        </div>
+        <div id="mcpOut" style="display:none; margin-top:14px">
+          <p class="hint" style="margin:0 0 6px"><b>Copy it now:</b> it's shown only once and works like a password. Creating a new link turns off the old one.</p>
+          <label for="mcpUrl">Link for claude.ai (Settings → Connectors → Add custom connector → paste)</label>
+          <input id="mcpUrl" type="text" readonly>
+          <label for="mcpCmd" style="display:block; margin-top:10px">Claude Code (paste in the terminal)</label>
+          <input id="mcpCmd" type="text" readonly>
+        </div>
+      </div>
+    </section>
+
     <div class="grid2">
       <div class="card card-b stat"><span class="hint">Avg follows per 1K views</span><b id="sAvg">–</b><span class="hint">reels with an automation</span></div>
       <div class="card card-b stat"><span class="hint">Reels in this report</span><b id="sCount">–</b><span class="hint">your latest reels</span></div>
@@ -210,6 +229,28 @@ async function load(fresh) {
   catch (err) { $("reels").innerHTML = `<div class="empty error">Couldn't load the report: ${esc(err.message)}</div>`; }
 }
 $("refreshBtn").onclick = () => load(true);
+
+// ---------- Connect Claude (MCP) ----------
+function mcpBadge(on) {
+  $("mcpStatus").className = "badge " + (on ? "on" : "off");
+  $("mcpStatus").textContent = on ? "link active" : "not connected";
+}
+api("/api/mcp-key").then(d => mcpBadge(d.active)).catch(() => {});
+$("mcpNew").onclick = async () => {
+  if (!confirm("Create a new Claude link? Any older link stops working.")) return;
+  const d = await api("/api/mcp-key", {method: "POST", body: "{}"});
+  $("mcpUrl").value = d.url;
+  $("mcpCmd").value = `claude mcp add --transport http autopilot ${d.endpoint} --header "Authorization: Bearer ${d.key}"`;
+  $("mcpOut").style.display = "block";
+  mcpBadge(true);
+  $("mcpUrl").select();
+};
+$("mcpOff").onclick = async () => {
+  if (!confirm("Disconnect Claude? The link stops working right away.")) return;
+  await api("/api/mcp-key", {method: "DELETE", body: "{}"});
+  $("mcpOut").style.display = "none";
+  mcpBadge(false);
+};
 loadAuto();
 load(false);
 </script>

@@ -93,6 +93,21 @@
         </details>
       </div>
 
+      <div class="card" style="margin-bottom:16px">
+        <h2 style="margin-top:0">🤖 Connect Claude <span class="badge off" id="mcpStatus">not connected</span></h2>
+        <p class="muted" style="margin-top:0">Run {{ brand }} from Claude: <i>"Set up DMs on my latest reel for GUIDE"</i>,
+          <i>"Which reel got me the most followers?"</i>, <i>"Pause everything"</i>.</p>
+        <div class="actions"><button class="btn small" type="button" id="mcpNew">Create Claude link</button>
+          <button class="btn small ghost" type="button" id="mcpOff">Disconnect</button></div>
+        <div id="mcpOut" hidden style="margin-top:12px">
+          <p class="muted" style="margin:0"><b>Copy it now:</b> it's shown only once and works like a password.</p>
+          <label class="muted" for="mcpUrl">claude.ai → Settings → Connectors → Add custom connector → paste:</label>
+          <input id="mcpUrl" type="text" readonly>
+          <label class="muted" for="mcpCmd">Claude Code:</label>
+          <input id="mcpCmd" type="text" readonly>
+        </div>
+      </div>
+
       <div class="card">
         <h2 style="margin-top:0">🔑 Keyword rules</h2>
         <p class="muted" style="margin-top:0">Work on <b>every reel</b> and when someone <b>DMs</b> the word.</p>
@@ -278,6 +293,21 @@ async function loadFeed() {
     <span class="t">${esc(NAME[a.action] || a.action)} · ${new Date(a.at).toLocaleTimeString()}</span>
     ${a.status !== "ok" ? `<div class="e">⚠️ ${esc(a.detail)}</div>` : ""}</div>`).join("");
 }
+
+// ---------- Connect Claude (MCP) ----------
+function mcpBadge(on) { $("mcpStatus").className = "badge " + (on ? "on" : "off"); $("mcpStatus").textContent = on ? "link active" : "not connected"; }
+api("/api/mcp-key").then(d => mcpBadge(d.active)).catch(() => {});
+$("mcpNew").onclick = async () => {
+  if (!confirm("Create a new Claude link? Any older link stops working.")) return;
+  const d = await api("/api/mcp-key", {method: "POST", body: "{}"});
+  $("mcpUrl").value = d.url;
+  $("mcpCmd").value = `claude mcp add --transport http replyinbox ${d.endpoint} --header "Authorization: Bearer ${d.key}"`;
+  $("mcpOut").hidden = false; mcpBadge(true); $("mcpUrl").select();
+};
+$("mcpOff").onclick = async () => {
+  if (!confirm("Disconnect Claude? The link stops working right away.")) return;
+  await api("/api/mcp-key", {method: "DELETE", body: "{}"}); $("mcpOut").hidden = true; mcpBadge(false);
+};
 
 // ---------- auto-setup ----------
 async function loadAuto() {

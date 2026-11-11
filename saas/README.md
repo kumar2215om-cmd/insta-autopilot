@@ -26,6 +26,17 @@ It's a separate Flask app from the one in the repo root (Om's own site, courses 
   Per-reel counts are stored in `s:t:<id>:m:<media_id>` from the moment a reel's automation runs; button payloads now carry
   the reel (`GET|<rule>|<media_id>`). Cached 10 minutes; ↻ Refresh fetches again.
 
+## Connect Claude (MCP server)
+`POST /mcp` is a Model Context Protocol server (Streamable HTTP, JSON responses, stateless), so creators can run
+ReplyInbox from claude.ai (Settings → Connectors → Add custom connector), Claude Desktop or Claude Code.
+- Dashboard card **Connect Claude** creates a per-account key `ri_…` (shown once; only its SHA-256 is stored as
+  `s:mcpkey:<hash>` → account). The connector link is `https://<PUBLIC_URL>/mcp?key=ri_…`; Claude Code can send it as
+  `Authorization: Bearer ri_…`. A new link or Disconnect revokes the old key; deleting the account removes it.
+- Tools (`mcp_tools.py`): get_account_summary, list_reels, get_reel_report, list_automations, save_automation,
+  set_automation_enabled, delete_automation, get_recent_activity, pause_all_automations.
+- Protocol code: `mcp_protocol.py` (identical copy at the repo root for Om's app; keep them the same).
+- Costs nothing extra: Claude usage is on the creator's own Claude plan; each tool call is a normal request here.
+
 ## How events reach it
 Instagram sends **every** connected account's webhook events to the one callback URL set in the Meta app,
 which stays pointed at the root app (`/webhook`). The root app answers only Om's account and forwards

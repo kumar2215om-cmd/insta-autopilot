@@ -300,19 +300,25 @@ def reel_views(ig, media_id):
 
 @app.get("/api/report")
 def api_report():
-    acc = current_account()
+    try:
+        return jsonify(build_report(current_account(), bool(request.args.get("fresh"))))
+    except RuntimeError as e:
+        return jsonify(error=str(e), reels=[]), 502
+
+
+def build_report(acc, fresh=False):
     key = store.account_key(acc["id"], "report")
     cached = store.get_json(key)
-    if cached and not request.args.get("fresh"):
-        return jsonify(cached)
+    if cached and not fresh:
+        return cached
     try:
         ig = engine.Instagram(acc)
         media = ig.get("me/media", limit=30, fields=(
             "id,caption,media_product_type,permalink,thumbnail_url,media_url,timestamp,comments_count,like_count"))["data"]
     except Exception as e:
         if cached:
-            return jsonify({**cached, "warning": str(e)})
-        return jsonify(error=str(e), reels=[]), 502
+            return {**cached, "warning": str(e)}
+        raise RuntimeError(str(e))
     reels = [m for m in media if m.get("media_product_type") == "REELS"][:REPORT_REELS]
     with ThreadPoolExecutor(max_workers=6) as pool:
         insights = list(pool.map(lambda m: reel_views(ig, m["id"]), reels))
@@ -341,7 +347,7 @@ def api_report():
     data = {"reels": rows, "avg_per_1k": avg, "ranked_count": len(ranked), "steps": engine.REPORT_STEPS,
             "fetched_at": int(time.time())}
     store.redis("SET", key, json.dumps(data), "EX", REPORT_CACHE_SECONDS)
-    return jsonify(data)
+    return data
 
 
 @app.get("/report")
@@ -363,10 +369,16 @@ def valid_rule_key(key):
 
 @app.put("/api/rules/<key>")
 def api_put_rule(key):
-    acc = current_account()
+    try:
+        return jsonify(save_rule(current_account(), key, request.get_json(force=True)))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+
+
+def save_rule(acc, key, data):
+    """Creates or replaces one rule (reel id, "kw:WORD" or "*"); returns all rules. Raises ValueError on bad input."""
     if not valid_rule_key(key):
-        return jsonify(error="Bad rule id"), 400
-    data = request.get_json(force=True)
+        raise ValueError("Bad rule id")
     rule = {
         "enabled": bool(data.get("enabled", True)),
         "keywords": [k.strip()[:40] for k in data.get("keywords", []) if k.strip()][:20],
@@ -381,13 +393,13 @@ def api_put_rule(key):
         "label": str(data.get("label", ""))[:120],
     }
     if rule["enabled"] and not rule["dm"]:
-        return jsonify(error="Add the final DM (your message and link) before turning the rule on."), 400
+        raise ValueError("Add the final DM (your message and link) before turning the rule on.")
     if engine.is_keyword_rule(key) and not rule["keywords"]:
         rule["keywords"] = [key[3:]]
     rules = store.load_rules(acc["id"])
     rules.setdefault("reels", {})[key] = rule
     store.save_rules(acc["id"], rules)
-    return jsonify(rules)
+    return rules
 
 
 @app.delete("/api/rules/<key>")
@@ -410,6 +422,53 @@ def api_pause():
     acc["paused"] = bool(request.get_json(force=True).get("paused"))
     store.save_account(acc)
     return jsonify(paused=acc["paused"])
+
+
+# ---------- MCP server: creators run ReplyInbox from Claude ----------
+
+import mcp_tools  # noqa: E402
+from mcp_protocol import handle_http  # noqa: E402
+
+
+def mcp_account():
+    header = request.headers.get("Authorization", "")
+    key = header[7:].strip() if header.lower().startswith("bearer ") else request.args.get("key", "")
+    if not key.startswith("ri_"):
+        return None
+    ig_id = store.redis("GET", f"s:mcpkey:{hashlib.sha256(key.encode()).hexdigest()}")
+    return store.load_account(ig_id) if ig_id else None
+
+
+@app.route("/mcp", methods=["GET", "POST", "DELETE"])
+def mcp_endpoint():
+    acc = mcp_account()
+    if not acc:
+        return jsonify(error=f"Missing or wrong key. Create a new Claude link in your {BRAND} dashboard."), 401
+    if request.method != "POST":
+        return "", 405, {"Allow": "POST"}
+    tools = mcp_tools.tools_for(acc, save_rule=save_rule, build_report=build_report)
+    status, body = handle_http(request.get_data(), tools, BRAND.lower(),
+                               f"{BRAND}: Instagram comment-to-DM automation for @{acc.get('username')}. "
+                               "Ask before deleting automations.")
+    return (jsonify(body), status) if body is not None else ("", status)
+
+
+@app.route("/api/mcp-key", methods=["GET", "POST", "DELETE"])
+def api_mcp_key():
+    acc = current_account()
+    if request.method == "GET":
+        return jsonify(active=bool(acc.get("mcp_key_hash")))
+    if acc.get("mcp_key_hash"):  # a new link (or disconnect) turns off the old one
+        store.redis("DEL", f"s:mcpkey:{acc['mcp_key_hash']}")
+        acc["mcp_key_hash"] = ""
+    if request.method == "POST":
+        key = "ri_" + secrets.token_urlsafe(32)  # shown once; only its hash is stored
+        acc["mcp_key_hash"] = hashlib.sha256(key.encode()).hexdigest()
+        store.redis("SET", f"s:mcpkey:{acc['mcp_key_hash']}", acc["id"])
+    store.save_account(acc)
+    if request.method == "DELETE":
+        return jsonify(active=False)
+    return jsonify(active=True, key=key, url=f"{base_url()}/mcp?key={key}", endpoint=f"{base_url()}/mcp")
 
 
 # ---------- webhook (comments + DMs for every connected account) ----------

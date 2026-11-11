@@ -303,6 +303,32 @@ class SaasTest(unittest.TestCase):
         self.assertIn("50 comments and no automation", reels["555"]["tips"][0])
         self.assertEqual(self.c.get("/report").status_code, 200)
 
+    def test_mcp_server(self):
+        self.login()
+        self.assertEqual(self.c.post("/mcp", json={}).status_code, 401)
+        key = self.c.post("/api/mcp-key", json={}).get_json()["key"]
+        H = {"Authorization": f"Bearer {key}"}
+        rpc = lambda method, params=None, i=1: self.c.post("/mcp", headers=H, json={
+            "jsonrpc": "2.0", "id": i, "method": method, **({"params": params} if params is not None else {})}).get_json()
+        call = lambda name, args: rpc("tools/call", {"name": name, "arguments": args})["result"]
+        self.assertEqual(rpc("initialize", {"protocolVersion": "2025-06-18"})["result"]["protocolVersion"], "2025-06-18")
+        self.assertEqual(self.c.post("/mcp", headers=H, json={"jsonrpc": "2.0", "method": "notifications/initialized"}).status_code, 202)
+        names = [t["name"] for t in rpc("tools/list")["result"]["tools"]]
+        self.assertIn("save_automation", names)
+        self.assertEqual(call("get_account_summary", {})["structuredContent"]["account"], "creator")
+        self.assertEqual(call("list_reels", {})["structuredContent"]["reels"][0]["id"], "777")
+        self.assertTrue(call("save_automation", {"target": "777", "keywords": ["GUIDE"]})["isError"])  # no final DM
+        saved = call("save_automation", {"target": "777", "keywords": ["GUIDE"], "final_dm": "https://x.com"})["structuredContent"]["saved"]
+        self.assertEqual((saved["keywords"], saved["require_follow"]), (["GUIDE"], True))
+        self.assertEqual(call("save_automation", {"target": "777", "require_follow": False})["structuredContent"]["saved"]["final_dm"], "https://x.com")
+        self.assertFalse(call("set_automation_enabled", {"automation_id": "777", "enabled": False})["structuredContent"]["enabled"])
+        self.assertTrue(call("pause_all_automations", {"paused": True})["structuredContent"]["paused"])
+        self.assertEqual(call("delete_automation", {"automation_id": "777"})["structuredContent"], {"deleted": "777"})
+        # ?key= works too (claude.ai connector link); another account's key can't see this one; disconnect kills it
+        self.assertIn("result", self.c.post(f"/mcp?key={key}", json={"jsonrpc": "2.0", "id": 5, "method": "ping"}).get_json())
+        self.c.delete("/api/mcp-key", json={})
+        self.assertEqual(self.c.post("/mcp", headers=H, json={}).status_code, 401)
+
     def test_pages_render(self):
         for path in ("/", "/privacy", "/terms", "/data-deletion"):
             self.assertEqual(self.c.get(path).status_code, 200, path)
