@@ -466,6 +466,11 @@ def save_rule(acc, key, data):
         "followed_button_text": str(data.get("followed_button_text", ""))[:20].strip(),
         "dm": str(data.get("dm", ""))[:1000].strip(),
         "ask_email": bool(data.get("ask_email")),
+        "followup_on": bool(data.get("followup_on")),
+        "followup_hours": int(data.get("followup_hours") or 3) if str(data.get("followup_hours") or 3).isdigit() else 3,
+        "followup_dm": str(data.get("followup_dm", ""))[:640].strip(),
+        "followup_button": str(data.get("followup_button", ""))[:20].strip(),
+        "followup_url": safe_url(data.get("followup_url")),
         "email_dm": str(data.get("email_dm", ""))[:640].strip(),
         "email_required": bool(data.get("email_required")),
         "comments": bool(data.get("comments", True)),
@@ -473,6 +478,10 @@ def save_rule(acc, key, data):
     }
     if rule["enabled"] and not rule["dm"]:
         raise ValueError("Add the final DM (your message and link) before turning the rule on.")
+    if rule["followup_on"] and not rule["followup_dm"]:
+        raise ValueError("Write the follow-up message, or turn the follow-up off.")
+    if data.get("followup_url") and not rule["followup_url"]:
+        raise ValueError("The follow-up link must start with https://")
     if engine.is_keyword_rule(key) and not rule["keywords"]:
         rule["keywords"] = [key[3:]]
     rules = store.load_rules(acc["id"])
@@ -755,7 +764,23 @@ def receive_webhook():
     if not valid_signature(request.get_data(), request.headers.get("X-Hub-Signature-256")):
         abort(403)
     engine.dispatch(request.get_json(silent=True) or {}, run_task)
+    run_task(send_followups_safely)
     return "ok"
+
+
+def send_followups_safely():
+    try:
+        engine.send_due_followups()
+    except Exception:
+        pass  # never fail a webhook because of a follow-up
+
+
+@app.get("/cron/followups")
+def cron_followups():
+    """Also sends due follow-ups (add an hourly cron on Vercel Pro; webhooks trigger it too)."""
+    if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
+        abort(401)
+    return jsonify(sent=engine.send_due_followups(100))
 
 
 # ---------- Meta callbacks: app removed / data deletion request ----------
@@ -807,6 +832,7 @@ def meta_data_deletion():
 def cron_refresh_tokens():
     if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
         abort(401)
+    engine.send_due_followups(100)
     done = failed = 0
     for ig_id in store.account_ids():
         acc = store.load_account(ig_id)

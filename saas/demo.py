@@ -67,7 +67,10 @@ def seed():
     store.redis("SET", f"s:user:{USERNAME}", DEMO_ID)
     store.save_rules(DEMO_ID, {"reels": {
         "18000000000000001": {"enabled": True, "keywords": ["PROMPTS"], "comment_reply": "@{username} Check your DM 📩",
-                              "require_follow": True, "dm": "Here are your 39 prompts 🎁 https://example.com/prompts"},
+                              "require_follow": True, "dm": "Here are your 39 prompts 🎁 https://example.com/prompts",
+                              "ask_email": True, "followup_on": True, "followup_hours": 3,
+                              "followup_dm": "Prompts try kiye {username}? 🙌 Full pack with the master guide is just ₹149 today.",
+                              "followup_url": "https://example.com/prompts", "followup_button": "Get the full pack"},
         "18000000000000002": {"enabled": True, "keywords": ["GUIDE"], "auto": True, "comment_reply": "@{username} Sent 📥",
                               "require_follow": True, "dm": "Full setup guide 👉 https://example.com/guide",
                               "label": "Claude se Instagram grow karo"},

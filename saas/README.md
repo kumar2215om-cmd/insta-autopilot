@@ -38,6 +38,14 @@ for an email (with a "Skip" quick reply unless required) and waits 24 h (`s:t:<i
 email saves it to Contacts (`emails` counter) and sends the final DM; a non-email gets one "doesn't look like an email" per
 10 minutes; a keyword starts that automation instead. People whose email is already saved aren't asked again.
 
+## Follow-up offer (freebie → paid)
+Rule option **Follow-up offer** (`followup_on`, `followup_hours` 1/3/6/12/20, `followup_dm`, `followup_url`, `followup_button`):
+after the final DM, one more DM (with a link button) is queued in the sorted set `s:followups`. It's sent once per person per
+automation (30 days), and skipped if Instagram's 24-hour window (counted as 23 h from the link) has passed.
+- No job runner: due follow-ups are sent after every webhook (`send_due_followups`), by `/cron/followups` and by the daily cron.
+  **On Vercel Pro, add an hourly cron for `/cron/followups`** (Hobby only allows daily crons) so quiet accounts get theirs on time.
+- A rule with a follow-up (or email capture) always uses the DM button, which opens the chat the follow-up needs.
+
 ## Auto-setup and Reel report
 - **Auto-setup new reels** (dashboard card): the creator saves a template once (reply, DM, follow gate, final DM with
   `{keyword}`). When a reel posted *after* switching it on says "Comment GUIDE" (a word in capitals or quotes after

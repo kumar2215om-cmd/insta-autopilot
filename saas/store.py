@@ -87,6 +87,24 @@ class MemoryRedis:
                 return sorted(self.data.get(a[0], set()))
             if cmd == "SCARD":
                 return len(self.data.get(a[0], set()))
+            if cmd == "ZADD":
+                z = self.data.setdefault(a[0], {})
+                added = 0
+                for i in range(1, len(a), 2):
+                    added += str(a[i + 1]) not in z
+                    z[str(a[i + 1])] = float(a[i])
+                return added
+            if cmd == "ZRANGEBYSCORE":
+                z = self.data.get(a[0], {})
+                lo = float("-inf") if str(a[1]) == "-inf" else float(a[1])
+                hi = float("inf") if str(a[2]) == "+inf" else float(a[2])
+                rows = [m for m, sc in sorted(z.items(), key=lambda kv: kv[1]) if lo <= sc <= hi]
+                if len(a) >= 6 and str(a[3]).upper() == "LIMIT":
+                    rows = rows[int(a[4]):int(a[4]) + int(a[5])]
+                return rows
+            if cmd == "ZREM":
+                z = self.data.get(a[0], {})
+                return sum(1 for m in a[1:] if z.pop(str(m), None) is not None)
         raise ValueError(f"MemoryRedis: unsupported command {cmd}")
 
 
@@ -119,6 +137,24 @@ def claim(key, seconds=30 * 86400):
 def hash_all(key):
     flat = redis("HGETALL", key) or []
     return {flat[i]: int(flat[i + 1]) for i in range(0, len(flat), 2)}
+
+
+# ---------- scheduled follow-up DMs ----------
+
+FOLLOWUPS = "s:followups"
+
+
+def schedule(due_at, item):
+    redis("ZADD", FOLLOWUPS, int(due_at), json.dumps(item, sort_keys=True))
+
+
+def take_due(limit=25):
+    """Due items, each returned to exactly one caller (ZREM decides who got it)."""
+    out = []
+    for raw in redis("ZRANGEBYSCORE", FOLLOWUPS, "-inf", int(time.time()), "LIMIT", 0, limit) or []:
+        if int(redis("ZREM", FOLLOWUPS, raw) or 0):
+            out.append(json.loads(raw))
+    return out
 
 
 # ---------- accounts ----------

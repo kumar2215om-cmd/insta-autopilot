@@ -92,6 +92,16 @@ function ruleForm(key) {
     <div class="step">Step ${++n} · Deliver</div>
     <div><label class="f" for="dm-${esc(key)}">Final DM: your message and link <span class="hint">required</span></label>
       <textarea id="dm-${esc(key)}" name="dm" rows="3" placeholder="Here you go 🎁 https://...">${esc(r.dm)}</textarea></div>
+    <div class="step">Step ${++n} · Follow-up offer <span class="hint" style="text-transform:none; letter-spacing:0">optional · turns a freebie into a sale</span></div>
+    <label><input type="checkbox" name="followup_on" ${r.followup_on ? "checked" : ""}> Send one more DM after the link</label>
+    <div class="two"><div><label class="f" for="fu-${esc(key)}">Message <span class="hint">{username} = their name</span></label>
+        <textarea id="fu-${esc(key)}" name="followup_dm" rows="3" placeholder="Did you try it {username}? 🙌 The full pack with 39 prompts is just ₹149 today.">${esc(r.followup_dm || "")}</textarea></div>
+      <div style="display:grid; gap:10px; align-content:start">
+        <div><label class="f" for="fh-${esc(key)}">Send after</label><select id="fh-${esc(key)}" name="followup_hours">
+          ${[1, 3, 6, 12, 20].map(h => `<option value="${h}" ${(r.followup_hours || 3) === h ? "selected" : ""}>${h} hour${h > 1 ? "s" : ""}</option>`).join("")}</select></div>
+        <div class="two"><div><label class="f" for="fl-${esc(key)}">Button link</label><input id="fl-${esc(key)}" type="url" name="followup_url" value="${esc(r.followup_url || "")}" placeholder="https://..."></div>
+          <div><label class="f" for="fbt-${esc(key)}">Button text</label><input id="fbt-${esc(key)}" type="text" name="followup_button" maxlength="20" value="${esc(r.followup_button || "")}" placeholder="Get it"></div></div></div></div>
+    <p class="hint" style="margin:0">Sent once per person, only within Instagram's 24 hours after they last messaged you.</p>
     <div class="row"><button class="btn sm" type="submit">Save</button>
       ${rules.reels[key] ? `<button class="btn danger sm" type="button" data-del="${esc(key)}">Delete</button>` : ""}
       <span class="err small" data-msg></span></div>
@@ -138,6 +148,8 @@ document.addEventListener("submit", async (e) => {
     opening_dm: f.opening_dm.value, button_text: f.button_text.value, require_follow: f.require_follow.checked,
     follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value,
     ask_email: f.ask_email.checked, email_dm: f.email_dm.value, email_required: f.email_required.checked,
+    followup_on: f.followup_on.checked, followup_dm: f.followup_dm.value, followup_hours: Number(f.followup_hours.value),
+    followup_url: f.followup_url.value, followup_button: f.followup_button.value,
     comments: f.comments ? f.comments.checked : true, label: rules.reels[key]?.label || ""};
   try {
     rules = await api(`/api/rules/${encodeURIComponent(key)}`, {method: "PUT", body: JSON.stringify(body)});

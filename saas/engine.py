@@ -215,7 +215,8 @@ def find_rule(rules, media_id, text):
 
 
 def uses_button_flow(rule):
-    return rule.get("require_follow") or rule.get("opening_dm") or rule.get("ask_email")
+    # the email question and the follow-up need the chat the button opens
+    return rule.get("require_follow") or rule.get("opening_dm") or rule.get("ask_email") or rule.get("followup_on")
 
 
 def pick_reply(replies):
@@ -298,11 +299,10 @@ def send_rule_dm(acc, ig, igsid, key, rule, username, text, action):
         if uses_button_flow(rule):
             ig.send_buttons({"id": igsid}, fill(rule.get("opening_dm") or DEFAULT_OPENING),
                             postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}")])
+            store.log_activity(acc["id"], key, who, text, action, "ok")
         else:
-            ig.send_dm({"id": igsid}, {"text": fill(rule.get("dm", ""))})
-            store.count(acc["id"], "links_sent")
+            deliver(acc, ig, igsid, key, rule, username, "", text, action)
         note_dm(acc)
-        store.log_activity(acc["id"], key, who, text, action, "ok")
         return True
     except Exception as e:
         store.log_activity(acc["id"], key, who, text, action, "error", str(e))
@@ -455,14 +455,60 @@ def handle_button(acc, igsid, payload):
         store.log_activity(acc["id"], key, username or igsid, payload, "dm", "error", str(e))
 
 
-def deliver(acc, ig, igsid, key, rule, username, media_id, detail):
+def deliver(acc, ig, igsid, key, rule, username, media_id, detail, action="dm"):
     """Sends the rule's final DM (message and link). Raises when Instagram refuses."""
     if not rule.get("dm"):
         raise RuntimeError("The final DM is empty: add your message and link to this rule")
     ig.send_dm({"id": igsid}, {"text": rule["dm"].replace("{username}", username)})
     store.count(acc["id"], "links_sent")
     store.media_count(acc["id"], media_id, "link")
-    store.log_activity(acc["id"], key, username or igsid, detail, "dm", "ok")
+    store.log_activity(acc["id"], key, username or igsid, detail, action, "ok")
+    schedule_followup(acc, igsid, key, rule, username)
+
+
+# ---------- follow-up offer: a second DM some hours after the freebie ----------
+
+FOLLOWUP_HOURS = (1, 3, 6, 12, 20)
+WINDOW = 23 * 3600  # Instagram allows messages until 24 h after the person's last message
+
+
+def schedule_followup(acc, igsid, key, rule, username=""):
+    if not (rule.get("followup_on") and rule.get("followup_dm")):
+        return
+    if not store.claim(f"s:seen:{acc['id']}:followup:{igsid}:{key}", 30 * 86400):
+        return  # one follow-up per person per automation per month
+    hours = rule.get("followup_hours") if rule.get("followup_hours") in FOLLOWUP_HOURS else 3
+    now = int(time.time())
+    store.schedule(now + hours * 3600, {"acc": acc["id"], "igsid": igsid, "key": key, "username": username, "since": now})
+
+
+def send_due_followups(limit=25):
+    """Sends follow-ups whose time has come. Runs after webhooks and from the cron, so no job runner is needed."""
+    sent = 0
+    for item in store.take_due(limit):
+        acc = store.load_account(item["acc"])
+        rule = (store.load_rules(item["acc"]).get("reels", {}).get(item["key"]) if acc else None) or {}
+        if not acc or acc.get("paused") or is_blocked(acc) or not rule.get("followup_on") or not rule.get("followup_dm"):
+            continue
+        who = item.get("username") or item["igsid"]
+        if time.time() - item.get("since", 0) > WINDOW:
+            store.log_activity(acc["id"], item["key"], who, "", "followup", "error", "Skipped: Instagram's 24-hour window had passed.")
+            continue
+        ig = Instagram(acc)
+        username = item.get("username") or (username_of(ig, item["igsid"]) if "{username}" in rule["followup_dm"] else "")
+        text = rule["followup_dm"].replace("{username}", username)
+        try:
+            if rule.get("followup_url"):
+                ig.send_buttons({"id": item["igsid"]}, text, links=[(rule.get("followup_button") or "Get it", rule["followup_url"])])
+            else:
+                ig.send_dm({"id": item["igsid"]}, {"text": text})
+            note_dm(acc)
+            store.count(acc["id"], "followups_sent")
+            store.log_activity(acc["id"], item["key"], who, "", "followup", "ok")
+            sent += 1
+        except Exception as e:
+            store.log_activity(acc["id"], item["key"], who, "", "followup", "error", str(e))
+    return sent
 
 
 # ---------- email capture: ask for an email before sending the link ----------

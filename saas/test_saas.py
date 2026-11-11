@@ -557,6 +557,35 @@ class SaasTest(unittest.TestCase):
         self.hook(tap("SKIPMAIL|kw:GUIDE|", who="83"))
         self.assertEqual(len(self.ig.messages()), sent)
 
+    def test_followup_offer(self):
+        self.login()
+        r = self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", dm="Guide https://g.com",
+                          followup_on=True, followup_hours=3, followup_dm="Full pack ₹149 {username}",
+                          followup_url="https://shop.com/p", followup_button="Buy now")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(self.put_rule("kw:X", followup_on=True, followup_dm="").status_code, 400)
+        self.hook(dm("GUIDE", sender="91"))  # a follow-up needs the chat the button opens
+        tap = {"entry": [{"id": "1789", "messaging": [{"sender": {"id": "91"}, "postback": {"payload": "GET|kw:GUIDE"}}]}]}
+        self.hook(tap)
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Guide https://g.com"})
+        self.hook(tap)  # a second tap doesn't schedule a second follow-up
+        self.assertEqual(len(store.redis("ZRANGEBYSCORE", store.FOLLOWUPS, "-inf", "+inf")), 1)
+        self.assertEqual(engine.send_due_followups(), 0)  # not due yet
+        later = engine.time.time() + 3 * 3600 + 5
+        with mock.patch.object(engine.time, "time", lambda: later), mock.patch.object(store.time, "time", lambda: later):
+            self.assertEqual(engine.send_due_followups(), 1)
+        msg = self.ig.messages()[-1]["message"]["attachment"]["payload"]
+        self.assertEqual(msg["text"], "Full pack ₹149 fan")
+        self.assertEqual(msg["buttons"][0], {"type": "web_url", "title": "Buy now", "url": "https://shop.com/p"})
+        self.assertEqual(store.counts("1789").get("followups_sent"), 1)
+        # past Instagram's 24 hours: skipped
+        store.schedule(0, {"acc": "1789", "igsid": "92", "key": "kw:GUIDE", "since": 1})
+        sent = len(self.ig.messages())
+        self.assertEqual(engine.send_due_followups(), 0)
+        self.assertEqual(len(self.ig.messages()), sent)
+        # the cron also sends them
+        self.assertEqual(self.c.get("/cron/followups", headers={"Authorization": "Bearer cron"}).get_json(), {"sent": 0})
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)
