@@ -4,52 +4,81 @@
 <meta charset="utf-8">
 <link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ brand }}: Comment to DM for Instagram</title>
-<meta name="description" content="Auto-reply to comments and DM the link, with a follow check. Built for Instagram creators.">
+<title>{{ brand }}: Instagram DM automation for creators</title>
+<meta name="description" content="Comment-to-DM with follow to unlock, story replies, an AI that answers DMs in Hinglish, email and phone capture, follow-up offers, link in bio and reel reports. Free to start.">
 {% include "_style.html" %}
 <style>
-  header.top { display:flex; justify-content:space-between; align-items:center; padding:18px 0; }
+  header.top { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:18px 0; }
+  header nav { display:flex; gap:18px; align-items:center; }
+  header nav a:not(.btn) { color:var(--ink); text-decoration:none; font-weight:600; font-size:14px; }
   .logo { font-weight:900; font-size:22px; }
-  .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:32px; align-items:center; padding:40px 0 56px; }
-  .hero h1 { font-size:clamp(36px, 6vw, 60px); margin:12px 0 16px; }
-  .hero p.lead { font-size:18px; color:#4a453f; max-width:520px; }
+  .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:32px; align-items:center; padding:36px 0 48px; }
+  .hero h1 { font-size:clamp(34px, 5.6vw, 58px); margin:12px 0 16px; }
+  .hero p.lead { font-size:18px; color:#4a453f; max-width:540px; }
   .cta { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:24px; }
-  .invite { display:flex; gap:8px; max-width:420px; margin-top:20px; }
+  .invite { display:flex; gap:8px; max-width:420px; }
+  .proof { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:18px; font-size:14px; color:var(--mute); }
   .flow { display:grid; gap:12px; }
-  .bubble { background:#fff; border:1px solid var(--line); border-radius:18px; padding:12px 16px; box-shadow:var(--shadow);
-            max-width:320px; font-size:14px; }
+  .bubble { background:#fff; border:1px solid var(--line); border-radius:18px; padding:12px 16px; box-shadow:var(--shadow); max-width:330px; font-size:14px; }
   .bubble.me { margin-left:auto; background:var(--ink); color:#fff; border-color:var(--ink); }
   .bubble b { display:block; font-size:12px; color:var(--mute); margin-bottom:2px; }
   .bubble.me b { color:#d6d0c6; }
-  .chip { display:inline-block; margin-top:8px; padding:6px 12px; border-radius:999px; background:var(--rose); color:#fff;
-          font-weight:800; font-size:13px; }
-  section { padding:40px 0; }
-  .grid3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-top:20px; }
+  .chip { display:inline-block; margin-top:8px; padding:6px 12px; border-radius:999px; background:var(--rose); color:#fff; font-weight:800; font-size:13px; }
+  section { padding:44px 0; }
+  section > h2 { font-size:clamp(26px, 3.6vw, 36px); margin:8px 0 6px; }
+  section > p.sub { color:var(--mute); margin:0; max-width:620px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-top:22px; }
   .grid3 .card h3 { font-size:18px; margin:8px 0 6px; }
   .step { font-weight:900; font-size:40px; color:var(--rose); line-height:1; }
-  .plans { display:grid; grid-template-columns:repeat(2, 1fr); gap:16px; margin-top:20px; max-width:760px; }
-  .price { font-size:36px; font-weight:900; margin:6px 0; }
-  .plans ul { padding-left:18px; margin:10px 0 0; }
+  .group { margin-top:26px; }
+  .group h3 { font-size:15px; text-transform:uppercase; letter-spacing:.1em; color:var(--mute); font-weight:800; margin:0 0 12px; }
+  .feats { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:14px; }
+  .feat { background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px; }
+  .feat .ic { font-size:22px; line-height:1; }
+  .feat b { display:block; margin:8px 0 4px; font-size:16px; }
+  .feat p { margin:0; font-size:14px; color:var(--mute); }
+  .feat .tag { display:inline-block; margin-left:6px; font-size:11px; font-weight:800; color:var(--rose); background:#EEEAFE; border-radius:99px; padding:2px 8px; vertical-align:2px; }
+  .plans { display:grid; grid-template-columns:repeat(2, 1fr); gap:18px; margin-top:22px; max-width:820px; }
+  .plan { position:relative; }
+  .plan.pro { border:2px solid var(--rose); }
+  .plan .ribbon { position:absolute; top:-12px; right:18px; background:var(--rose); color:#fff; font-size:12px; font-weight:800; padding:4px 10px; border-radius:99px; }
+  .price { font-size:40px; font-weight:900; margin:6px 0 0; }
+  .price small { font-size:15px; font-weight:600; color:var(--mute); }
+  .plan ul { list-style:none; padding:0; margin:14px 0 18px; display:grid; gap:8px; font-size:15px; }
+  .plan li::before { content:"✓"; color:var(--ok); font-weight:900; margin-right:8px; }
+  .plan li.big { font-weight:700; }
+  .table { overflow-x:auto; margin-top:22px; max-width:820px; }
+  .table table { width:100%; border-collapse:collapse; min-width:520px; background:#fff; border:1px solid var(--line); border-radius:16px; overflow:hidden; font-size:14.5px; }
+  .table th, .table td { padding:11px 14px; border-top:1px solid var(--line); text-align:left; }
+  .table thead th { border-top:0; background:#FAFAF7; font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); }
+  .table td:not(:first-child), .table th:not(:first-child) { text-align:center; width:22%; }
   .alert { background:#fff1e6; border:1px solid #fed7aa; color:var(--bad); border-radius:12px; padding:10px 14px; margin-top:16px; }
-  details { background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-top:10px; }
+  details { background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-top:10px; max-width:820px; }
   summary { font-weight:800; cursor:pointer; }
-  footer { padding:32px 0 48px; color:var(--mute); font-size:14px; display:flex; flex-wrap:wrap; gap:16px; }
-  @media (max-width: 760px) { .hero, .grid3, .plans { grid-template-columns:1fr; } .hero { padding-top:16px; } }
+  .final { text-align:center; background:var(--ink); color:#fff; border-radius:24px; padding:40px 20px; margin:20px 0; }
+  .final h2 { font-size:clamp(26px, 3.6vw, 38px); margin:0 0 10px; }
+  .final p { color:#d6d0c6; margin:0 0 20px; }
+  .final .btn.ghost { color:#fff; border-color:#6b6660; }
+  footer { padding:24px 0 48px; color:var(--mute); font-size:14px; display:flex; flex-wrap:wrap; gap:16px; }
+  @media (max-width: 760px) {
+    .hero, .grid3, .plans { grid-template-columns:1fr; } .hero { padding-top:12px; }
+    header nav a:not(.btn) { display:none; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div class="logo">{{ brand }}<span class="hl">.</span></div>
-    <a class="btn dark small" href="#start">Get started</a>
+    <nav aria-label="Main"><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a class="btn dark small" href="#start">Get started</a></nav>
   </header>
 
   <div class="hero">
     <div>
       <div class="label">For Instagram creators</div>
-      <h1>Comment a word. <span class="hl">Get the link in DM.</span></h1>
-      <p class="lead">Followers comment your keyword on a reel. {{ brand }} replies to the comment, sends them a DM,
-        checks that they follow you, then sends the link. Automatically, 24/7.</p>
+      <h1>Turn every comment into a <span class="hl">follower, lead or sale.</span></h1>
+      <p class="lead">People comment your keyword. {{ brand }} replies, sends the DM, checks they follow you, collects their email or
+        WhatsApp number, sends the link, and follows up with your offer. An AI answers the rest of your DMs in Hinglish. 24/7.</p>
       <div class="cta" id="start">
         {% if invite_only %}
           <form class="invite" action="/login" method="get">
@@ -60,8 +89,8 @@
           <a class="btn" href="/login">Continue with Instagram</a>
         {% endif %}
         <a class="btn ghost" href="/demo">See a live demo</a>
-        <span class="muted">Free · no card needed</span>
       </div>
+      <div class="proof"><span>✓ Free to start, no card</span><span>✓ Official Instagram API, approved by Meta</span><span>✓ No password sharing</span></div>
       {% if error %}
         <div class="alert">
           {% if error == "invite" %}That invite code doesn't work. Check it and try again.
@@ -74,40 +103,114 @@
     <div class="flow" aria-hidden="true">
       <div class="bubble"><b>@rahul.creates commented</b>PROMPTS 🔥</div>
       <div class="bubble me"><b>You replied</b>@rahul.creates Check your DM 📩</div>
-      <div class="bubble me"><b>DM</b>Hey rahul.creates! 👋 Tap below and I'll send it to you.<br><span class="chip">Send me the link</span></div>
+      <div class="bubble me"><b>DM</b>Hey rahul.creates! 👋 Follow me and tap below to unlock it.<br><span class="chip">I followed ✅</span></div>
       <div class="bubble me"><b>DM</b>Here you go 🎁 https://your-link.com</div>
+      <div class="bubble me"><b>3 hours later</b>Prompts try kiye? 🙌 Full pack is just ₹149 today.<br><span class="chip">Get the full pack</span></div>
     </div>
   </div>
 
   <section>
     <div class="label">How it works</div>
-    <h2>Set up in 2 minutes</h2>
+    <h2>Live in 2 minutes</h2>
     <div class="grid3">
-      <div class="card"><div class="step">1</div><h3>Connect Instagram</h3><p class="muted">Log in with Instagram. We use Instagram's official API, so there's no password sharing and no risk of a ban from bots.</p></div>
-      <div class="card"><div class="step">2</div><h3>Pick a reel + keyword</h3><p class="muted">Choose the reel, the word people comment (like PROMPTS), and the link to send. Spelling mistakes still match.</p></div>
-      <div class="card"><div class="step">3</div><h3>Watch DMs go out</h3><p class="muted">Every matching comment gets a reply and a DM. Turn on "follow first" to grow followers with every link.</p></div>
+      <div class="card"><div class="step">1</div><h3>Connect Instagram</h3><p class="muted">Log in with Instagram's official login. No password sharing, no bots, no ban risk.</p></div>
+      <div class="card"><div class="step">2</div><h3>Pick a template</h3><p class="muted">Free guide, lead magnet, course launch, giveaway… Add your keyword and link, Save.</p></div>
+      <div class="card"><div class="step">3</div><h3>Post and relax</h3><p class="muted">Every matching comment, story reply or DM gets answered, and you see the numbers per reel.</p></div>
     </div>
   </section>
 
-  <section>
+  <section id="features">
+    <div class="label">Everything in one place</div>
+    <h2>More than comment-to-DM</h2>
+    <p class="sub">Built for creators who sell guides, courses and products from Instagram.</p>
+
+    <div class="group"><h3>Grow</h3><div class="feats">
+      <div class="feat"><span class="ic">💬</span><b>Comment to DM</b><p>Reply to the comment and DM the link. Typos, plurals and emojis still match your keyword.</p></div>
+      <div class="feat"><span class="ic">➕</span><b>Follow to unlock</b><p>The link is sent only after they follow you, so every freebie brings followers.</p></div>
+      <div class="feat"><span class="ic">📲</span><b>Story replies and mentions</b><p>DM everyone who replies to your story, and thank people who mention you.</p></div>
+      <div class="feat"><span class="ic">✨</span><b>Auto-setup from your caption</b><p>Write "Comment GUIDE" in a new reel's caption and its automation creates itself.</p></div>
+      <div class="feat"><span class="ic">⏪</span><b>Past comments and retries</b><p>Send to comments from before you set it up, and retry DMs Instagram refused.</p></div>
+      <div class="feat"><span class="ic">🎁</span><b>Giveaway picker</b><p>Fair random winners from a post's comments, with keyword, tag and follower rules.</p></div>
+      <div class="feat"><span class="ic">🛡️</span><b>Comment guard</b><p>Hides spam links and words you block, on every post, automatically.</p></div>
+    </div></div>
+
+    <div class="group"><h3>Sell</h3><div class="feats">
+      <div class="feat"><span class="ic">✉️</span><b>Email and WhatsApp capture</b><p>Ask for their email or number before the link. Saved in Contacts, export to CSV.</p></div>
+      <div class="feat"><span class="ic">🔁</span><b>Follow-up offer</b><p>A second DM hours later with your paid product, inside Instagram's 24-hour window.</p></div>
+      <div class="feat"><span class="ic">🔗</span><b>Link in bio page</b><p>Your products and links on one page, with click counts. Five themes.</p></div>
+      <div class="feat"><span class="ic">👥</span><b>Contacts</b><p>Everyone who commented, DMed or followed, with keyword, email and phone.</p></div>
+      <div class="feat"><span class="ic">🆎</span><b>A/B test your first DM</b><p>Two versions, see which gets more taps, links and follows.</p></div>
+      <div class="feat"><span class="ic">🗓️</span><b>Schedules</b><p>Start and end dates for launches and limited-time offers.</p></div>
+    </div></div>
+
+    <div class="group"><h3>AI and insights</h3><div class="feats">
+      <div class="feat"><span class="ic">🤖</span><b>AI DM agent<span class="tag">NEW</span></b><p>Answers fans in Hinglish, Hindi or English from your FAQ and products. Hands refunds and collabs to you.</p></div>
+      <div class="feat"><span class="ic">📥</span><b>AI Inbox</b><p>Every conversation in one place, with "needs you" chats and suggested replies.</p></div>
+      <div class="feat"><span class="ic">🩺</span><b>Reel report</b><p>Views → comments → DMs → links → follows for every reel, with tips on what to fix.</p></div>
+      <div class="feat"><span class="ic">📈</span><b>Weekly summary</b><p>This week against last week, at a glance on your home page.</p></div>
+      <div class="feat"><span class="ic">✦</span><b>Connect Claude</b><p>Run {{ brand }} by chatting with Claude: "set up DMs on my latest reel for GUIDE".</p></div>
+    </div></div>
+
+    <div class="group"><h3>Work smarter</h3><div class="feats">
+      <div class="feat"><span class="ic">🧩</span><b>Templates</b><p>Ready-made automations for guides, launches, giveaways and brand deals.</p></div>
+      <div class="feat"><span class="ic">❓</span><b>Chat menu</b><p>Questions people can tap when they first open your DMs, each with your answer.</p></div>
+      <div class="feat"><span class="ic">🤝</span><b>Team access</b><p>Invite your manager or editor. No Instagram password needed, remove any time.</p></div>
+    </div></div>
+  </section>
+
+  <section id="pricing">
     <div class="label">Pricing</div>
-    <h2>Start free</h2>
+    <h2>Start free. Upgrade when you grow.</h2>
+    <p class="sub">Every feature is on the free plan. Pro removes the limits.</p>
     <div class="plans">
-      <div class="card"><div class="label">Free</div><div class="price">₹0</div>
-        <ul><li>Up to 1,000 DMs a month</li><li>Unlimited reels and keywords</li><li>Follow-to-unlock</li><li>Live activity feed</li></ul></div>
-      <div class="card"><div class="label">Pro · coming soon</div><div class="price">₹—</div>
-        <ul><li>More DMs every month</li><li>Priority support</li><li>More features as we build them</li></ul></div>
+      <div class="card plan"><div class="label">Free</div><div class="price">₹0 <small>forever</small></div>
+        <ul><li class="big">1,000 DMs every month</li><li>25 AI replies to try the AI agent</li><li>All automations, story replies, follow-ups</li>
+          <li>Email and WhatsApp capture, Contacts</li><li>Link in bio, reel report, giveaway picker</li><li>Team access</li></ul>
+        <a class="btn ghost" href="#start" style="width:100%">Start free</a></div>
+      <div class="card plan pro"><span class="ribbon">Launching soon</span><div class="label">Pro</div><div class="price">₹299 <small>/ month</small></div>
+        <ul><li class="big">No monthly DM limit</li><li class="big">1,000 AI replies every month</li><li>Everything in Free</li>
+          <li>Priority support on WhatsApp</li><li>New features first</li></ul>
+        <a class="btn" href="#start" style="width:100%">Start free, upgrade later</a></div>
+    </div>
+    <div class="label" style="margin-top:28px">Compare plans</div>
+    <div class="table" style="margin-top:10px">
+      <table aria-label="Compare plans">
+        <thead><tr><th scope="col">Feature</th><th scope="col">Free</th><th scope="col">Pro</th></tr></thead>
+        <tbody>
+          <tr><td>DMs per month</td><td>1,000</td><td>No limit*</td></tr>
+          <tr><td>AI DM replies</td><td>25 to try</td><td>1,000 / month</td></tr>
+          <tr><td>Reels, keywords, story automations</td><td>Unlimited</td><td>Unlimited</td></tr>
+          <tr><td>Follow to unlock, email and phone capture</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Follow-up offers, A/B tests, schedules</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Link in bio, Contacts, CSV export</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Reel report, weekly summary, giveaway picker</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Team members</td><td>Up to 5</td><td>Up to 5</td></tr>
+          <tr><td>Support</td><td>Email</td><td>Priority, WhatsApp</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="font-size:13px; margin:8px 0 0">* Instagram's own limits still apply: one DM per comment within 7 days, and hourly request limits on very busy reels.</p>
     </div>
   </section>
 
-  <section>
+  <section id="faq">
     <div class="label">Questions</div>
     <h2>FAQ</h2>
-    <details><summary>Which accounts work?</summary><p>Instagram Business or Creator accounts (free to switch in Instagram settings: Account type and tools).</p></details>
+    <details><summary>Which accounts work?</summary><p>Instagram Business or Creator accounts (free to switch in Instagram: Settings → Account type and tools).</p></details>
     <details><summary>Is it safe for my account?</summary><p>Yes. {{ brand }} uses Instagram's official API, approved by Meta. We never ask for your password, and you can disconnect any time.</p></details>
+    <details><summary>How does the AI DM agent work?</summary><p>It answers DMs that aren't one of your keywords, using only your FAQ, products and links, in the language the fan writes in. It never makes up prices or links, and anything like refunds or brand deals is handed to you with a suggested reply. You can switch it off any time.</p></details>
     <details><summary>Why do people tap a button before getting the link?</summary><p>Instagram only lets apps check whether someone follows you after they reply to your DM. The button tap is that reply.</p></details>
-    <details><summary>What are the limits?</summary><p>Instagram lets an app DM someone who commented within 7 days of the comment, once per comment. Very busy reels can hit Instagram's hourly limit; {{ brand }} then waits and continues.</p></details>
+    <details><summary>What are Instagram's limits?</summary><p>An app can DM someone who commented once per comment, within 7 days. Follow-ups must go within 24 hours of the person's last message. Very busy reels can hit Instagram's hourly limit; {{ brand }} then waits and continues.</p></details>
+    <details><summary>When can I buy Pro?</summary><p>Pro is launching soon. Start on Free today: everything you set up stays when you upgrade.</p></details>
+    <details><summary>Can my team use it?</summary><p>Yes. Invite up to 5 people as Manager or Viewer from Settings. They don't need your Instagram password.</p></details>
   </section>
+
+  <div class="final">
+    <h2>Your next reel can grow your list while you sleep.</h2>
+    <p>Free to start. Set up your first automation in 2 minutes.</p>
+    <div class="cta" style="justify-content:center; margin:0">
+      <a class="btn" href="{{ '#start' if invite_only else '/login' }}">Continue with Instagram</a><a class="btn ghost" href="/demo">See a live demo</a>
+    </div>
+  </div>
 
   <footer>
     <span>© {{ brand }}</span>

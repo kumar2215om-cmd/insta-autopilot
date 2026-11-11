@@ -104,7 +104,7 @@ def role_blocks(path, method):
 
 def public_account(acc):
     """What the dashboard may see: never the token."""
-    return {k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused", "demo")}
+    return {k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused", "demo", "plan")}
 
 
 # Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.

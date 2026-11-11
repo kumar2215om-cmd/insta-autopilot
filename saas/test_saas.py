@@ -809,6 +809,15 @@ class SaasTest(unittest.TestCase):
         self.assertEqual([x["name"] for x in owner.get("/api/team").get_json()["team"]], ["Aman"])
         self.assertEqual(owner.get("/app/settings").status_code, 200)
 
+    def test_pro_plan_limits(self):
+        acc = {"id": "1", "plan": "pro"}
+        self.assertEqual(engine.monthly_limit(acc), 0)  # no ReplyInbox DM limit
+        self.assertEqual(engine.monthly_limit({"id": "1"}), 3)  # free (tests run with FREE_MONTHLY_DMS=3)
+        self.assertEqual(engine.monthly_limit({"id": "1", "plan": "pro", "dm_limit": 50}), 50)
+        html = self.c.get("/").get_data(as_text=True)
+        for text in ("₹299", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
+            self.assertIn(text, html)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

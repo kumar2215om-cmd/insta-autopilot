@@ -177,6 +177,12 @@ No Meta webhook change needed.
 If Meta asks for **Access verification (Tech Provider)** in the app dashboard, complete it: it's required
 for apps used by businesses other than the app owner.
 
+## Plans (landing page pricing)
+- **Free:** `FREE_MONTHLY_DMS` (1,000) DMs a month, `FREE_AI_TRIAL_REPLIES` (25) AI replies once, every feature.
+- **Pro (₹299/month, "launching soon" until billing exists):** account field `"plan": "pro"` → `PRO_MONTHLY_DMS`
+  (default 0 = no ReplyInbox limit) and `PAID_MONTHLY_AI_REPLIES` (1,000). Set by hand for now; `"dm_limit"` / `"ai_limit"`
+  on an account override both. Keep `templates/landing.html` in sync if these change.
+
 ## Limits and notes
 - One DM per comment, within 7 days of the comment (Instagram rule). The follow check only works after the
   person taps a button in the DM, which is why the first DM has one.

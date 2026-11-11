@@ -119,8 +119,13 @@ def month():
     return datetime.now(timezone.utc).strftime("%Y-%m")
 
 
+PRO_MONTHLY_DMS = int(os.environ.get("PRO_MONTHLY_DMS", "0"))  # 0 = no ReplyInbox limit (Instagram's own limits still apply)
+
+
 def monthly_limit(acc):
-    return int(acc.get("dm_limit", FREE_MONTHLY_DMS))
+    if acc.get("dm_limit") is not None:
+        return int(acc["dm_limit"])
+    return PRO_MONTHLY_DMS if acc.get("plan") == "pro" else FREE_MONTHLY_DMS
 
 
 def dms_this_month(ig_id):
