@@ -282,14 +282,44 @@ def handle_comment(acc, value):
     return True
 
 
+# ---------- A/B test of the first DM ----------
+
+def opening(rule):
+    """(variant, text) of the first DM: "A" or "B" at random when the rule has a second version, else ("", text)."""
+    a = rule.get("opening_dm") or DEFAULT_OPENING
+    if not rule.get("opening_dm_b"):
+        return "", a
+    return ("A", a) if random.random() < 0.5 else ("B", rule["opening_dm_b"])
+
+
+def ab_key(acc, key):
+    return store.account_key(acc["id"], f"ab:{key}")
+
+
+def ab_count(acc, key, variant, field):
+    if variant in ("A", "B"):
+        store.redis("HINCRBY", ab_key(acc, key), f"{field}_{variant}", 1)
+
+
+def ab_stats(acc, key):
+    return store.hash_all(ab_key(acc, key))
+
+
+def ab_variant(acc, igsid, key):
+    return store.redis("GET", store.account_key(acc["id"], f"abv:{igsid}:{key}")) or ""
+
+
 def send_comment_dm(acc, ig, comment_id, key, rule, media_id, username, text, retry=False):
     """The private-reply DM to a comment. When Instagram refuses to open the chat, the comment is queued for a retry."""
     fill = lambda s: s.replace("{username}", username)
     action = "opening_dm" if uses_button_flow(rule) else "dm"
     try:
+        variant = ""
         if uses_button_flow(rule):
-            ig.send_buttons({"comment_id": comment_id}, fill(rule.get("opening_dm") or DEFAULT_OPENING),
-                            postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}|{media_id}")])
+            variant, first = opening(rule)
+            ig.send_buttons({"comment_id": comment_id}, fill(first),
+                            postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}|{media_id}|{variant}".rstrip("|"))])
+            ab_count(acc, key, variant, "sent")
         elif rule.get("dm"):
             ig.send_dm({"comment_id": comment_id}, {"text": fill(rule["dm"])})
             store.count(acc["id"], "links_sent")
@@ -487,8 +517,10 @@ def send_rule_dm(acc, ig, igsid, key, rule, username, text, action):
     fill = lambda s: s.replace("{username}", username)
     try:
         if uses_button_flow(rule):
-            ig.send_buttons({"id": igsid}, fill(rule.get("opening_dm") or DEFAULT_OPENING),
-                            postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}")])
+            variant, first = opening(rule)
+            ig.send_buttons({"id": igsid}, fill(first),
+                            postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}||{variant}".rstrip("|"))])
+            ab_count(acc, key, variant, "sent")
             store.log_activity(acc["id"], key, who, text, action, "ok")
         else:
             deliver(acc, ig, igsid, key, rule, username, "", text, action)
@@ -651,9 +683,13 @@ def handle_ice(acc, igsid, index):
 
 def handle_button(acc, igsid, payload):
     """They tapped "Send me the link" or "I followed": check the follow, then send the link or ask again."""
-    step, key, media_id = (payload.split("|") + ["", ""])[:3]
+    step, key, media_id, variant = (payload.split("|") + ["", "", ""])[:4]
     if step == "ICE":
         return handle_ice(acc, igsid, key)
+    if step == "GET" and variant in ("A", "B"):
+        store.redis("SET", store.account_key(acc["id"], f"abv:{igsid}:{key}"), variant, "EX", 7 * 86400)
+        if store.claim(f"s:seen:{acc['id']}:abtap:{igsid}:{key}", 7 * 86400):
+            ab_count(acc, key, variant, "tap")
     media_id = media_id or (key if key.isdigit() else "")  # older buttons carried only the rule key
     rule = store.load_rules(acc["id"]).get("reels", {}).get(key)
     if step not in ("GET", "FOLLOWED", *SKIP_STEPS) or not rule or is_blocked(acc):
@@ -680,6 +716,7 @@ def handle_button(acc, igsid, payload):
             if step == "FOLLOWED" and rule.get("require_follow") and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
                 store.count(acc["id"], "gate_follows")
                 store.media_count(acc["id"], media_id, "follow")
+                ab_count(acc, key, ab_variant(acc, igsid, key), "follow")
             store.touch_contact(acc["id"], username, igsid, followed=bool(rule.get("require_follow") and follows))
         else:
             ig.send_buttons({"id": igsid}, (rule.get("follow_dm") or DEFAULT_FOLLOW).replace("{username}", username),
@@ -699,6 +736,8 @@ def deliver(acc, ig, igsid, key, rule, username, media_id, detail, action="dm"):
     store.count(acc["id"], "links_sent")
     store.media_count(acc["id"], media_id, "link")
     store.log_activity(acc["id"], key, username or igsid, detail, action, "ok")
+    if store.claim(f"s:seen:{acc['id']}:ablink:{igsid}:{key}", 7 * 86400):
+        ab_count(acc, key, ab_variant(acc, igsid, key), "link")
     schedule_followup(acc, igsid, key, rule, username)
 
 

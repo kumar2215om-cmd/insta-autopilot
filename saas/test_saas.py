@@ -728,6 +728,33 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(len(self.ig.messages()), 1)
         self.assertEqual(store.load_rules("1789")["reels"]["555"]["ends_at"], now - 1)
 
+    def test_ab_test_first_dm(self):
+        self.login()
+        self.put_rule("555", comment_reply="", require_follow=True, opening_dm="Version A text", opening_dm_b="Version B text")
+        tap = lambda p, who: {"entry": [{"id": "1789", "messaging": [{"sender": {"id": who}, "postback": {"payload": p}}]}]}
+        with mock.patch.object(engine.random, "random", lambda: 0.9):  # B
+            self.hook(comment("PROMPTS", cid="ab1"))
+        first = self.ig.messages()[-1]["message"]["attachment"]["payload"]
+        self.assertEqual(first["text"], "Version B text")
+        payload = first["buttons"][0]["payload"]
+        self.assertEqual(payload, "GET|555|555|B")
+        self.hook(tap(payload, "51"))  # follows (fake) → link
+        self.hook(tap(payload, "51"))  # a second tap isn't counted twice
+        with mock.patch.object(engine.random, "random", lambda: 0.1):  # A
+            self.hook(comment("PROMPTS", cid="ab2"))
+        self.assertEqual(self.ig.messages()[-1]["message"]["attachment"]["payload"]["text"], "Version A text")
+        st = self.c.get("/api/ab").get_json()["555"]
+        self.assertEqual((st["sent_A"], st["sent_B"], st["tap_B"], st["link_B"]), (1, 1, 1, 1))
+        self.assertNotIn("tap_A", st)
+        # changing a version starts a fresh test
+        self.put_rule("555", comment_reply="", opening_dm="Version A text", opening_dm_b="New B")
+        self.assertEqual(self.c.get("/api/ab").get_json()["555"], {})
+        # without version B there's no test and the payload stays as before
+        self.put_rule("555", comment_reply="", opening_dm="Only A", opening_dm_b="")
+        self.hook(comment("PROMPTS", cid="ab3"))
+        self.assertEqual(self.ig.messages()[-1]["message"]["attachment"]["payload"]["buttons"][0]["payload"], "GET|555|555")
+        self.assertEqual(self.c.get("/api/ab").get_json(), {})
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

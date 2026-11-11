@@ -78,6 +78,7 @@ def seed():
     store.save_rules(DEMO_ID, {"reels": {
         "18000000000000001": {"enabled": True, "keywords": ["PROMPTS"], "comment_reply": "@{username} Check your DM 📩",
                               "require_follow": True, "dm": "Here are your 39 prompts 🎁 https://example.com/prompts",
+                              "opening_dm_b": "Bhai ye lo 🔥 Neeche button dabao, link turant milega",
                               "ask_email": True, "ask_phone": True, "followup_on": True, "followup_hours": 3,
                               "followup_dm": "Prompts try kiye {username}? 🙌 Full pack with the master guide is just ₹149 today.",
                               "followup_url": "https://example.com/prompts", "followup_button": "Get the full pack"},
@@ -144,6 +145,10 @@ def seed():
         for i, (role, text) in enumerate(chat):
             ai_agent.add_message(DEMO_ID, igsid, role, text, user)
         ai_agent.update_thread(DEMO_ID, igsid, **{"unread": False, **extra})
+    store.redis("DEL", store.account_key(DEMO_ID, "ab:18000000000000001"))
+    for field, n in (("sent_A", 176), ("tap_A", 118), ("link_A", 97), ("follow_A", 41),
+                     ("sent_B", 181), ("tap_B", 139), ("link_B", 121), ("follow_B", 52)):
+        store.redis("HINCRBY", store.account_key(DEMO_ID, "ab:18000000000000001"), field, n)
     for cid, user in (("c901", "priya.ai"), ("c902", "vikas.codes")):
         store.redis("HSET", store.account_key(DEMO_ID, "retry"), cid, json.dumps(
             {"key": "18000000000000001", "media_id": "18000000000000001", "username": user, "text": "PROMPTS", "at": int(time.time()) - 7200}))

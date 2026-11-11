@@ -473,6 +473,7 @@ def save_rule(acc, key, data):
         "keywords": [k.strip()[:40] for k in data.get("keywords", []) if k.strip()][:20],
         "comment_reply": str(data.get("comment_reply", ""))[:1000].strip(),
         "opening_dm": str(data.get("opening_dm", ""))[:640].strip(),
+        "opening_dm_b": str(data.get("opening_dm_b", ""))[:640].strip(),
         "button_text": str(data.get("button_text", ""))[:20].strip(),
         "require_follow": bool(data.get("require_follow")),
         "follow_dm": str(data.get("follow_dm", ""))[:640].strip(),
@@ -505,6 +506,9 @@ def save_rule(acc, key, data):
     if engine.is_keyword_rule(key) and not rule["keywords"]:
         rule["keywords"] = [key[3:]]
     rules = store.load_rules(acc["id"])
+    before = rules.get("reels", {}).get(key) or {}
+    if (before.get("opening_dm"), before.get("opening_dm_b")) != (rule["opening_dm"], rule["opening_dm_b"]):
+        store.redis("DEL", engine.ab_key(acc, key))  # new messages: a fresh test
     rules.setdefault("reels", {})[key] = rule
     store.save_rules(acc["id"], rules)
     return rules
@@ -643,6 +647,14 @@ def api_giveaway_announce():
         store.log_activity(acc["id"], "giveaway", row["username"], "", "giveaway_winner", "ok")
         done.append(row)
     return jsonify(results=done)
+
+
+@app.get("/api/ab")
+def api_ab():
+    """A/B test numbers for every automation that has a second first-DM version."""
+    acc = current_account()
+    return jsonify({k: engine.ab_stats(acc, k) for k, r in store.load_rules(acc["id"]).get("reels", {}).items()
+                    if r.get("opening_dm_b")})
 
 
 @app.get("/api/activity")

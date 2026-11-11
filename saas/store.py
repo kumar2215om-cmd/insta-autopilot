@@ -194,6 +194,9 @@ def delete_account(ig_id):
         redis("DEL", f"s:mcpkey:{acc['mcp_key_hash']}")
     if acc.get("username") and redis("GET", f"s:user:{acc['username'].lower()}") == ig_id:
         redis("DEL", f"s:user:{acc['username'].lower()}")
+    abs_ = [account_key(ig_id, f"ab:{k}") for k in load_rules(ig_id).get("reels", {})]
+    if abs_:
+        redis("DEL", *abs_)
     threads = redis("HGETALL", account_key(ig_id, "threads")) or []
     chats = [account_key(ig_id, f"chat:{u}") for u in threads[::2]]
     redis("DEL", *[account_key(ig_id, p) for p in parts + ["threads"]], *chats,

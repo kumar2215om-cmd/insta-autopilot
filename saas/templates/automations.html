@@ -71,6 +71,22 @@ function toLocal(t) {
 }
 const fromLocal = (v) => v ? Math.floor(new Date(v).getTime() / 1000) : 0;
 
+let ab = {};
+function abBox(key) {
+  const st = ab[key];
+  if (!st) return "";
+  const row = (v) => {
+    const sent = st[`sent_${v}`] || 0, pct = (n) => sent ? `${Math.round(100 * (n || 0) / sent)}%` : "–";
+    return `<tr><th scope="row">Version ${v}</th><td>${fmt(sent)}</td><td>${pct(st[`tap_${v}`])}</td><td>${pct(st[`link_${v}`])}</td><td>${fmt(st[`follow_${v}`] || 0)}</td></tr>`;
+  };
+  const rate = (v) => (st[`link_${v}`] || 0) / Math.max(st[`sent_${v}`] || 0, 1);
+  const enough = (st.sent_A || 0) >= 30 && (st.sent_B || 0) >= 30;
+  const lead = rate("A") === rate("B") ? "" : rate("A") > rate("B") ? "A" : "B";
+  return `<div class="scroll" style="margin-top:10px"><table class="small" style="min-width:420px"><thead><tr><th></th><th scope="col">Sent</th><th scope="col">Tapped</th><th scope="col">Got the link</th><th scope="col">Follows</th></tr></thead>
+    <tbody>${row("A")}${row("B")}</tbody></table></div>
+    <p class="hint" style="margin:6px 0 0">${!enough ? "Wait for at least 30 sends of each version before picking a winner." : lead ? `Version ${lead} is ahead. Keep it as the main message and try a new version B.` : "Both versions are doing the same."}</p>`;
+}
+
 function badge(key) {
   const r = rules.reels[key];
   if (!r) return `<span class="badge">no automation</span>`;
@@ -108,6 +124,10 @@ function ruleForm(key) {
     <div class="step">Step ${++n} · DM with a button${story ? ` <span class="hint" style="text-transform:none; letter-spacing:0">optional: empty message = send the final DM straight away</span>` : ""}</div>
     <div class="two"><div><label class="f" for="od-${esc(key)}">Message</label><textarea id="od-${esc(key)}" name="opening_dm" rows="2">${esc(r.opening_dm)}</textarea></div>
       <div><label class="f" for="bt-${esc(key)}">Button</label><input id="bt-${esc(key)}" type="text" name="button_text" maxlength="20" value="${esc(r.button_text)}"></div></div>
+    <details ${r.opening_dm_b ? "open" : ""}><summary class="small"><b>A/B test this message</b> <span class="hint">half get version A, half get B · see which gets more taps, links and follows</span></summary>
+      <div style="margin-top:8px"><label class="f" for="ob-${esc(key)}">Version B <span class="hint">empty = no test</span></label>
+        <textarea id="ob-${esc(key)}" name="opening_dm_b" rows="2" placeholder="Bhai ye lo 🔥 Neeche button dabao, link turant milega">${esc(r.opening_dm_b || "")}</textarea>
+        ${abBox(key)}</div></details>
     <div class="step">Step ${++n} · Follow to unlock</div>
     <label><input type="checkbox" name="require_follow" ${r.require_follow ? "checked" : ""}> Only send the link to people who follow me</label>
     <div class="two"><div><label class="f" for="fd-${esc(key)}">Follow message</label><textarea id="fd-${esc(key)}" name="follow_dm" rows="2">${esc(r.follow_dm)}</textarea></div>
@@ -240,7 +260,7 @@ document.addEventListener("submit", async (e) => {
   e.preventDefault();
   const key = f.dataset.key, msg = f.querySelector("[data-msg]");
   const body = {enabled: f.enabled.checked, keywords: f.keywords.value.split(","), comment_reply: f.comment_reply.value,
-    opening_dm: f.opening_dm.value, button_text: f.button_text.value, require_follow: f.require_follow.checked,
+    opening_dm: f.opening_dm.value, opening_dm_b: f.opening_dm_b.value, button_text: f.button_text.value, require_follow: f.require_follow.checked,
     follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value,
     ask_email: f.ask_email.checked, email_dm: f.email_dm.value, email_required: f.email_required.checked,
     starts_at: fromLocal(f.starts_at.value), ends_at: fromLocal(f.ends_at.value),
@@ -250,6 +270,7 @@ document.addEventListener("submit", async (e) => {
     comments: f.comments ? f.comments.checked : true, label: rules.reels[key]?.label || ""};
   try {
     rules = await api(`/api/rules/${encodeURIComponent(key)}`, {method: "PUT", body: JSON.stringify(body)});
+    ab = await api("/api/ab").catch(() => ab);
     open.delete(key); newKw.delete(key); render(); toast("Automation saved");
   } catch (err) { msg.textContent = err.message; }
 });
@@ -284,6 +305,6 @@ async function loadReels(fresh) {
 }
 $("refresh").onclick = () => loadReels(true);
 
-(async () => { loadBanners(); loadRetry(); rules = await api("/api/rules"); render(); ice = await api("/api/ice"); drawIce(); loadReels(false); })();
+(async () => { loadBanners(); loadRetry(); rules = await api("/api/rules"); try { ab = await api("/api/ab"); } catch (e) {} render(); ice = await api("/api/ice"); drawIce(); loadReels(false); })();
 </script>
 {% endblock %}

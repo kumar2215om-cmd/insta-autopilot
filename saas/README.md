@@ -24,6 +24,12 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## A/B test of the first DM
+A rule with `opening_dm_b` sends version A or B at random (`engine.opening`); the button payload carries it
+(`GET|<rule>|<media>|<A|B>`). Counters in `s:t:<id>:ab:<rule>`: `sent_*`, `tap_*` (once per person), `link_*` (once per person),
+`follow_*`; the person's version is remembered 7 days (`abv:<igsid>:<rule>`). Changing either text resets the test.
+The form shows the table and says which is ahead after 30+ sends each. `GET /api/ab`.
+
 ## Automation schedule
 Every automation can have `starts_at` / `ends_at` (Unix seconds, optional; form: "Schedule"). `engine.is_live(rule)` is used
 everywhere a rule is matched, so outside its window it behaves as off (a reel with its own scheduled rule still doesn't fall
