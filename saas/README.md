@@ -24,6 +24,12 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Giveaway picker (`/app/giveaway`)
+Pick a post → rules (keyword, number of @tags, "only people who followed through a DM follow gate" from Contacts, exclude
+list, 1–20 winners) → `engine.pick_winners` reads up to 2,000 comments, gives each person one entry (never the creator),
+and draws with `secrets.SystemRandom`. The last 10 draws are kept (`s:t:<id>:giveaways`). **Announce winners** replies
+under each winner's comment and DMs them (private reply, only within 7 days of the comment).
+
 ## Comment guard
 Settings → Comment guard (`acc["guard"]`: `enabled`, `links`, `words`): every new comment and thread reply is checked first
 (`engine.guard_hides`); a match is hidden with `POST /<comment_id>?hide=true` and skips the automation. Counter

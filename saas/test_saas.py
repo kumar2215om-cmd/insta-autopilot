@@ -693,6 +693,26 @@ class SaasTest(unittest.TestCase):
         self.hook(comment("PROMPTS", cid="g3"))
         self.assertEqual(len(self.ig.messages()), 1)  # normal comments still work
 
+    def test_giveaway(self):
+        self.login()
+        self.assertEqual(self.c.get("/app/giveaway").status_code, 200)
+        self.ig.comments = [{"id": f"w{i}", "text": t, "from": {"id": str(i), "username": u}}
+                            for i, (u, t) in enumerate([("a", "WIN @x @y"), ("a", "WIN again @x @y"), ("b", "win @x"),
+                                                        ("c", "nice"), ("creator", "WIN @x @y"), ("d", "WIN @p @q")])]
+        r = self.c.post("/api/giveaway", json={"media_id": "555", "keyword": "WIN", "min_mentions": 2, "winners": 5,
+                                               "exclude": "d"}).get_json()
+        self.assertEqual((r["entries"], [w["username"] for w in r["winners"]]), (1, ["a"]))  # one entry each, own account out
+        r = self.c.post("/api/giveaway", json={"media_id": "555", "winners": 2}).get_json()
+        self.assertEqual((r["entries"], len(r["winners"])), (4, 2))
+        store.save_contact("1789", {"username": "b", "followed": True})
+        r = self.c.post("/api/giveaway", json={"media_id": "555", "followed_only": True}).get_json()
+        self.assertEqual([w["username"] for w in r["winners"]], ["b"])
+        self.assertEqual(len(self.c.get("/api/giveaway").get_json()["history"]), 3)
+        res = self.c.post("/api/giveaway/announce", json={"winners": r["winners"], "reply": "Congrats @{username}!",
+                                                           "dm": "You won {username}"}).get_json()["results"]
+        self.assertEqual(res, [{"username": "b", "reply": "ok", "dm": "ok"}])
+        self.assertEqual(self.ig.messages()[-1], {"recipient": {"comment_id": "w2"}, "message": {"text": "You won b"}})
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

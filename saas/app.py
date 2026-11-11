@@ -80,10 +80,10 @@ SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Automations", True),
     ("inbox", "/app/inbox", "AI Inbox", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
-    ("contacts", "/app/contacts", "Contacts", False), ("apps", "/app/apps", "Apps", True),
+    ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"inbox": True, "report": True, "links": True, "contacts": True}
+DEFAULT_APPS = {"inbox": True, "report": True, "links": True, "contacts": True, "giveaway": True}
 
 
 def apps_of(acc):
@@ -148,6 +148,11 @@ def contacts_page():
 @app.get("/app/inbox")
 def inbox_page():
     return render_app("inbox.html", "inbox")
+
+
+@app.get("/app/giveaway")
+def giveaway_page():
+    return render_app("giveaway.html", "giveaway")
 
 
 @app.get("/app/apps")
@@ -579,6 +584,53 @@ def api_put_guard():
 @app.post("/api/guard/test")
 def api_guard_test():
     return jsonify(reason=engine.guard_reason(current_account(), str(request.get_json(force=True).get("text", ""))[:500]))
+
+
+@app.get("/api/giveaway")
+def api_giveaways():
+    acc = current_account()
+    return jsonify(history=[json.loads(x) for x in store.redis("LRANGE", store.account_key(acc["id"], "giveaways"), 0, 9) or []])
+
+
+@app.post("/api/giveaway")
+def api_giveaway():
+    acc = current_account()
+    data = request.get_json(force=True)
+    media_id = str(data.get("media_id", ""))
+    if not media_id.isdigit():
+        return jsonify(error="Pick a post first."), 400
+    try:
+        return jsonify(engine.pick_winners(
+            acc, media_id, winners=min(int(data.get("winners") or 1), 20), keyword=str(data.get("keyword", "")).strip()[:40],
+            min_mentions=min(int(data.get("min_mentions") or 0), 10), followed_only=bool(data.get("followed_only")),
+            exclude=[e.strip() for e in str(data.get("exclude", "")).replace("\n", ",").split(",")][:50]))
+    except (RuntimeError, ValueError) as e:
+        return jsonify(error=f"Couldn't read the comments: {str(e)[:200]}"), 502
+
+
+@app.post("/api/giveaway/announce")
+def api_giveaway_announce():
+    """Replies under each winner's comment and DMs them (Instagram allows the DM within 7 days of the comment)."""
+    acc = current_account()
+    data = request.get_json(force=True)
+    reply, message = str(data.get("reply", "")).strip()[:500], str(data.get("dm", "")).strip()[:1000]
+    ig, done = engine.Instagram(acc), []
+    for w in (data.get("winners") or [])[:20]:
+        row = {"username": w.get("username", ""), "reply": None, "dm": None}
+        fill = lambda s: s.replace("{username}", row["username"])
+        for field, text, send in (("reply", reply, lambda t: ig.reply_to_comment(w["comment_id"], t)),
+                                  ("dm", message, lambda t: ig.send_dm({"comment_id": w["comment_id"]}, {"text": t}))):
+            if text:
+                try:
+                    send(fill(text))
+                    row[field] = "ok"
+                    if field == "dm":
+                        engine.note_dm(acc)
+                except Exception as e:
+                    row[field] = str(e)[:160]
+        store.log_activity(acc["id"], "giveaway", row["username"], "", "giveaway_winner", "ok")
+        done.append(row)
+    return jsonify(results=done)
 
 
 @app.get("/api/activity")

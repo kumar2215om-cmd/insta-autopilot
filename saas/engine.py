@@ -416,6 +416,46 @@ def guard_hides(acc, value):
     return True
 
 
+# ---------- giveaway picker ----------
+
+def all_comments(acc, media_id, max_pages=40):
+    """Every top-level comment on a post (up to 2,000)."""
+    ig, out = Instagram(acc), []
+    params = {"fields": "id,text,timestamp,from,username", "limit": 50}
+    for _ in range(max_pages):
+        page = ig.get(f"{media_id}/comments", **params)
+        out += page.get("data", [])
+        after = (page.get("paging") or {}).get("cursors", {}).get("after")
+        if not after or not (page.get("paging") or {}).get("next"):
+            break
+        params["after"] = after
+    return out
+
+
+def pick_winners(acc, media_id, winners=1, keyword="", min_mentions=0, followed_only=False, exclude=()):
+    """Draws random winners among the people who commented (one entry per person) and match the filters."""
+    import secrets
+    followed = {c["username"].lower() for c in store.contacts(acc["id"]) if c.get("followed") and c.get("username")}
+    skip = {e.lower().lstrip("@") for e in exclude if e} | {acc.get("username", "").lower()}
+    entries = {}
+    for c in all_comments(acc, media_id):
+        user = ((c.get("from") or {}).get("username") or c.get("username") or "").lower()
+        text = c.get("text", "")
+        if (not user or user in skip or user in entries or (keyword and not keyword_matches(keyword, text))
+                or text.count("@") < min_mentions or (followed_only and user not in followed)):
+            continue
+        entries[user] = {"username": user, "text": text[:300], "comment_id": c.get("id"), "timestamp": c.get("timestamp")}
+    pool = list(entries.values())
+    rng = secrets.SystemRandom()
+    chosen = rng.sample(pool, min(max(int(winners), 1), len(pool))) if pool else []
+    result = {"media_id": media_id, "entries": len(pool), "winners": chosen, "at": int(time.time()),
+              "filters": {"keyword": keyword, "min_mentions": min_mentions, "followed_only": followed_only}}
+    key = store.account_key(acc["id"], "giveaways")
+    store.redis("LPUSH", key, json.dumps(result, ensure_ascii=False))
+    store.redis("LTRIM", key, 0, 9)
+    return result
+
+
 def dm_keyword_match(rules, text):
     """(key, rule) of the first keyword automation a DM matches: keyword rules first, then reel rules."""
     ordered = sorted(((k, r) for k, r in rules.items() if not is_story_rule(k)), key=lambda kv: not is_keyword_rule(kv[0]))

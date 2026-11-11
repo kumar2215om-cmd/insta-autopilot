@@ -1,0 +1,126 @@
+{% extends "_base.html" %}
+{% block title %}Giveaway{% endblock %}
+{% block heading %}Giveaway picker{% endblock %}
+{% block head %}
+<style>
+  .posts { display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px; max-height:330px; overflow-y:auto; padding:2px; }
+  .post { border:2px solid transparent; border-radius:12px; padding:0; background:var(--bg); cursor:pointer; text-align:left; font:inherit; color:inherit; overflow:hidden; }
+  .post img, .post .ph { width:100%; aspect-ratio:9/12; object-fit:cover; display:block; background:var(--accent-soft); }
+  .post span { display:block; padding:6px 8px; font-size:12px; color:var(--mute); }
+  .post[aria-pressed="true"] { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  form.grid1 { display:grid; gap:12px; }
+  .two { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; }
+  .winner { display:flex; gap:12px; align-items:center; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+  .winner .n { width:34px; height:34px; border-radius:50%; background:var(--accent); color:#fff; display:grid; place-items:center; font:700 15px var(--display); flex:none; }
+  .winner .txt { min-width:0; } .winner .txt span { display:block; color:var(--mute); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #winners { display:grid; gap:10px; }
+</style>
+{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>1 · Pick the post</h2>
+  <p class="muted small" style="margin:0 0 10px">Everyone who commented gets one entry, however many times they commented. Your own comments don't count.</p>
+  <div class="posts" id="posts"><div class="empty">Loading your posts…</div></div>
+</section>
+
+<section class="card">
+  <h2>2 · Rules</h2>
+  <form class="grid1" id="gForm">
+    <div class="two">
+      <div><label class="f" for="g_kw">Comment must include <span class="hint">optional · e.g. WIN</span></label><input id="g_kw" name="keyword" type="text" maxlength="40"></div>
+      <div><label class="f" for="g_m">Friends tagged (@) at least</label><select id="g_m" name="min_mentions">
+        <option value="0">No tag needed</option><option value="1">1 friend</option><option value="2">2 friends</option><option value="3">3 friends</option></select></div>
+      <div><label class="f" for="g_n">Number of winners</label><input id="g_n" name="winners" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" value="1"></div>
+    </div>
+    <label><input type="checkbox" name="followed_only"> Only people who followed me through a DM follow gate <span class="hint">from your Contacts</span></label>
+    <div><label class="f" for="g_ex">Exclude <span class="hint">usernames, comma separated (team, friends, last winners)</span></label><input id="g_ex" name="exclude" type="text"></div>
+    <div class="row"><button class="btn" type="submit" id="draw" disabled>🎁 Pick winners</button><span class="small" id="gMsg"></span></div>
+  </form>
+</section>
+
+<section class="card" id="result" hidden>
+  <div class="row"><h2 style="margin-right:auto">Winners</h2><span class="badge accent" id="entries"></span></div>
+  <div id="winners" style="margin-top:10px"></div>
+  <div style="margin-top:16px; display:grid; gap:10px">
+    <div class="two">
+      <div><label class="f" for="a_reply">Public reply under their comment <span class="hint">empty = none</span></label><textarea id="a_reply" rows="2">Congratulations @{username}! 🎉 You won. Check your DMs 📩</textarea></div>
+      <div><label class="f" for="a_dm">DM to the winner <span class="hint">only for comments from the last 7 days</span></label><textarea id="a_dm" rows="2">Hey {username}! 🎉 You won the giveaway. Reply here and I'll tell you how to claim it.</textarea></div>
+    </div>
+    <div class="row"><button class="btn sm" type="button" id="announce">Announce winners</button><button class="btn ghost sm" type="button" id="again">Draw again</button><span class="small" id="aMsg"></span></div>
+  </div>
+</section>
+
+<section class="card" id="histBox" hidden>
+  <h2>Past draws</h2>
+  <div id="hist" class="small"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let media = null, last = null;
+
+function drawResult(r) {
+  last = r;
+  $("result").hidden = false;
+  $("entries").textContent = `${fmt(r.entries)} entries`;
+  $("winners").innerHTML = r.winners.length ? r.winners.map((w, i) => `<div class="winner"><span class="n">${i + 1}</span>
+      <div class="txt"><b>@${esc(w.username)}</b><span>${esc(w.text)}</span></div>
+      <a class="btn ghost sm" style="margin-left:auto" href="https://www.instagram.com/${encodeURIComponent(w.username)}/" target="_blank" rel="noopener">Profile</a></div>`).join("")
+    : `<div class="empty">Nobody matches these rules yet.</div>`;
+  $("announce").disabled = !r.winners.length; $("aMsg").textContent = "";
+}
+
+async function loadHistory() {
+  const h = (await api("/api/giveaway")).history;
+  $("histBox").hidden = !h.length;
+  $("hist").innerHTML = h.map(g => `<div style="padding:8px 0; border-top:1px solid var(--line2)">${new Date(g.at * 1000).toLocaleString()} ·
+    ${fmt(g.entries)} entries · winners: <b>${g.winners.map(w => "@" + esc(w.username)).join(", ") || "none"}</b></div>`).join("");
+}
+
+document.addEventListener("click", (e) => {
+  const p = e.target.closest(".post");
+  if (!p) return;
+  media = p.dataset.id;
+  document.querySelectorAll(".post").forEach(b => b.setAttribute("aria-pressed", String(b === p)));
+  $("draw").disabled = false;
+});
+
+async function draw() {
+  const f = $("gForm"), msg = $("gMsg");
+  msg.className = "small muted"; msg.textContent = "Reading every comment…"; $("draw").disabled = true;
+  try {
+    drawResult(await api("/api/giveaway", {method: "POST", body: JSON.stringify({media_id: media, keyword: f.keyword.value,
+      min_mentions: Number(f.min_mentions.value), winners: Number(f.winners.value), followed_only: f.followed_only.checked, exclude: f.exclude.value})}));
+    msg.textContent = ""; loadHistory();
+    $("result").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+  } catch (err) { msg.className = "small err"; msg.textContent = err.message; }
+  $("draw").disabled = false;
+}
+$("gForm").onsubmit = (e) => { e.preventDefault(); draw(); };
+$("again").onclick = draw;
+
+$("announce").onclick = async () => {
+  const b = $("announce");
+  if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Click again: this posts and sends"; return; }
+  b.disabled = true; delete b.dataset.sure; b.textContent = "Announce winners";
+  try {
+    const r = await api("/api/giveaway/announce", {method: "POST", body: JSON.stringify({winners: last.winners, reply: $("a_reply").value, dm: $("a_dm").value})});
+    const bad = r.results.filter(x => (x.reply && x.reply !== "ok") || (x.dm && x.dm !== "ok"));
+    $("aMsg").className = `small ${bad.length ? "err" : "ok"}`;
+    $("aMsg").textContent = bad.length ? `Done, but ${bad.length} couldn't be reached (DMs only work within 7 days of the comment).` : "Announced ✓";
+  } catch (err) { $("aMsg").className = "small err"; $("aMsg").textContent = err.message; }
+  b.disabled = false;
+};
+
+(async () => {
+  loadBanners(); loadHistory();
+  try {
+    const data = await api("/api/reels");
+    $("posts").innerHTML = data.reels.map(m => `<button type="button" class="post" data-id="${esc(m.id)}" aria-pressed="false">
+        ${m.thumbnail_url || m.media_url ? `<img src="${esc(m.thumbnail_url || m.media_url)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'), {className: 'ph'}))">` : `<div class="ph"></div>`}
+        <span>💬 ${fmt(m.comments_count ?? 0)} · ${new Date(m.timestamp).toLocaleDateString()}</span></button>`).join("")
+      || `<div class="empty">No posts found.</div>`;
+  } catch (err) { $("posts").innerHTML = `<div class="empty err">${esc(err.message)}</div>`; }
+})();
+</script>
+{% endblock %}
