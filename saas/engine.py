@@ -125,7 +125,7 @@ PRO_MONTHLY_DMS = int(os.environ.get("PRO_MONTHLY_DMS", "0"))  # 0 = no ReplyInb
 def monthly_limit(acc):
     if acc.get("dm_limit") is not None:
         return int(acc["dm_limit"])
-    return PRO_MONTHLY_DMS if acc.get("plan") == "pro" else FREE_MONTHLY_DMS
+    return PRO_MONTHLY_DMS if store.is_pro(acc) else FREE_MONTHLY_DMS
 
 
 def dms_this_month(ig_id):

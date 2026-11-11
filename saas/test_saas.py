@@ -39,6 +39,7 @@ class FakeInstagram:
 
     def __init__(self):
         self.calls, self.follows, self.fail_dm, self.dead, self.comments = [], True, False, False, []
+        self.me = {"id": "asid9", "user_id": "1789", "username": "creator", "name": "C", "profile_picture_url": "", "followers_count": 500}
         self.media = [
             {"id": "777", "caption": "Naya reel! Comment GUIDE and I'll DM you", "timestamp": "2999-01-01T00:00:00+0000",
              "media_product_type": "REELS", "comments_count": 30, "thumbnail_url": "t.jpg"},
@@ -51,8 +52,7 @@ class FakeInstagram:
         if url.endswith("/access_token"):
             return Resp({"access_token": "LONG", "expires_in": 5184000})
         if url.endswith("/me"):
-            return Resp({"id": "asid9", "user_id": "1789", "username": "creator", "name": "C",
-                         "profile_picture_url": "", "followers_count": 500})
+            return Resp(self.me)
         if url.endswith("/refresh_access_token"):
             return Resp({"access_token": "NEWER"})
         fields = (params or {}).get("fields", "")
@@ -819,6 +819,33 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.c.get("/static/og.png").status_code, 200)
         for text in ("₹299", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
             self.assertIn(text, html)
+
+    def test_referrals(self):
+        self.login()  # @creator
+        self.assertTrue(self.c.get("/api/referrals").get_json()["link"].endswith("/r/creator"))
+        self.c.post("/logout")
+        # a new creator follows the invite link and signs up
+        self.ig.calls.clear()
+        friend = {"id": "asid2", "user_id": "2002", "username": "friend.creates", "name": "F", "profile_picture_url": "", "followers_count": 10}
+        self.ig.me = friend
+        new = saas.app.test_client()
+        new.get("/r/creator")
+        self.assertIn("@creator invited you", new.get("/").get_data(as_text=True))
+        r = new.get("/login")
+        state = parse_qs(urlparse(r.location).query)["state"][0]
+        new.get(f"/auth/callback?code=abc&state={state}")
+        friend_acc, me = store.load_account("2002"), store.load_account("1789")
+        self.assertTrue(store.is_pro(friend_acc) and store.is_pro(me))
+        self.assertEqual(engine.monthly_limit(me), 0)
+        self.assertEqual(friend_acc["referred_by"], "1789")
+        self.assertEqual(me["referrals"][0]["username"], "friend.creates")
+        # logging in again doesn't reward twice
+        until = me["pro_until"]
+        new.get("/r/creator")
+        r = new.get("/login")
+        new.get(f"/auth/callback?code=abc&state={parse_qs(urlparse(r.location).query)['state'][0]}")
+        self.assertEqual(store.load_account("1789")["pro_until"], until)
+        self.assertIn("Pro plan", new.get("/app").get_data(as_text=True))
 
     def test_demo_inbox(self):
         self.c.get("/demo")

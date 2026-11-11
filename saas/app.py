@@ -104,7 +104,8 @@ def role_blocks(path, method):
 
 def public_account(acc):
     """What the dashboard may see: never the token."""
-    return {k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused", "demo", "plan")}
+    return {**{k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused", "demo", "plan",
+                                        "pro_until")}, "pro": store.is_pro(acc)}
 
 
 # Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.
@@ -156,8 +157,57 @@ def guard():
 def landing():
     if current_account():
         return redirect(url_for("dashboard"))
-    return render_template("landing.html", invite_only=SIGNUPS == "invite",
-                           error=request.args.get("error", ""))
+    ref = clean_ref(request.args.get("ref"))
+    if ref:
+        session["ref"] = ref
+    referrer = store.account_by_username(session["ref"]) if session.get("ref") else None
+    return render_template("landing.html", invite_only=SIGNUPS == "invite", error=request.args.get("error", ""),
+                           referrer=referrer.get("username") if referrer else "")
+
+
+# ---------- referrals: invite a creator, both get a free month of Pro ----------
+
+REFERRAL_DAYS = 30
+MAX_REFERRAL_REWARDS = 12  # free months one creator can earn by inviting
+
+
+def clean_ref(value):
+    value = str(value or "").strip().lstrip("@").lower()
+    return value if re.fullmatch(r"[a-z0-9._]{1,30}", value) else ""
+
+
+@app.get("/r/<code>")
+def referral_link(code):
+    """Short invite link: replyinbox.in/r/<username>."""
+    ref = clean_ref(code)
+    if ref:
+        session["ref"] = ref
+    return redirect(url_for("landing"))
+
+
+def reward_referral(new_acc):
+    """Called once, when a new account is created after following an invite link."""
+    referrer = store.account_by_username(session.pop("ref", "") or "")
+    if not referrer or referrer["id"] == new_acc["id"] or referrer.get("demo"):
+        return
+    new_acc["referred_by"] = referrer["id"]
+    store.grant_pro_days(new_acc, REFERRAL_DAYS)
+    joined = referrer.setdefault("referrals", [])
+    joined.append({"username": new_acc.get("username", ""), "at": int(time.time())})
+    if sum(1 for r in joined if r.get("rewarded", True)) <= MAX_REFERRAL_REWARDS:
+        store.grant_pro_days(referrer, REFERRAL_DAYS)
+    else:
+        joined[-1]["rewarded"] = False
+    store.save_account(referrer)
+
+
+@app.get("/api/referrals")
+def api_referrals():
+    acc = current_account()
+    joined = acc.get("referrals") or []
+    return jsonify(link=f"{base_url()}/r/{acc.get('username', '')}", joined=joined[::-1],
+                   months_earned=sum(1 for r in joined if r.get("rewarded", True)), max_months=MAX_REFERRAL_REWARDS,
+                   pro=store.is_pro(acc), pro_until=acc.get("pro_until", 0), plan=acc.get("plan", ""))
 
 
 @app.get("/app")
@@ -272,10 +322,13 @@ def auth_callback():
         return redirect(url_for("landing", error="login"))
 
     ig_id = str(me["user_id"])  # the ID Instagram puts in webhooks ("entry.id")
-    acc = store.load_account(ig_id) or {"id": ig_id, "created": int(time.time()), "paused": False}
+    existing = store.load_account(ig_id)
+    acc = existing or {"id": ig_id, "created": int(time.time()), "paused": False}
     acc.update(asid=str(me.get("id", "")), username=me.get("username", ""), name=me.get("name", ""),
                pic=me.get("profile_picture_url", ""), followers=me.get("followers_count"),
                token=token, token_at=int(time.time()), invite=session.pop("invite", acc.get("invite", "")))
+    if not existing:
+        reward_referral(acc)
     store.save_account(acc)
     store.redis("DEL", store.account_key(ig_id, "token_dead"))
     try:  # without this subscription Instagram sends no comment/DM events for the account

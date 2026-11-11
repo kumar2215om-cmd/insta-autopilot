@@ -93,7 +93,7 @@ def month():
 
 
 def is_paid(acc):
-    return acc.get("plan") == "pro"
+    return store.is_pro(acc)
 
 
 def allowance(acc):

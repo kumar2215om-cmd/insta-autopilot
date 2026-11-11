@@ -268,7 +268,8 @@
 
 <div class="dark hero">
   <div class="wrap">
-    <a class="pill rise" href="#ai"><b>NEW</b> An AI that answers your DMs in Hinglish →</a>
+    {% if referrer %}<a class="pill rise" href="#start"><b>INVITED</b> @{{ referrer }} invited you · you both get 1 month of Pro free →</a>
+    {% else %}<a class="pill rise" href="#ai"><b>NEW</b> An AI that answers your DMs in Hinglish →</a>{% endif %}
     <h1 class="rise d1">Every comment, <span class="serif">a customer.</span></h1>
     <p class="lede rise d2">People comment your keyword. {{ brand }} replies, checks they follow you, collects their email or WhatsApp,
       sends the link and follows up with your offer. Automatically, 24/7.</p>

@@ -62,6 +62,15 @@
   <button class="btn ghost sm" type="button" id="pause">Pause automation</button>
 </section>
 
+<section class="card" {% if role != "owner" or acc.demo %}hidden{% endif %}>
+  <div class="row"><h2 style="margin-right:auto">Invite creators, get Pro free</h2><span class="badge" id="refPlan"></span></div>
+  <p class="muted small" style="margin:6px 0 12px">Share your link. When a creator joins {{ brand }} through it, <b>you both get 1 month of Pro free</b>
+    (no DM limit, 1,000 AI replies). Up to 12 free months.</p>
+  <div class="copy"><input id="refLink" type="text" readonly aria-label="Your invite link"><button class="btn ghost sm" type="button" id="refCopy">Copy</button>
+    <a class="btn sm" id="refWa" target="_blank" rel="noopener">Share on WhatsApp</a></div>
+  <div id="refList" class="small" style="margin-top:12px"></div>
+</section>
+
 <section class="card" {% if role != "owner" %}hidden{% endif %}>
   <div class="row"><h2 style="margin-right:auto">Team</h2><span class="badge" id="teamCount"></span></div>
   <p class="muted small" style="margin:6px 0 12px">Let your manager or editor log in to this account without your Instagram password.
@@ -152,6 +161,18 @@ $("g_try").oninput = () => { clearTimeout(gTimer); gTimer = setTimeout(async () 
   $("g_tryOut").className = `small ${r.reason ? "err" : "ok"}`; $("g_tryOut").textContent = r.reason ? `Hidden (${r.reason})` : "Kept";
 }, 300); };
 loadGuard();
+{% if role == "owner" and not acc.demo %}
+api("/api/referrals").then(r => {
+  $("refLink").value = r.link;
+  $("refWa").href = "https://wa.me/?text=" + encodeURIComponent(`I use {{ brand }} to auto-DM links to everyone who comments on my reels. Join with my link and we both get 1 month of Pro free: ${r.link}`);
+  $("refPlan").className = `badge ${r.pro ? "on" : ""}`;
+  $("refPlan").textContent = r.plan === "pro" ? "Pro" : r.pro ? `Pro until ${new Date(r.pro_until * 1000).toLocaleDateString()}` : `${r.months_earned} of ${r.max_months} months earned`;
+  $("refList").innerHTML = r.joined.length ? `<b>${r.joined.length} joined</b> · ${r.months_earned} free month${r.months_earned === 1 ? "" : "s"} earned<br>` +
+    r.joined.slice(0, 10).map(j => `@${esc(j.username)} <span class="muted">${new Date(j.at * 1000).toLocaleDateString()}</span>`).join(" · ")
+    : `<span class="muted">Nobody has joined with your link yet.</span>`;
+}).catch(() => {});
+$("refCopy").onclick = () => navigator.clipboard.writeText($("refLink").value).then(() => toast("Copied"));
+{% endif %}
 {% if role == "owner" %}
 function drawTeam(team) {
   $("teamCount").textContent = `${team.length} of 5`;

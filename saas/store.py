@@ -164,6 +164,17 @@ def take_due(limit=25):
     return out
 
 
+# ---------- plans ----------
+
+def is_pro(acc):
+    """Pro by plan (set by hand until billing exists) or by free months earned through referrals."""
+    return bool(acc) and (acc.get("plan") == "pro" or acc.get("pro_until", 0) > time.time())
+
+
+def grant_pro_days(acc, days):
+    acc["pro_until"] = int(max(time.time(), acc.get("pro_until", 0)) + days * 86400)
+
+
 # ---------- accounts ----------
 
 def account_key(ig_id, part=""):

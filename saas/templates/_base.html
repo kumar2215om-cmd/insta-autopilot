@@ -118,7 +118,7 @@
     </nav>
     <div class="who">
       {% if acc.pic %}<img class="av" src="{{ acc.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}
-      <div class="meta"><b>@{{ acc.username }}</b><span class="muted small">{{ "Demo account" if acc.demo else (("Pro plan" if acc.plan == "pro" else "Free plan") if role == "owner" else ("Manager access" if role == "manager" else "View-only access")) }}</span></div>
+      <div class="meta"><b>@{{ acc.username }}</b><span class="muted small">{{ "Demo account" if acc.demo else (("Pro plan" if acc.pro else "Free plan") if role == "owner" else ("Manager access" if role == "manager" else "View-only access")) }}</span></div>
       <form action="/logout" method="post"><button class="btn ghost sm" type="submit" aria-label="Log out">Log out</button></form>
     </div>
   </aside>

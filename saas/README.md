@@ -187,6 +187,13 @@ No Meta webhook change needed.
 If Meta asks for **Access verification (Tech Provider)** in the app dashboard, complete it: it's required
 for apps used by businesses other than the app owner.
 
+## Referrals
+Invite link `/r/<username>` (or `/?ref=<username>`) remembers the referrer in the session; the landing page then says who
+invited them. When a **new** account is created at login (`reward_referral`), both accounts get 30 days of Pro
+(`acc["pro_until"]`, stacked; the referrer earns at most 12 free months). `store.is_pro(acc)` = `plan == "pro"` or
+`pro_until` in the future; it drives the DM and AI limits. Settings → "Invite creators" shows the link, a WhatsApp share and
+who joined (`GET /api/referrals`).
+
 ## Plans (landing page pricing)
 - **Free:** `FREE_MONTHLY_DMS` (1,000) DMs a month, `FREE_AI_TRIAL_REPLIES` (25) AI replies once, every feature.
 - **Pro (₹299/month, "launching soon" until billing exists):** account field `"plan": "pro"` → `PRO_MONTHLY_DMS`
