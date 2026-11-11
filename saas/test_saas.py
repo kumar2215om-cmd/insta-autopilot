@@ -522,6 +522,41 @@ class SaasTest(unittest.TestCase):
         c = {x["username"]: x for x in self.c.get("/api/contacts").get_json()["contacts"]}
         self.assertIn("fan", c)
 
+    def test_email_capture(self):
+        self.login()
+        self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", ask_email=True, dm="Guide https://g.com")
+        self.hook(dm("GUIDE", sender="81"))
+        self.assertIn("buttons", self.ig.messages()[-1]["message"]["attachment"]["payload"])  # button first
+        tap = lambda p, who="81": {"entry": [{"id": "1789", "messaging": [{"sender": {"id": who}, "postback": {"payload": p}}]}]}
+        self.hook(tap("GET|kw:GUIDE"))
+        ask = self.ig.messages()[-1]["message"]
+        self.assertIn("email", ask["text"])
+        self.assertEqual(ask["quick_replies"][0]["payload"], "SKIPMAIL|kw:GUIDE|")
+        self.hook(dm("hmm what", sender="81", mid="e1"))
+        self.assertIn("doesn't look like an email", self.ig.messages()[-1]["message"]["text"])
+        self.hook(dm("sure: Fan.Name@Gmail.com", sender="81", mid="e2"))
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Guide https://g.com"})
+        c = self.c.get("/api/contacts").get_json()["contacts"][0]
+        self.assertEqual(c["email"], "fan.name@gmail.com")
+        # asked only once: next time the link comes straight away
+        self.hook(tap("GET|kw:GUIDE"))
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Guide https://g.com"})
+        # skip (optional email) delivers too; required email can't be skipped
+        self.ig.calls.clear()
+        store.redis("DEL", store.account_key("1789", "contacts"), store.account_key("1789", "counts"))
+        self.hook(tap("GET|kw:GUIDE", who="82"))
+        self.hook({"entry": [{"id": "1789", "messaging": [{"sender": {"id": "82"}, "message": {
+            "mid": "q1", "text": "Skip", "quick_reply": {"payload": "SKIPMAIL|kw:GUIDE|"}}}]}]})
+        self.assertEqual(self.ig.messages()[-1]["message"], {"text": "Guide https://g.com"})
+        self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", ask_email=True,
+                      email_required=True, dm="Guide https://g.com")
+        store.redis("DEL", store.account_key("1789", "contacts"))
+        self.hook(tap("GET|kw:GUIDE", who="83"))
+        self.assertNotIn("quick_replies", self.ig.messages()[-1]["message"])
+        sent = len(self.ig.messages())
+        self.hook(tap("SKIPMAIL|kw:GUIDE|", who="83"))
+        self.assertEqual(len(self.ig.messages()), sent)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

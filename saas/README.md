@@ -32,6 +32,12 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   person per day (usually a thank-you). Counters `story_replies`, `story_mentions`; contacts get source `story` / `story_mention`.
 - Story rules never answer ordinary DMs (`engine.dm_keyword_match` skips `story:` keys).
 
+## Email capture
+Rule option **Ask for their email** (`ask_email`, `email_dm`, `email_required`): after the button / follow check, the DM asks
+for an email (with a "Skip" quick reply unless required) and waits 24 h (`s:t:<id>:wait_email:<igsid>`). The next DM with an
+email saves it to Contacts (`emails` counter) and sends the final DM; a non-email gets one "doesn't look like an email" per
+10 minutes; a keyword starts that automation instead. People whose email is already saved aren't asked again.
+
 ## Auto-setup and Reel report
 - **Auto-setup new reels** (dashboard card): the creator saves a template once (reply, DM, follow gate, final DM with
   `{keyword}`). When a reel posted *after* switching it on says "Comment GUIDE" (a word in capitals or quotes after

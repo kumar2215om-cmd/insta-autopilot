@@ -3,6 +3,7 @@
 Same flow and matching as the single-account app (../app.py), with every call tied to one account.
 """
 import hashlib
+import json
 import os
 import random
 import re
@@ -32,6 +33,10 @@ DEFAULT_OPENING = "Hey {username}! 👋 Tap the button below and I'll send it to
 DEFAULT_BUTTON = "Send me the link"
 DEFAULT_FOLLOW = 'Almost there! 👀 Follow me first to unlock it, then tap "I followed" below.'
 DEFAULT_FOLLOWED_BUTTON = "I followed ✅"
+DEFAULT_EMAIL_ASK = "One last step ✉️ Reply with your email and I'll send it right away."
+DEFAULT_EMAIL_RETRY = "Hmm, that doesn't look like an email 🤔 Please type it like name@gmail.com"
+SKIP_BUTTON = "Skip"
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
 
 
 # ---------- Instagram API for one account ----------
@@ -210,7 +215,7 @@ def find_rule(rules, media_id, text):
 
 
 def uses_button_flow(rule):
-    return rule.get("require_follow") or rule.get("opening_dm")
+    return rule.get("require_follow") or rule.get("opening_dm") or rule.get("ask_email")
 
 
 def pick_reply(replies):
@@ -307,7 +312,7 @@ def send_rule_dm(acc, ig, igsid, key, rule, username, text, action):
 def handle_dm_text(acc, igsid, text, mid=""):
     """Someone DMed a keyword: start the same flow inside that chat (works even when comment DMs are refused).
     Any other message goes to the AI DM agent when it's on."""
-    if is_blocked(acc):
+    if is_blocked(acc) or handle_email_reply(acc, igsid, text):
         return
     key, rule = dm_keyword_match(store.load_rules(acc["id"]).get("reels", {}), text)
     if not rule:
@@ -416,7 +421,7 @@ def handle_button(acc, igsid, payload):
     step, key, media_id = (payload.split("|") + ["", ""])[:3]
     media_id = media_id or (key if key.isdigit() else "")  # older buttons carried only the rule key
     rule = store.load_rules(acc["id"]).get("reels", {}).get(key)
-    if step not in ("GET", "FOLLOWED") or not rule or is_blocked(acc):
+    if step not in ("GET", "FOLLOWED", "SKIPMAIL") or not rule or is_blocked(acc):
         return
     ig = Instagram(acc)
     username, follows = "", True
@@ -426,27 +431,85 @@ def handle_button(acc, igsid, payload):
         except Exception as e:
             follows = False  # strict gate: no confirmed follow, no link
             store.log_activity(acc["id"], key, igsid, payload, "follow_check", "error", str(e))
-    fill = lambda s: s.replace("{username}", username)
     try:
         if follows:
-            if not rule.get("dm"):
-                raise RuntimeError("The final DM is empty: add your message and link to this rule")
-            ig.send_dm({"id": igsid}, {"text": fill(rule["dm"])})
-            store.count(acc["id"], "links_sent")
-            store.media_count(acc["id"], media_id, "link")
-            store.log_activity(acc["id"], key, username or igsid, payload, "dm", "ok")
+            if step != "SKIPMAIL" and rule.get("ask_email"):
+                username = username or username_of(ig, igsid)
+                if not (store.get_contact(acc["id"], username, igsid) or {}).get("email"):
+                    return ask_email(acc, ig, igsid, key, rule, media_id, username)
+            if step == "SKIPMAIL" and rule.get("email_required"):
+                return
+            store.redis("DEL", pending_key(acc, igsid))
+            deliver(acc, ig, igsid, key, rule, username, media_id, payload)
             if step == "FOLLOWED" and rule.get("require_follow") and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
                 store.count(acc["id"], "gate_follows")
                 store.media_count(acc["id"], media_id, "follow")
             store.touch_contact(acc["id"], username, igsid, followed=bool(rule.get("require_follow") and follows))
         else:
-            ig.send_buttons({"id": igsid}, fill(rule.get("follow_dm") or DEFAULT_FOLLOW),
+            ig.send_buttons({"id": igsid}, (rule.get("follow_dm") or DEFAULT_FOLLOW).replace("{username}", username),
                             links=[("Open profile", f"https://www.instagram.com/{acc['username']}/")],
                             postbacks=[(rule.get("followed_button_text") or DEFAULT_FOLLOWED_BUTTON,
                                         f"FOLLOWED|{key}|{media_id}")])
             store.log_activity(acc["id"], key, username or igsid, payload, "follow_prompt", "ok")
     except Exception as e:
         store.log_activity(acc["id"], key, username or igsid, payload, "dm", "error", str(e))
+
+
+def deliver(acc, ig, igsid, key, rule, username, media_id, detail):
+    """Sends the rule's final DM (message and link). Raises when Instagram refuses."""
+    if not rule.get("dm"):
+        raise RuntimeError("The final DM is empty: add your message and link to this rule")
+    ig.send_dm({"id": igsid}, {"text": rule["dm"].replace("{username}", username)})
+    store.count(acc["id"], "links_sent")
+    store.media_count(acc["id"], media_id, "link")
+    store.log_activity(acc["id"], key, username or igsid, detail, "dm", "ok")
+
+
+# ---------- email capture: ask for an email before sending the link ----------
+
+def pending_key(acc, igsid):
+    return store.account_key(acc["id"], f"wait_email:{igsid}")
+
+
+def ask_email(acc, ig, igsid, key, rule, media_id, username):
+    text = (rule.get("email_dm") or DEFAULT_EMAIL_ASK).replace("{username}", username)
+    if rule.get("email_required"):
+        ig.send_dm({"id": igsid}, {"text": text})
+    else:
+        ig.send_dm({"id": igsid}, {"text": text, "quick_replies": [
+            {"content_type": "text", "title": SKIP_BUTTON, "payload": f"SKIPMAIL|{key}|{media_id}"}]})
+    store.redis("SET", pending_key(acc, igsid), json.dumps({"key": key, "media_id": media_id, "username": username}), "EX", 86400)
+    store.log_activity(acc["id"], key, username or igsid, "", "email_ask", "ok")
+
+
+def handle_email_reply(acc, igsid, text):
+    """True when this DM answered our email question (and was handled)."""
+    raw = store.redis("GET", pending_key(acc, igsid))
+    if not raw:
+        return False
+    wait = json.loads(raw)
+    rule = store.load_rules(acc["id"]).get("reels", {}).get(wait["key"])
+    if not rule:
+        store.redis("DEL", pending_key(acc, igsid))
+        return False
+    ig = Instagram(acc)
+    username = wait.get("username", "")
+    found = EMAIL_RE.search(text)
+    try:
+        if not found:
+            if dm_keyword_match(store.load_rules(acc["id"]).get("reels", {}), text)[1]:
+                return False  # they typed a keyword instead: start that automation
+            if store.claim(f"s:seen:{acc['id']}:mailretry:{igsid}:{int(time.time() // 600)}", 900):
+                ig.send_dm({"id": igsid}, {"text": DEFAULT_EMAIL_RETRY})
+            return True
+        email = found.group(0).lower()
+        store.redis("DEL", pending_key(acc, igsid))
+        store.touch_contact(acc["id"], username, igsid, email=email, source="email")
+        store.count(acc["id"], "emails")
+        deliver(acc, ig, igsid, wait["key"], rule, username, wait.get("media_id", ""), "(email)")
+    except Exception as e:
+        store.log_activity(acc["id"], wait["key"], username or igsid, text, "dm", "error", str(e))
+    return True
 
 
 # ---------- auto-setup: "Comment GUIDE" in a new reel's caption creates its automation ----------

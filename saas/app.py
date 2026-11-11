@@ -465,6 +465,9 @@ def save_rule(acc, key, data):
         "follow_dm": str(data.get("follow_dm", ""))[:640].strip(),
         "followed_button_text": str(data.get("followed_button_text", ""))[:20].strip(),
         "dm": str(data.get("dm", ""))[:1000].strip(),
+        "ask_email": bool(data.get("ask_email")),
+        "email_dm": str(data.get("email_dm", ""))[:640].strip(),
+        "email_required": bool(data.get("email_required")),
         "comments": bool(data.get("comments", True)),
         "label": str(data.get("label", ""))[:120],
     }

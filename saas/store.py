@@ -247,7 +247,12 @@ def save_contact(ig_id, contact):
     redis("HSET", key, contact_key(contact.get("username"), contact.get("igsid", "")), json.dumps(contact, ensure_ascii=False))
 
 
-def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, source=""):
+def get_contact(ig_id, username="", igsid=""):
+    raw = redis("HGET", account_key(ig_id, "contacts"), contact_key(username, igsid))
+    return json.loads(raw) if raw else None
+
+
+def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, source="", email=""):
     """Adds or updates one person who interacted with an automation."""
     if not username and not igsid:
         return
@@ -273,6 +278,8 @@ def touch_contact(ig_id, username="", igsid="", keyword="", followed=None, sourc
         c["source"] = source
     if followed:
         c["followed"] = True
+    if email:
+        c["email"] = email
     redis("HSET", key, field, json.dumps(c, ensure_ascii=False))
 
 
