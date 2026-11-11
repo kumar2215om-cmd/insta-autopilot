@@ -868,6 +868,20 @@ class SaasTest(unittest.TestCase):
         self.c.put("/api/page", json={"signup": {"enabled": False}})
         self.assertEqual(fan.post("/creator/join", data={"email": "c@c.com"}).status_code, 404)
 
+    def test_copy_automation(self):
+        self.login()
+        self.put_rule("555", keywords=["PROMPTS"], dm="Prompts https://p.com", followup_on=True, followup_dm="Offer")
+        self.put_rule("777", keywords=["OTHER"], dm="Keep me")
+        r = self.c.post("/api/rules/555/copy", json={"targets": ["777", "888", "kw:GUIDE", "bad key"]}).get_json()
+        self.assertEqual((r["copied"], r["skipped"]), (["888", "kw:GUIDE"], ["777"]))
+        reels = r["rules"]["reels"]
+        self.assertEqual((reels["888"]["dm"], reels["888"]["followup_dm"]), ("Prompts https://p.com", "Offer"))
+        self.assertEqual(reels["kw:GUIDE"]["keywords"], ["GUIDE"])
+        self.assertEqual(reels["777"]["dm"], "Keep me")
+        r = self.c.post("/api/rules/555/copy", json={"targets": ["777"], "replace": True}).get_json()
+        self.assertEqual(r["rules"]["reels"]["777"]["dm"], "Prompts https://p.com")
+        self.assertEqual(self.c.post("/api/rules/999/copy", json={"targets": ["1"]}).status_code, 404)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

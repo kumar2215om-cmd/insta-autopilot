@@ -658,6 +658,33 @@ def save_rule(acc, key, data):
     return rules
 
 
+@app.post("/api/rules/<key>/copy")
+def api_copy_rule(key):
+    """Copies one automation to other reels and / or new keywords. Existing automations are kept unless "replace" is set."""
+    acc = current_account()
+    data = request.get_json(force=True)
+    source = store.load_rules(acc["id"]).get("reels", {}).get(key)
+    if not source:
+        return jsonify(error="Automation not found."), 404
+    targets = [str(t) for t in (data.get("targets") or [])][:50]
+    done, skipped = [], []
+    for target in targets:
+        if target == key or not valid_rule_key(target):
+            continue
+        if target in store.load_rules(acc["id"]).get("reels", {}) and not data.get("replace"):
+            skipped.append(target)
+            continue
+        copy = {k: v for k, v in source.items() if k not in ("auto", "label")}
+        if engine.is_keyword_rule(target):
+            copy["keywords"] = [target[3:]]
+        try:
+            save_rule(acc, target, copy)
+            done.append(target)
+        except ValueError as e:
+            return jsonify(error=str(e)), 400
+    return jsonify(copied=done, skipped=skipped, rules=store.load_rules(acc["id"]))
+
+
 @app.delete("/api/rules/<key>")
 def api_delete_rule(key):
     acc = current_account()

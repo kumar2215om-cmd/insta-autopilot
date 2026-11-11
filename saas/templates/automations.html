@@ -210,6 +210,7 @@ function ruleForm(key) {
     <p class="hint" style="margin:0">Sent once per person, only within Instagram's 24 hours after they last messaged you.</p>
     <div class="row"><button class="btn sm" type="submit">Save</button>
       ${rules.reels[key] ? `<button class="btn danger sm" type="button" data-del="${esc(key)}">Delete</button>` : ""}
+      ${rules.reels[key] && !key.startsWith("story:") ? `<button class="btn ghost sm" type="button" data-copy="${esc(key)}">Copy to…</button>` : ""}
       ${/^\d+$/.test(key) && rules.reels[key] ? `<button class="btn ghost sm" type="button" data-past="${esc(key)}" title="Comments from the last 7 days that came before this automation">Send to past comments</button>` : ""}
       <span class="err small" data-msg></span></div>
   </form>`;
@@ -282,6 +283,37 @@ $("iceForm").onsubmit = async (e) => {
     drawIce(); $("iceMsg").className = "small ok"; $("iceMsg").textContent = ice.enabled ? "Published on Instagram ✓" : "Saved (not shown on Instagram)";
   } catch (err) { $("iceMsg").className = "small err"; $("iceMsg").textContent = err.message; }
 };
+
+function copyBox(key) {
+  const opts = reels.filter(m => m.id !== key).slice(0, 24).map(m => `<label class="small" style="display:flex; gap:8px; align-items:center; padding:4px 0">
+      <input type="checkbox" value="${esc(m.id)}"> ${esc((m.caption || "(no caption)").split("\n")[0].slice(0, 70))}
+      ${rules.reels[m.id] ? `<span class="badge">has one</span>` : ""}</label>`).join("");
+  return `<form class="copybox" data-from="${esc(key)}" style="border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; display:grid; gap:8px; background:var(--card)">
+    <b class="small">Copy this automation to:</b>
+    <div style="max-height:220px; overflow-y:auto">${opts || `<span class="muted small">No other reels loaded.</span>`}</div>
+    <div class="row"><label class="small" for="cpkw-${esc(key)}">New keywords</label><input id="cpkw-${esc(key)}" type="text" name="kw" placeholder="GUIDE2, LINK2" style="flex:1; min-width:140px"></div>
+    <label class="small"><input type="checkbox" name="replace"> Replace automations that already exist</label>
+    <div class="row"><button class="btn sm" type="submit">Copy</button><button class="btn ghost sm" type="button" data-copyclose>Cancel</button><span class="err small" data-cmsg></span></div></form>`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-copy]");
+  if (b) { const f = b.closest("form.rule"); if (!f.nextElementSibling?.classList.contains("copybox")) f.insertAdjacentHTML("afterend", copyBox(b.dataset.copy)); return; }
+  const c = e.target.closest("[data-copyclose]");
+  if (c) c.closest(".copybox").remove();
+});
+document.addEventListener("submit", async (e) => {
+  const f = e.target.closest("form.copybox");
+  if (!f) return;
+  e.preventDefault();
+  const targets = [...f.querySelectorAll("input[type=checkbox][value]:checked")].map(x => x.value)
+    .concat(f.kw.value.split(",").map(w => w.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "")).filter(Boolean).map(w => "kw:" + w));
+  if (!targets.length) { f.querySelector("[data-cmsg]").textContent = "Pick a reel or type a keyword."; return; }
+  try {
+    const r = await api(`/api/rules/${encodeURIComponent(f.dataset.from)}/copy`, {method: "POST", body: JSON.stringify({targets, replace: f.replace.checked})});
+    rules = r.rules; render();
+    toast(`Copied to ${r.copied.length}${r.skipped.length ? ` · ${r.skipped.length} skipped (already had one)` : ""}`);
+  } catch (err) { f.querySelector("[data-cmsg]").textContent = err.message; }
+});
 
 async function loadRetry() {
   try {

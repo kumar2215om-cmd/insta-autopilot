@@ -187,6 +187,11 @@ No Meta webhook change needed.
 If Meta asks for **Access verification (Tech Provider)** in the app dashboard, complete it: it's required
 for apps used by businesses other than the app owner.
 
+## Copy an automation
+"Copy to…" in an automation form → pick reels and / or type new keywords. `POST /api/rules/<key>/copy`
+`{"targets": [...], "replace": false}` copies everything except the auto-setup flag and label; keyword targets get their own
+word. Reels that already have an automation are skipped unless "replace" is ticked.
+
 ## Link page signup form
 Link in bio → "Signup form" (`page["signup"]`: enabled, ask email / phone / both, heading, button, thank-you, optional link).
 The public page posts to `/<username>/join`: validated with `engine.parse_email` / `parse_phone`, a hidden honeypot field
