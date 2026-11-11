@@ -24,6 +24,11 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Automation schedule
+Every automation can have `starts_at` / `ends_at` (Unix seconds, optional; form: "Schedule"). `engine.is_live(rule)` is used
+everywhere a rule is matched, so outside its window it behaves as off (a reel with its own scheduled rule still doesn't fall
+through to the all-reels rule). People already mid-flow (button tapped) still get their link.
+
 ## Giveaway picker (`/app/giveaway`)
 Pick a post → rules (keyword, number of @tags, "only people who followed through a DM follow gate" from Contacts, exclude
 list, 1–20 winners) → `engine.pick_winners` reads up to 2,000 comments, gives each person one entry (never the creator),

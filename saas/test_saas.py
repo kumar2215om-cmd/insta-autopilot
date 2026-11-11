@@ -713,6 +713,21 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(res, [{"username": "b", "reply": "ok", "dm": "ok"}])
         self.assertEqual(self.ig.messages()[-1], {"recipient": {"comment_id": "w2"}, "message": {"text": "You won b"}})
 
+    def test_automation_schedule(self):
+        self.login()
+        now = int(engine.time.time())
+        self.assertEqual(self.put_rule("555", starts_at=now + 100, ends_at=now + 50).status_code, 400)
+        self.put_rule("555", comment_reply="", require_follow=False, starts_at=now + 3600)  # not started yet
+        self.hook(comment("PROMPTS", cid="s1"))
+        self.assertEqual(self.ig.messages(), [])
+        self.put_rule("555", comment_reply="", require_follow=False, starts_at=now - 60, ends_at=now + 3600)  # running
+        self.hook(comment("PROMPTS", cid="s2"))
+        self.assertEqual(len(self.ig.messages()), 1)
+        self.put_rule("555", comment_reply="", require_follow=False, ends_at=now - 1)  # ended
+        self.hook(comment("PROMPTS", cid="s3"))
+        self.assertEqual(len(self.ig.messages()), 1)
+        self.assertEqual(store.load_rules("1789")["reels"]["555"]["ends_at"], now - 1)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

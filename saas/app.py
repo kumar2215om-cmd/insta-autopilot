@@ -456,6 +456,14 @@ def api_put_rule(key):
         return jsonify(error=str(e)), 400
 
 
+def as_time(value):
+    """Unix seconds from the form (0 = no limit)."""
+    try:
+        return max(int(float(value or 0)), 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def save_rule(acc, key, data):
     """Creates or replaces one rule (reel id, "kw:WORD" or "*"); returns all rules. Raises ValueError on bad input."""
     if not valid_rule_key(key):
@@ -482,10 +490,14 @@ def save_rule(acc, key, data):
         "phone_dm": str(data.get("phone_dm", ""))[:640].strip(),
         "phone_required": bool(data.get("phone_required")),
         "comments": bool(data.get("comments", True)),
+        "starts_at": as_time(data.get("starts_at")),
+        "ends_at": as_time(data.get("ends_at")),
         "label": str(data.get("label", ""))[:120],
     }
     if rule["enabled"] and not rule["dm"]:
         raise ValueError("Add the final DM (your message and link) before turning the rule on.")
+    if rule["starts_at"] and rule["ends_at"] and rule["ends_at"] <= rule["starts_at"]:
+        raise ValueError("The end time must be after the start time.")
     if rule["followup_on"] and not rule["followup_dm"]:
         raise ValueError("Write the follow-up message, or turn the follow-up off.")
     if data.get("followup_url") and not rule["followup_url"]:
