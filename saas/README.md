@@ -190,6 +190,11 @@ No Meta webhook change needed.
 If Meta asks for **Access verification (Tech Provider)** in the app dashboard, complete it: it's required
 for apps used by businesses other than the app owner.
 
+## Several Instagram accounts in one login
+Every owner login adds the account to `session["accounts"]` (up to 10). The sidebar's "Switch account" menu lists them
+(`POST /api/switch`, only accounts this browser logged in to) and "Add another Instagram account" (`/login?add=1`, skips the
+beta invite code). Disconnecting one account keeps you logged in to the others; Log out ends them all.
+
 ## Copy an automation
 "Copy to…" in an automation form → pick reels and / or type new keywords. `POST /api/rules/<key>/copy`
 `{"targets": [...], "replace": false}` copies everything except the auto-setup flag and label; keyword targets get their own

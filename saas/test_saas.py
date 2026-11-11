@@ -882,6 +882,23 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(r["rules"]["reels"]["777"]["dm"], "Prompts https://p.com")
         self.assertEqual(self.c.post("/api/rules/999/copy", json={"targets": ["1"]}).status_code, 404)
 
+    def test_multiple_accounts(self):
+        self.login()  # @creator (1789)
+        self.ig.me = {"id": "asid3", "user_id": "3003", "username": "second.page", "name": "S", "profile_picture_url": "", "followers_count": 5}
+        r = self.c.get("/login?add=1")
+        self.c.get(f"/auth/callback?code=abc&state={parse_qs(urlparse(r.location).query)['state'][0]}")
+        self.assertEqual(self.c.get("/api/me").get_json()["account"]["username"], "second.page")
+        html = self.c.get("/app").get_data(as_text=True)
+        self.assertIn('data-switch="1789"', html)
+        self.assertEqual(self.c.post("/api/switch", json={"id": "1789"}).status_code, 200)
+        self.assertEqual(self.c.get("/api/me").get_json()["account"]["username"], "creator")
+        self.assertEqual(self.c.post("/api/switch", json={"id": "9999"}).status_code, 403)  # not logged in to it
+        # disconnecting one keeps you in the other
+        self.assertTrue(self.c.post("/api/disconnect", json={}).get_json()["switched"])
+        self.assertEqual(self.c.get("/api/me").get_json()["account"]["username"], "second.page")
+        self.c.post("/logout")
+        self.assertEqual(self.c.get("/api/me").status_code, 401)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

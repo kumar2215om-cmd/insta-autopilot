@@ -130,6 +130,7 @@ def render_app(template, active, **extra):
     on = apps_of(acc)
     nav = [(key, href, label) for key, href, label, core in SECTIONS if core or on.get(key)]
     return render_template(template, acc=public_account(acc), active=active, nav=nav, apps=on, role=current_role(),
+                           linked=[a for a in linked_accounts() if a["id"] != acc["id"]],
                            page_url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}", **extra)
 
 
@@ -277,7 +278,8 @@ def deletion_status():
 
 @app.get("/login")
 def login():
-    if SIGNUPS == "invite":
+    adding = bool(session.get("accounts")) and request.args.get("add") == "1"
+    if SIGNUPS == "invite" and not adding:
         code = request.args.get("invite", "").strip().upper()
         if code not in INVITE_CODES:
             return redirect(url_for("landing", error="invite"))
@@ -337,8 +339,36 @@ def auth_callback():
         store.log_activity(ig_id, "", "", "", "connect", "error",
                            f"Couldn't turn on comment and DM events: {e}")
     session.permanent = True
+    linked = [a for a in session.get("accounts", []) if a != ig_id] if not session.get("member") else []
+    session.pop("member", None)
+    session["accounts"] = ([ig_id] + linked)[:MAX_LINKED]
     session["uid"] = ig_id
     return redirect(url_for("dashboard"))
+
+
+# ---------- several Instagram accounts in one login ----------
+
+MAX_LINKED = 10
+
+
+def linked_accounts():
+    """The Instagram accounts this browser logged in to as the owner (for the account switcher)."""
+    out = []
+    for ig_id in session.get("accounts", []):
+        acc = store.load_account(ig_id)
+        if acc:
+            out.append({"id": ig_id, "username": acc.get("username", ""), "pic": acc.get("pic", "")})
+    return out
+
+
+@app.post("/api/switch")
+def api_switch():
+    target = str(request.get_json(force=True).get("id", ""))
+    if target not in session.get("accounts", []) or not store.load_account(target):
+        return jsonify(error="Log in to that account first."), 403
+    session.pop("member", None)
+    session["uid"] = target
+    return jsonify(ok=True)
 
 
 @app.get("/api/team")
@@ -414,8 +444,12 @@ def api_disconnect():
     except Exception:
         pass
     store.delete_account(acc["id"])
+    others = [a for a in session.get("accounts", []) if a != acc["id"] and store.load_account(a)]
     session.clear()
-    return jsonify(ok=True)
+    if others:  # stay logged in to the other accounts
+        session.permanent = True
+        session.update(accounts=others, uid=others[0])
+    return jsonify(ok=True, switched=bool(others))
 
 
 # ---------- dashboard API ----------

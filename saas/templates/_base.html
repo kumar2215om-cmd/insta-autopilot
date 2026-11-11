@@ -39,7 +39,18 @@
   .promo { margin-top:auto; display:block; text-decoration:none; color:#fff; padding:14px; border-radius:14px; position:relative; overflow:hidden;
            background:linear-gradient(135deg, rgba(123,92,255,.35), rgba(255,122,89,.22)); border:1px solid rgba(255,255,255,.12); }
   .promo b { display:block; font-size:14px; } .promo span { display:block; font-size:12.5px; color:#D9D4E6; margin-top:2px; }
-  .promo + .who { margin-top:0; }
+  .promo + .who, .promo + .switcher, .switcher + .who { margin-top:0; }
+  .switcher { margin-top:auto; }
+  .side > * { flex-shrink:0; }
+  .switcher summary { list-style:none; display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:10px; color:#A9A5B5; font-size:13px; font-weight:500; }
+  .switcher summary::-webkit-details-marker { display:none; }
+  .switcher summary:hover { background:rgba(255,255,255,.05); color:#fff; }
+  .switcher .menu { display:grid; gap:2px; padding:6px; margin-top:4px; border-radius:12px; background:#17151F; border:1px solid rgba(255,255,255,.08); }
+  .switcher .menu button, .switcher .menu a { display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px; border:0; border-radius:8px; background:none;
+    color:#E9E6F0; font:500 13.5px var(--text); text-align:left; text-decoration:none; cursor:pointer; }
+  .switcher .menu button:hover, .switcher .menu a:hover { background:rgba(255,255,255,.06); }
+  .switcher .menu a { color:var(--lav); }
+  .switcher img, .switcher .av { width:24px; height:24px; border-radius:50%; object-fit:cover; flex:none; background:linear-gradient(135deg, #FFB199, #FF7A59); }
   .who { margin-top:auto; display:flex; align-items:center; gap:10px; padding:10px; border-radius:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
   .who .av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #FFB199, #FF7A59); object-fit:cover; flex:none; }
   .who .meta { flex:1; min-width:0; }
@@ -130,6 +141,8 @@
     .who { margin:0 0 0 auto; padding:6px 8px; }
     .who .meta { display:none; }
     .promo { display:none; }
+    .switcher { order:2; margin:0; } .switcher summary span { display:none; }
+    .switcher[open] .menu { position:absolute; z-index:40; right:16px; min-width:240px; }
     .top, .content { padding-left:16px; padding-right:16px; }
     .top { padding-top:22px; }
   }
@@ -161,6 +174,17 @@
     {% if role == "owner" and not acc.pro and not acc.demo %}
     <a class="promo" href="/app/settings#invite"><b>Get Pro free</b><span>Invite a creator, you both get a month of Pro.</span></a>
     {% endif %}
+    {% if role == "owner" and not acc.demo %}
+    <details class="switcher">
+      <summary aria-label="Switch Instagram account"><span>Switch account</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg></summary>
+      <div class="menu">
+        {% for a in linked %}
+          <button type="button" data-switch="{{ a.id }}">{% if a.pic %}<img src="{{ a.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}@{{ a.username }}</button>
+        {% endfor %}
+        <a href="/login?add=1">＋ Add another Instagram account</a>
+      </div>
+    </details>
+    {% endif %}
     <div class="who">
       {% if acc.pic %}<img class="av" src="{{ acc.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}
       <div class="meta"><b>@{{ acc.username }}</b><span class="muted small">{{ "Demo account" if acc.demo else (("Pro plan" if acc.pro else "Free plan") if role == "owner" else ("Manager access" if role == "manager" else "View-only access")) }}</span></div>
@@ -191,6 +215,11 @@ async function api(path, opts = {}) {
   return data;
 }
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-switch]");
+  if (!b) return;
+  try { await api("/api/switch", {method: "POST", body: JSON.stringify({id: b.dataset.switch})}); location.reload(); } catch (err) { toast(err.message); }
+});
 async function loadBanners() {
   try {
     const me = await api("/api/me"), b = [];

@@ -135,7 +135,7 @@ $("pause").onclick = async () => { await api("/api/pause", {method: "POST", body
 $("disconnect").onclick = async () => {
   const b = $("disconnect");
   if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "Click again to delete everything"; return; }
-  await api("/api/disconnect", {method: "POST", body: "{}"}); location.href = "/";
+  const r = await api("/api/disconnect", {method: "POST", body: "{}"}); location.href = r.switched ? "/app" : "/";
 };
 loadAuto(); loadMe();
 
