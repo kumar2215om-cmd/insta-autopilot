@@ -41,6 +41,15 @@
   .item small { opacity:.75; font-size:13px; }
   .price { flex:none; font-weight:700; padding:8px 12px; border-radius:10px; background:var(--accent); color:var(--accent-ink); }
   .item.link { justify-content:center; text-align:center; }
+  .join { background:var(--card); color:var(--ink); border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(20,18,40,.08); display:grid; gap:10px; }
+  .sunset .join, .midnight .join { color:var(--ink); } .sunset .join { color:#1d1530; }
+  .join h2 { margin:0; font:700 18px "Space Grotesk", Inter, sans-serif; text-align:center; }
+  .join input { width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(127,127,127,.35); font:15px Inter, sans-serif; background:transparent; color:inherit; }
+  .join button { padding:13px; border:0; border-radius:12px; background:var(--accent); color:var(--accent-ink); font:700 15px Inter, sans-serif; cursor:pointer; }
+  .join .msg { text-align:center; font-weight:600; margin:0; }
+  .join .err { color:#c2410c; text-align:center; margin:0; font-size:14px; }
+  .join .hp { position:absolute; left:-9999px; }
+  .join .note { font-size:12px; opacity:.7; text-align:center; margin:0; }
   footer { text-align:center; font-size:13px; color:var(--sub); margin-top:16px; }
   footer a { color:inherit; font-weight:700; }
 </style>
@@ -58,6 +67,27 @@
   {% if others %}<nav class="socials" aria-label="Social links">
     {% for k, v in others %}<a href="{{ v if v.startswith('http') else 'mailto:' ~ v }}" target="_blank" rel="noopener">{{ {"youtube": "YouTube", "whatsapp": "WhatsApp", "email": "Email", "website": "Website"}.get(k, k) }}</a>{% endfor %}
   </nav>{% endif %}
+  {% set sign = page.signup or {} %}
+  {% if sign.enabled %}
+  <section class="join" id="join" aria-label="{{ sign.title }}">
+    {% if joined %}
+      <p class="msg">{{ sign.thanks }}</p>
+      {% if sign.link %}<a class="follow" href="{{ sign.link }}" rel="noopener">Open it now</a>{% endif %}
+    {% else %}
+      <h2>{{ sign.title }}</h2>
+      {% if error == "invalid" %}<p class="err">Please check your {{ "email and number" if sign.ask == "both" else ("number" if sign.ask == "phone" else "email") }}.</p>
+      {% elif error == "slow" %}<p class="err">One moment, then try again.</p>{% endif %}
+      <form method="post" action="/{{ acc.username }}/join" style="display:grid; gap:10px">
+        {% if sign.ask in ("email", "both") %}<input type="email" name="email" placeholder="Your email" autocomplete="email" required aria-label="Your email">{% endif %}
+        {% if sign.ask in ("phone", "both") %}<input type="tel" name="phone" placeholder="WhatsApp number" autocomplete="tel" required aria-label="WhatsApp number">{% endif %}
+        <input type="text" name="instagram" placeholder="Instagram username (optional)" autocomplete="off" aria-label="Instagram username (optional)">
+        <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <button type="submit">{{ sign.button }}</button>
+        <p class="note">Shared only with @{{ acc.username }}.</p>
+      </form>
+    {% endif %}
+  </section>
+  {% endif %}
   {% for it in items %}
     <a class="item {{ 'link' if it.type == 'link' }} {{ 'featured' if it.featured }}" href="/{{ acc.username }}/go/{{ it.id }}" rel="noopener">
       {% if it.image %}<img src="{{ it.image }}" alt="" loading="lazy">{% endif %}

@@ -1003,7 +1003,13 @@ def clean_page(data, acc):
                       "image": image if image.startswith("https://") else "",
                       "featured": bool(it.get("featured")), "enabled": it.get("enabled", True) is not False})
     socials = data.get("socials") or {}
-    return {"name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
+    sign = data.get("signup") or {}
+    signup = {"enabled": bool(sign.get("enabled")), "ask": sign.get("ask") if sign.get("ask") in ("email", "phone", "both") else "email",
+              "title": str(sign.get("title", "")).strip()[:80] or "Get my free guide",
+              "button": str(sign.get("button", "")).strip()[:30] or "Send it to me",
+              "thanks": str(sign.get("thanks", "")).strip()[:200] or "Done! Check your inbox 🎉",
+              "link": safe_url(sign.get("link"))}
+    return {"signup": signup, "name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
             "bio": str(data.get("bio", "")).strip()[:300],
             "theme": data.get("theme") if data.get("theme") in THEMES else "violet",
             "socials": {k: str(socials.get(k, "")).strip()[:200] for k in SOCIALS}, "items": items}
@@ -1018,6 +1024,7 @@ def default_page(acc):
 def api_get_page():
     acc = current_account()
     return jsonify(page=store.load_page(acc["id"]) or default_page(acc), clicks=store.clicks(acc["id"]),
+                   signups=store.counts(acc["id"]).get("page_signups", 0),
                    url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}")
 
 
@@ -1260,7 +1267,31 @@ def bio_page(username):
     items = [it for it in page.get("items", []) if it.get("enabled", True)]
     items.sort(key=lambda it: not it.get("featured"))
     socials = [(k, v) for k, v in (page.get("socials") or {}).items() if v]
-    return render_template("bio.html", acc=public_account(acc), page=page, items=items, socials=socials)
+    return render_template("bio.html", acc=public_account(acc), page=page, items=items, socials=socials,
+                           joined=request.args.get("joined") == "1", error=request.args.get("error", ""))
+
+
+@app.post("/<username>/join")
+def bio_signup(username):
+    """The signup form on a link page: saves the email / phone to the creator's Contacts."""
+    acc, page = public_page(username)
+    form = page.get("signup") or {}
+    if not form.get("enabled"):
+        abort(404)
+    if request.form.get("website"):  # hidden field only bots fill in
+        return redirect(f"/{username}?joined=1")
+    ask = form.get("ask", "email")
+    email = engine.parse_email(request.form.get("email", "")) if ask in ("email", "both") else ""
+    phone = engine.parse_phone(request.form.get("phone", "")) if ask in ("phone", "both") else ""
+    if (ask in ("email", "both") and not email) or (ask in ("phone", "both") and not phone):
+        return redirect(f"/{username}?error=invalid#join")
+    ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    if not store.claim(f"s:seen:signup:{acc['id']}:{ip}:{int(time.time() // 60)}", 120):
+        return redirect(f"/{username}?error=slow#join")  # one signup per minute from the same place
+    handle = clean_ref(request.form.get("instagram", ""))
+    store.touch_contact(acc["id"], handle, "" if handle else f"web:{email or phone}", source="bio_page", email=email, phone=phone)
+    store.count(acc["id"], "page_signups")
+    return redirect(f"/{username}?joined=1#join")
 
 
 @app.get("/<username>/go/<item_id>")

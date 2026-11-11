@@ -187,6 +187,11 @@ No Meta webhook change needed.
 If Meta asks for **Access verification (Tech Provider)** in the app dashboard, complete it: it's required
 for apps used by businesses other than the app owner.
 
+## Link page signup form
+Link in bio → "Signup form" (`page["signup"]`: enabled, ask email / phone / both, heading, button, thank-you, optional link).
+The public page posts to `/<username>/join`: validated with `engine.parse_email` / `parse_phone`, a hidden honeypot field
+drops bots, one signup per minute per IP, saved with `store.touch_contact(..., source="bio_page")`, counter `page_signups`.
+
 ## Referrals
 Invite link `/r/<username>` (or `/?ref=<username>`) remembers the referrer in the session; the landing page then says who
 invited them. When a **new** account is created at login (`reward_referral`), both accounts get 30 days of Pro

@@ -847,6 +847,27 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(store.load_account("1789")["pro_until"], until)
         self.assertIn("Pro plan", new.get("/app").get_data(as_text=True))
 
+    def test_bio_signup_form(self):
+        self.login()
+        self.c.put("/api/page", json={"items": [{"type": "link", "title": "Site", "url": "https://x.com"}],
+                                      "signup": {"enabled": True, "ask": "both", "title": "Free guide", "link": "https://g.com"}})
+        html = self.c.get("/creator").get_data(as_text=True)
+        self.assertIn("Free guide", html)
+        self.assertIn('name="phone"', html)
+        fan = saas.app.test_client()
+        r = fan.post("/creator/join", data={"email": "nope", "phone": "98765 43210"})
+        self.assertIn("error=invalid", r.location)
+        r = fan.post("/creator/join", data={"email": "Fan@Mail.com", "phone": "98765 43210", "instagram": "@fan.page"})
+        self.assertIn("joined=1", r.location)
+        self.assertIn("https://g.com", fan.get("/creator?joined=1").get_data(as_text=True))
+        c = {x["username"]: x for x in self.c.get("/api/contacts").get_json()["contacts"]}
+        self.assertEqual((c["fan.page"]["email"], c["fan.page"]["phone"], c["fan.page"]["source"]), ("fan@mail.com", "+919876543210", "bio_page"))
+        self.assertIn("slow", fan.post("/creator/join", data={"email": "b@b.com", "phone": "9876543211"}).location)  # one per minute
+        self.assertIn("joined=1", fan.post("/creator/join", data={"website": "spam"}).location)  # bots are silently ignored
+        self.assertEqual(self.c.get("/api/page").get_json()["signups"], 1)
+        self.c.put("/api/page", json={"signup": {"enabled": False}})
+        self.assertEqual(fan.post("/creator/join", data={"email": "c@c.com"}).status_code, 404)
+
     def test_demo_inbox(self):
         self.c.get("/demo")
         self.assertEqual(self.c.get("/app/inbox").status_code, 200)

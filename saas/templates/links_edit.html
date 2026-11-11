@@ -39,6 +39,18 @@
       </div>
     </section>
     <section class="card fields">
+      <div class="row"><h2 style="margin-right:auto">Signup form</h2><span class="badge" id="signCount"></span></div>
+      <p class="muted small" style="margin:0">Collect emails or WhatsApp numbers right on your page. They're saved in Contacts.</p>
+      <label><input type="checkbox" id="sg_on"> <b>Show a signup form</b></label>
+      <div class="two">
+        <div><label class="f" for="sg_title">Heading</label><input id="sg_title" type="text" maxlength="80" placeholder="Get my free guide"></div>
+        <div><label class="f" for="sg_ask">Ask for</label><select id="sg_ask"><option value="email">Email</option><option value="phone">WhatsApp number</option><option value="both">Both</option></select></div>
+        <div><label class="f" for="sg_btn">Button</label><input id="sg_btn" type="text" maxlength="30" placeholder="Send it to me"></div>
+        <div><label class="f" for="sg_thanks">Thank-you message</label><input id="sg_thanks" type="text" maxlength="200" placeholder="Done! Check your inbox 🎉"></div>
+      </div>
+      <div><label class="f" for="sg_link">Link after signup <span class="hint">optional · e.g. your freebie</span></label><input id="sg_link" type="url" placeholder="https://"></div>
+    </section>
+    <section class="card fields">
       <div class="row"><h2 style="margin-right:auto">Links and products</h2>
         <button class="btn ghost sm" type="button" data-add="link">＋ Link</button><button class="btn sm" type="button" data-add="product">＋ Product</button></div>
       <div id="items" style="display:grid; gap:10px"></div>
@@ -74,12 +86,17 @@ function itemCard(it, i) {
 function draw() {
   $("name").value = page.name || ""; $("bio").value = page.bio || "";
   for (const k of ["instagram", "youtube", "whatsapp", "website"]) $("s_" + k).value = (page.socials || {})[k] || "";
+  const sg = page.signup || {};
+  $("sg_on").checked = !!sg.enabled; $("sg_title").value = sg.title || ""; $("sg_ask").value = sg.ask || "email";
+  $("sg_btn").value = sg.button || ""; $("sg_thanks").value = sg.thanks || ""; $("sg_link").value = sg.link || "";
   drawThemes();
   $("items").innerHTML = page.items.map(itemCard).join("") || `<div class="empty">No links yet. Add your first link or product.</div>`;
 }
 function collect() {
   page.name = $("name").value; page.bio = $("bio").value;
   page.socials = Object.fromEntries(["instagram", "youtube", "whatsapp", "website"].map(k => [k, $("s_" + k).value]));
+  page.signup = {enabled: $("sg_on").checked, title: $("sg_title").value, ask: $("sg_ask").value, button: $("sg_btn").value,
+                 thanks: $("sg_thanks").value, link: $("sg_link").value};
 }
 $("items").addEventListener("input", (e) => {
   const card = e.target.closest(".it"), k = e.target.dataset.k;
@@ -108,6 +125,6 @@ $("save").onclick = async () => {
   } catch (err) { toast(err.message); }
 };
 $("copy").onclick = async () => { try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) { $("pageUrl").select(); } };
-(async () => { loadBanners(); const d = await api("/api/page"); page = d.page; clicks = d.clicks; draw(); })();
+(async () => { loadBanners(); const d = await api("/api/page"); page = d.page; clicks = d.clicks; draw(); $("signCount").textContent = `${fmt(d.signups || 0)} signups`; })();
 </script>
 {% endblock %}
