@@ -4,6 +4,13 @@
 {% block actions %}<button class="btn ghost" type="button" id="refresh">↻ Refresh reels</button><button class="btn" type="button" id="addKw">＋ Keyword automation</button>{% endblock %}
 {% block head %}
 <style>
+  #tplBox > summary { cursor:pointer; font:600 16px var(--display); }
+  .tpls { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; margin-top:14px; }
+  .tpl { border:1px solid var(--line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:8px; background:var(--card); }
+  .tpl b { font-size:15px; } .tpl p { margin:0; font-size:13px; color:var(--mute); flex:1; }
+  .tpl .row input { flex:1; min-width:0; max-width:none; }
+</style>
+<style>
   .item { display:flex; gap:14px; align-items:center; padding:12px 0; border-top:1px solid var(--line2); }
   .item:first-child { border-top:0; }
   .thumb { width:48px; height:64px; border-radius:10px; background:var(--accent-soft); object-fit:cover; flex:none;
@@ -19,6 +26,10 @@
 {% endblock %}
 {% block content %}
 <div id="retryBox"></div>
+<details class="card" id="tplBox">
+  <summary><b>Start from a template</b> <span class="muted small">ready-made automations, change the words and link</span></summary>
+  <div class="tpls" id="tpls"></div>
+</details>
 <section class="card">
   <h2>Keyword automations</h2>
   <p class="muted small" style="margin:0 0 8px">Work on <b>every reel</b> and when someone <b>DMs</b> you the word.</p>
@@ -71,6 +82,51 @@ function toLocal(t) {
 }
 const fromLocal = (v) => v ? Math.floor(new Date(v).getTime() / 1000) : 0;
 
+const LINK = "https://your-link.com";
+const TEMPLATES = [
+  {id: "guide", name: "🎁 Free guide", what: "Comment a word → follow → get the guide. The classic follower magnet.", word: "GUIDE",
+   rule: {require_follow: true, opening_dm: "Hey {username}! 👋 Guide ready hai. Neeche button dabao.", dm: `Ye lo tumhari free guide 🎁 ${LINK}`}},
+  {id: "lead", name: "✉️ Lead magnet", what: "Get their email before the freebie, so you can reach them outside Instagram.", word: "CHECKLIST",
+   rule: {require_follow: false, opening_dm: "Hey {username}! Checklist ready hai 📋 Tap below.", ask_email: true, email_required: true,
+          dm: `Here's your checklist ✅ ${LINK}`}},
+  {id: "launch", name: "🚀 Course launch", what: "Details now, WhatsApp number for updates, and a reminder offer 6 hours later.", word: "COURSE",
+   rule: {require_follow: false, opening_dm: "Hey {username}! 🚀 Course details chahiye? Tap below.", ask_phone: true,
+          dm: `Course details + early-bird price 👉 ${LINK}`, followup_on: true, followup_hours: 6,
+          followup_dm: "Early-bird price sirf kal raat tak hai {username} ⏳ Seat book kar lo!", followup_url: LINK, followup_button: "Join now"}},
+  {id: "giveaway", name: "🎉 Giveaway entry", what: "Confirms their entry publicly and makes sure they follow you. Pick winners in Giveaway.", word: "WIN",
+   rule: {require_follow: true, comment_reply: "@{username} You're in! 🤞\n@{username} Entry confirmed ✅ Good luck!",
+          opening_dm: "Hey {username}! 🎉 Tap below to confirm your giveaway entry.",
+          dm: "You're in the giveaway 🎉 Winners announced on my story this Sunday. Good luck!"}},
+  {id: "story", name: "📲 Story link", what: "Post a story saying \"Reply LINK\" and everyone who replies gets it.", word: "LINK", story: true,
+   rule: {require_follow: false, opening_dm: "", dm: `Here's the link from my story 👉 ${LINK}`}},
+  {id: "collab", name: "🤝 Brand collabs", what: "When brands DM COLLAB, send your media kit and email right away.", word: "COLLAB",
+   rule: {require_follow: false, comments: false, opening_dm: "", comment_reply: "",
+          dm: `Thanks for reaching out! 🙌 Here's my media kit: ${LINK} · Email me your brief at you@example.com`}},
+];
+let drafts = {};
+
+function drawTemplates() {
+  $("tpls").innerHTML = TEMPLATES.map(t => `<form class="tpl" data-tpl="${t.id}"><b>${esc(t.name)}</b><p>${esc(t.what)}</p>
+    <div class="row">${t.story ? `<span class="small muted">Story replies with</span>` : `<label class="small muted" for="tw-${t.id}">Keyword</label>`}
+      <input id="tw-${t.id}" type="text" value="${esc(t.word)}" maxlength="24" aria-label="Keyword for ${esc(t.name)}"><button class="btn sm" type="submit">Use</button></div></form>`).join("");
+}
+
+document.addEventListener("submit", (e) => {
+  const f = e.target.closest("form.tpl");
+  if (!f) return;
+  e.preventDefault();
+  const t = TEMPLATES.find(x => x.id === f.dataset.tpl);
+  const word = f.querySelector("input").value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "");
+  if (!word) return;
+  const key = t.story ? "story:reply" : "kw:" + word;
+  if (rules.reels[key] && !confirm(`You already have an automation for ${t.story ? "story replies" : word}. Replace its settings with this template? (Nothing is saved until you click Save.)`)) return;
+  drafts[key] = {enabled: true, keywords: [word], ...t.rule};
+  if (!t.story && !rules.reels[key]) newKw.add(key);
+  open.add(key); $("tplBox").open = false; render();
+  const row = document.getElementById(`row-${key}`); if (row) row.scrollIntoView({block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+  toast("Template added. Change the link and words, then Save.");
+});
+
 let ab = {};
 function abBox(key) {
   const st = ab[key];
@@ -102,7 +158,7 @@ function badge(key) {
 
 function ruleForm(key) {
   const r = {enabled: key !== "*", keywords: key.startsWith("kw:") ? [key.slice(3)] : [], require_follow: true, comments: true, dm: "",
-             ...DEFAULTS, ...(rules.reels[key] || {})};
+             ...DEFAULTS, ...(rules.reels[key] || {}), ...(drafts[key] || {})};
   const kw = key.startsWith("kw:"), story = key.startsWith("story:"), mention = key === "story:mention";
   if (story && !rules.reels[key]) Object.assign(r, {require_follow: false, comment_reply: ""},
     mention ? {opening_dm: "", dm: "Thank you so much for the shoutout {username}! 🙏❤️"} : {});
@@ -259,6 +315,9 @@ document.addEventListener("submit", async (e) => {
   if (!f) return;
   e.preventDefault();
   const key = f.dataset.key, msg = f.querySelector("[data-msg]");
+  if ([...f.querySelectorAll("textarea, input[type=text], input[type=url]")].some(el => el.value.includes("your-link.com"))) {
+    msg.textContent = "Replace https://your-link.com with your real link first."; return;
+  }
   const body = {enabled: f.enabled.checked, keywords: f.keywords.value.split(","), comment_reply: f.comment_reply.value,
     opening_dm: f.opening_dm.value, opening_dm_b: f.opening_dm_b.value, button_text: f.button_text.value, require_follow: f.require_follow.checked,
     follow_dm: f.follow_dm.value, followed_button_text: f.followed_button_text.value, dm: f.dm.value,
@@ -271,7 +330,7 @@ document.addEventListener("submit", async (e) => {
   try {
     rules = await api(`/api/rules/${encodeURIComponent(key)}`, {method: "PUT", body: JSON.stringify(body)});
     ab = await api("/api/ab").catch(() => ab);
-    open.delete(key); newKw.delete(key); render(); toast("Automation saved");
+    open.delete(key); newKw.delete(key); delete drafts[key]; render(); toast("Automation saved");
   } catch (err) { msg.textContent = err.message; }
 });
 
@@ -305,6 +364,6 @@ async function loadReels(fresh) {
 }
 $("refresh").onclick = () => loadReels(true);
 
-(async () => { loadBanners(); loadRetry(); rules = await api("/api/rules"); try { ab = await api("/api/ab"); } catch (e) {} render(); ice = await api("/api/ice"); drawIce(); loadReels(false); })();
+(async () => { loadBanners(); loadRetry(); rules = await api("/api/rules"); try { ab = await api("/api/ab"); } catch (e) {} render(); drawTemplates(); ice = await api("/api/ice"); drawIce(); loadReels(false); })();
 </script>
 {% endblock %}

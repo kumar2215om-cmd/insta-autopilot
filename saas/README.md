@@ -24,6 +24,11 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
   The demo account never calls Instagram (engine.Instagram answers from `demo.ig_get`).
 - Contacts are saved from the automation itself (`store.touch_contact`): comment, DM keyword, button tap / follow.
 
+## Templates
+Automations → "Start from a template": Free guide, Lead magnet (email), Course launch (phone + follow-up), Giveaway entry,
+Story link, Brand collabs. Client-side only (`TEMPLATES` in `automations.html`): fills the form as a draft; nothing is saved
+until Save, and saving is blocked while a field still contains `https://your-link.com`.
+
 ## Weekly summary (Home)
 `store.count` also adds to a per-day hash `s:t:<id>:day:<YYYY-MM-DD>` (India date, kept 40 days; monthly `x:YYYY-MM` counters
 are skipped). `GET /api/week` returns the last 7 days vs the 7 before for DMs, links, follows, replies, emails, phones, AI
