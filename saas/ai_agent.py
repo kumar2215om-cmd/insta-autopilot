@@ -9,8 +9,12 @@ import time
 
 import store
 
-AI_MODEL = os.environ.get("AI_MODEL", "claude-opus-5-5")
-FREE_MONTHLY_AI_REPLIES = int(os.environ.get("FREE_MONTHLY_AI_REPLIES", "100"))
+AI_MODEL = os.environ.get("AI_MODEL", "claude-haiku-5-5")
+# Free plan: a one-time trial. Paid plan ("plan": "pro" on the account): a monthly allowance.
+FREE_AI_TRIAL = int(os.environ.get("FREE_AI_TRIAL_REPLIES", "25"))
+PAID_MONTHLY_AI_REPLIES = int(os.environ.get("PAID_MONTHLY_AI_REPLIES", "1000"))
+# Models with server-side refusal fallbacks (Haiku has none).
+FALLBACK_MODELS = ("claude-opus-", "claude-sonnet-5-5", "claude-fable-")
 HISTORY = 12  # messages of the conversation Claude sees
 DEFAULT_HOLD = "Thanks for your message! I'll get back to you personally soon 🙏"
 DEFAULT_HANDOFF = ["refunds or payment problems", "brand deals and collaborations", "anything you are not sure about"]
@@ -88,21 +92,38 @@ def month():
     return time.strftime("%Y-%m", time.gmtime())
 
 
-def monthly_limit(acc):
-    return int(acc.get("ai_limit", FREE_MONTHLY_AI_REPLIES))
+def is_paid(acc):
+    return acc.get("plan") == "pro"
 
 
-def used_this_month(ig_id):
-    return store.counts(ig_id).get(f"ai:{month()}", 0)
+def allowance(acc):
+    """("month", n) for paid plans or a custom "ai_limit"; ("trial", n) for the free plan's one-time trial."""
+    if acc.get("ai_limit") is not None:
+        return "month", int(acc["ai_limit"])
+    return ("month", PAID_MONTHLY_AI_REPLIES) if is_paid(acc) else ("trial", FREE_AI_TRIAL)
+
+
+def used(acc):
+    kind, _ = allowance(acc)
+    c = store.counts(acc["id"])
+    return c.get(f"ai:{month()}", 0) if kind == "month" else c.get("ai_total", 0)
 
 
 def over_quota(acc):
-    limit = monthly_limit(acc)
-    return bool(limit) and used_this_month(acc["id"]) >= limit
+    _, limit = allowance(acc)
+    return bool(limit) and used(acc) >= limit
+
+
+def quota_reason(acc):
+    kind, limit = allowance(acc)
+    if kind == "trial":
+        return f"Your {limit} free AI replies are used up. Upgrade to keep AI replies on."
+    return f"This month's {limit} AI replies are used up."
 
 
 def note_use(acc):
     store.count(acc["id"], f"ai:{month()}")
+    store.count(acc["id"], "ai_total")
 
 
 def ready(acc):
@@ -189,15 +210,17 @@ def ask_claude(acc, history, s):
         convo.insert(0, {"role": "user", "content": "(conversation start)"})
     if convo[-1]["role"] != "user":
         convo.append({"role": "user", "content": "(no new message)"})
-    response = c.beta.messages.create(
+    request = dict(
         model=AI_MODEL,
         max_tokens=4000,
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
         system=[{"type": "text", "text": system_prompt(acc, s), "cache_control": {"type": "ephemeral"}}],
         output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
         messages=convo,
     )
+    if AI_MODEL.startswith(FALLBACK_MODELS):
+        response = c.beta.messages.create(**request, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
+    else:
+        response = c.messages.create(**request)
     if response.stop_reason == "refusal":
         return {"reply": "", "needs_human": True, "reason": "The AI declined to answer this message.", "suggested_reply": ""}
     if response.stop_reason == "max_tokens":

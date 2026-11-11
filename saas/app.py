@@ -523,7 +523,8 @@ LANGUAGES = ["match", "hinglish", "hindi", "english"]
 
 def ai_state(acc):
     return {"settings": ai_agent.settings(acc), "ready": ai_agent.ready(acc), "demo": bool(acc.get("demo")),
-            "used": ai_agent.used_this_month(acc["id"]), "limit": ai_agent.monthly_limit(acc)}
+            "used": ai_agent.used(acc), "limit": ai_agent.allowance(acc)[1], "kind": ai_agent.allowance(acc)[0],
+            "over": ai_agent.over_quota(acc)}
 
 
 @app.get("/api/inbox")
@@ -560,7 +561,7 @@ def api_ai_test():
     if not ai_agent.ready(acc):
         return jsonify(error="The AI isn't set up on the server yet (ANTHROPIC_API_KEY)."), 400
     if ai_agent.over_quota(acc):
-        return jsonify(error="This month's AI replies are used up."), 400
+        return jsonify(error=ai_agent.quota_reason(acc)), 400
     try:
         answer = ai_agent.answer(acc, [{"role": "fan", "text": text}], ai_agent.settings(acc))
     except Exception as e:

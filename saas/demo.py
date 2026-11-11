@@ -57,6 +57,7 @@ def seed():
            "auto_setup": {"enabled": True, "since": "2026-01-01T00:00:00+0000",
                           "template": {"comment_reply": "@{username} Check your DM 📩", "require_follow": True,
                                        "dm": "Here you go 🎁 https://example.com/free?k={keyword}"}},
+           "plan": "pro",
            "apps": {"inbox": True, "links": True, "contacts": True, "report": True},
            "ai": {"enabled": True, "language": "match",
                   "about": "I make Hindi reels about AI tools for creators. Friendly, bhai-style tone.",

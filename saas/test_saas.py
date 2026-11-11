@@ -411,6 +411,8 @@ class SaasTest(unittest.TestCase):
         self.assertIn("Q: UPI? A: Yes", system)
         self.assertIn("Hinglish", system)
         self.assertEqual(claude.requests[0]["messages"][-1], {"role": "user", "content": "price kya hai?"})
+        self.assertEqual(claude.requests[0]["model"], "claude-haiku-5-5")
+        self.assertNotIn("fallbacks", claude.requests[0])  # Haiku has no server-side fallbacks
         self.assertEqual(self.ig.messages()[-1], {"recipient": {"id": "88"}, "message": {"text": "Sirf ₹149 👉 https://shop.com/p"}})
         self.hook(dm("price kya hai?"))  # Instagram delivering the same message again
         self.assertEqual(len(claude.requests), 1)
@@ -451,12 +453,35 @@ class SaasTest(unittest.TestCase):
         store.save_account(acc)
         self.c.post("/api/inbox/88/status", json={"status": "ai"})
         self.hook(dm("are you there", mid="m6"))
-        self.assertIn("limit", ai_agent.get_thread("1789", "88")["reason"])
+        self.assertIn("used up", ai_agent.get_thread("1789", "88")["reason"])
         # disconnect removes the conversations
         self.c.post("/api/disconnect", json={})
         self.assertEqual(ai_agent.threads("1789"), [])
         self.assertIsNone(store.redis("GET", store.account_key("1789", "chat:88")))
         self.assertEqual(store.redis("LRANGE", store.account_key("1789", "chat:88"), 0, -1), [])
+
+    def test_ai_free_trial_and_paid_plan(self):
+        self.login()
+        claude = FakeClaude()
+        self.enterContext(mock.patch.object(ai_agent, "client", lambda: claude))
+        self.enterContext(mock.patch.object(ai_agent, "FREE_AI_TRIAL", 2))
+        self.c.put("/api/ai", json={"enabled": True})
+        for i in range(3):
+            self.hook(dm(f"question {i}", sender=f"7{i}"))
+        self.assertEqual(len(claude.requests), 2)  # the third is handed over: trial used up
+        self.assertIn("free AI replies are used up", ai_agent.get_thread("1789", "72")["reason"])
+        state = self.c.get("/api/inbox").get_json()
+        self.assertEqual((state["kind"], state["used"], state["limit"], state["over"]), ("trial", 2, 2, True))
+        acc = store.load_account("1789")
+        acc["plan"] = "pro"
+        store.save_account(acc)
+        state = self.c.get("/api/inbox").get_json()
+        self.assertEqual((state["kind"], state["limit"], state["over"]), ("month", 1000, False))
+        self.hook(dm("question 3", sender="73"))
+        self.assertEqual(len(claude.requests), 3)
+        with mock.patch.object(ai_agent, "AI_MODEL", "claude-opus-5-5"):
+            self.hook(dm("question 4", sender="74"))
+        self.assertEqual(claude.requests[-1]["fallbacks"], "default")
 
     def test_demo_inbox(self):
         self.c.get("/demo")

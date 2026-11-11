@@ -56,7 +56,7 @@
 <div class="grid">
   <div class="card tile"><div class="k">Needs you</div><div class="n" id="nWait">–</div><div class="d">the AI handed these over</div></div>
   <div class="card tile"><div class="k">Conversations</div><div class="n" id="nAll">–</div><div class="d">people who DMed you</div></div>
-  <div class="card tile"><div class="k">AI replies this month</div><div class="n" id="nUsed">–</div><div class="bar"><i id="usedBar" style="width:0"></i></div><div class="d" id="nLimit"></div></div>
+  <div class="card tile"><div class="k" id="usedLabel">AI replies</div><div class="n" id="nUsed">–</div><div class="bar"><i id="usedBar" style="width:0"></i></div><div class="d" id="nLimit"></div></div>
 </div>
 
 <section class="card inbox" id="inbox" aria-label="Conversations">
@@ -146,9 +146,11 @@ function drawState() {
   $("nWait").textContent = fmt(waiting);
   if (nav) { nav.hidden = !waiting; nav.textContent = waiting; }
   $("nUsed").textContent = fmt(state.used);
-  $("nLimit").textContent = state.limit ? `of ${fmt(state.limit)} on your plan` : "no limit";
+  $("usedLabel").textContent = state.kind === "trial" ? "Free AI trial" : "AI replies this month";
+  $("nLimit").textContent = !state.limit ? "no limit" : state.kind === "trial" ? `of ${fmt(state.limit)} free replies` : `of ${fmt(state.limit)} this month`;
   $("usedBar").style.width = state.limit ? `${Math.min(100, 100 * state.used / state.limit)}%` : "0";
-  $("setupNote").innerHTML = !state.ready ? `<div class="banner info">The AI isn't switched on for ${"{{ brand }}"} yet. It will be ready soon.</div>`
+  $("setupNote").innerHTML = state.over && s.enabled ? `<div class="banner bad">${state.kind === "trial" ? `Your ${fmt(state.limit)} free AI replies are used up. New DMs are handed to you until you upgrade.` : `This month's ${fmt(state.limit)} AI replies are used up. New DMs are handed to you until next month.`}</div>`
+    : !state.ready ? `<div class="banner info">The AI isn't switched on for ${"{{ brand }}"} yet. It will be ready soon.</div>`
     : !s.enabled ? `<div class="banner info">AI replies are off. Open <b>Teach your AI</b> below, add your FAQ and turn it on.</div>`
     : state.demo ? `<div class="banner info">Demo: the AI here gives sample answers. Try asking "price kya hai?" or "refund chahiye" in <b>Teach your AI → Try it</b>.</div>` : "";
 }

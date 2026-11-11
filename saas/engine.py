@@ -333,7 +333,7 @@ def handle_ai_dm(acc, igsid, text, mid=""):
     if not ai_agent.ready(acc):
         return hand_over("AI isn't set up on the server yet.")
     if ai_agent.over_quota(acc):
-        return hand_over(f"Monthly AI reply limit reached ({ai_agent.monthly_limit(acc)}).")
+        return hand_over(ai_agent.quota_reason(acc))
     try:
         answer = ai_agent.answer(acc, ai_agent.messages(acc["id"], igsid), s)
     except Exception as e:

@@ -37,7 +37,7 @@ in `acc["apps"]`) and Settings (`/app/settings`: auto-setup template, Connect Cl
 
 ## AI DM agent and AI Inbox (`/app/inbox`)
 DMs that aren't one of the creator's keywords go to the AI (`engine.handle_ai_dm`, `ai_agent.py`) when it's switched on.
-- Claude (`AI_MODEL`, default `claude-opus-5-5`, effort low, server-side fallbacks) reads the last 12 messages and answers from the
+- Claude (`AI_MODEL`, default `claude-haiku-5-5`, effort low; Opus/Sonnet models also get server-side refusal fallbacks) reads the last 12 messages and answers from the
   creator's Link-in-bio products/prices, automation links, "About you" and FAQ, in the fan's language (or a fixed one). It returns
   JSON `{reply, needs_human, reason, suggested_reply}`; it never invents prices or links.
 - **Hand-over:** refunds, collabs and anything unsure (the creator's list) mark the chat **Needs you** with a suggested reply; one
@@ -46,8 +46,11 @@ DMs that aren't one of the creator's keywords go to the AI (`engine.handle_ai_dm
   Instagram's 24 hours of the fan's last message.
 - Storage: `s:t:<id>:threads` (hash igsid → row), `s:t:<id>:chat:<igsid>` (last 40 messages); removed on disconnect.
 - **Try it** box (`/api/ai/test`) shows an answer without sending. Demo account: sample answers, no API call.
-- Env: `ANTHROPIC_API_KEY` (required; without it AI can't be switched on), optional `AI_MODEL`, `FREE_MONTHLY_AI_REPLIES`
-  (default 100; per account `"ai_limit": N`). Each AI reply is one Claude request (~2–3K input tokens, mostly cached).
+- **Plans:** free accounts get a one-time trial of `FREE_AI_TRIAL_REPLIES` (default 25, counter `ai_total`); accounts with
+  `"plan": "pro"` get `PAID_MONTHLY_AI_REPLIES` per month (default 1000, counter `ai:<YYYY-MM>`); `"ai_limit": N` on an account
+  overrides with N per month. When used up, new DMs are handed to the creator. Set `"plan"` by hand until billing exists.
+- Env: `ANTHROPIC_API_KEY` (required; without it AI can't be switched on), optional `AI_MODEL`. Cost on Haiku 5.5: about
+  ₹0.04 per reply (~2.5K input tokens), so 1,000 replies ≈ ₹35.
 
 ## Connect Claude (MCP server)
 `POST /mcp` is a Model Context Protocol server (Streamable HTTP, JSON responses, stateless), so creators can run
