@@ -949,6 +949,117 @@ GUIDES.update({
 })
 
 
+# ---------- AI guides ----------
+
+GUIDES.update({
+    "ai-dm-replies-in-any-language": {
+        "title": "AI Instagram DM replies in Hindi, Hinglish and any language",
+        "description": "How an AI DM agent replies in the fan's own language (Hindi, Hinglish, English, Spanish and more), and when to fix one language.",
+        "answer": "A good AI DM agent replies in the same language and script the person writes in: Hindi in Devanagari, Hinglish "
+                  "in Latin letters, English, Spanish or anything else. {brand} does this by default, or you can fix one language "
+                  "(Hinglish, Hindi or English) for every reply.",
+        "sections": [
+            ("Matching vs fixed language", "<ul><li><b>Same as the fan</b> (default): \"price kya hai?\" gets Hinglish, \"कीमत क्या है?\" gets Hindi, \"how much?\" gets English.</li>"
+             "<li><b>Always Hinglish / Hindi / English</b>: for creators whose brand voice is one language.</li></ul>"),
+            ("Write your FAQ once", "<p>You don't need to translate your FAQ. Write it in the language you're comfortable with; the AI answers in the fan's language using those facts.</p>"),
+            ("Check names and prices", "<p>Keep product names, prices and links exactly as written, so they stay the same in every language. Test a few languages in the test box before going live.</p>"),
+        ],
+        "faq": [("Does it understand regional languages?", "It understands many languages, including major Indian languages; replies follow the fan's language when set to match."),
+                ("Can it reply in Hinglish even if the fan writes in English?", "Yes, choose Always Hinglish in the AI settings.")],
+    },
+    "ai-handoff-rules": {
+        "title": "AI hand-off rules: which Instagram DMs the AI should pass to you",
+        "description": "Decide which Instagram DMs your AI agent answers and which it hands to you: refunds, collabs, complaints and more.",
+        "answer": "An AI DM agent should answer routine questions from your FAQ and hand everything else to you: refunds and payment "
+                  "problems, brand deals and collaborations, complaints, anything personal, medical, legal or financial, and "
+                  "anything it isn't sure about. {brand} hands these over with the reason and a suggested reply.",
+        "sections": [
+            ("Default hand-offs in {brand}", "<ul><li>Refunds or payment problems.</li><li>Brand deals and collaborations.</li>"
+             "<li>Anything the AI is not sure about.</li></ul><p>Add your own, one per line (for example \"injuries\", \"bulk orders\", \"exam results\").</p>"),
+            ("What the fan sees", "<p>Optionally a holding message such as \"Thanks for your message! I'll get back to you personally soon 🙏\", "
+             "so they aren't left waiting in silence. Then the AI stays quiet in that chat until you hand it back.</p>"),
+            ("What you see", "<p>The chat appears in the AI Inbox as <i>needs you</i>, with the reason and a suggested reply you can edit and send, and a phone notification if you turned those on.</p>"),
+        ],
+        "faq": [("Will the AI keep replying after a hand-off?", "No. It stays out of that chat until you hand it back to the AI.")],
+    },
+    "instagram-ai-chatbot-cost": {
+        "title": "How much does an AI chatbot for Instagram DMs cost?",
+        "description": "What AI replies for Instagram DMs cost in 2026: included allowances, credits and per-reply prices compared.",
+        "answer": "AI replies for Instagram DMs usually cost about ₹0.10 (around $0.001–$0.002) per reply when bought as credits, "
+                  "or come as a monthly allowance in a plan. {brand} includes 300 AI replies a month on Creator (₹199 / $9) and "
+                  "2,000 on Pro, with extra packs at ₹99 / $2 per 1,000.",
+        "sections": [
+            ("Two pricing models", "<ul><li><b>Included allowance</b>: a number of AI replies each month in the plan ({brand}).</li>"
+             "<li><b>Credits or wallet</b>: you top up and each reply uses credit (some tools charge around ₹1 for 10 replies).</li>"
+             "<li><b>Higher plan only</b>: some tools put AI on their more expensive plans.</li></ul>"),
+            ("How many replies do you need?", "<p>Most AI replies come from open questions in DMs. A creator with a few hundred DMs a week "
+             "typically needs a few hundred AI replies a month; keyword automations don't use AI replies at all.</p>"),
+        ],
+        "faq": [("Do keyword automations use AI replies?", "No. Only free-text DMs answered by the AI agent count."),
+                ("What happens when I run out?", "The AI pauses until next month or you add a pack; keyword automations keep running.")],
+    },
+    "is-ai-safe-for-instagram-dms": {
+        "title": "Is it safe to let AI answer your Instagram DMs?",
+        "description": "Accuracy, privacy and brand safety when an AI answers Instagram DMs, and the settings that keep it safe.",
+        "answer": "Letting AI answer Instagram DMs is safe when it answers only from your own FAQ and products, never invents prices "
+                  "or links, hands sensitive chats to you, and uses an AI provider that doesn't train on your conversations. "
+                  "Review the AI Inbox regularly in the first weeks.",
+        "sections": [
+            ("Accuracy", "<ul><li>Give it facts: prices, links, policies.</li><li>Tell it to hand over anything not in the FAQ.</li>"
+             "<li>Test real questions before switching it on.</li></ul>"),
+            ("Privacy", "<p>{brand} uses Anthropic's Claude through the API; conversations aren't used to train the model. Only the "
+             "recent messages of each chat are stored, so the AI can answer in context and you can read them.</p>"),
+            ("Brand safety", "<ul><li>Hand-offs for refunds, complaints and collaborations.</li><li>No promises it can't keep: it only states what's in your FAQ.</li>"
+             "<li>You can take over any chat at any time.</li></ul>"),
+        ],
+        "faq": [("Should I tell people they're talking to AI?", "Being open is good practice and required in some places; add a line like \"Replies may be assisted by AI\" to your About or welcome message.")],
+    },
+    "ai-inbox-daily-workflow": {
+        "title": "A 10-minute daily routine for your Instagram AI inbox",
+        "description": "How creators manage Instagram DMs with an AI agent in 10 minutes a day: hand-offs, suggested replies, saved replies and FAQ updates.",
+        "answer": "With an AI agent answering routine DMs, a creator's daily DM work becomes a 10-minute routine: open the chats "
+                  "the AI handed over, send or edit its suggested replies, use saved replies for repeat answers, and add any new "
+                  "question to the FAQ so the AI handles it next time.",
+        "sections": [
+            ("The routine", "<ol><li>Open the AI Inbox filtered to <i>needs you</i>.</li><li>Send or edit the suggested reply for each chat (within 24 hours of their last message).</li>"
+             "<li>Use saved replies for common answers like payment steps.</li><li>Hand resolved chats back to the AI.</li>"
+             "<li>Add new questions you answered to the FAQ.</li></ol>"),
+            ("Get alerted, not distracted", "<p>Turn on phone notifications for hand-offs only, so you look at DMs when it matters.</p>"),
+        ],
+        "faq": [("Can a team member handle the inbox?", "Yes, invite them as a Manager; they don't need your Instagram password (Pro).")],
+    },
+    "manage-instagram-automations-with-claude": {
+        "title": "Run your Instagram DM automations from Claude",
+        "description": "Connect {brand} to Claude and manage Instagram automations by chatting: weekly reviews, launches, inbox drafts and setup.",
+        "answer": "{brand} connects to Claude (claude.ai, Claude Desktop or Claude Code) through MCP, so you can manage Instagram "
+                  "automations by chatting: ask which reel made the most money, set up next week's reel automation, draft replies "
+                  "for chats waiting for you, or plan a launch. Claude asks before sending or deleting anything.",
+        "sections": [
+            ("What you can ask", "<ul><li>\"How did this week compare to last week?\"</li><li>\"Set up my next reel: keyword PROMPTS, ask for WhatsApp, follow up with the ₹149 pack.\"</li>"
+             "<li>\"Draft replies for the chats waiting for me.\"</li><li>\"Which automation has the best conversion?\"</li></ul>"),
+            ("Ready-made prompts", "<p>Weekly review, Plan a launch, Set up a reel, Health check and Catch up on DMs appear in Claude's menu once connected.</p>"),
+            ("Stay in control", "<p>Choose full access or read-only. Every change Claude makes is logged in Activity, and messages are only sent after you confirm.</p>"),
+        ],
+        "faq": [("Which plan includes the Claude connection?", "Pro (and during the beta, every plan)."),
+                ("Does Claude see my Instagram password?", "No. It uses a separate key you create in {brand}, which you can turn off any time.")],
+    },
+    "ai-dm-agent-examples": {
+        "title": "AI Instagram DM agent: example conversations",
+        "description": "Real-world examples of how an AI DM agent answers Instagram questions about price, access and payments, and when it hands over.",
+        "answer": "An AI DM agent handles routine questions like price, what's included, access and payment methods by quoting the "
+                  "creator's FAQ, and hands over refunds, complaints and collaboration requests with a suggested reply. Here are "
+                  "typical exchanges.",
+        "sections": [
+            ("Price question (answered)", "<p><b>Fan:</b> bhai full pack kitne ka hai?<br><b>AI:</b> Sirf ₹149 hai 🙌 39 prompts + guide, lifetime access. Yahan se le lo 👉 [link]</p>"),
+            ("Access question (answered)", "<p><b>Fan:</b> I paid, how do I get it?<br><b>AI:</b> The download link is emailed within 2 minutes of payment. Please check spam too, and tell me if it isn't there in 10 minutes.</p>"),
+            ("Refund (handed over)", "<p><b>Fan:</b> Payment ho gaya, link nahi aaya, refund chahiye.<br><b>AI to the creator:</b> Needs you: payment issue. Suggested reply: \"Sorry! Please send a screenshot of the payment, I'll sort it right away 🙏\"</p>"),
+            ("Collaboration (handed over)", "<p><b>Brand:</b> We'd like to collaborate on a campaign.<br><b>AI to the creator:</b> Needs you: brand deal. The fan gets your holding message meanwhile.</p>"),
+        ],
+        "faq": [("Can I edit what the AI says?", "Yes. Improve the FAQ to change future answers, and edit suggested replies before sending.")],
+    },
+})
+
+
 # =====================================================================================================================
 # Pillar-cluster (hub-and-spoke) architecture with entity-first coverage.
 # Each PILLAR is a topic hub: a long overview page that links down to every cluster page in its topic. Every cluster
@@ -1065,9 +1176,15 @@ PILLARS = {
              "<li>Replies in the person's language.</li><li>Uses a <a href=\"/glossary#human-handoff\">human hand-off</a> for anything sensitive.</li></ul>"
              "<p>See the <a href=\"/features/ai-dm-agent\">AI DM agent</a>, <a href=\"/guides/instagram-ai-chatbot\">how to set up an AI chatbot for Instagram</a>, "
              "<a href=\"/guides/write-faq-for-ai-dm-agent\">how to write its FAQ</a> and <a href=\"/guides/ai-vs-keyword-dm-automation\">when to use AI vs keywords</a>.</p>"),
+            ("Languages, hand-offs and safety", "<ul><li><a href=\"/guides/ai-dm-replies-in-any-language\">Replies in Hindi, Hinglish and any language</a></li>"
+             "<li><a href=\"/guides/ai-handoff-rules\">Which DMs the AI should pass to you</a></li><li><a href=\"/guides/is-ai-safe-for-instagram-dms\">Is it safe to let AI answer DMs?</a></li>"
+             "<li><a href=\"/guides/ai-dm-agent-examples\">Example conversations</a></li></ul>"),
+            ("Cost and workflow", "<ul><li><a href=\"/guides/instagram-ai-chatbot-cost\">What AI replies cost</a></li>"
+             "<li><a href=\"/guides/ai-inbox-daily-workflow\">A 10-minute daily inbox routine</a></li>"
+             "<li><a href=\"/guides/manage-instagram-automations-with-claude\">Run your automations from Claude</a></li></ul>"),
         ],
         "faq": [("Can AI reply to Instagram DMs automatically?", "Yes, through the official API, within Instagram's 24-hour messaging window.")],
-        "clusters": [("guide", "write-faq-for-ai-dm-agent"), ("guide", "ai-vs-keyword-dm-automation"), ("feature", "ai-dm-agent"), ("guide", "instagram-ai-chatbot")],
+        "clusters": [("guide", "ai-dm-replies-in-any-language"), ("guide", "ai-handoff-rules"), ("guide", "ai-dm-agent-examples"), ("guide", "instagram-ai-chatbot-cost"), ("guide", "is-ai-safe-for-instagram-dms"), ("guide", "ai-inbox-daily-workflow"), ("guide", "manage-instagram-automations-with-claude"), ("guide", "write-faq-for-ai-dm-agent"), ("guide", "ai-vs-keyword-dm-automation"), ("feature", "ai-dm-agent"), ("guide", "instagram-ai-chatbot")],
     },
     "instagram-dm-automation-tools": {
         "title": "Instagram DM automation tools compared",
