@@ -668,6 +668,108 @@ GUIDES.update({
 })
 
 
+# ---------- niche guides, batch 2 ----------
+
+GUIDES.update({
+    "instagram-dm-automation-for-food-creators": {
+        "title": "Instagram DM automation for food creators and home bakers",
+        "description": "How food creators and home bakers use Instagram comment-to-DM for recipes, e-books, cooking classes and orders.",
+        "answer": "Food creators use Instagram DM automation to send the full recipe to everyone who comments a keyword like RECIPE, "
+                  "grow followers with a follow gate, sell recipe e-books or cooking classes with a follow-up offer, and (for home "
+                  "bakers and cloud kitchens) answer menu, price and delivery questions with an AI agent.",
+        "sections": [
+            ("A funnel for food content", "<ol><li><b>Reel</b>: the dish in 30 seconds, ending with \"comment RECIPE for the full recipe\".</li>"
+             "<li><b>DM</b>: the recipe with measurements, after a follow.</li><li><b>Follow-up</b>: \"Want 50 more like this? The e-book is ₹199 today.\"</li>"
+             "<li><b>Choice menu</b> for bakers: \"Order a cake / See the menu / Baking classes\".</li>"
+             "<li><b>WhatsApp capture</b> for orders, so you can confirm date, flavour and address.</li></ol>"),
+            ("Keyword ideas", "<p>RECIPE, MENU, SAUCE, CAKE, ORDER, CLASS, EBOOK, DIET, TIFFIN, MASALA.</p>"),
+            ("What the AI agent should answer", "<ul><li>Menu, prices, sizes and flavours.</li><li>Delivery areas, timings and how far ahead to order.</li>"
+             "<li>Egg/eggless, vegan and common allergens, from your FAQ.</li></ul><p>Hand over custom orders, complaints and allergy questions you haven't covered.</p>"),
+            ("If you sell food", "<p>Follow your local food-licence and labelling rules (in India, FSSAI registration for home food businesses) and list allergens clearly.</p>"),
+        ],
+        "faq": [("Can I take cake orders through Instagram DMs?", "Yes: use a choice menu, collect the customer's WhatsApp number, and confirm details there. The AI can answer menu and price questions first."),
+                ("Which keyword gets the most comments?", "RECIPE works well because the promise is clear; test one keyword per reel and compare in the reel report.")],
+    },
+    "instagram-dm-automation-for-beauty-creators": {
+        "title": "Instagram DM automation for beauty, makeup and fashion creators",
+        "description": "How beauty and fashion creators send product links, routines and affiliate offers by Instagram DM, and how salons take bookings.",
+        "answer": "Beauty and fashion creators use Instagram DM automation to send product links and routines to everyone who "
+                  "comments a keyword like LINK or SHOP, earn more from affiliate links (with click tracking turned off for them), "
+                  "and, for salons and makeup artists, answer price questions and collect booking requests automatically.",
+        "sections": [
+            ("For creators", "<ol><li><b>Reel</b>: a look, routine or haul ending with \"comment LINK for everything I used\".</li>"
+             "<li><b>DM</b>: a short list with product links, or a menu (\"Skincare / Makeup / Outfit\").</li>"
+             "<li><b>Story replies</b>: \"reply SHOP for today's finds\".</li>"
+             "<li><b>Follow-up</b> for your own product, preset pack or course.</li></ol>"),
+            ("For salons and makeup artists", "<ul><li>Comment BOOK on a reel → price list and a booking link.</li>"
+             "<li>WhatsApp capture for bridal enquiries, with date and location.</li><li>AI answers services, prices, timings and location from your FAQ.</li></ul>"),
+            ("Affiliate links", "<p>Turn off click counting for affiliate links (some programmes don't allow redirects) and say the link is affiliate where your country's rules require it.</p>"),
+            ("Keyword ideas", "<p>LINK, SHOP, LOOK, SKIN, ROUTINE, SHADE, OUTFIT, BOOK, BRIDAL, PRESET.</p>"),
+        ],
+        "faq": [("Will Instagram mind product links in DMs?", "Links in DMs sent through the official API are fine; avoid putting links in public comment replies."),
+                ("Can I see which products people tapped?", "Yes, with click counting on, each link counts its clicks per automation (keep it off for affiliate links).")],
+    },
+    "instagram-dm-automation-for-travel-creators": {
+        "title": "Instagram DM automation for travel creators and agencies",
+        "description": "How travel creators send itineraries and maps by DM, and how travel agencies turn reel comments into trip enquiries.",
+        "answer": "Travel creators use Instagram DM automation to send itineraries, saved-places maps and budget breakdowns to everyone "
+                  "who comments a keyword like TRIP, and travel agencies use it to turn reel comments into enquiries by asking for "
+                  "dates, group size and a WhatsApp number in the DM.",
+        "sections": [
+            ("For creators", "<ol><li><b>Reel</b>: a place or route ending with \"comment TRIP for the full itinerary\".</li>"
+             "<li><b>DM</b>: the day-by-day plan and a map link.</li><li><b>Follow-up</b>: your paid guide, preset pack or group-trip waitlist.</li></ol>"),
+            ("For travel agencies and tour operators", "<ol><li>Comment PACKAGE or PRICE on a destination reel.</li>"
+             "<li>DM with the package brochure and a menu: \"Honeymoon / Family / Group\".</li>"
+             "<li>Ask for WhatsApp to send a custom quote.</li><li>Broadcast seasonal offers to everyone who messaged in the last 24 hours.</li></ol>"),
+            ("What the AI agent should answer", "<ul><li>What's included, starting prices, best season.</li><li>Visa and documents (general info from your FAQ).</li></ul>"
+             "<p>Hand over custom quotes, cancellations and payment issues.</p>"),
+            ("Keyword ideas", "<p>TRIP, ITINERARY, MAP, BUDGET, PACKAGE, VISA, HONEYMOON, TREK, HOSTELS, GUIDE.</p>"),
+        ],
+        "faq": [("Can I send a different itinerary for each reel?", "Yes, each reel can have its own automation, keyword and link."),
+                ("Can agencies see which destination reels bring bookings?", "Yes, sales tracking and lead counts show results per reel.")],
+    },
+    "instagram-dm-automation-for-real-estate": {
+        "title": "Instagram DM automation for real estate agents and builders",
+        "description": "How real estate agents and builders turn Instagram reel comments into qualified property leads with DMs and WhatsApp capture.",
+        "answer": "Real estate agents and builders use Instagram DM automation to send brochures, price sheets and site-visit links "
+                  "to everyone who comments a keyword like PRICE or DETAILS on a property reel, collect WhatsApp numbers, and sort "
+                  "leads by budget or property type with a choice menu, so agents only call serious buyers.",
+        "sections": [
+            ("A lead funnel for property", "<ol><li><b>Reel</b>: a walkthrough ending with \"comment PRICE for the price sheet\".</li>"
+             "<li><b>DM</b>: brochure and price sheet, then a menu: \"2 BHK / 3 BHK / Plots\" or by budget.</li>"
+             "<li><b>WhatsApp capture</b> with \"want a site visit?\".</li><li><b>Tags</b> per project and budget for follow-up.</li>"
+             "<li><b>Leads to Google Sheets</b> or your CRM through a webhook (Pro).</li></ol>"),
+            ("What the AI agent should answer", "<ul><li>Location, sizes, amenities and starting prices from your FAQ.</li><li>Possession dates and site-visit timings.</li></ul>"
+             "<p>Hand over price negotiation, loan questions and anything legal.</p>"),
+            ("Stay compliant", "<p>Show registration details where your local rules require them (in India, the RERA registration number for registered projects and agents), and keep prices and offers accurate.</p>"),
+            ("Keyword ideas", "<p>PRICE, DETAILS, BROCHURE, VISIT, 2BHK, 3BHK, PLOT, RENT, EMI, LOCATION.</p>"),
+        ],
+        "faq": [("Can I send leads straight to my sales team?", "Yes, through Google Sheets or a webhook to your CRM, and team members can be invited to the dashboard (Pro)."),
+                ("Does it work for rentals too?", "Yes, use a RENT keyword and ask for move-in date and budget in the DM.")],
+    },
+    "instagram-dm-automation-for-astrologers": {
+        "title": "Instagram DM automation for astrologers and tarot readers",
+        "description": "How astrologers and tarot readers share free readings, collect birth details and sell consultations through Instagram DMs.",
+        "answer": "Astrologers and tarot readers use Instagram DM automation to send a free weekly reading or guide to everyone who "
+                  "comments their sign or a keyword, collect WhatsApp numbers for paid consultations, and let an AI agent answer "
+                  "questions about consultation types, prices and booking, while personal readings stay with the reader.",
+        "sections": [
+            ("A funnel for astrology content", "<ol><li><b>Reel</b>: \"this week for your sign\" ending with \"comment your sign\" (one automation with all 12 signs as keywords).</li>"
+             "<li><b>DM</b>: a choice menu by sign, each with its weekly reading or guide.</li>"
+             "<li><b>Follow-up</b>: \"Want a personal reading? Consultations start at ₹499.\"</li>"
+             "<li><b>WhatsApp capture</b> for booking, then collect birth details there.</li></ol>"),
+            ("What the AI agent should answer", "<ul><li>Consultation types (call, chat, report), prices and duration.</li><li>How to book and pay, languages offered.</li></ul>"
+             "<p>Keep personal readings, health, legal and money questions with the reader, not the AI.</p>"),
+            ("Be responsible", "<ul><li>Don't promise guaranteed outcomes in automated messages.</li><li>Add \"for guidance and entertainment\" style disclaimers where appropriate.</li>"
+             "<li>Ask for birth details only for paid readings, and keep them private.</li></ul>"),
+            ("Keyword ideas", "<p>The 12 signs (ARIES … PISCES), TAROT, READING, KUNDLI, NUMEROLOGY, LOVE, CAREER, REMEDY, CONSULT.</p>"),
+        ],
+        "faq": [("Can one reel react to all 12 signs?", "Yes, add all 12 signs as keywords to one automation, and use a choice menu or the sign keyword to send the right reading."),
+                ("Can the AI give readings?", "Set it to answer only about your services and booking; personal readings should come from you.")],
+    },
+})
+
+
 def all_paths():
     return (["/", "/features", "/compare", "/guides", "/privacy", "/terms"]
             + [f"/features/{k}" for k in FEATURES] + [f"/vs/{k}" for k in COMPARE] + [f"/guides/{k}" for k in GUIDES])
