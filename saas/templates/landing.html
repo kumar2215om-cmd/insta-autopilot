@@ -146,6 +146,9 @@
   .tile h3 { font-size:22px; letter-spacing:-.025em; }
   .tile p { color:var(--muted); font-size:15px; margin:8px 0 0; }
   .tile .vis { margin-top:auto; padding-top:22px; }
+  .funnelv { display:grid; gap:9px; font-size:13px; color:var(--muted-d); }
+  .funnelv div { display:grid; gap:4px; }
+  .funnelv i { display:block; height:8px; border-radius:99px; background:linear-gradient(90deg, #7B5CFF, #B05CE8 62%, #FF7A59); }
   .s3 { grid-column:span 3; } .s2 { grid-column:span 2; } .s4 { grid-column:span 4; }
   .tile.inkt { background:var(--ink2); color:#fff; border-color:var(--ink3); } .tile.inkt p { color:var(--muted-d); }
   .tag { display:inline-block; font:500 10.5px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--violet); background:#EEEAFF; border-radius:99px; padding:4px 9px; margin-bottom:14px; align-self:flex-start; }
@@ -450,6 +453,25 @@
           <div class="msg in" style="max-width:100%"><small>{{ brand|upper }} · NOW</small>📧 New lead: @rahul.k shared his email</div>
           <div class="msg in" style="max-width:100%"><small>{{ brand|upper }} · 2 MIN AGO</small>🙋 The AI handed you a chat about a refund</div></div>
       </div>
+      <div class="tile s4">
+        <span class="tag">New</span>
+        <h3>See which reel makes money</h3>
+        <p>Add your product, paste one link into your payment page, and every sale is credited to the reel and DM that brought the buyer. Rupees per reel, not just likes.</p>
+        <div class="vis" style="display:grid; gap:8px">
+          <div class="msg in" style="max-width:100%; display:flex; justify-content:space-between; gap:12px"><span>Prompts reel · 125 sales</span><b style="color:var(--lav)">₹18,625</b></div>
+          <div class="msg in" style="max-width:100%; display:flex; justify-content:space-between; gap:12px"><span>Claude reel · 5 sales</span><b style="color:var(--lav)">₹745</b></div>
+          <div class="msg in" style="max-width:100%; display:flex; justify-content:space-between; gap:12px"><span>Story replies · 1 sale</span><b style="color:var(--lav)">₹149</b></div>
+        </div>
+      </div>
+      <div class="tile s2 inkt">
+        <span class="tag">New</span>
+        <h3>Insights for every automation</h3>
+        <p>30 days of runs, link opens, follows and sales, the DM-to-sale funnel, and the hours your audience is most active.</p>
+        <div class="vis funnelv" aria-hidden="true">
+          <div><span>Got the DM</span><i style="width:100%"></i></div><div><span>Opened link</span><i style="width:76%"></i></div>
+          <div><span>Followed</span><i style="width:43%"></i></div><div><span>Bought</span><i style="width:28%"></i></div>
+        </div>
+      </div>
       <div class="tile s3">
         <span class="tag">Leads</span>
         <h3>Signup form, tags and saved replies</h3>
@@ -474,6 +496,7 @@
       <span>📝 Link page signup form</span><span>🎁 Invite a creator, get Pro free</span>
       <span>🔴 Live comment DMs</span><span>🔀 Message variations</span><span>🚫 Excluded keywords</span><span>👤 Once per person</span>
       <span>🕒 Delay before the DM</span><span>📊 Activity log</span><span>🔌 Google Sheets and webhooks</span>
+      <span>🏷️ Automatic UTM tags</span><span>🚨 Account health alerts</span><span>💰 Sale notifications</span>
     </div>
   </div>
 </section>
@@ -528,6 +551,7 @@
           <tr><td>Follow-up offers, A/B tests, schedules</td><td>✓</td><td>✓</td></tr>
           <tr><td>Choice menus, welcome message, broadcast to recent chats</td><td>✓</td><td>✓</td></tr>
           <tr><td>Link click counts, phone app and notifications</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Sales per reel, automation insights, UTM tags, health alerts</td><td>✓</td><td>✓</td></tr>
           <tr><td>Link in bio, Contacts, CSV export</td><td>✓</td><td>✓</td></tr>
           <tr><td>Reel report, weekly summary, giveaway picker</td><td>✓</td><td>✓</td></tr>
           <tr><td>Team members</td><td>Up to 5</td><td>Up to 5</td></tr>
@@ -556,6 +580,8 @@
       <details><summary>Can I manage more than one Instagram account?</summary><p>Yes. Log in with each account once, then switch between them from the sidebar. Each account has its own automations, inbox and contacts.</p></details>
       <details><summary>Is there a phone app?</summary><p>Yes. Open {{ brand }} on your phone and install it from Settings (Android: Install app; iPhone: Share → Add to Home Screen). Turn on notifications to hear about new leads right away.</p></details>
       <details><summary>Can I message all my followers at once?</summary><p>Instagram only allows messages to people who DMed you in the last 24 hours, so Broadcast sends to them. That's still everyone who reacted to your latest reel or story.</p></details>
+      <details><summary>How does it know which reel made a sale?</summary><p>Add your product in {{ brand }} and paste its sales link into your payment page (Razorpay, Instamojo and others) as the page buyers land on after paying. The sale is then credited to the last DM link that buyer tapped. We never see their payment details.</p></details>
+      <details><summary>What if something goes wrong with my account?</summary><p>You get a notification if Instagram logs you out, starts refusing or slowing DMs, or you're close to your monthly DM limit, so automations never stop silently.</p></details>
       <details><summary>Can my team use it?</summary><p>Yes. Invite up to 5 people as Manager or Viewer from Settings. They don't need your Instagram password.</p></details>
     </div>
   </div>
