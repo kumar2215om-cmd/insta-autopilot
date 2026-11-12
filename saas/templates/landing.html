@@ -88,6 +88,8 @@
   .invite { display:flex; gap:8px; }
   .invite input { border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06); color:#fff; border-radius:12px; padding:12px 14px; font:15px var(--sans); width:170px; }
   .trust { display:flex; flex-wrap:wrap; justify-content:center; gap:10px 26px; margin-top:22px; font:500 13px var(--mono); color:#8F8A9C; letter-spacing:.02em; }
+  .trust span.meta::before { content:none; }
+  .trust .meta, .safe .meta { display:inline-flex; align-items:center; gap:7px; }
   .trust span::before { content:"◆"; color:var(--violet); margin-right:8px; font-size:9px; vertical-align:2px; }
   .alert { display:inline-block; margin-top:18px; background:rgba(255,122,89,.12); border:1px solid rgba(255,122,89,.4); color:#FFB39F; border-radius:12px; padding:10px 14px; font-size:14px; }
 
@@ -308,7 +310,7 @@
       {% endif %}
       <a class="btn ghost" href="/demo">Explore the live demo</a>
     </div>
-    <div class="trust rise d4"><span>Free to start, no card</span><span>Official Instagram API</span><span>Meta-approved app</span><span>No password sharing</span></div>
+    <div class="trust rise d4"><span class="meta"><svg class="metalogo" viewBox="0 0 36 24" width="22" height="15" aria-hidden="true"><defs><linearGradient id="mg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0064E1"/><stop offset=".5" stop-color="#0082FB"/><stop offset="1" stop-color="#0064E0"/></linearGradient></defs><path d="M3 15.5C3 9.5 6 4 10 4c3.2 0 5.3 3 8 7.8C20.7 16.6 22.8 20 26 20c2.9 0 4.6-2.4 4.6-5.6C30.6 9.2 28 4 24.4 4c-3 0-5 3.1-7 6.6C15 14.6 13 20 9.6 20 6 20 3 18.7 3 15.5z" fill="none" stroke="url(#mg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Built on official Meta APIs</span><span>Free to start, no card</span><span>No password sharing</span></div>
     {% if error %}
       <div><div class="alert">
         {% if error == "invite" %}That invite code doesn't work. Check it and try again.
@@ -547,7 +549,7 @@
         <button type="button" data-bill="year" aria-pressed="false">Yearly <span>2+ months free</span></button>
       </div>
       <ul class="safe" aria-label="Safety">
-        <li>✓ Official Instagram API, approved by Meta</li><li>✓ No Instagram password, ever</li>
+        <li class="meta"><svg class="metalogo" viewBox="0 0 36 24" width="22" height="15" aria-hidden="true"><defs><linearGradient id="mg2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0064E1"/><stop offset=".5" stop-color="#0082FB"/><stop offset="1" stop-color="#0064E0"/></linearGradient></defs><path d="M3 15.5C3 9.5 6 4 10 4c3.2 0 5.3 3 8 7.8C20.7 16.6 22.8 20 26 20c2.9 0 4.6-2.4 4.6-5.6C30.6 9.2 28 4 24.4 4c-3 0-5 3.1-7 6.6C15 14.6 13 20 9.6 20 6 20 3 18.7 3 15.5z" fill="none" stroke="url(#mg2)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Built on official Meta APIs</li><li>✓ No Instagram password, ever</li>
         <li>✓ Alerts if anything goes wrong</li><li>✓ Disconnect and delete your data anytime</li>
       </ul>
     </div>
@@ -629,7 +631,7 @@
     </div>
     <div>
       <details><summary>Which accounts work?</summary><p>Instagram Business or Creator accounts. Switching is free in Instagram: Settings → Account type and tools.</p></details>
-      <details><summary>Is it safe for my account?</summary><p>Yes. {{ brand }} uses Instagram's official API through a Meta-approved app. We never ask for your password, and you can disconnect any time.</p></details>
+      <details><summary>Is it safe for my account?</summary><p>Yes. {{ brand }} is built on Meta's official Instagram API. We never ask for your password, and you can disconnect any time.</p></details>
       <details><summary>How does the AI DM agent work?</summary><p>It answers DMs that aren't one of your keywords, using only your FAQ, products and links, in the language the fan writes in. It never makes up prices or links. Refunds, brand deals and anything it's unsure about are handed to you with a suggested reply.</p></details>
       <details><summary>Why do people tap a button before getting the link?</summary><p>Instagram only lets apps check whether someone follows you after they reply to your DM. The button tap is that reply.</p></details>
       <details><summary>What are Instagram's limits?</summary><p>An app can DM someone who commented once per comment, within 7 days. Follow-ups must go within 24 hours of the person's last message. Very busy reels can hit Instagram's hourly limit; {{ brand }} then waits and continues.</p></details>
