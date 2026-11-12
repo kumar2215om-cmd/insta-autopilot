@@ -63,7 +63,14 @@
 
 <section class="card" {% if role != "owner" %}hidden{% endif %}>
   <div class="row"><h2 style="margin-right:auto">Connect Claude</h2><span class="badge" id="mcpStatus">not connected</span></div>
-  <p class="muted small" style="margin:6px 0 12px">Run {{ brand }} from Claude: <i>"Set up DMs on my latest reel for GUIDE"</i>, <i>"Which reel got me the most followers?"</i>, <i>"Pause everything"</i>.</p>
+  <p class="muted small" style="margin:6px 0 10px">Run {{ brand }} by chatting with Claude: <i>"Which reel made the most money this week?"</i>,
+    <i>"Set up my next reel: keyword PROMPTS, ask for WhatsApp, follow-up with the ₹149 pack"</i>, <i>"Draft replies for the chats waiting for me"</i>,
+    <i>"Plan my launch on Friday"</i>. Claude can see your numbers, sales, contacts and inbox, and every change it makes shows up in Activity.</p>
+  <p class="small muted" style="margin:0 0 10px">Ready-made prompts in Claude: <b>Weekly review</b>, <b>Plan a launch</b>, <b>Set up a reel</b>, <b>Health check</b>, <b>Catch up on DMs</b>.</p>
+  <div class="row small" role="radiogroup" aria-label="What Claude may do" style="margin-bottom:10px">
+    <label><input type="radio" name="mcpMode" value="full" checked> <b>Full access</b>: look, change and send (asks you first)</label>
+    <label><input type="radio" name="mcpMode" value="read"> <b>Read-only</b>: look and advise, never change or send</label>
+  </div>
   <div class="row"><button class="btn sm" type="button" id="mcpNew">Create Claude link</button><button class="btn danger sm" type="button" id="mcpOff">Disconnect Claude</button></div>
   <div id="mcpOut" hidden>
     <p class="small" style="margin:14px 0 8px"><b>Copy it now:</b> it's shown only once and works like a password. A new link turns off the old one.</p>
@@ -163,14 +170,14 @@ $("autoForm").addEventListener("submit", async (e) => {
   } catch (err) { $("autoMsg").className = "small err"; $("autoMsg").textContent = err.message; }
 });
 
-api("/api/mcp-key").then(d => setBadge($("mcpStatus"), d.active, "link active", "not connected")).catch(() => {});
+api("/api/mcp-key").then(d => setBadge($("mcpStatus"), d.active, d.read_only ? "read-only link" : "link active", "not connected")).catch(() => {});
 $("mcpNew").onclick = async () => {
   if ($("mcpNew").dataset.sure !== "1") { $("mcpNew").dataset.sure = "1"; $("mcpNew").textContent = "Click again: old link stops working"; return; }
   $("mcpNew").dataset.sure = ""; $("mcpNew").textContent = "Create Claude link";
-  const d = await api("/api/mcp-key", {method: "POST", body: "{}"});
+  const d = await api("/api/mcp-key", {method: "POST", body: JSON.stringify({read_only: document.querySelector("[name=mcpMode]:checked").value === "read"})});
   $("mcpUrl").value = d.endpoint; $("mcpHdr").value = "Bearer " + d.key;
   $("mcpCmd").value = `claude mcp add --transport http replyinbox ${d.endpoint} --header "Authorization: Bearer ${d.key}"`;
-  $("mcpOut").hidden = false; setBadge($("mcpStatus"), true, "link active", "not connected");
+  $("mcpOut").hidden = false; setBadge($("mcpStatus"), true, d.read_only ? "read-only link" : "link active", "not connected");
 };
 $("mcpOff").onclick = async () => { await api("/api/mcp-key", {method: "DELETE", body: "{}"}); $("mcpOut").hidden = true; setBadge($("mcpStatus"), false, "", "not connected"); toast("Claude disconnected"); };
 

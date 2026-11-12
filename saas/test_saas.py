@@ -339,7 +339,7 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.c.post("/mcp", headers=H, json={"jsonrpc": "2.0", "method": "notifications/initialized"}).status_code, 202)
         names = [t["name"] for t in rpc("tools/list")["result"]["tools"]]
         self.assertIn("save_automation", names)
-        self.assertEqual(call("get_account_summary", {})["structuredContent"]["account"], "creator")
+        self.assertEqual(call("get_account_summary", {})["structuredContent"]["account"], "@creator")
         self.assertEqual(call("list_reels", {})["structuredContent"]["reels"][0]["id"], "777")
         self.assertTrue(call("save_automation", {"target": "777", "keywords": ["GUIDE"]})["isError"])  # no final DM
         saved = call("save_automation", {"target": "777", "keywords": ["GUIDE"], "final_dm": "https://x.com"})["structuredContent"]["saved"]
@@ -352,6 +352,99 @@ class SaasTest(unittest.TestCase):
         self.assertIn("result", self.c.post(f"/mcp?key={key}", json={"jsonrpc": "2.0", "id": 5, "method": "ping"}).get_json())
         self.c.delete("/api/mcp-key", json={})
         self.assertEqual(self.c.post("/mcp", headers=H, json={}).status_code, 401)
+
+    def test_mcp_advanced_tools(self):
+        self.login()
+        key = self.c.post("/api/mcp-key", json={}).get_json()["key"]
+        H = {"Authorization": f"Bearer {key}"}
+        rpc = lambda method, params=None: self.c.post("/mcp", headers=H, json={
+            "jsonrpc": "2.0", "id": 1, "method": method, **({"params": params} if params is not None else {})}).get_json()
+        call = lambda name, args={}: rpc("tools/call", {"name": name, "arguments": args})["result"]
+        out = lambda name, args={}: call(name, args)["structuredContent"]
+        init = rpc("initialize", {"protocolVersion": "2025-06-18"})["result"]
+        self.assertIn("prompts", init["capabilities"])
+        self.assertIn("@creator", init["instructions"])
+        self.assertGreaterEqual(len(rpc("tools/list")["result"]["tools"]), 30)
+        # prompts
+        names = [p["name"] for p in rpc("prompts/list")["result"]["prompts"]]
+        self.assertEqual(names, ["weekly_review", "launch_plan", "new_reel_automation", "fix_problems", "inbox_catchup"])
+        msg = rpc("prompts/get", {"name": "launch_plan", "arguments": {"product": "Prompt pack", "price": "149"}})["result"]["messages"][0]
+        self.assertIn("Prompt pack", msg["content"]["text"])
+        self.assertIn("error", rpc("prompts/get", {"name": "launch_plan", "arguments": {}}))  # product is required
+        # full wizard options through Claude
+        saved = out("save_automation", {"target": "next_post", "keywords": ["PROMPTS"], "final_dm": "{Hi|Hey} {username}! Pick one:",
+                                         "menu": [{"title": "Free", "text": "https://f.com"}, {"title": "Paid", "text": "₹149 https://p.com"}],
+                                         "ask_phone": True, "followup_dm": "Pack is ₹149 today", "followup_url": "https://p.com",
+                                         "starts_at": "2030-01-01T18:00", "label": "Launch reel"})
+        self.assertTrue(saved["created"])
+        st = saved["saved"]["settings"]
+        self.assertEqual((st["ask_phone"], st["followup_on"], len(st["menu"]), st["starts_at"]), (True, True, 2, "2030-01-01 18:00 IST"))
+        self.assertEqual(saved["saved"]["trigger"], "comments on your next post")
+        story = out("save_automation", {"target": "story_replies", "final_dm": "Thanks!"})["saved"]
+        self.assertFalse(story["require_follow"])
+        dm_only = out("save_automation", {"target": "keyword", "keywords": ["price"], "final_dm": "₹149", "dm_only": True})["saved"]
+        self.assertEqual(dm_only["trigger"], "keyword in a DM")
+        self.assertEqual(out("duplicate_automation", {"automation_id": "next", "to": ["777", "GUIDE"]})["copied_to"], ["777", "kw:GUIDE"])
+        self.assertTrue(call("save_automation", {"target": "nonsense"})["isError"])
+        # numbers
+        self.hook(dm("PRICE", sender="44"))
+        rows = out("list_automations", {"sort_by": "runs"})["automations"]
+        self.assertEqual(rows[0]["automation_id"], "kw:PRICE")
+        self.assertEqual(out("get_automation_insights", {"automation_id": "kw:PRICE"})["last_30_days"]["runs"], 1)
+        self.assertEqual(out("get_trends", {"days": 7})["metrics"]["dms"]["this_period"], 1)
+        self.assertIn("busiest_hours", out("get_best_posting_times"))
+        self.assertEqual(out("get_automation", {"automation_id": "next"})["settings"]["label"], "Launch reel")
+        # products and sales
+        prod = out("add_product", {"name": "Prompt pack", "price": 149})["product"]
+        self.assertIn("/s/", prod["link"])
+        self.assertEqual(out("get_sales")["products"][0]["name"], "Prompt pack")
+        self.assertFalse(out("set_utm_tags", {"on": False})["utm_tags_on"])
+        # contacts and tags
+        found = out("search_contacts", {"query": "fan"})
+        self.assertEqual(found["matches"], 1)
+        self.assertEqual(out("tag_contacts", {"contact_ids": ["@fan", "ghost"], "add_tags": ["vip"]}), {"updated": 1, "not_found": ["ghost"]})
+        self.assertEqual(out("search_contacts", {"tag": "vip"})["matches"], 1)
+        out("tag_contacts", {"contact_ids": ["fan"], "remove_tags": ["vip"]})
+        self.assertEqual(out("search_contacts", {"tag": "vip"})["matches"], 0)
+        # welcome, broadcast (preview, then send)
+        self.assertEqual(len(out("set_welcome_message", {"text": "Hi!", "buttons": [{"title": "Price", "automation_id": "kw:PRICE"},
+                                                                                   {"title": "Shop", "link": "https://s.com"}]})["welcome_message"]["buttons"]), 2)
+        before = len(self.ig.messages())
+        prev = out("broadcast_to_recent_chats", {"text": "Live in 1 hour!"})
+        self.assertEqual((prev["preview"], prev["would_reach"], len(self.ig.messages())), (True, 1, before))
+        store.redis("DEL", store.account_key("1789", "counts"))
+        sent = out("broadcast_to_recent_chats", {"text": "Live in 1 hour!", "confirm": True})
+        self.assertEqual((sent["sent"], sent["done"]), (1, True))
+        self.assertEqual(out("get_messaging_settings")["welcome_message"]["text"], "Hi!")
+        # inbox
+        import ai_agent
+        ai_agent.add_message("1789", "44", "fan", "refund chahiye", "fan", status="needs_you", reason="Refund")
+        chats = out("list_inbox")["chats"]
+        self.assertEqual((chats[0]["chat_id"], chats[0]["can_reply"]), ("44", True))
+        self.assertEqual(out("get_conversation", {"chat_id": "44"})["messages"][-1]["text"], "refund chahiye")
+        self.assertTrue(out("reply_in_dm", {"chat_id": "44", "text": "Sorry! Sending now"})["sent"])
+        self.assertEqual(out("hand_chat_to", {"chat_id": "44", "to": "ai"})["handled_by"], "ai")
+        self.assertTrue(call("reply_in_dm", {"chat_id": "nope", "text": "x"})["isError"])
+        # every change is in the activity log
+        claude = [a for a in self.c.get("/api/activity?all=1").get_json() if a["action"] == "claude"]
+        self.assertIn("Created Launch reel", [a["detail"] for a in claude])
+        self.assertNotIn("Preview only", [a["detail"] for a in claude])
+        self.assertTrue(out("delete_automation", {"automation_id": "kw:GUIDE"}))
+
+    def test_mcp_read_only_link(self):
+        self.login()
+        d = self.c.post("/api/mcp-key", json={"read_only": True}).get_json()
+        self.assertTrue(d["read_only"])
+        self.assertTrue(self.c.get("/api/mcp-key").get_json()["read_only"])
+        H = {"Authorization": f"Bearer {d['key']}"}
+        rpc = lambda method, params=None: self.c.post("/mcp", headers=H, json={
+            "jsonrpc": "2.0", "id": 1, "method": method, **({"params": params} if params is not None else {})}).get_json()
+        tools = rpc("tools/list")["result"]["tools"]
+        self.assertTrue(all(t["annotations"]["readOnlyHint"] for t in tools))
+        self.assertNotIn("save_automation", [t["name"] for t in tools])
+        self.assertIn("error", rpc("tools/call", {"name": "pause_all_automations", "arguments": {"paused": True}}))
+        self.assertIn("read-only", rpc("initialize", {})["result"]["instructions"])
+        self.assertFalse(store.load_account("1789").get("paused"))
 
     def test_demo_mode(self):
         r = self.c.get("/demo")

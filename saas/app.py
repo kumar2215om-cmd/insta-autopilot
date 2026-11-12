@@ -733,36 +733,47 @@ def api_copy_rule(key):
     """Copies one automation to other reels and / or new keywords. Existing automations are kept unless "replace" is set."""
     acc = current_account()
     data = request.get_json(force=True)
+    try:
+        done, skipped = copy_rule(acc, key, data.get("targets") or [], bool(data.get("replace")))
+    except LookupError:
+        return jsonify(error="Automation not found."), 404
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(copied=done, skipped=skipped, rules=store.load_rules(acc["id"]))
+
+
+def copy_rule(acc, key, targets, replace=False):
+    """Copies an automation to other rule ids; returns (copied, skipped). LookupError if the source is missing."""
     source = store.load_rules(acc["id"]).get("reels", {}).get(key)
     if not source:
-        return jsonify(error="Automation not found."), 404
-    targets = [str(t) for t in (data.get("targets") or [])][:50]
+        raise LookupError(key)
+    targets = [str(t) for t in targets][:50]
     done, skipped = [], []
     for target in targets:
         if target == key or not valid_rule_key(target):
             continue
-        if target in store.load_rules(acc["id"]).get("reels", {}) and not data.get("replace"):
+        if target in store.load_rules(acc["id"]).get("reels", {}) and not replace:
             skipped.append(target)
             continue
         copy = {k: v for k, v in source.items() if k not in ("auto", "label")}
         if engine.is_keyword_rule(target):
             copy["keywords"] = [target[3:]]
-        try:
-            save_rule(acc, target, copy)
-            done.append(target)
-        except ValueError as e:
-            return jsonify(error=str(e)), 400
-    return jsonify(copied=done, skipped=skipped, rules=store.load_rules(acc["id"]))
+        save_rule(acc, target, copy)
+        done.append(target)
+    return done, skipped
 
 
 @app.delete("/api/rules/<key>")
 def api_delete_rule(key):
-    acc = current_account()
+    return jsonify(delete_rule(current_account(), key))
+
+
+def delete_rule(acc, key):
     rules = store.load_rules(acc["id"])
     rules.get("reels", {}).pop(key, None)
     store.save_rules(acc["id"], rules)
     store.redis("DEL", *[store.account_key(acc["id"], f"{p}:{key}") for p in ("rs", "rsd", "rsh", "ab")])
-    return jsonify(rules)
+    return rules
 
 
 @app.post("/api/reels/<media_id>/past-comments")
@@ -1017,24 +1028,34 @@ def sale_return(pid):
 
 @app.get("/api/sales")
 def api_sales():
-    acc = current_account()
+    return jsonify(sales_summary(current_account()))
+
+
+def sales_summary(acc):
     days = store.days(acc["id"], 30)
     keys = list(store.load_rules(acc["id"]).get("reels", {}))
     by_rule = {k: v for k, v in store.rule_stats(acc["id"], keys).items() if v.get("sales")}
     c = store.counts(acc["id"])
-    return jsonify(products=[{**p, "link": f"{base_url()}/s/{p['id']}"} for p in engine.products(acc)],
-                   sales=c.get("sales", 0), revenue=c.get("revenue", 0), link_clicks=c.get("link_clicks", 0),
-                   daily=[{"date": d, "sales": v.get("sales", 0), "revenue": v.get("revenue", 0)} for d, v in days],
-                   recent=[json.loads(x) for x in store.redis("LRANGE", store.account_key(acc["id"], "sales"), 0, 19) or []],
-                   by_rule={k: {"sales": v.get("sales", 0), "revenue": v.get("revenue", 0), "link_clicks": v.get("link_clicks", 0)}
-                            for k, v in by_rule.items()},
-                   utm=acc.get("utm", True))
+    return dict(products=[{**p, "link": f"{base_url()}/s/{p['id']}"} for p in engine.products(acc)],
+                sales=c.get("sales", 0), revenue=c.get("revenue", 0), link_clicks=c.get("link_clicks", 0),
+                daily=[{"date": d, "sales": v.get("sales", 0), "revenue": v.get("revenue", 0)} for d, v in days],
+                recent=[json.loads(x) for x in store.redis("LRANGE", store.account_key(acc["id"], "sales"), 0, 19) or []],
+                by_rule={k: {"sales": v.get("sales", 0), "revenue": v.get("revenue", 0), "link_clicks": v.get("link_clicks", 0)}
+                         for k, v in by_rule.items()},
+                utm=acc.get("utm", True))
 
 
 @app.post("/api/products")
 def api_add_product():
-    acc = current_account()
-    data = request.get_json(force=True)
+    try:
+        add_product(current_account(), request.get_json(force=True))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return api_sales()
+
+
+def add_product(acc, data):
+    """Adds a product and returns it with its sales link; raises ValueError on bad input."""
     name = str(data.get("name", "")).strip()[:80]
     try:
         price = int(float(str(data.get("price", "0")).replace(",", "").replace("₹", "").strip() or 0))
@@ -1042,19 +1063,20 @@ def api_add_product():
         price = -1
     thanks = str(data.get("thanks_url", "")).strip()
     if not name:
-        return jsonify(error="Give the product a name."), 400
+        raise ValueError("Give the product a name.")
     if not 0 <= price <= 1_000_000:
-        return jsonify(error="Price must be a number in ₹."), 400
+        raise ValueError("Price must be a number in ₹.")
     if thanks and not safe_url(thanks):
-        return jsonify(error="The thank-you page must start with https://"), 400
+        raise ValueError("The thank-you page must start with https://")
     items = engine.products(acc)
     if len(items) >= engine.MAX_PRODUCTS:
-        return jsonify(error=f"Up to {engine.MAX_PRODUCTS} products."), 400
+        raise ValueError(f"Up to {engine.MAX_PRODUCTS} products.")
     pid = secrets.token_hex(6)
     store.redis("SET", f"s:prod:{pid}", acc["id"])
-    acc["products"] = items + [{"id": pid, "name": name, "price": price, "thanks_url": safe_url(thanks) if thanks else ""}]
+    prod = {"id": pid, "name": name, "price": price, "thanks_url": safe_url(thanks) if thanks else ""}
+    acc["products"] = items + [prod]
     store.save_account(acc)
-    return api_sales()
+    return {**prod, "link": f"{base_url()}/s/{pid}"}
 
 
 @app.delete("/api/products/<pid>")
@@ -1077,19 +1099,23 @@ def api_utm():
 
 @app.get("/api/rules/<key>/insights")
 def api_rule_insights(key):
-    """30 days of one automation's numbers, its busiest hours and how its menu options were picked."""
-    acc = current_account()
+    data = rule_insights(current_account(), key)
+    return jsonify(data) if data else (jsonify(error="Automation not found"), 404)
+
+
+def rule_insights(acc, key):
+    """30 days of one automation's numbers, its busiest hours and how its menu options were picked (None if unknown)."""
     rule = store.load_rules(acc["id"]).get("reels", {}).get(key)
     if not rule:
-        return jsonify(error="Automation not found"), 404
+        return None
     fields = ("runs", "clicks", "link_clicks", "follows", "leads", "sales", "revenue")
     daily = [{"date": d, **{f: v.get(f, 0) for f in fields}} for d, v in store.rule_daily(acc["id"], key, 30)]
     total = store.rule_stats(acc["id"], [key])[key]
     hours = store.rule_hours(acc["id"], key)
     best = sorted(range(24), key=lambda h: -hours[h])[:3] if any(hours) else []
     menu = [{"title": m.get("title", ""), "picked": total.get(f"menu_{i}", 0)} for i, m in enumerate(rule.get("menu") or [])]
-    return jsonify(daily=daily, total={f: total.get(f, 0) for f in fields}, hours=hours, best_hours=best, menu=menu,
-                   last30={f: sum(d[f] for d in daily) for f in fields})
+    return dict(daily=daily, total={f: total.get(f, 0) for f in fields}, hours=hours, best_hours=best, menu=menu,
+                last30={f: sum(d[f] for d in daily) for f in fields})
 
 
 @app.get("/api/welcome")
@@ -1099,8 +1125,13 @@ def api_welcome():
 
 @app.put("/api/welcome")
 def api_put_welcome():
-    acc = current_account()
-    data = request.get_json(force=True)
+    try:
+        return jsonify(set_welcome(current_account(), request.get_json(force=True)))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+
+
+def set_welcome(acc, data):
     rules = store.load_rules(acc["id"]).get("reels", {})
     buttons = []
     for b in (data.get("buttons") or [])[:3]:
@@ -1111,10 +1142,10 @@ def api_put_welcome():
             buttons.append({"type": "kw", "title": title, "value": str(b["value"])})
     text = str(data.get("text", "")).strip()[:640]
     if data.get("enabled") and not text:
-        return jsonify(error="Write the welcome message first."), 400
+        raise ValueError("Write the welcome message first.")
     acc["welcome"] = {"enabled": bool(data.get("enabled")), "text": text, "buttons": buttons}
     store.save_account(acc)
-    return jsonify(engine.welcome_settings(acc))
+    return engine.welcome_settings(acc)
 
 
 BROADCAST_BATCH = 40  # messages per request, so one request stays well inside the time limit
@@ -1130,19 +1161,25 @@ def api_broadcast_info():
 @app.post("/api/broadcast")
 def api_broadcast():
     """Sends one message to everyone who DMed in the last 24 h. Call again with the same id until done is true."""
-    acc = current_account()
-    data = request.get_json(force=True)
+    try:
+        return jsonify(broadcast_batch(current_account(), request.get_json(force=True)))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+
+
+def broadcast_batch(acc, data):
+    """One batch of a broadcast; raises ValueError for bad input or when the account can't send."""
     text = str(data.get("text", "")).strip()[:640]
     bid = re.sub(r"[^a-z0-9]", "", str(data.get("id", "")).lower())[:16]
     url, button = safe_url(data.get("url")), str(data.get("button", "")).strip()[:20] or "Open"
     if not text or not bid:
-        return jsonify(error="Write the message first."), 400
+        raise ValueError("Write the message first.")
     if data.get("url") and not url:
-        return jsonify(error="The link must start with https://"), 400
+        raise ValueError("The link must start with https://")
     if engine.is_blocked(acc):
-        return jsonify(error="Instagram is limiting this account right now. Try again later."), 400
+        raise ValueError("Instagram is limiting this account right now. Try again later.")
     if engine.over_limit(acc):
-        return jsonify(error="This month's DM limit is reached."), 400
+        raise ValueError("This month's DM limit is reached.")
     done_key = store.account_key(acc["id"], f"bc:{bid}")
     already = set(store.redis("SMEMBERS", done_key) or [])
     todo = [i for i in engine.recent_chats(acc) if i not in already]
@@ -1170,7 +1207,7 @@ def api_broadcast():
                     json.dumps({"id": bid, "text": text[:120], "to": total, "at": int(time.time())}, ensure_ascii=False))
         store.redis("LTRIM", store.account_key(acc["id"], "broadcasts"), 0, 9)
         store.log_activity(acc["id"], "broadcast", "", text, "broadcast", "ok", f"Sent to {total} people")
-    return jsonify(sent=sent, failed=failed, left=left, done=not left)
+    return {"sent": sent, "failed": failed, "left": left, "done": not left}
 
 
 # ---------- notifications and the installable app ----------
@@ -1307,7 +1344,15 @@ def api_inbox():
 @app.put("/api/ai")
 def api_put_ai():
     acc = current_account()
-    data = request.get_json(force=True)
+    try:
+        update_ai(acc, request.get_json(force=True))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(ai_state(acc))
+
+
+def update_ai(acc, data):
+    """Changes only the AI agent settings present in data."""
     old = ai_agent.settings(acc)
     handoff = [h.strip()[:120] for h in str(data.get("handoff", "")).splitlines() if h.strip()][:10] \
         if "handoff" in data else old["handoff"]
@@ -1317,9 +1362,10 @@ def api_put_ai():
                  "handoff": handoff, "hold_message": str(data.get("hold_message", old["hold_message"]))[:500],
                  "send_hold": bool(data.get("send_hold", old["send_hold"]))}
     if acc["ai"]["enabled"] and not ai_agent.ready(acc):
-        return jsonify(error="The AI isn't set up on the server yet (ANTHROPIC_API_KEY)."), 400
+        acc["ai"] = old
+        raise ValueError("The AI isn't set up on the server yet (ANTHROPIC_API_KEY).")
     store.save_account(acc)
-    return jsonify(ai_state(acc))
+    return ai_state(acc)
 
 
 @app.post("/api/ai/test")
@@ -1369,19 +1415,29 @@ def api_thread(igsid):
 def api_thread_send(igsid):
     """The creator answers by hand. The AI then stays quiet in this chat until they hand it back."""
     acc = current_account()
+    try:
+        inbox_send(acc, igsid, request.get_json(force=True).get("text", ""))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    except RuntimeError as e:
+        return jsonify(error=str(e)), 502
+    return jsonify(thread=ai_agent.get_thread(acc["id"], igsid), messages=ai_agent.messages(acc["id"], igsid))
+
+
+def inbox_send(acc, igsid, text):
+    """A reply typed by the creator (or Claude for them). The AI then stays out of this chat until handed back."""
     thread = ai_agent.get_thread(acc["id"], igsid)
-    text = str(request.get_json(force=True).get("text", "")).strip()[:1000]
+    text = str(text or "").strip()[:1000]
     if not thread or not text:
-        return jsonify(error="Write a message first."), 400
+        raise ValueError("Write a message first." if thread else "Conversation not found.")
     if time.time() - thread.get("last_fan_at", 0) > 24 * 3600:
-        return jsonify(error="Instagram only allows replies within 24 hours of their last message."), 400
+        raise ValueError("Instagram only allows replies within 24 hours of their last message.")
     try:
         engine.Instagram(acc).send_dm({"id": igsid}, {"text": text})
     except Exception as e:
-        return jsonify(error=f"Instagram didn't send it: {str(e)[:200]}"), 502
+        raise RuntimeError(f"Instagram didn't send it: {str(e)[:200]}")
     ai_agent.add_message(acc["id"], igsid, "you", text, status="you", reason="", suggestion="", unread=False)
     store.log_activity(acc["id"], "ai", thread.get("username") or igsid, text, "inbox_reply", "ok")
-    return jsonify(thread=ai_agent.get_thread(acc["id"], igsid), messages=ai_agent.messages(acc["id"], igsid))
 
 
 @app.post("/api/inbox/<igsid>/status")
@@ -1496,25 +1552,35 @@ from mcp_protocol import handle_http  # noqa: E402
 
 
 def mcp_account():
+    """(account, read_only) for the key in the Authorization header or ?key=; (None, False) when unknown."""
     header = request.headers.get("Authorization", "")
     key = header[7:].strip() if header.lower().startswith("bearer ") else request.args.get("key", "")
     if not key.startswith("ri_"):
-        return None
-    ig_id = store.redis("GET", f"s:mcpkey:{hashlib.sha256(key.encode()).hexdigest()}")
-    return store.load_account(ig_id) if ig_id else None
+        return None, False
+    value = store.redis("GET", f"s:mcpkey:{hashlib.sha256(key.encode()).hexdigest()}") or ""
+    ig_id, _, mode = value.partition("|")
+    acc = store.load_account(ig_id) if ig_id else None
+    return acc, mode == "read"
+
+
+def mcp_services():
+    """The app functions the MCP tools share with the dashboard."""
+    from types import SimpleNamespace
+    return SimpleNamespace(save_rule=save_rule, build_report=build_report, delete_rule=delete_rule, copy_rule=copy_rule,
+                           rule_insights=rule_insights, sales_summary=sales_summary, add_product=add_product,
+                           broadcast_batch=broadcast_batch, inbox_send=inbox_send, set_welcome=set_welcome, update_ai=update_ai)
 
 
 @app.route("/mcp", methods=["GET", "POST", "DELETE"])
 def mcp_endpoint():
-    acc = mcp_account()
+    acc, read_only = mcp_account()
     if not acc:
         return jsonify(error=f"Missing or wrong key. Create a new Claude link in your {BRAND} dashboard."), 401
     if request.method != "POST":
         return "", 405, {"Allow": "POST"}
-    tools = mcp_tools.tools_for(acc, save_rule=save_rule, build_report=build_report)
-    status, body = handle_http(request.get_data(), tools, BRAND.lower(),
-                               f"{BRAND}: Instagram comment-to-DM automation for @{acc.get('username')}. "
-                               "Ask before deleting automations.")
+    tools = mcp_tools.tools_for(acc, mcp_services(), read_only=read_only)
+    status, body = handle_http(request.get_data(), tools, BRAND.lower(), mcp_tools.instructions(acc, BRAND, read_only),
+                               prompts=mcp_tools.prompts())
     return (jsonify(body), status) if body is not None else ("", status)
 
 
@@ -1522,18 +1588,20 @@ def mcp_endpoint():
 def api_mcp_key():
     acc = current_account()
     if request.method == "GET":
-        return jsonify(active=bool(acc.get("mcp_key_hash")))
+        return jsonify(active=bool(acc.get("mcp_key_hash")), read_only=acc.get("mcp_mode") == "read")
     if acc.get("mcp_key_hash"):  # a new link (or disconnect) turns off the old one
         store.redis("DEL", f"s:mcpkey:{acc['mcp_key_hash']}")
         acc["mcp_key_hash"] = ""
     if request.method == "POST":
         key = "ri_" + secrets.token_urlsafe(32)  # shown once; only its hash is stored
         acc["mcp_key_hash"] = hashlib.sha256(key.encode()).hexdigest()
-        store.redis("SET", f"s:mcpkey:{acc['mcp_key_hash']}", acc["id"])
+        acc["mcp_mode"] = "read" if (request.get_json(silent=True) or {}).get("read_only") else "full"
+        store.redis("SET", f"s:mcpkey:{acc['mcp_key_hash']}", acc["id"] + ("|read" if acc["mcp_mode"] == "read" else ""))
     store.save_account(acc)
     if request.method == "DELETE":
         return jsonify(active=False)
-    return jsonify(active=True, key=key, url=f"{base_url()}/mcp?key={key}", endpoint=f"{base_url()}/mcp")
+    return jsonify(active=True, key=key, url=f"{base_url()}/mcp?key={key}", endpoint=f"{base_url()}/mcp",
+                   read_only=acc["mcp_mode"] == "read")
 
 
 # ---------- webhook (comments + DMs for every connected account) ----------

@@ -152,9 +152,24 @@ ReplyInbox from claude.ai (Settings → Connectors → Add custom connector), Cl
 - Dashboard card **Connect Claude** creates a per-account key `ri_…` (shown once; only its SHA-256 is stored as
   `s:mcpkey:<hash>` → account). The connector link is `https://<PUBLIC_URL>/mcp?key=ri_…`; Claude Code can send it as
   `Authorization: Bearer ri_…`. A new link or Disconnect revokes the old key; deleting the account removes it.
-- Tools (`mcp_tools.py`): get_account_summary, list_reels, get_reel_report, list_automations, save_automation,
-  set_automation_enabled, delete_automation, get_recent_activity, pause_all_automations.
-- Protocol code: `mcp_protocol.py` (identical copy at the repo root for Om's app; keep them the same).
+- **Full access or read-only:** the card picks the mode; the key maps to `<account>` or `<account>|read`. Read-only links
+  list and run only `read_only` tools. Every change Claude makes is logged in Activity (action `claude`).
+- **Tools** (`mcp_tools.py`, 31). They use the same app functions as the dashboard (`mcp_services()` in app.py), so the
+  checks are identical.
+  - Overview: get_account_summary, get_trends, get_best_posting_times, list_reels, get_reel_report, get_recent_activity.
+  - Automations: list_automations (with stats and sort_by), get_automation, get_automation_insights, save_automation
+    (every wizard option: targets reel / keyword / all / next_post / story_replies / story_mentions / live, menu, email
+    and WhatsApp capture, follow-up, A/B, schedule in IST, tags, exclude, delay, dm_only), duplicate_automation,
+    set_automation_enabled, delete_automation, pause_all_automations, send_to_past_comments, retry_refused_dms.
+  - Money: get_sales, add_product, delete_product, set_utm_tags.
+  - People and DMs: search_contacts, tag_contacts, list_inbox, get_conversation, reply_in_dm, hand_chat_to,
+    broadcast_to_recent_chats (preview unless confirm=true), get_messaging_settings, set_welcome_message,
+    update_ai_agent, test_ai_reply.
+- **Prompts** (shown in Claude's menu): weekly_review, launch_plan, new_reel_automation, fix_problems, inbox_catchup.
+- **Instructions** sent at connect explain ids, ₹/IST, `{username}` and `{a|b}`, Instagram's windows, and to ask before
+  sending or deleting.
+- Protocol code: `mcp_protocol.py` (identical copy at the repo root for Om's app; keep them the same). Prompts are an
+  optional argument, so Om's app is unchanged.
 - Costs nothing extra: Claude usage is on the creator's own Claude plan; each tool call is a normal request here.
 
 ## How events reach it

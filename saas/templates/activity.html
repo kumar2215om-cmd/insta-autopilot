@@ -48,9 +48,11 @@ const NAME = {comment_reply: ["💬", "replied to the comment"], opening_dm: ["�
   comment_hidden: ["🛡️", "hid a comment"], story_reply: ["◎", "answered a story reply"], story_mention: ["@", "thanked a story mention"],
   email_ask: ["📧", "asked for their email"], phone_ask: ["📱", "asked for their WhatsApp number"], followup: ["🔁", "sent the follow-up offer"],
   chat_menu: ["❓", "answered a chat menu question"], ai_reply: ["🤖", "AI replied"], ai_handoff: ["🙋", "AI handed the chat to you"],
-  inbox_reply: ["↩️", "you replied from the inbox"], integration: ["🔗", "sent a lead to your integration"], giveaway_winner: ["🎁", "announced a giveaway winner"]};
+  inbox_reply: ["↩️", "you replied from the inbox"], integration: ["🔗", "sent a lead to your integration"], giveaway_winner: ["🎁", "announced a giveaway winner"],
+  claude: ["✦", "Claude made a change"], sale: ["💰", "new sale"], health: ["🚨", "account alert"], menu_choice: ["☰", "picked a menu option"],
+  broadcast: ["📣", "broadcast to recent chats"]};
 const GROUP = {dm: ["opening_dm", "dm", "dm_keyword", "story_reply", "story_mention", "followup", "chat_menu", "email_ask", "phone_ask"],
-  reply: ["comment_reply", "comment_hidden"], lead: ["email_ask", "phone_ask", "follow_prompt", "follow_check", "integration"], ai: ["ai_reply", "ai_handoff", "inbox_reply"]};
+  reply: ["comment_reply", "comment_hidden"], lead: ["email_ask", "phone_ask", "follow_prompt", "follow_check", "integration"], ai: ["ai_reply", "ai_handoff", "inbox_reply", "claude"]};
 let all = [], filter = "all";
 const ago = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? "now" : s < 3600 ? `${Math.floor(s / 60)}m ago` : s < 86400 ? `${Math.floor(s / 3600)}h ago` : new Date(iso).toLocaleDateString(); };
 function draw() {
