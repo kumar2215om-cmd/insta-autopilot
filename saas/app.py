@@ -139,9 +139,34 @@ def render_app(template, active, **extra):
                            page_url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}", **extra)
 
 
+SITE_URL = env("SITE_URL").rstrip("/")  # the address search engines should index; set it once the main domain works
+
+
+def site_url():
+    """Canonical address for public pages: SITE_URL when set, else the address this request came in on."""
+    return SITE_URL or request.host_url.rstrip("/")
+
+
 @app.context_processor
 def brand():
-    return {"brand": BRAND, "contact_email": CONTACT_EMAIL, "public_url": base_url() if request else ""}
+    return {"brand": BRAND, "contact_email": CONTACT_EMAIL, "public_url": base_url() if request else "",
+            "site_url": site_url() if request else ""}
+
+
+PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report")
+
+
+def is_private_path(path):
+    """True for the dashboard, demo, short links and the like (whole path segments only, so /apple.store stays public)."""
+    return any(path == p or path.startswith(p + "/") for p in PRIVATE_PREFIXES)
+
+
+@app.after_request
+def no_index_private(resp):
+    """Keep the dashboard, demo and redirect links out of search results."""
+    if is_private_path(request.path):
+        resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return resp
 
 
 @app.before_request
@@ -167,8 +192,179 @@ def landing():
         session["ref"] = ref
     referrer = store.account_by_username(session["ref"]) if session.get("ref") else None
     return render_template("landing.html", invite_only=SIGNUPS == "invite", error=request.args.get("error", ""),
-                           signed_in=bool(current_account()),
+                           signed_in=bool(current_account()), schema=landing_schema(),
                            referrer=referrer.get("username") if referrer else "")
+
+
+# ---------- public pages for search engines and AI assistants (SEO / AEO / GEO) ----------
+
+import seo_content as seo  # noqa: E402
+
+
+def fill(value):
+    """Replaces {brand} in page content (strings, lists, tuples, dicts)."""
+    if isinstance(value, str):
+        return value.replace("{brand}", BRAND)
+    if isinstance(value, (list, tuple)):
+        return type(value)(fill(v) for v in value)
+    if isinstance(value, dict):
+        return {k: fill(v) for k, v in value.items()}
+    return value
+
+
+def org_schema():
+    return {"@type": "Organization", "@id": f"{site_url()}/#org", "name": BRAND, "url": f"{site_url()}/",
+            "logo": f"{site_url()}/static/icon-512.png", **({"email": CONTACT_EMAIL} if CONTACT_EMAIL else {})}
+
+
+def faq_schema(faq):
+    return {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faq]}
+
+
+_LANDING_FAQ = None
+
+
+def landing_faq():
+    """The landing page's FAQ, read from the template so the page and its structured data never disagree."""
+    global _LANDING_FAQ
+    if _LANDING_FAQ is None:
+        src = open(os.path.join(app.root_path, "templates", "landing.html"), encoding="utf-8").read()
+        strip = lambda h: re.sub(r"\s+", " ", re.sub(r"<[^>]+>|\{%.*?%\}", "", h)).replace("{{ brand }}", BRAND).strip()
+        _LANDING_FAQ = [(strip(q), strip(a)) for q, a in re.findall(r"<details><summary>(.*?)</summary><p>(.*?)</p></details>", src)]
+    return _LANDING_FAQ
+
+
+def landing_schema():
+    offers = [{"@type": "Offer", "name": p["name"], "price": str(p["price"]), "priceCurrency": "INR", "url": f"{site_url()}/#pricing"}
+              for k, p in plans.PLANS.items()]
+    offers += [{"@type": "Offer", "name": plans.PLANS[k]["name"], "price": str(m), "priceCurrency": "USD", "url": f"{site_url()}/#pricing"}
+               for k, (m, _) in plans.USD.items()]
+    return [
+        {"@context": "https://schema.org", **org_schema()},
+        {"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": f"{site_url()}/", "publisher": {"@id": f"{site_url()}/#org"}},
+        {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": BRAND, "url": f"{site_url()}/",
+         "applicationCategory": "BusinessApplication", "applicationSubCategory": "Instagram DM automation", "operatingSystem": "Web, Android, iOS",
+         "description": "Instagram DM automation for creators: comment-to-DM, follow to unlock, story replies, email and WhatsApp "
+                        "capture, follow-up offers, an AI that answers DMs in any language, and sales tracking per reel.",
+         "featureList": ["Comment-to-DM", "Follow to unlock", "Story reply and mention automation", "Email and WhatsApp capture",
+                         "AI DM agent in any language", "Follow-up offers", "Broadcast to recent chats", "Sales tracking per reel",
+                         "Link in bio page", "Claude (MCP) integration"],
+         "offers": offers, "publisher": {"@id": f"{site_url()}/#org"}},
+        faq_schema(landing_faq()),
+    ]
+
+
+def content_page(page, path, crumbs, related=()):
+    page = fill(page)
+    schema = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": i + 1, "name": name, "item": f"{site_url()}{url or path}"}
+        for i, (name, url) in enumerate([("Home", "/")] + list(crumbs))]}]
+    if page.get("kind") != "hub":
+        schema.append({"@context": "https://schema.org", "@type": "Article", "headline": page.get("h1") or page["title"],
+                       "description": page["description"], "dateModified": seo.UPDATED, "datePublished": seo.UPDATED,
+                       "mainEntityOfPage": f"{site_url()}{path}", "author": {"@id": f"{site_url()}/#org"},
+                       "publisher": org_schema(), "image": f"{site_url()}/static/og.png"})
+    if page.get("faq"):
+        schema.append(faq_schema(page["faq"]))
+    return render_template("content.html", page=page, path=path, crumbs=crumbs, related=fill(list(related)), schema=schema,
+                           updated=seo.UPDATED, checked=seo.CHECKED)
+
+
+def card(kind, slug, item):
+    url = {"feature": "/features/", "compare": "/vs/", "guide": "/guides/"}[kind] + slug
+    title = item["title"] if kind != "compare" else f"{BRAND} vs {item['name']}"
+    return {"url": url, "title": fill(title), "text": fill(item["description"])}
+
+
+@app.get("/features")
+def features_hub():
+    return content_page({"kind": "hub", "title": "Features", "h1": f"Everything {BRAND} does on Instagram",
+                         "description": f"All {BRAND} features: comment-to-DM, follow to unlock, AI DM agent, story replies, lead capture and sales tracking.",
+                         "intro": "Pick a feature to see how it works, what it costs and common questions.",
+                         "cards": [card("feature", k, v) for k, v in seo.FEATURES.items()]}, "/features", [("Features", None)])
+
+
+@app.get("/features/<slug>")
+def feature_page(slug):
+    item = seo.FEATURES.get(slug) or abort(404)
+    related = [card("feature", k, v) for k, v in seo.FEATURES.items() if k != slug][:3]
+    return content_page({**item, "kind": "feature"}, f"/features/{slug}", [("Features", "/features"), (item["title"], None)], related)
+
+
+@app.get("/compare")
+def compare_hub():
+    return content_page({"kind": "hub", "title": "Compare Instagram DM automation tools", "h1": f"{BRAND} compared with other tools",
+                         "description": f"Honest comparisons of {BRAND} with ManyChat, LinkDM, SuperProfile, Repli, ReplyKaro and InstantDM.",
+                         "intro": "Side-by-side comparisons with prices and features, checked " + seo.CHECKED + ".",
+                         "cards": [card("compare", k, v) for k, v in seo.COMPARE.items()]
+                                  + [card("guide", "instagram-dm-automation-pricing", seo.GUIDES["instagram-dm-automation-pricing"])]},
+                        "/compare", [("Compare", None)])
+
+
+@app.get("/vs/<slug>")
+def compare_page(slug):
+    item = seo.COMPARE.get(slug) or abort(404)
+    page = {**item, "kind": "compare", "h1": f"{BRAND} vs {item['name']}: the {item['name']} alternative for Instagram",
+            "title": f"{item['title']} ({BRAND} vs {item['name']})",
+            "faq": [(f"Is {BRAND} a good {item['name']} alternative?", f"Yes, if {item['choose_us']}"),
+                    (f"How much does {BRAND} cost?", "Free for 1,000 DMs a month; Creator is ₹199 / $9 a month with unlimited DMs and AI replies included.")]}
+    related = [card("compare", k, v) for k, v in seo.COMPARE.items() if k != slug][:3]
+    return content_page(page, f"/vs/{slug}", [("Compare", "/compare"), (f"vs {item['name']}", None)], related)
+
+
+@app.get("/guides")
+def guides_hub():
+    return content_page({"kind": "hub", "title": "Instagram DM automation guides", "h1": "Guides: grow and sell with Instagram DMs",
+                         "description": "Practical guides on Instagram comment-to-DM, follow gates, DM automation pricing and account safety.",
+                         "intro": "Short, practical guides you can follow today.",
+                         "cards": [card("guide", k, v) for k, v in seo.GUIDES.items()]}, "/guides", [("Guides", None)])
+
+
+@app.get("/guides/<slug>")
+def guide_page(slug):
+    item = seo.GUIDES.get(slug) or abort(404)
+    related = [card("guide", k, v) for k, v in seo.GUIDES.items() if k != slug][:2] + [card("feature", "comment-to-dm", seo.FEATURES["comment-to-dm"])]
+    return content_page({**item, "kind": "guide"}, f"/guides/{slug}", [("Guides", "/guides"), (item["title"], None)], related)
+
+
+@app.get("/robots.txt")
+def robots_txt():
+    lines = ["# Search engines and AI assistants are welcome on the public pages.", "User-agent: *", "Allow: /"]
+    lines += [f"Disallow: {p}/" for p in PRIVATE_PREFIXES] + [f"Disallow: /{p}$" for p in ("app", "demo", "login", "owner", "report")]
+    lines += ["", f"Sitemap: {site_url()}/sitemap.xml"]
+    return "\n".join(lines) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+
+@app.get("/sitemap.xml")
+def sitemap_xml():
+    urls = "".join(f"<url><loc>{site_url()}{p}</loc><lastmod>{seo.UPDATED}</lastmod></url>" for p in seo.all_paths())
+    return (f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>',
+            200, {"Content-Type": "application/xml; charset=utf-8"})
+
+
+@app.get("/llms.txt")
+def llms_txt():
+    """A plain summary for AI assistants (the llms.txt convention): what the product is, prices, and where details live."""
+    u = site_url()
+    p = plans.PLANS
+    out = [f"# {BRAND}", "",
+           f"> {BRAND} is Instagram DM automation for creators, coaches and brands: comment-to-DM, follow to unlock, story reply and "
+           "mention automation, email and WhatsApp capture, follow-up offers, broadcasts to recent chats, an AI agent that answers "
+           "DMs in the fan's language, and sales tracking that shows which reel made money. Built on Meta's official Instagram API; "
+           "no Instagram password needed.", "",
+           "## Pricing (monthly)",
+           f"- Free: ₹0 / $0, {p['free']['monthly_dms']:,} DMs a month, 25 AI replies to try",
+           f"- Starter: ₹{p['starter']['price']} / ${plans.USD['starter'][0]}, 3,000 DMs, follow to unlock",
+           f"- Creator: ₹{p['creator']['price']} / ${plans.USD['creator'][0]}, unlimited DMs, 300 AI replies included, follow-ups, menus, broadcast, sales tracking",
+           f"- Pro: ₹{p['pro']['price']} / ${plans.USD['pro'][0]}, 3 Instagram accounts, 2,000 AI replies, Claude (MCP), Google Sheets and webhooks, team",
+           f"- Agency: ₹{p['agency']['price']:,} / ${plans.USD['agency'][0]}, 10 accounts, 10,000 AI replies",
+           "- During the beta every feature is free.", "",
+           "## Features"] + [f"- [{fill(v['title'])}]({u}/features/{k}): {fill(v['answer'])}" for k, v in seo.FEATURES.items()] + [
+           "", "## Comparisons"] + [f"- [{BRAND} vs {v['name']}]({u}/vs/{k}): {fill(v['answer'])}" for k, v in seo.COMPARE.items()] + [
+           "", "## Guides"] + [f"- [{fill(v['title'])}]({u}/guides/{k}): {fill(v['answer'])}" for k, v in seo.GUIDES.items()] + [
+           "", "## Links", f"- Website: {u}/", f"- Pricing: {u}/#pricing", f"- Live demo: {u}/demo", f"- Privacy: {u}/privacy"]
+    return "\n".join(out) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 
 # ---------- referrals: invite a creator, both get a free month of Pro ----------

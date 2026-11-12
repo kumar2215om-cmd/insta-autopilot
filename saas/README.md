@@ -275,6 +275,18 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
   limited (6 h), 10+ refused comment DMs waiting (`REFUSED_ALERT`, daily), 80% and 100% of the monthly DM limit (once a
   month), and login renewal failing in the daily cron.
 
+## SEO, answer engines and AI assistants (SEO / AEO / GEO)
+- **Pages** (`seo_content.py` → `templates/content.html`): `/features` + 6 feature pages, `/compare` + 6 `/vs/<tool>` pages,
+  `/guides` + 4 guides. Each starts with a direct answer, has short sections, a FAQ, an "Updated" date, related links and a CTA.
+  Competitor facts are dated (`CHECKED`) with a "not affiliated" note; refresh them when competitors change prices.
+- **Structured data (JSON-LD)**: landing page has Organization, WebSite, SoftwareApplication (₹ and $ offers from `plans.py`)
+  and FAQPage (read from the landing FAQ itself); content pages have BreadcrumbList, Article and FAQPage.
+- **`/robots.txt`** allows everything public (including AI crawlers) and blocks private paths; **`/sitemap.xml`** lists every
+  public page; **`/llms.txt`** is a plain summary with prices and links for AI assistants.
+- **Private pages** (`/app`, `/api`, `/demo`, `/l`, `/s`, `/owner`, …) send `X-Robots-Tag: noindex`. Creator link pages stay indexable.
+- **Canonical address**: `SITE_URL` (env). Unset = the address the request came in on (likhodm.vercel.app today). Set
+  `SITE_URL=https://replyinbox.in` only once that domain works, then submit `/sitemap.xml` in Google Search Console and Bing.
+
 ## Contact tags
 Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
 to 5) adds tags to everyone who goes through it (comments, keyword DMs, story replies and mentions). Creators edit tags

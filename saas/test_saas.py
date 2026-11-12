@@ -502,6 +502,40 @@ class SaasTest(unittest.TestCase):
             store.save_account(acc)
             self.assertTrue(plans.has(acc, "follow_gate"))
 
+    def test_seo_pages_and_files(self):
+        import re as _re
+        import seo_content as seo
+        for path in seo.all_paths():
+            r = self.c.get(path)
+            self.assertEqual(r.status_code, 200, path)
+            self.assertIsNone(r.headers.get("X-Robots-Tag"), path)
+            html = r.get_data(as_text=True)
+            self.assertIn('<link rel="canonical" href="http://localhost' + (path if path != "/" else "/") + '"', html, path)
+            for block in _re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, _re.S):
+                json.loads(block)  # every structured-data block is valid JSON
+            self.assertNotIn("{brand}", html, path)
+        page = self.c.get("/vs/manychat").get_data(as_text=True)
+        self.assertIn('"@type": "FAQPage"', page.replace('":"', '": "'))
+        self.assertIn("not affiliated", page)
+        self.assertEqual(self.c.get("/vs/nobody").status_code, 404)
+        sitemap = self.c.get("/sitemap.xml").get_data(as_text=True)
+        self.assertIn("<loc>http://localhost/vs/repli</loc>", sitemap)
+        robots = self.c.get("/robots.txt").get_data(as_text=True)
+        self.assertIn("Sitemap: http://localhost/sitemap.xml", robots)
+        self.assertIn("Disallow: /app/", robots)
+        llms = self.c.get("/llms.txt").get_data(as_text=True)
+        self.assertIn("Creator: ₹199 / $9", llms)
+        self.assertIn("/features/ai-dm-agent", llms)
+        # private pages stay out of search; creator link pages don't
+        self.assertEqual(self.c.get("/app").headers.get("X-Robots-Tag"), "noindex, nofollow")
+        self.assertEqual(self.c.get("/demo").headers.get("X-Robots-Tag"), "noindex, nofollow")
+        self.assertFalse(saas.is_private_path("/apple.store"))
+        self.assertTrue(saas.is_private_path("/l/abc"))
+        landing = self.c.get("/").get_data(as_text=True)
+        self.assertIn('"SoftwareApplication"', landing.replace('": "', '":"'))
+        with mock.patch.object(saas, "SITE_URL", "https://replyinbox.in"):
+            self.assertIn('<link rel="canonical" href="https://replyinbox.in/">', self.c.get("/").get_data(as_text=True))
+
     def test_demo_mode(self):
         r = self.c.get("/demo")
         self.assertTrue(r.location.endswith("/app"))
