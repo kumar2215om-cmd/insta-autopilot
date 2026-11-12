@@ -454,7 +454,8 @@ class SaasTest(unittest.TestCase):
         f = plans.platform_fee(free, 499)
         self.assertEqual((f["fee"], f["gst"], f["total_fee"], f["creator_gets"]), (24.95, 4.49, 29.44, 469.56))
         self.assertEqual(plans.platform_fee(creator, 499)["total_fee"], 11.78)
-        self.assertEqual(plans.platform_fee(pro, 499)["total_fee"], 0)
+        self.assertEqual(plans.platform_fee(pro, 499)["total_fee"], 11.78)
+        self.assertEqual(plans.platform_fee({"plan": "agency"}, 499)["total_fee"], 11.78)
         # referral months count as Pro; unknown plans as Free
         self.assertEqual(plans.plan_of({"plan": "free", "pro_until": _t.time() + 99}), "pro")
         self.assertEqual(plans.plan_of({"plan": "gold"}), "free")

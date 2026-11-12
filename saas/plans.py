@@ -3,7 +3,7 @@
 Two revenue streams:
 1. Subscriptions: Free / Creator / Pro / Agency (prices below, in ₹ per month).
 2. A platform fee on sales collected through ReplyInbox (UPI / card payments in DM, once Razorpay is connected),
-   like SuperProfile's ~5% + GST. Paid plans pay less, which is itself a reason to upgrade.
+   like SuperProfile's ~5% + GST: 5% on Free, 2% on every paid plan (plus 18% GST on the fee).
    Sales on the creator's own payment pages (the Sales page's tracking links) carry no fee: that money never
    passes through us.
 
@@ -20,9 +20,9 @@ PLANS = {
     "creator": {"name": "Creator", "price": 149, "yearly": 1199, "monthly_dms": 0, "ai_replies": 300, "ai_kind": "month",
                 "accounts": 1, "sale_fee_pct": 2.0},
     "pro": {"name": "Pro", "price": 399, "yearly": 3499, "monthly_dms": 0, "ai_replies": 2000, "ai_kind": "month",
-            "accounts": 3, "sale_fee_pct": 0.0},
+            "accounts": 3, "sale_fee_pct": 2.0},
     "agency": {"name": "Agency", "price": 1499, "yearly": 14999, "monthly_dms": 0, "ai_replies": 10000, "ai_kind": "month",
-               "accounts": 10, "sale_fee_pct": 0.0},
+               "accounts": 10, "sale_fee_pct": 2.0},
 }
 PAID = ("creator", "pro", "agency")
 AI_TOPUP = {"replies": 1000, "price": 99}  # extra AI replies, any paid plan
