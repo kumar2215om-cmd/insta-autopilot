@@ -463,6 +463,142 @@ GUIDES.update({
 })
 
 
+# ---------- guides, batch 3 ----------
+
+GUIDES.update({
+    "instagram-comment-keyword-ideas": {
+        "title": "40 comment keyword ideas for Instagram reels (with freebie ideas)",
+        "description": "Comment keyword and freebie ideas for Instagram reels: what to ask people to comment, and what to send in the DM.",
+        "answer": "Good Instagram comment keywords are one short, specific word tied to what people get, such as GUIDE, PROMPTS, "
+                  "RECIPE, PLAN or LINK. Say it early in the reel and in the caption, and send the promised freebie by DM the "
+                  "moment someone comments it.",
+        "sections": [
+            ("Rules for a keyword that works", "<ul><li>One word, easy to spell, no symbols.</li><li>Matches the promise (comment RECIPE for a recipe).</li>"
+             "<li>Different per reel, so you can see which reel performs.</li><li>Said in the first 3 seconds and written on screen and in the caption.</li></ul>"),
+            ("Keyword and freebie ideas by niche", "<div class=\"scroll\"><table><thead><tr><th>Niche</th><th>Keywords</th><th>What to send</th></tr></thead><tbody>"
+             "<tr><td>AI and tech</td><td>PROMPTS, TOOLS, AI, CODE</td><td>Prompt pack, tool list, starter template</td></tr>"
+             "<tr><td>Fitness</td><td>PLAN, ABS, MEAL, STRETCH</td><td>7-day plan, meal sheet, routine video</td></tr>"
+             "<tr><td>Food</td><td>RECIPE, SAUCE, MENU</td><td>Full recipe, grocery list</td></tr>"
+             "<tr><td>Finance</td><td>BUDGET, SIP, TAX, SHEET</td><td>Budget sheet, checklist</td></tr>"
+             "<tr><td>Coaching</td><td>CALL, GUIDE, START, FREE</td><td>Mini-course, booking link</td></tr>"
+             "<tr><td>Fashion and beauty</td><td>LINK, SHOP, LOOK, SKIN</td><td>Product links, routine</td></tr>"
+             "<tr><td>Travel</td><td>TRIP, ITINERARY, MAP</td><td>Itinerary, saved-places map</td></tr>"
+             "<tr><td>Education</td><td>NOTES, PDF, MOCK, PYQ</td><td>Notes, practice set</td></tr>"
+             "<tr><td>Business and marketing</td><td>SCRIPT, HOOKS, AUDIT, DECK</td><td>Script template, hook list</td></tr>"
+             "<tr><td>Design</td><td>FONTS, TEMPLATE, PRESET, KIT</td><td>Template or preset download</td></tr></tbody></table></div>"),
+            ("Reel scripts you can copy", "<ul><li>\"Comment PROMPTS and I'll DM you all 39.\"</li><li>\"Want the full plan? Comment PLAN.\"</li>"
+             "<li>\"I made a sheet for this. Comment SHEET and it's yours.\"</li></ul>"),
+        ],
+        "faq": [("Does the keyword have to be exact?", "No. {brand} matches capitals, plurals and emojis around the word, so \"prompts!!\" still counts as PROMPTS."),
+                ("Can one reel have several keywords?", "Yes, add several keywords to one automation, or use a choice menu in the DM instead.")],
+    },
+    "auto-reply-instagram-comments": {
+        "title": "How to auto-reply to Instagram comments",
+        "description": "Automatically reply to Instagram comments publicly (and by DM) with rotating replies that don't look like spam.",
+        "answer": "To auto-reply to Instagram comments, use a tool on Meta's official API that posts a public reply to each matching "
+                  "comment and, optionally, sends a DM. Rotate 2–3 different replies and mention the person, so replies look "
+                  "natural and Instagram doesn't treat them as spam.",
+        "sections": [
+            ("Set it up", "<ol><li>Create a comment automation on a reel, on any post, or on your next post.</li><li>Choose a keyword or reply to every comment.</li>"
+             "<li>Write 2–3 public replies, e.g. \"Sent! Check your DMs 📩\". {brand} picks one at random and adds @username.</li>"
+             "<li>Add the DM, or turn the DM off if you only want public replies.</li></ol>"),
+            ("Why reply publicly", "<p>Replies show other viewers that commenting works, which brings more comments and pushes the reel to more people.</p>"),
+            ("Stay safe", "<ul><li>Use variations like {Sent|Done|Check your DMs}.</li><li>Don't put links in public replies.</li><li>Hide spam comments automatically with a comment guard.</li></ul>"),
+        ],
+        "faq": [("Can I reply only with a DM and no public comment?", "Yes, turn public replies off in the automation.")],
+    },
+    "why-instagram-dm-not-sent": {
+        "title": "Why didn't my Instagram auto DM send? (Fixes)",
+        "description": "Troubleshooting Instagram DM automation: common reasons an auto DM wasn't delivered and how to fix each one.",
+        "answer": "An automated Instagram DM usually fails for one of these reasons: the comment is older than 7 days, Instagram "
+                  "refused to open a new chat, the account hit its hourly limit, the keyword didn't match, the automation was "
+                  "paused or scheduled, or the Instagram login expired. Each has a simple fix.",
+        "sections": [
+            ("Check these in order", "<ol><li><b>Automation on?</b> Not paused, and inside its start/end time.</li>"
+             "<li><b>Keyword matched?</b> Check excluded words and that the comment is on the right post.</li>"
+             "<li><b>Already sent?</b> With once per person on, each person gets one DM.</li>"
+             "<li><b>Older than 7 days?</b> Instagram doesn't allow DMs to older comments.</li>"
+             "<li><b>Refused by Instagram?</b> Sometimes it won't open a new chat; {brand} retries daily for several days.</li>"
+             "<li><b>Hourly limit?</b> On viral reels, sending pauses and resumes by itself.</li>"
+             "<li><b>Logged out?</b> Log in with Instagram again; you'll get an alert if this happens.</li></ol>"),
+            ("Where to look in {brand}", "<p>The Activity page lists every event with errors in plain words, and the Auto DM page shows refused DMs waiting for a retry.</p>"),
+        ],
+        "faq": [("Do people need to follow me to get the DM?", "Only if you turned on follow to unlock; then they get a follow request first and the link after following.")],
+    },
+    "switch-to-instagram-professional-account": {
+        "title": "How to switch to an Instagram Business or Creator account",
+        "description": "DM automation needs an Instagram professional account. How to switch for free, and Business vs Creator.",
+        "answer": "Instagram DM automation needs a professional (Business or Creator) account. Switching is free: in the Instagram "
+                  "app open your profile, go to Settings, find Account type and tools, and choose Switch to professional account. "
+                  "Either type works with {brand}.",
+        "sections": [
+            ("Business or Creator?", "<ul><li><b>Creator</b>: for influencers, artists, coaches and personal brands.</li>"
+             "<li><b>Business</b>: for shops, brands and service businesses.</li><li>Both work for comment-to-DM and the AI agent; you can switch back any time.</li></ul>"),
+            ("Then connect", "<p>Open {brand}, tap Continue with Instagram, and approve the permissions on Instagram's own screen. You never share your password.</p>"),
+        ],
+        "faq": [("Will switching change my followers or reach?", "No, your followers stay the same, and you get insights and contact options."),
+                ("Do I need a Facebook page?", "No, {brand} uses Instagram Login, so a Facebook page isn't required.")],
+    },
+    "instagram-ai-chatbot": {
+        "title": "How to set up an AI chatbot for Instagram DMs",
+        "description": "Set up an AI that answers Instagram DMs from your FAQ, in the fan's language, and hands tricky chats to you.",
+        "answer": "To set up an AI chatbot for Instagram DMs, connect your account to an official-API tool with an AI agent, write "
+                  "a short About section and an FAQ with your products, prices and links, choose which topics it must hand to you, "
+                  "test it with sample questions, and turn it on.",
+        "sections": [
+            ("What to put in the FAQ", "<ul><li>Each product: name, price, what's inside, the link.</li><li>Delivery and access: \"you get it instantly by email\".</li>"
+             "<li>Payment methods and refund policy.</li><li>Common questions copied from your real DMs.</li></ul>"),
+            ("Hand-offs that keep you safe", "<p>Send refunds, payment problems, collabs and anything the AI isn't sure about to you, with a suggested reply. The AI never invents prices or links.</p>"),
+            ("Test before going live", "<p>Use the test box with real questions in different languages, then check the AI Inbox daily for the first week.</p>"),
+        ],
+        "faq": [("Does it reply in Hindi or other languages?", "Yes, by default it replies in the language the person writes in.")],
+    },
+    "instagram-lead-magnet-ideas": {
+        "title": "Instagram lead magnet ideas that get comments",
+        "description": "Lead magnet ideas for Instagram creators and coaches that people will comment for, plus how to deliver them by DM.",
+        "answer": "The best Instagram lead magnets are quick wins people can use today: checklists, templates, prompt packs, short "
+                  "guides, swipe files and mini video lessons. Promise one specific result, ask for a comment keyword, and deliver "
+                  "it by DM (optionally after collecting an email).",
+        "sections": [
+            ("Ideas that work", "<ul><li>Checklist (\"10-point reel checklist\").</li><li>Template (Notion, Canva, Sheets).</li>"
+             "<li>Prompt pack or script pack.</li><li>Cheat sheet or one-page guide.</li><li>Recorded mini-lesson (5–10 minutes).</li>"
+             "<li>Resource list (tools, books, places).</li><li>Free audit or quiz result.</li></ul>"),
+            ("Make it convert", "<ul><li>Specific beats general: \"7 hooks for coaches\" beats \"marketing tips\".</li>"
+             "<li>Deliver instantly by DM.</li><li>Follow up later with the paid next step.</li></ul>"),
+        ],
+        "faq": [("Should I ask for an email?", "If you'll email them later, yes. If you mainly want followers, use follow to unlock and skip the email.")],
+    },
+    "instagram-dm-automation-for-ecommerce": {
+        "title": "Instagram DM automation for online stores",
+        "description": "How online stores use Instagram DM automation: product links on comments, price questions, offers and sales tracking.",
+        "answer": "Online stores use Instagram DM automation to send product links when people comment (\"LINK\" or \"PRICE\"), "
+                  "answer stock and price questions with an AI agent, send discount codes to story mentions, and track which "
+                  "post brought each sale with UTM tags and sales links.",
+        "sections": [
+            ("Automations to set up", "<ol><li><b>Comment PRICE</b> on product reels → DM with price and a Buy button.</li>"
+             "<li><b>Story replies</b> → link to the product in the story.</li><li><b>Story mentions</b> → thank-you plus a discount code.</li>"
+             "<li><b>AI agent</b> for sizes, shipping and returns from your FAQ.</li><li><b>Broadcast</b> on sale day to people who DMed in the last 24 hours.</li></ol>"),
+            ("Measure revenue", "<p>UTM tags show the traffic in Shopify or Google Analytics, and a sales link on your thank-you page credits each order to the post.</p>"),
+        ],
+        "faq": [("Does it work with Shopify?", "Yes, through links and UTM tags; add a sales link as the order confirmation redirect if your checkout allows it.")],
+    },
+    "run-instagram-giveaway": {
+        "title": "How to run an Instagram giveaway and pick a winner",
+        "description": "Run a fair Instagram giveaway: entry rules, picking a random winner from comments, and announcing it.",
+        "answer": "To run an Instagram giveaway, post clear entry rules (comment a word, follow, optional tag), set an end date, "
+                  "then pick a random winner from the comments with a giveaway picker that skips duplicates and your own account, "
+                  "and announce the winner publicly and by DM.",
+        "sections": [
+            ("Rules to post", "<ul><li>How to enter (comment, follow, tag a friend).</li><li>End date and time.</li>"
+             "<li>Prize and who can enter (country, age).</li><li>\"Not sponsored or endorsed by Instagram.\"</li></ul>"),
+            ("Pick a fair winner", "<p>{brand}'s giveaway picker loads the comments, keeps one entry per person, skips your own account, can require the keyword or a number of tagged friends, and picks at random. It can then reply under each winner's comment and DM them. Screen-record the draw for transparency.</p>"),
+            ("Grow from it", "<p>Add a comment-to-DM automation so every entrant gets a thank-you and a small freebie: everyone wins something and you collect leads.</p>"),
+        ],
+        "faq": [("Is a giveaway picker free?", "Yes, it's included on every {brand} plan.")],
+    },
+})
+
+
 def all_paths():
     return (["/", "/features", "/compare", "/guides", "/privacy", "/terms"]
             + [f"/features/{k}" for k in FEATURES] + [f"/vs/{k}" for k in COMPARE] + [f"/guides/{k}" for k in GUIDES])
