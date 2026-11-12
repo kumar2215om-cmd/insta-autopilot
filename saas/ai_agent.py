@@ -153,7 +153,8 @@ def knowledge(acc):
 
 
 LANGUAGE = {
-    "match": "Reply in the same language and style the fan writes in: Hinglish (Hindi in Latin letters), Hindi or English.",
+    "match": "Reply in the same language, script and style the fan writes in, whatever it is: for example English, Hindi, "
+             "Hinglish (Hindi in Latin letters), Spanish, Portuguese, Arabic or Indonesian. If unsure, use English.",
     "hinglish": "Always reply in Hinglish (Hindi written in Latin letters, mixed with English), like Indian creators text.",
     "hindi": "Always reply in Hindi (Devanagari).",
     "english": "Always reply in simple English.",
