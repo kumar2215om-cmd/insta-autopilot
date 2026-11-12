@@ -320,6 +320,9 @@ All plan numbers live in `plans.py`; `store.is_pro`, `engine.monthly_limit` and 
   the gateway's charge through at cost, `GATEWAY_FEE_PCT` = 2 by default, or the real fee per payment) on payments collected
   through ReplyInbox (UPI/card in DM, once Razorpay is connected). Sales on the creator's own payment pages (Sales page
   tracking links) carry no fee. **The fee is not shown on the landing page** (owner's decision).
+- **Paid-only features** (`plans.PAID_FEATURES`, checked with `plans.has(acc, feature)`): the follow gate. Locked only
+  when `PLAN_LOCKS=on` (set it in Vercel when billing goes live; during the beta every feature is free). With locks on, a
+  Free account's automations skip the follow check and send the link, and the wizard shows "Upgrade" instead of the toggle.
 - Plans are set by hand on `/owner` (plan picker per account, MRR and plan counts on top) until billing exists. Referral
   months (`pro_until`) count as Pro but not in MRR. `"dm_limit"` / `"ai_limit"` on an account override the plan; the env
   vars `FREE_MONTHLY_DMS`, `FREE_AI_TRIAL_REPLIES`, `PRO_MONTHLY_DMS`, `PAID_MONTHLY_AI_REPLIES` override too when set.

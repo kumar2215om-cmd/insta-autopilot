@@ -15,6 +15,9 @@ import os
 import time
 
 GST = 0.18  # charged on our fee, as SuperProfile does
+# Paid-only features. Locked only when PLAN_LOCKS=on (turn it on with billing; during the beta every feature is free).
+PAID_FEATURES = {"follow_gate"}
+LOCKS_ON = os.environ.get("PLAN_LOCKS", "off").lower() == "on"
 # Razorpay's standard fee, used when the real fee of a payment isn't known yet (check the current rate when signing up)
 GATEWAY_PCT = float(os.environ.get("GATEWAY_FEE_PCT", "2.0"))
 
@@ -53,6 +56,11 @@ def plan(acc):
 
 def is_paid(acc):
     return plan_of(acc) in PAID
+
+
+def has(acc, feature):
+    """Whether the account's plan includes a feature (always true while plan locks are off)."""
+    return not LOCKS_ON or feature not in PAID_FEATURES or is_paid(acc)
 
 
 def platform_fee(acc, amount, gateway_fee=None):

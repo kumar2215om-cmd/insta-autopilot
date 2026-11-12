@@ -285,6 +285,11 @@ def find_live_rule(rules, text):
     return "live", rule
 
 
+def follow_gate_on(acc, rule):
+    """The follow gate runs only when the automation asks for it and the plan includes it (paid plans)."""
+    return bool(rule.get("require_follow")) and plans.has(acc, "follow_gate")
+
+
 def uses_button_flow(rule):
     # the email question and the follow-up need the chat the button opens
     return (rule.get("require_follow") or rule.get("opening_dm") or rule.get("ask_email") or rule.get("ask_phone")
@@ -819,7 +824,8 @@ def handle_button(acc, igsid, payload):
         return
     ig = Instagram(acc)
     username, follows = "", True
-    if rule.get("require_follow"):
+    gate = follow_gate_on(acc, rule)
+    if gate:
         try:
             username, follows = ig.follow_status(igsid)
         except Exception as e:
@@ -836,13 +842,13 @@ def handle_button(acc, igsid, payload):
                     return
             store.redis("DEL", pending_key(acc, igsid))
             deliver(acc, ig, igsid, key, rule, username, media_id, payload)
-            if step == "FOLLOWED" and rule.get("require_follow") and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
+            if step == "FOLLOWED" and gate and store.claim(f"s:seen:{acc['id']}:gate:{igsid}"):
                 store.count(acc["id"], "gate_follows")
                 store.rule_count(acc["id"], key, "follows")
                 send_hook(acc, "follow", {"username": username, "automation": key})
                 store.media_count(acc["id"], media_id, "follow")
                 ab_count(acc, key, ab_variant(acc, igsid, key), "follow")
-            store.touch_contact(acc["id"], username, igsid, followed=bool(rule.get("require_follow") and follows))
+            store.touch_contact(acc["id"], username, igsid, followed=bool(gate and follows))
         else:
             ig.send_buttons({"id": igsid}, (rule.get("follow_dm") or DEFAULT_FOLLOW).replace("{username}", username),
                             links=[("Open profile", f"https://www.instagram.com/{acc['username']}/")],

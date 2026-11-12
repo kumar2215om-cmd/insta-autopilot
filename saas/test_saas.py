@@ -483,6 +483,25 @@ class SaasTest(unittest.TestCase):
         self.assertIn("MRR ₹199", page)
         self.assertNotIn("sale_fee", self.c.get("/").get_data(as_text=True))
 
+    def test_follow_gate_is_paid(self):
+        import plans
+        self.login()
+        self.put_rule("555", comment_reply="", require_follow=True, opening_dm="Hi", dm="Link https://x.com")
+        tap = lambda: {"entry": [{"id": "1789", "messaging": [{"sender": {"id": "52"}, "postback": {"payload": "GET|555|555"}}]}]}
+        self.ig.follows = False
+        with mock.patch.object(plans, "LOCKS_ON", False):  # beta: everyone has it
+            self.hook(tap())
+        self.assertNotIn("https://x.com", json.dumps(self.ig.messages()[-1]))  # asked to follow first
+        with mock.patch.object(plans, "LOCKS_ON", True):  # locks on, Free plan: no gate, the link goes out
+            self.assertFalse(plans.has(store.load_account("1789"), "follow_gate"))
+            self.assertFalse(self.c.get("/api/me").get_json()["account"]["follow_gate"])
+            self.hook(tap())
+            self.assertIn("https://x.com", json.dumps(self.ig.messages()[-1]))
+            acc = store.load_account("1789")
+            acc["plan"] = "starter"
+            store.save_account(acc)
+            self.assertTrue(plans.has(acc, "follow_gate"))
+
     def test_demo_mode(self):
         r = self.c.get("/demo")
         self.assertTrue(r.location.endswith("/app"))

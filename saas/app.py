@@ -26,6 +26,7 @@ import ai_agent
 import demo
 import push
 import engine
+import plans
 import store
 
 
@@ -107,7 +108,8 @@ def role_blocks(path, method):
 def public_account(acc):
     """What the dashboard may see: never the token."""
     return {**{k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused", "demo", "plan",
-                                        "pro_until")}, "pro": store.is_pro(acc)}
+                                        "pro_until")}, "pro": store.is_pro(acc),
+            "follow_gate": plans.has(acc, "follow_gate"), "locks_on": plans.LOCKS_ON}
 
 
 # Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.
@@ -1548,7 +1550,6 @@ def api_contacts_csv():
 # ---------- MCP server: creators run ReplyInbox from Claude ----------
 
 import mcp_tools  # noqa: E402
-import plans  # noqa: E402
 from mcp_protocol import handle_http  # noqa: E402
 
 

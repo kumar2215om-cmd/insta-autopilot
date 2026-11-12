@@ -207,7 +207,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const ME = {username: "{{ acc.username }}", pic: "{{ acc.pic or '' }}"};
+const ME = {username: "{{ acc.username }}", pic: "{{ acc.pic or '' }}", followGate: {{ "true" if acc.follow_gate else "false" }}, locksOn: {{ "true" if acc.locks_on else "false" }}};
 const DEF = {
   replies: ["Thanks! Check your DMs 📩", "Sent you a message! Check it out 📥", "Done ✅ check your inbox"],
   opening_dm: "Hey {username}! 👋 Thanks for stopping by. Tap below and I'll send it to you ✨", button_text: "Send me the access",
@@ -389,6 +389,7 @@ function openWizard({key, duplicate, template, mediaId}) {
              btn_on: !!r.dm_button_url, menu: (r.menu || []).map(m => ({...m})), track_links: r.track_links !== false, keywords: [...(r.keywords || [])], exclude: [...(r.exclude || [])],
              once_per_person: key || template ? !!r.once_per_person : true, delay_min: +r.delay_min || 0}};
   if (!key && !template) wiz.r.require_follow = true;
+  if (!ME.followGate) wiz.r.require_follow = false;  // Free plan once plan locks are on
   drawWizard(); $("wiz").showModal();
 }
 $("wizClose").onclick = () => $("wiz").close();
@@ -458,8 +459,11 @@ function drawWizard() {
         <details ${R.opening_dm_b ? "open" : ""}><summary class="small"><b>A/B test this message</b></summary>
           <textarea rows="2" data-f="opening_dm_b" maxlength="640" placeholder="Version B: half your audience gets this one" style="margin-top:8px" aria-label="Version B">${esc(R.opening_dm_b || "")}</textarea>${abBox(wiz.origKey)}</details>` : ""}</div>`;
     h += `<p class="lbl" style="margin:4px 0 -4px">Before the primary DM, send them…</p>`;
-    h += `<div class="blk"><div class="hd"><b>A DM asking to follow you</b>${toggle("require_follow", R.require_follow)}</div>
-      ${R.require_follow ? `<textarea rows="3" data-f="follow_dm" maxlength="640" aria-label="Follow check message">${esc(R.follow_dm)}</textarea>
+    const gateTag = `<span class="chip" style="margin-left:6px">${ME.locksOn ? "Starter and up" : "paid plans · free in beta"}</span>`;
+    h += `<div class="blk"><div class="hd"><b>A DM asking to follow you${gateTag}</b>${ME.followGate ? toggle("require_follow", R.require_follow)
+        : `<a class="btn sm" href="/#pricing">Upgrade</a>`}</div>
+      ${!ME.followGate ? `<p class="hint" style="margin:0">Only send the link to people who follow you. Available on Starter and up.</p>`
+        : R.require_follow ? `<textarea rows="3" data-f="follow_dm" maxlength="640" aria-label="Follow check message">${esc(R.follow_dm)}</textarea>
         <div class="two2"><input type="text" value="Visit Profile" disabled aria-label="Visit profile button"><input type="text" data-f="followed_button_text" maxlength="20" value="${esc(R.followed_button_text)}" aria-label="I'm following button"></div>
         <p class="hint">The link is sent only after Instagram confirms they follow you.</p>` : ""}</div>`;
     h += `<div class="blk"><div class="hd"><b>A DM asking for their email</b>${toggle("ask_email", R.ask_email)}</div>
