@@ -35,6 +35,9 @@ PLANS = {
                "accounts": 10, "sale_fee_pct": 2.0, "pass_gateway": True},
 }
 PAID = ("starter", "creator", "pro", "agency")
+# Prices outside India, in US$ (monthly, yearly); shown by the pricing page's currency switch
+USD = {"free": (0, 0), "starter": (5, 48), "creator": (9, 84), "pro": (19, 180), "agency": (49, 468)}
+USD_ADDONS = {"extra_account": 5, "ai_topup": 2}
 AI_TOPUP = {"replies": 1000, "price": 99}  # extra AI replies, any paid plan
 # One more Instagram account on Creator or Pro, per month (each Instagram account is its own account here; charged with billing)
 EXTRA_ACCOUNT = {"price": 149, "plans": ("creator", "pro")}

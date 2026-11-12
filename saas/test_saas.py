@@ -966,7 +966,7 @@ class SaasTest(unittest.TestCase):
         html = self.c.get("/").get_data(as_text=True)
         self.assertIn('property="og:image" content="http://localhost/static/og.png"', html)
         self.assertEqual(self.c.get("/static/og.png").status_code, 200)
-        for text in ("₹149", "₹199", "₹499", "Agency ₹1,499", "MOST POPULAR", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
+        for text in ("₹149", "₹199", "₹499", "₹1,499", 'data-usd="$9"', 'data-usd-m="$19"', "MOST POPULAR", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
             self.assertIn(text, html)
 
     def test_referrals(self):
