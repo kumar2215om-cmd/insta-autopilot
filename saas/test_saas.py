@@ -1390,6 +1390,9 @@ class SaasTest(unittest.TestCase):
         for path in ("/", "/privacy", "/terms", "/data-deletion"):
             self.assertEqual(self.c.get(path).status_code, 200, path)
         self.login()
+        home = self.c.get("/")  # logged in: the landing page still shows, with a way back to the dashboard
+        self.assertEqual(home.status_code, 200)
+        self.assertIn('href="/app">Open dashboard', home.get_data(as_text=True))
         self.assertIn("@creator", self.c.get("/app").get_data(as_text=True))
 
 

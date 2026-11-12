@@ -161,13 +161,13 @@ def guard():
 
 @app.get("/")
 def landing():
-    if current_account():
-        return redirect(url_for("dashboard"))
+    # Logged-in creators can still read the landing page; the nav then offers "Open dashboard".
     ref = clean_ref(request.args.get("ref"))
     if ref:
         session["ref"] = ref
     referrer = store.account_by_username(session["ref"]) if session.get("ref") else None
     return render_template("landing.html", invite_only=SIGNUPS == "invite", error=request.args.get("error", ""),
+                           signed_in=bool(current_account()),
                            referrer=referrer.get("username") if referrer else "")
 
 
