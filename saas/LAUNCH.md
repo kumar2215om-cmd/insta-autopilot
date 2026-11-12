@@ -6,7 +6,10 @@ The SEO pages (features, comparisons, guides, sitemap, robots.txt, llms.txt, str
 1. Point replyinbox.in at the likhodm Vercel project (Domains), and check https://replyinbox.in opens the site.
 2. In Vercel → likhodm → Environment Variables, add `SITE_URL=https://replyinbox.in` (Production).
 3. Redirect likhodm.vercel.app to replyinbox.in (Vercel → Domains → redirect), so search engines see one address.
-4. Merge this branch into `main` (GitHub → Pull request from `seo-launch` → Merge). That deploys everything.
+4. Put the SEO work on `main`. `main` has a commit (e429fc2, "Hold the SEO pages until launch") that removed the first
+   version, so a plain merge conflicts. Ask Claude to do it, or run:
+   `git checkout main && git pull && git revert --no-edit e429fc2 && git merge seo-launch && git push origin main`
+   (if the merge still reports conflicts in the SEO files, keep the `seo-launch` version). Pushing `main` deploys everything.
 5. Check: https://replyinbox.in/sitemap.xml, /robots.txt, /llms.txt, /guides, /glossary and the six topic hubs
    (/instagram-dm-automation, /instagram-lead-generation, /sell-on-instagram, /ai-instagram-dm-replies,
    /instagram-dm-automation-tools, /instagram-automation-by-industry) all open. Test one page in Google's Rich Results Test.
