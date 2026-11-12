@@ -1018,6 +1018,128 @@ class SaasTest(unittest.TestCase):
         self.assertIn("₹149", ai_agent.messages(demo.DEMO_ID, "5")[-1]["text"])
         self.assertEqual(len(self.ig.calls), 0)
 
+    def tap(self, payload, sender="41"):
+        return self.hook({"entry": [{"id": "1789", "messaging": [{"sender": {"id": sender}, "postback": {"payload": payload}}]}]})
+
+    def test_quick_reply_menu(self):
+        self.login()
+        r = self.put_rule("kw:START", keywords=["START"], require_follow=False, comment_reply="", dm="Kya chahiye {username}?",
+                          menu=[{"title": "Free guide", "text": "Ye lo guide", "url": "https://g.com", "button": "Open"},
+                                {"title": "Course", "text": "Course details"}, {"title": "", "text": "dropped"},
+                                {"title": "4th", "text": "x"}, {"title": "5th", "text": "y"}])
+        self.assertEqual(len(r.get_json()["rule"]["menu"]) if "rule" in r.get_json() else
+                         len(store.load_rules("1789")["reels"]["kw:START"]["menu"]), 3)
+        self.hook(dm("start", sender="41"))
+        first = json.dumps(self.ig.messages()[-1])
+        self.assertIn("MENU|kw:START|0", first)
+        self.assertIn("Kya chahiye fan?", first)
+        self.tap("MENU|kw:START|0")
+        last = json.dumps(self.ig.messages()[-1])
+        self.assertIn("Ye lo guide", last)
+        self.assertIn("https://g.com", last)
+        self.tap("MENU|kw:START|1")
+        self.assertIn("Course details", json.dumps(self.ig.messages()[-1]))
+        n = len(self.ig.messages())
+        self.tap("MENU|kw:START|7")
+        self.tap("MENU|kw:NOPE|0")
+        self.assertEqual(len(self.ig.messages()), n)
+        self.assertEqual(store.rule_stats("1789", ["kw:START"])["kw:START"].get("menu_0"), 1)
+
+    def test_welcome_message(self):
+        self.login()
+        self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", dm="Guide https://g.com")
+        self.assertEqual(self.c.put("/api/welcome", json={"enabled": True, "text": ""}).status_code, 400)
+        w = self.c.put("/api/welcome", json={"enabled": True, "text": "Hi {username}! Kya chahiye?", "buttons": [
+            {"type": "url", "title": "Shop", "value": "https://shop.com"}, {"type": "kw", "title": "Guide", "value": "kw:GUIDE"},
+            {"type": "kw", "title": "Bad", "value": "kw:MISSING"}, {"type": "url", "title": "Bad", "value": "javascript:x"}]}).get_json()
+        self.assertEqual([b["title"] for b in w["buttons"]], ["Shop", "Guide"])
+        self.hook(dm("hello", sender="61"))
+        first = json.dumps(self.ig.messages()[-1])
+        self.assertIn("Hi fan! Kya chahiye?", first)
+        self.assertIn("KW|kw:GUIDE", first)
+        n = len(self.ig.messages())
+        self.hook(dm("hello again", sender="61", mid="m2"))  # only the first time
+        self.assertEqual(len(self.ig.messages()), n)
+        self.tap("KW|kw:GUIDE", sender="61")
+        self.assertIn("Guide https://g.com", json.dumps(self.ig.messages()[-1]))
+        self.hook(dm("GUIDE", sender="62"))  # a keyword wins over the welcome
+        self.assertNotIn("Kya chahiye", json.dumps(self.ig.messages()[-1]))
+
+    def test_link_click_tracking(self):
+        self.login()
+        with mock.patch.object(engine, "PUBLIC_URL", "https://replyinbox.in"):
+            self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", dm="Guide https://g.com/x?a=1",
+                          dm_button_text="Open", dm_button_url="https://shop.com")
+            self.put_rule("kw:AFF", keywords=["AFF"], require_follow=False, comment_reply="", dm="Deal https://amzn.to/abc", track_links=False)
+            self.hook(dm("GUIDE", sender="71"))
+            sent = json.dumps(self.ig.messages()[-1])
+            self.assertNotIn("g.com", sent)
+            self.assertNotIn("shop.com", sent)
+            codes = __import__("re").findall(r"https://replyinbox.in/l/([0-9a-f]{10})", sent)
+            self.assertEqual(len(codes), 2)
+            self.hook(dm("AFF", sender="72"))
+            self.assertIn("https://amzn.to/abc", json.dumps(self.ig.messages()[-1]))
+        self.c.get("/logout")
+        r = self.c.get(f"/l/{codes[0]}")
+        self.assertEqual(r.status_code, 302)
+        self.assertIn(r.location, ("https://g.com/x?a=1", "https://shop.com"))
+        self.c.get(f"/l/{codes[1]}")
+        self.assertEqual(self.c.get("/l/0000000000").status_code, 404)
+        self.assertEqual(self.c.get("/l/../etc").status_code, 404)
+        self.assertEqual(store.rule_stats("1789", ["kw:GUIDE"])["kw:GUIDE"].get("link_clicks"), 2)
+
+    def test_broadcast_to_recent_chats(self):
+        self.login()
+        for i in range(3):
+            self.hook(dm("hi", sender=f"9{i}", mid=f"b{i}"))
+        old = store.account_key("1789", "recent")
+        store.redis("HSET", old, "999", 1)  # a chat from long ago is outside Instagram's window
+        info = self.c.get("/api/broadcast").get_json()
+        self.assertEqual(info["eligible"], 3)
+        self.assertEqual(self.c.post("/api/broadcast", json={"id": "x1", "text": ""}).status_code, 400)
+        self.assertEqual(self.c.post("/api/broadcast", json={"id": "x1", "text": "Live!", "url": "ftp://x"}).status_code, 400)
+        store.redis("DEL", store.account_key("1789", "counts"))
+        before = len(self.ig.messages())
+        with mock.patch.object(saas, "BROADCAST_BATCH", 2):
+            r1 = self.c.post("/api/broadcast", json={"id": "x1", "text": "Live in 1 hour {username}!", "url": "https://live.com", "button": "Join"}).get_json()
+            self.assertEqual((r1["sent"], r1["done"]), (2, False))
+            r2 = self.c.post("/api/broadcast", json={"id": "x1", "text": "Live in 1 hour {username}!", "url": "https://live.com", "button": "Join"}).get_json()
+            self.assertEqual((r2["sent"], r2["left"], r2["done"]), (1, 0, True))
+        sent = self.ig.messages()[before:]
+        self.assertEqual(sorted(m["recipient"]["id"] for m in sent), ["90", "91", "92"])
+        self.assertIn("https://live.com", json.dumps(sent[0]))
+        self.assertEqual(self.c.get("/api/broadcast").get_json()["history"][0]["to"], 3)
+
+    def test_push_notifications_and_app(self):
+        import push
+        self.assertEqual(self.c.get("/manifest.webmanifest").status_code, 200)
+        sw = self.c.get("/sw.js")
+        self.assertEqual(sw.status_code, 200)
+        self.assertIn("/api/notifications/latest", sw.get_data(as_text=True))
+        self.login()
+        info = self.c.get("/api/notifications").get_json()
+        self.assertEqual(len(base64.urlsafe_b64decode(info["key"] + "==")), 65)
+        bad = self.c.post("/api/notifications/subscribe", json={"endpoint": "https://evil.example.com/x"})
+        self.assertEqual(bad.status_code, 400)
+        self.assertEqual(self.c.post("/api/notifications/subscribe", json={"endpoint": "http://fcm.googleapis.com/x"}).status_code, 400)
+        ep = "https://fcm.googleapis.com/fcm/send/abc"
+        self.assertEqual(self.c.post("/api/notifications/subscribe", json={"endpoint": ep}).status_code, 200)
+        self.assertEqual(self.c.get("/api/notifications").get_json()["devices"], 1)
+        pushes = []
+        with mock.patch.object(push.requests, "post", lambda url, **k: pushes.append((url, k["headers"])) or Resp({}, 201)):
+            self.assertEqual(self.c.post("/api/notifications/test", json={}).get_json()["sent"], 1)
+        self.assertEqual(pushes[0][0], ep)
+        self.assertTrue(pushes[0][1]["Authorization"].startswith("vapid t="))
+        header = json.loads(base64.urlsafe_b64decode(pushes[0][1]["Authorization"][8:].split(".")[0] + "=="))
+        self.assertEqual(header["alg"], "ES256")
+        self.assertTrue(self.c.get("/api/notifications/latest").get_json()["title"])
+        with mock.patch.object(push.requests, "post", lambda url, **k: Resp({}, 410)):
+            push.notify(store.load_account("1789"), "x", "y")
+        self.assertEqual(push.devices("1789"), 0)  # an expired device is dropped
+        self.c.put("/api/notifications/prefs", json={"lead": False, "handoff": True})
+        self.assertEqual(self.c.get("/api/notifications").get_json()["prefs"]["lead"], False)
+        self.assertEqual(push.notify({"demo": True, "id": "d"}, "x", "y"), 0)
+
     def test_pages_render(self):
         for path in ("/", "/privacy", "/terms", "/data-deletion"):
             self.assertEqual(self.c.get(path).status_code, 200, path)

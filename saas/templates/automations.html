@@ -123,6 +123,8 @@
   <div class="tabs" role="tablist" aria-label="Auto DM">
     <button type="button" role="tab" data-tab="list" aria-selected="true" id="tabList">Automations</button>
     <button type="button" role="tab" data-tab="ice" aria-selected="false">Chat menu</button>
+    <button type="button" role="tab" data-tab="welcome" aria-selected="false">Welcome</button>
+    <button type="button" role="tab" data-tab="bc" aria-selected="false">Broadcast</button>
     <button type="button" role="tab" data-tab="tpl" aria-selected="false">Templates</button>
   </div>
   <button class="btn ghost sm" type="button" id="refresh">↻ Refresh posts</button>
@@ -146,6 +148,31 @@
     <div id="iceItems" style="display:grid; gap:12px"></div>
     <div class="row"><button class="btn sm" type="submit">Save and publish</button><button class="btn ghost sm" type="button" id="iceAdd">＋ Question</button><span class="small" id="iceMsg"></span></div>
   </form>
+</section>
+
+<section class="card" id="pWelcome" hidden>
+  <div class="row"><h2 style="margin-right:auto">Welcome message</h2><span class="badge" id="wStatus">off</span></div>
+  <p class="muted small" style="margin:0 0 12px">Sent once, the first time someone DMs you, when their message doesn't match any keyword. Add buttons to send a link or start one of your automations.</p>
+  <form id="wForm" style="display:grid; gap:12px">
+    <label><input type="checkbox" name="enabled"> <b>Send a welcome message to new chats</b></label>
+    <textarea name="text" rows="3" maxlength="640" aria-label="Welcome message" placeholder="Hey {username}! 👋 Thanks for the message. What are you looking for?"></textarea>
+    <div id="wBtns" style="display:grid; gap:10px"></div>
+    <div class="row"><button class="btn sm" type="submit">Save</button><button class="btn ghost sm" type="button" id="wAdd">＋ Button</button><span class="small" id="wMsg"></span></div>
+  </form>
+</section>
+
+<section class="card" id="pBc" hidden>
+  <div class="row"><h2 style="margin-right:auto">Send to recent chats</h2><span class="badge on" id="bcCount">–</span></div>
+  <p class="muted small" style="margin:0 0 12px">Message everyone who DMed you in the last 24 hours, for a launch, a live or a last-call offer.
+    Instagram only allows messages inside that 24-hour window, so older chats can't be reached.</p>
+  <form id="bcForm" style="display:grid; gap:12px">
+    <textarea name="text" rows="3" maxlength="640" aria-label="Message" placeholder="{Hey|Hi} {username}! The workshop starts in 1 hour 🔴 Join here 👇"></textarea>
+    <div class="two2"><input name="button" type="text" maxlength="20" placeholder="Button text (optional)" aria-label="Button text">
+      <input name="url" type="url" placeholder="https://link (optional)" aria-label="Button link"></div>
+    <div class="row"><button class="btn sm" type="submit" id="bcSend">Send now</button><span class="small" id="bcMsg"></span></div>
+  </form>
+  <h3 style="margin:18px 0 6px; font-size:14px">Sent before</h3>
+  <div id="bcHist" class="small muted">Nothing sent yet.</div>
 </section>
 
 <div id="pTpl" hidden>
@@ -232,7 +259,7 @@ function rowHtml(key) {
   return `<div class="arow" data-key="${esc(key)}">
     <div class="who2" data-edit="${esc(key)}" role="button" tabindex="0" aria-label="Edit ${esc(title)}">${thumb}<div class="t"><b>${esc(title)}</b>
       <div class="chips"><span class="chip">${esc(t.label)}</span>${(r.keywords || []).slice(0, 4).map(k => `<span class="chip kw">${esc(k)}</span>`).join("")}
-        ${r.auto ? `<span class="chip">✨ auto-setup</span>` : ""}${r.opening_dm_b ? `<span class="chip">A/B</span>` : ""}</div></div></div>
+        ${r.auto ? `<span class="chip">✨ auto-setup</span>` : ""}${r.opening_dm_b ? `<span class="chip">A/B</span>` : ""}${(r.menu || []).length ? `<span class="chip">☰ menu</span>` : ""}${st.link_clicks ? `<span class="chip">🔗 ${fmt(st.link_clicks)} opened</span>` : ""}</div></div></div>
     <div class="num fcol"><span class="fire">🔥 ${fmt(st.follows || 0)}</span></div>
     <div class="num">${fmt(st.runs || 0)}</div>
     <div class="num">${fmt(st.clicks || 0)}</div>
@@ -307,6 +334,8 @@ document.addEventListener("click", async (e) => {
   if (tab) {
     document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b === tab)));
     $("pList").hidden = tab.dataset.tab !== "list"; $("pIce").hidden = tab.dataset.tab !== "ice"; $("pTpl").hidden = tab.dataset.tab !== "tpl";
+    $("pWelcome").hidden = tab.dataset.tab !== "welcome"; $("pBc").hidden = tab.dataset.tab !== "bc";
+    if (tab.dataset.tab === "bc") loadBc();
   }
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches("[data-edit]")) openWizard({key: e.target.dataset.edit}); });
@@ -337,7 +366,7 @@ function openWizard({key, duplicate, template, mediaId}) {
              opening_dm: r.opening_dm ?? DEF.opening_dm, button_text: r.button_text || DEF.button_text,
              follow_dm: r.follow_dm || DEF.follow_dm, followed_button_text: r.followed_button_text || DEF.followed_button_text,
              email_dm: r.email_dm || DEF.email_dm, phone_dm: r.phone_dm || DEF.phone_dm, dm: r.dm || DEF.dm,
-             btn_on: !!r.dm_button_url, keywords: [...(r.keywords || [])], exclude: [...(r.exclude || [])],
+             btn_on: !!r.dm_button_url, menu: (r.menu || []).map(m => ({...m})), track_links: r.track_links !== false, keywords: [...(r.keywords || [])], exclude: [...(r.exclude || [])],
              once_per_person: key || template ? !!r.once_per_person : true, delay_min: +r.delay_min || 0}};
   if (!key && !template) wiz.r.require_follow = true;
   drawWizard(); $("wiz").showModal();
@@ -424,7 +453,15 @@ function drawWizard() {
         ${R.btn_on ? `<div class="two2"><input type="text" data-f="dm_button_text" maxlength="20" placeholder="Button text" value="${esc(R.dm_button_text || "")}" aria-label="Button text">
           <input type="url" data-f="dm_button_url" placeholder="https://your-link" value="${esc(R.dm_button_url || "")}" aria-label="Button link"></div>
           <button class="dmbtn" type="button" data-btnoff style="color:var(--bad)">Remove button</button>`
-          : `<button class="dmbtn" type="button" data-btnon>＋ Add a button</button><p class="hint">No button? Put your link in the message itself.</p>`}</div>`;
+          : R.menu.length ? R.menu.map((m, i) => `<div class="blk" style="background:var(--bg)"><div class="hd"><b>Option ${i + 1}</b><button class="dmbtn" type="button" data-mdel="${i}" style="color:var(--bad); width:auto">Remove</button></div>
+              <input type="text" data-mi="${i}" data-mk="title" maxlength="20" placeholder="Button, e.g. Free guide" value="${esc(m.title || "")}" aria-label="Option ${i + 1} button">
+              <textarea rows="2" data-mi="${i}" data-mk="text" maxlength="640" placeholder="What they get when they tap it" aria-label="Option ${i + 1} message">${esc(m.text || "")}</textarea>
+              <div class="two2"><input type="text" data-mi="${i}" data-mk="button" maxlength="20" placeholder="Link button text" value="${esc(m.button || "")}" aria-label="Option ${i + 1} link button">
+                <input type="url" data-mi="${i}" data-mk="url" placeholder="https://link (optional)" value="${esc(m.url || "")}" aria-label="Option ${i + 1} link"></div></div>`).join("")
+              + (R.menu.length < 3 ? `<button class="dmbtn" type="button" data-madd>＋ Another option</button>` : "")
+              + `<p class="hint">They tap one and get that message. Up to 3 options.</p>`
+          : `<button class="dmbtn" type="button" data-btnon>＋ Add a button</button><button class="dmbtn" type="button" data-madd>☰ Let them choose (up to 3 options)</button>
+             <p class="hint">No button? Put your link in the message itself.</p>`}</div>`;
     h += `<div class="blk" style="background:var(--accent-soft); border-color:#DDD5FF"><b style="font-size:14px">🛡️ Account safety</b>
       <p class="hint" style="margin:0">Write <code>{Hi|Hey|Hello}</code> in any message and each person gets one of the options, so not everyone receives the exact same text.
       Instagram is less likely to treat varied DMs as spam. Example: <i>{Hey|Hi} {username}! {Here's|Ye lo} your guide 🎁</i></p></div>`;
@@ -434,12 +471,13 @@ function drawWizard() {
           <input type="text" data-f="followup_button" maxlength="20" placeholder="Button text" value="${esc(R.followup_button || "")}" aria-label="Follow-up button text"></div>
         <input type="url" data-f="followup_url" placeholder="https://your-paid-product" value="${esc(R.followup_url || "")}" aria-label="Follow-up button link">
         <p class="hint">Sent once per person, within Instagram's 24-hour window.</p>` : ""}</div>`;
-    h += `<details class="blk"><summary><b>More options</b> <span class="hint">name, tags, schedule</span></summary>
+    h += `<details class="blk"><summary><b>More options</b> <span class="hint">name, tags, schedule, click tracking</span></summary>
       <div style="display:grid; gap:10px; margin-top:10px">
         <div><label class="lbl" for="wName">Name</label><input id="wName" type="text" data-f="label" maxlength="120" value="${esc(R.label || "")}" placeholder="e.g. Prompts reel"></div>
         <div><label class="lbl" for="wTags">Tag these people in Contacts</label><input id="wTags" type="text" data-f="tags" maxlength="120" value="${esc(R.tags || "")}" placeholder="prompts-lead, launch"></div>
         <div class="two2"><div><label class="lbl" for="wSa">Starts</label><input id="wSa" type="datetime-local" data-time="starts_at" value="${toLocal(R.starts_at)}"></div>
-          <div><label class="lbl" for="wEa">Ends</label><input id="wEa" type="datetime-local" data-time="ends_at" value="${toLocal(R.ends_at)}"></div></div></div></details>`;
+          <div><label class="lbl" for="wEa">Ends</label><input id="wEa" type="datetime-local" data-time="ends_at" value="${toLocal(R.ends_at)}"></div></div>
+        <label class="small"><input type="checkbox" data-c="track_links" ${R.track_links !== false ? "checked" : ""}> <b>Count link clicks</b> (links go through a short replyinbox link; turn off for affiliate links)</label></div></details>`;
   }
   if (s === "review") h = reviewHtml();
   $("wizBody").innerHTML = h;
@@ -465,7 +503,9 @@ function reviewHtml() {
   if (R.require_follow) h += `<div class="bub me">${fill(R.follow_dm)}<span class="b">Visit Profile</span><span class="b">${esc(R.followed_button_text)}</span></div><div class="note">Once they follow, then…</div>`;
   if (R.ask_email) h += `<div class="bub me">${fill(R.email_dm)}</div>`;
   if (R.ask_phone) h += `<div class="bub me">${fill(R.phone_dm)}</div>`;
-  h += `<div class="bub me">${fill(R.dm)}${R.btn_on && R.dm_button_url ? `<span class="b">${esc(R.dm_button_text || "Open")}</span>` : ""}</div>`;
+  const opts = R.menu.filter(m => (m.title || "").trim());
+  h += `<div class="bub me">${fill(R.dm)}${opts.length ? opts.map(m => `<span class="b">${esc(m.title)}</span>`).join("") : R.btn_on && R.dm_button_url ? `<span class="b">${esc(R.dm_button_text || "Open")}</span>` : ""}</div>`;
+  if (opts.length) h += `<div class="note">They tap “${esc(opts[0].title)}” and get…</div><div class="bub me">${fill(opts[0].text || opts[0].title)}${opts[0].url ? `<span class="b">${esc(opts[0].button || "Open")}</span>` : ""}</div>`;
   if (R.followup_on) h += `<div class="note">🕒 ${+R.followup_hours || 3} hours later</div><div class="bub me">${fill(R.followup_dm)}${R.followup_url ? `<span class="b">${esc(R.followup_button || "Get it")}</span>` : ""}</div>`;
   return h + `</div><label><input type="checkbox" data-c="enabled" ${R.enabled !== false ? "checked" : ""}> <b>Turn on now</b></label>`;
 }
@@ -476,6 +516,7 @@ $("wizBody").addEventListener("input", (e) => {
   if (el.dataset.f) R[el.dataset.f] = el.value;
   if (el.dataset.reply) R.replies[+el.dataset.reply] = el.value;
   if (el.dataset.time) R[el.dataset.time] = fromLocal(el.value);
+  if (el.dataset.mi) R.menu[+el.dataset.mi][el.dataset.mk] = el.value;
 });
 $("wizBody").addEventListener("change", (e) => { if (e.target.dataset.c) wiz.r[e.target.dataset.c] = e.target.checked; if (e.target.dataset.f) wiz.r[e.target.dataset.f] = e.target.value; });
 $("wizBody").addEventListener("keydown", (e) => {
@@ -507,7 +548,9 @@ $("wizBody").addEventListener("click", (e) => {
   const xd = e.target.closest("[data-exdel]"); if (xd) { wiz.r.exclude.splice(+xd.dataset.exdel, 1); return drawWizard(); }
   if (e.target.closest("[data-showex]")) { wiz.showEx = true; drawWizard(); return $("exIn")?.focus(); }
   const sw = e.target.closest("[data-tg]"); if (sw) { const n = sw.dataset.tg; wiz.r[n] = !(n === "replies_on" ? wiz.r[n] !== false : wiz.r[n]); return drawWizard(); }
-  if (e.target.closest("[data-btnon]")) { wiz.r.btn_on = true; return drawWizard(); }
+  if (e.target.closest("[data-btnon]")) { wiz.r.btn_on = true; wiz.r.menu = []; return drawWizard(); }
+  if (e.target.closest("[data-madd]")) { Object.assign(wiz.r, {btn_on: false, dm_button_url: "", dm_button_text: ""}); wiz.r.menu.push({title: "", text: "", url: "", button: ""}); return drawWizard(); }
+  const mdel = e.target.closest("[data-mdel]"); if (mdel) { wiz.r.menu.splice(+mdel.dataset.mdel, 1); return drawWizard(); }
   if (e.target.closest("[data-btnoff]")) { Object.assign(wiz.r, {btn_on: false, dm_button_url: "", dm_button_text: ""}); return drawWizard(); }
 });
 
@@ -521,8 +564,13 @@ function check(step) {
   if (step === "dms") {
     if (!R.dm.trim()) return "Write the primary DM.";
     if (R.btn_on && !/^https?:\/\//.test(R.dm_button_url || "")) return "Add the button's link (https://…).";
+    for (const m of R.menu) {
+      if (!(m.title || "").trim()) return "Give every option a button name, or remove it.";
+      if (!(m.text || "").trim() && !m.url) return `Write what “${m.title}” sends.`;
+      if (m.url && !/^https?:\/\//.test(m.url)) return `The link for “${m.title}” must start with https://`;
+    }
     if (R.followup_on && !(R.followup_dm || "").trim()) return "Write the follow-up message, or turn it off.";
-    const all = [R.dm, R.dm_button_url, R.followup_url, R.opening_dm].join(" ");
+    const all = [R.dm, R.dm_button_url, R.followup_url, R.opening_dm, ...R.menu.map(m => m.url)].join(" ");
     if (all.includes("your-link.com")) return "Replace https://your-link.com with your real link.";
   }
   return "";
@@ -545,6 +593,7 @@ function bodyOf() {
     opening_dm_b: R.opening_on ? (R.opening_dm_b || "") : "", button_text: R.button_text, require_follow: !!R.require_follow,
     follow_dm: R.follow_dm, followed_button_text: R.followed_button_text, dm: R.dm,
     dm_button_text: R.btn_on ? R.dm_button_text : "", dm_button_url: R.btn_on ? R.dm_button_url : "",
+    menu: R.menu.filter(m => (m.title || "").trim()), track_links: R.track_links !== false,
     ask_email: !!R.ask_email, email_dm: R.email_dm, email_required: !!R.email_required,
     ask_phone: !!R.ask_phone, phone_dm: R.phone_dm, phone_required: !!R.phone_required,
     followup_on: !!R.followup_on, followup_dm: R.followup_dm || "", followup_hours: +R.followup_hours || 3, followup_url: R.followup_url || "", followup_button: R.followup_button || "",
@@ -615,6 +664,60 @@ $("iceForm").onsubmit = async (e) => {
   } catch (err) { $("iceMsg").className = "small err"; $("iceMsg").textContent = err.message; }
 };
 
+/* ---------- welcome tab ---------- */
+let welcome = {enabled: false, text: "", buttons: []};
+function drawWelcome(fields = true) {
+  const f = $("wForm");
+  $("wStatus").className = `badge ${welcome.enabled ? "on" : ""}`; $("wStatus").textContent = welcome.enabled ? "on" : "off";
+  if (fields) { f.enabled.checked = welcome.enabled; f.text.value = welcome.text; }
+  const kws = Object.keys(rules.reels).filter(k => k.startsWith("kw:"));
+  $("wBtns").innerHTML = welcome.buttons.map((b, i) => `<div class="blk wb2" data-i="${i}"><div class="two2">
+      <input type="text" data-k="title" maxlength="20" placeholder="Button text" value="${esc(b.title || "")}" aria-label="Button ${i + 1} text">
+      <select data-k="type" aria-label="Button ${i + 1} action"><option value="url" ${b.type !== "kw" ? "selected" : ""}>Opens a link</option>
+        ${kws.length ? `<option value="kw" ${b.type === "kw" ? "selected" : ""}>Starts an automation</option>` : ""}</select></div>
+      ${b.type === "kw" ? `<select data-k="value" aria-label="Automation">${kws.map(k => `<option value="${esc(k)}" ${b.value === k ? "selected" : ""}>${esc(k.slice(3))}</option>`).join("")}</select>`
+        : `<input type="url" data-k="value" placeholder="https://link" value="${esc(b.value || "")}" aria-label="Button ${i + 1} link">`}
+      <div><button class="btn danger sm" type="button" data-wdel="${i}">Remove</button></div></div>`).join("");
+  $("wAdd").hidden = welcome.buttons.length >= 3;
+}
+const readWelcome = () => [...document.querySelectorAll(".wb2")].map(row => Object.fromEntries([...row.querySelectorAll("[data-k]")].map(el => [el.dataset.k, el.value])));
+$("wAdd").onclick = () => { welcome.buttons = [...readWelcome(), {type: "url", title: "", value: ""}]; drawWelcome(false); };
+document.addEventListener("click", (e) => { const d = e.target.closest("[data-wdel]"); if (d) { const b = readWelcome(); b.splice(+d.dataset.wdel, 1); welcome.buttons = b; drawWelcome(false); } });
+document.addEventListener("change", (e) => { if (e.target.matches(".wb2 select[data-k=type]")) { const b = readWelcome(); b[+e.target.closest(".wb2").dataset.i].value = ""; welcome.buttons = b; drawWelcome(false); } });
+$("wForm").onsubmit = async (e) => {
+  e.preventDefault();
+  try { welcome = await api("/api/welcome", {method: "PUT", body: JSON.stringify({enabled: e.target.enabled.checked, text: e.target.text.value, buttons: readWelcome()})});
+    drawWelcome(); $("wMsg").className = "small ok"; $("wMsg").textContent = welcome.enabled ? "Saved. New chats get this ✓" : "Saved (off)";
+  } catch (err) { $("wMsg").className = "small err"; $("wMsg").textContent = err.message; }
+};
+
+/* ---------- broadcast tab ---------- */
+async function loadBc() {
+  try {
+    const b = await api("/api/broadcast");
+    $("bcCount").textContent = `${fmt(b.eligible)} people reachable`;
+    $("bcHist").innerHTML = b.history.length ? b.history.map(h => `<div style="padding:6px 0; border-top:1px solid var(--line2)">“${esc(h.text)}” · sent to <b>${fmt(h.to)}</b> · ${esc(new Date(h.at * 1000).toLocaleString())}</div>`).join("") : "Nothing sent yet.";
+  } catch (e) {}
+}
+$("bcForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const f = e.target, msg = $("bcMsg"), n = $("bcCount").textContent;
+  if (!f.text.value.trim()) { msg.className = "small err"; msg.textContent = "Write the message first."; return; }
+  if (!confirm(`Send this to ${n.replace(" reachable", "")}?`)) return;
+  const id = Math.random().toString(36).slice(2, 12);
+  $("bcSend").disabled = true; let sent = 0, failed = 0;
+  try {
+    for (let i = 0; i < 100; i++) {
+      const r = await api("/api/broadcast", {method: "POST", body: JSON.stringify({id, text: f.text.value, url: f.url.value.trim(), button: f.button.value})});
+      sent += r.sent; failed += r.failed;
+      msg.className = "small"; msg.textContent = `Sending… ${fmt(sent)} sent`;
+      if (r.done) break;
+    }
+    msg.className = "small ok"; msg.textContent = `Sent to ${fmt(sent)} people ✓${failed ? ` · ${fmt(failed)} couldn't be reached` : ""}`; f.reset();
+  } catch (err) { msg.className = "small err"; msg.textContent = (sent ? `${fmt(sent)} sent, then: ` : "") + err.message; }
+  $("bcSend").disabled = false; loadBc();
+};
+
 /* ---------- retries ---------- */
 async function loadRetry() {
   try {
@@ -655,6 +758,7 @@ $("refresh").onclick = () => loadMedia(true);
   await reload();
   try { ab = await api("/api/ab"); } catch (e) {}
   ice = await api("/api/ice").catch(() => ice); drawIce();
+  welcome = await api("/api/welcome").catch(() => welcome); drawWelcome(); loadBc();
   await loadMedia(false);
   const want = decodeURIComponent(location.hash.slice(1));
   if (want) openWizard(rules.reels[want] ? {key: want} : /^\d+$/.test(want) ? {mediaId: want} : {});

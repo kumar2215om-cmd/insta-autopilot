@@ -5,9 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ brand }}{% endblock %} · {{ brand }}</title>
 <link rel="icon" href="{{ logo.favicon }}">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="theme-color" content="#0C0B10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{ brand }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
+  [hidden] { display:none !important; }
   /* ReplyInbox app shell: dark ink sidebar, warm paper canvas, white cards. Same tokens as the landing page. */
   :root { --bg:#F7F5F0; --card:#fff; --ink:#0C0B10; --ink2:#14121B; --body:#3A3742; --mute:#66636F; --line:#E7E3DA; --line2:#EFEBE3;
           --accent:#6A4CFF; --accent-ink:#4B2FE6; --accent-soft:#EEEAFF; --lav:#B9A8FF; --coral:#FF7A59;
@@ -221,6 +227,9 @@ document.addEventListener("click", async (e) => {
   if (!b) return;
   try { await api("/api/switch", {method: "POST", body: JSON.stringify({id: b.dataset.switch})}); location.reload(); } catch (err) { toast(err.message); }
 });
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js", {scope: "/"}).catch(() => {});
+let installPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installPrompt = e; document.dispatchEvent(new Event("can-install")); });
 async function loadBanners() {
   try {
     const me = await api("/api/me"), b = [];

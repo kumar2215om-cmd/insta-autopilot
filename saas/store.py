@@ -213,7 +213,7 @@ def account_ids():
 def delete_account(ig_id):
     """Removes an account and everything stored for it (used by Disconnect and Meta's deletion callback)."""
     parts = ["", "rules", "activity", "counts", "rate_limited", "token_dead", "stats", "report", "autos", "medias",
-             "page", "contacts", "clicks", "retry", "giveaways"]
+             "page", "contacts", "clicks", "retry", "giveaways", "recent", "broadcasts", "push", "notes"]
     medias = redis("SMEMBERS", account_key(ig_id, "medias")) or []
     acc = load_account(ig_id) or {}
     if acc.get("mcp_key_hash"):

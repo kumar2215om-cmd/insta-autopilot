@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 import requests
 
 import ai_agent
+import push
 import store
 
 API_VERSION = os.environ.get("IG_API_VERSION", "v23.0")
@@ -635,7 +636,8 @@ def handle_dm_text(acc, igsid, text, mid=""):
         return
     key, rule = dm_keyword_match(store.load_rules(acc["id"]).get("reels", {}), text)
     if not rule:
-        handle_ai_dm(acc, igsid, text, mid)
+        if not send_welcome(acc, igsid):
+            handle_ai_dm(acc, igsid, text, mid)
         return
     if not store.claim(f"s:seen:{acc['id']}:dm:{igsid}:{key}:{int(time.time() // 600)}"):
         return
@@ -701,6 +703,8 @@ def handle_ai_dm(acc, igsid, text, mid=""):
 
     def hand_over(reason, suggestion=""):
         thread = ai_agent.update_thread(acc["id"], igsid, status="needs_you", reason=reason[:200], suggestion=suggestion)
+        if (acc.get("notify") or {}).get("handoff", True):
+            push.notify(acc, f"@{username or 'Someone'} needs you", reason[:120], "/app/inbox")
         store.log_activity(acc["id"], "ai", who, text, "ai_handoff", "ok", reason)
         if s["send_hold"] and s["hold_message"] and not thread.get("hold_sent"):
             try:
@@ -783,6 +787,10 @@ def handle_button(acc, igsid, payload):
     step, key, media_id, variant = (payload.split("|") + ["", "", ""])[:4]
     if step == "ICE":
         return handle_ice(acc, igsid, key)
+    if step == "MENU":
+        return handle_menu(acc, igsid, key, media_id)
+    if step == "KW":
+        return start_keyword(acc, igsid, key)
     if step == "GET" and store.claim(f"s:seen:{acc['id']}:click:{igsid}:{key}", 30 * 86400):
         store.rule_count(acc["id"], key, "clicks")
     if step == "GET" and variant in ("A", "B"):
@@ -830,12 +838,15 @@ def handle_button(acc, igsid, payload):
 
 
 def deliver(acc, ig, igsid, key, rule, username, media_id, detail, action="dm"):
-    """Sends the rule's final DM (message and link). Raises when Instagram refuses."""
+    """Sends the rule's final DM (message and link, or a menu of choices). Raises when Instagram refuses."""
     if not rule.get("dm"):
         raise RuntimeError("The final DM is empty: add your message and link to this rule")
-    text = rule["dm"].replace("{username}", username)
-    if rule.get("dm_button_url"):
-        ig.send_buttons({"id": igsid}, text, links=[(rule.get("dm_button_text") or "Open", rule["dm_button_url"])])
+    text = track_text(acc, key, rule["dm"].replace("{username}", username), rule)
+    menu = [m for m in rule.get("menu") or [] if m.get("title")][:3]
+    if menu:
+        ig.send_buttons({"id": igsid}, text, postbacks=[(m["title"], f"MENU|{key}|{i}") for i, m in enumerate(menu)])
+    elif rule.get("dm_button_url"):
+        ig.send_buttons({"id": igsid}, text, links=[(rule.get("dm_button_text") or "Open", track(acc, key, rule["dm_button_url"], rule))])
     else:
         ig.send_dm({"id": igsid}, {"text": text})
     store.count(acc["id"], "links_sent")
@@ -844,6 +855,123 @@ def deliver(acc, ig, igsid, key, rule, username, media_id, detail, action="dm"):
     if store.claim(f"s:seen:{acc['id']}:ablink:{igsid}:{key}", 7 * 86400):
         ab_count(acc, key, ab_variant(acc, igsid, key), "link")
     schedule_followup(acc, igsid, key, rule, username)
+
+
+def handle_menu(acc, igsid, key, index):
+    """They tapped one choice of a DM menu: send that choice's message and link."""
+    rule = store.load_rules(acc["id"]).get("reels", {}).get(key) or {}
+    menu = rule.get("menu") or []
+    if not index.isdigit() or int(index) >= len(menu) or is_blocked(acc):
+        return
+    if not store.claim(f"s:seen:{acc['id']}:menu:{igsid}:{key}:{index}:{int(time.time() // 60)}", 120):
+        return
+    item, ig = menu[int(index)], Instagram(acc)
+    username = username_of(ig, igsid)
+    text = track_text(acc, key, (item.get("text") or item["title"]).replace("{username}", username), rule)
+    try:
+        if item.get("url"):
+            ig.send_buttons({"id": igsid}, text, links=[(item.get("button") or "Open", track(acc, key, item["url"], rule))])
+        else:
+            ig.send_dm({"id": igsid}, {"text": text})
+        store.rule_count(acc["id"], key, f"menu_{index}")
+        store.count(acc["id"], "links_sent")
+        store.log_activity(acc["id"], key, username or igsid, item["title"], "menu_choice", "ok")
+    except Exception as e:
+        store.log_activity(acc["id"], key, username or igsid, item["title"], "menu_choice", "error", str(e))
+
+
+# ---------- link click tracking ----------
+
+# Short links for click counting; SHORT_LINK_URL overrides (e.g. the vercel.app address while the main domain is down).
+PUBLIC_URL = (os.environ.get("SHORT_LINK_URL") or os.environ.get("PUBLIC_URL", "")).rstrip("/")
+URL_RE = re.compile(r"https?://[^\s<>\"']+")
+
+
+def track(acc, key, url, rule=None):
+    """A short /l/<code> link that counts the click and redirects to url (off when the automation turns tracking off)."""
+    if not url or not PUBLIC_URL or (rule or {}).get("track_links") is False or url.startswith(PUBLIC_URL + "/l/"):
+        return url
+    code = hashlib.sha1(f"{acc['id']}|{key}|{url}".encode()).hexdigest()[:10]
+    store.redis("SET", f"s:link:{code}", json.dumps({"acc": acc["id"], "key": key, "url": url}), "EX", 180 * 86400)
+    return f"{PUBLIC_URL}/l/{code}"
+
+
+def track_text(acc, key, text, rule=None):
+    return URL_RE.sub(lambda m: track(acc, key, m.group(0), rule), text or "")
+
+
+def link_click(code):
+    """The target of a short link, counting the click; "" when unknown."""
+    raw = store.redis("GET", f"s:link:{code}")
+    if not raw:
+        return ""
+    link = json.loads(raw)
+    store.rule_count(link["acc"], link["key"], "link_clicks")
+    store.count(link["acc"], "link_clicks")
+    return link["url"]
+
+
+# ---------- welcome message for people who DM for the first time ----------
+
+def welcome_settings(acc):
+    w = acc.get("welcome") or {}
+    return {"enabled": bool(w.get("enabled")), "text": w.get("text", ""), "buttons": w.get("buttons") or []}
+
+
+def send_welcome(acc, igsid):
+    """True when this person got the welcome message now (only the first time they ever DM)."""
+    w = welcome_settings(acc)
+    if not w["enabled"] or not w["text"].strip() or not store.claim(f"s:seen:{acc['id']}:welcomed:{igsid}", 365 * 86400):
+        return False
+    ig = Instagram(acc)
+    username = username_of(ig, igsid)
+    text = track_text(acc, "welcome", w["text"].replace("{username}", username))
+    links = [(b["title"], track(acc, "welcome", b["value"])) for b in w["buttons"] if b.get("type") == "url" and b.get("value")]
+    posts = [(b["title"], f"KW|{b['value']}") for b in w["buttons"] if b.get("type") == "kw" and b.get("value")]
+    try:
+        if links or posts:
+            ig.send_buttons({"id": igsid}, text, links=links[:3], postbacks=posts[:3 - len(links[:3])])
+        else:
+            ig.send_dm({"id": igsid}, {"text": text})
+        store.touch_contact(acc["id"], username, igsid, source="dm")
+        store.count(acc["id"], "welcomes")
+        store.log_activity(acc["id"], "welcome", username or igsid, "", "welcome", "ok")
+        return True
+    except Exception as e:
+        store.log_activity(acc["id"], "welcome", username or igsid, "", "welcome", "error", str(e))
+        return False
+
+
+def start_keyword(acc, igsid, key):
+    """A welcome button that starts a keyword automation."""
+    rule = store.load_rules(acc["id"]).get("reels", {}).get(key)
+    if not rule or not is_live(rule) or is_blocked(acc):
+        return
+    if not store.claim(f"s:seen:{acc['id']}:dm:{igsid}:{key}:{int(time.time() // 600)}"):
+        return
+    ig = Instagram(acc)
+    username = username_of(ig, igsid)
+    store.touch_contact(acc["id"], username, igsid, keyword=(keywords_of(rule) or [""])[0], source="dm", tags=rule_tags(rule))
+    send_rule_dm(acc, ig, igsid, key, rule, username, "(welcome button)", "dm_keyword")
+
+
+# ---------- people who messaged in the last 24 hours (for "Send to recent chats") ----------
+
+def note_recent(acc, igsid):
+    if igsid and igsid != acc["id"]:
+        store.redis("HSET", store.account_key(acc["id"], "recent"), igsid, int(time.time()))
+
+
+def recent_chats(acc, hours=23):
+    """igsids who messaged within Instagram's 24-hour window (23 h to be safe); older ones are dropped."""
+    key = store.account_key(acc["id"], "recent")
+    flat = store.redis("HGETALL", key) or []
+    now, keep, old = time.time(), [], []
+    for i in range(0, len(flat), 2):
+        (keep if now - int(flat[i + 1]) < hours * 3600 else old).append(flat[i])
+    if old:
+        store.redis("HDEL", key, *old)
+    return keep
 
 
 # ---------- follow-up offer: a second DM some hours after the freebie ----------
@@ -885,8 +1013,10 @@ def send_due_followups(limit=25):
         username = item.get("username") or (username_of(ig, item["igsid"]) if "{username}" in rule["followup_dm"] else "")
         text = rule["followup_dm"].replace("{username}", username)
         try:
+            text = track_text(acc, item["key"], text, rule)
             if rule.get("followup_url"):
-                ig.send_buttons({"id": item["igsid"]}, text, links=[(rule.get("followup_button") or "Get it", rule["followup_url"])])
+                ig.send_buttons({"id": item["igsid"]}, text, links=[(rule.get("followup_button") or "Get it",
+                                                                    track(acc, item["key"], rule["followup_url"], rule))])
             else:
                 ig.send_dm({"id": item["igsid"]}, {"text": text})
             note_dm(acc)
@@ -981,6 +1111,8 @@ def handle_email_reply(acc, igsid, text):
         store.touch_contact(acc["id"], username, igsid, source=field, **{field: value})
         store.count(acc["id"], f"{field}s")
         send_hook(acc, "lead", {"username": username, field: value, "automation": wait["key"]})
+        if (acc.get("notify") or {}).get("lead", True):
+            push.notify(acc, "New lead 🎉", f"@{username or 'someone'} shared their {'email' if field == 'email' else 'WhatsApp number'}", "/app/contacts")
         if not ask_next(acc, ig, igsid, wait["key"], rule, wait.get("media_id", ""), username, after=field):
             deliver(acc, ig, igsid, wait["key"], rule, username, wait.get("media_id", ""), f"({field})")
     except Exception as e:
@@ -1129,6 +1261,7 @@ def dispatch(body, run):
                 continue
             payload = event.get("postback", {}).get("payload") or msg.get("quick_reply", {}).get("payload")
             sender = event.get("sender", {}).get("id")
+            note_recent(acc, sender)
             story = (msg.get("reply_to") or {}).get("story")
             if payload:
                 run(handle_button, acc, sender, payload)

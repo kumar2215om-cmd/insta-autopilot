@@ -24,6 +24,7 @@ from flask import Flask, abort, jsonify, redirect, render_template, request, ses
 
 import ai_agent
 import demo
+import push
 import engine
 import store
 
@@ -679,6 +680,10 @@ def save_rule(acc, key, data):
         "dm_button_url": safe_url(data.get("dm_button_url")),
         "replies_on": data.get("replies_on", True) is not False,
         "exclude": [k.strip()[:40] for k in data.get("exclude", []) if str(k).strip()][:20],
+        "menu": [{"title": str(m.get("title", "")).strip()[:20], "text": str(m.get("text", "")).strip()[:640],
+                  "url": safe_url(m.get("url")), "button": str(m.get("button", "")).strip()[:20]}
+                 for m in [m for m in (data.get("menu") or []) if isinstance(m, dict) and str(m.get("title", "")).strip()][:3]],
+        "track_links": data.get("track_links", True) is not False,
         "once_per_person": bool(data.get("once_per_person")),
         "delay_min": int(data.get("delay_min") or 0) if int(data.get("delay_min") or 0) in engine.DELAYS else 0,
         "since": str(data.get("since", "")) if key == "next" else "",
@@ -974,6 +979,157 @@ def api_test_integration():
     err = engine.send_hook(acc, "test", {"username": "test.fan", "email": "test@example.com", "phone": "+919876543210",
                                          "automation": "test"}, test=True)
     return (jsonify(error=err), 400) if err else jsonify(ok=True)
+
+
+# ---------- welcome message, short links, send to recent chats ----------
+
+@app.get("/l/<code>")
+def short_link(code):
+    url = engine.link_click(code) if re.fullmatch(r"[0-9a-f]{10}", code) else ""
+    return redirect(url) if url else abort(404)
+
+
+@app.get("/api/welcome")
+def api_welcome():
+    return jsonify(engine.welcome_settings(current_account()))
+
+
+@app.put("/api/welcome")
+def api_put_welcome():
+    acc = current_account()
+    data = request.get_json(force=True)
+    rules = store.load_rules(acc["id"]).get("reels", {})
+    buttons = []
+    for b in (data.get("buttons") or [])[:3]:
+        title = str(b.get("title", "")).strip()[:20]
+        if b.get("type") == "url" and title and safe_url(b.get("value")):
+            buttons.append({"type": "url", "title": title, "value": safe_url(b.get("value"))})
+        elif b.get("type") == "kw" and title and str(b.get("value")) in rules:
+            buttons.append({"type": "kw", "title": title, "value": str(b["value"])})
+    text = str(data.get("text", "")).strip()[:640]
+    if data.get("enabled") and not text:
+        return jsonify(error="Write the welcome message first."), 400
+    acc["welcome"] = {"enabled": bool(data.get("enabled")), "text": text, "buttons": buttons}
+    store.save_account(acc)
+    return jsonify(engine.welcome_settings(acc))
+
+
+BROADCAST_BATCH = 40  # messages per request, so one request stays well inside the time limit
+
+
+@app.get("/api/broadcast")
+def api_broadcast_info():
+    acc = current_account()
+    return jsonify(eligible=len(engine.recent_chats(acc)), history=[json.loads(x) for x in
+                   store.redis("LRANGE", store.account_key(acc["id"], "broadcasts"), 0, 9) or []])
+
+
+@app.post("/api/broadcast")
+def api_broadcast():
+    """Sends one message to everyone who DMed in the last 24 h. Call again with the same id until done is true."""
+    acc = current_account()
+    data = request.get_json(force=True)
+    text = str(data.get("text", "")).strip()[:640]
+    bid = re.sub(r"[^a-z0-9]", "", str(data.get("id", "")).lower())[:16]
+    url, button = safe_url(data.get("url")), str(data.get("button", "")).strip()[:20] or "Open"
+    if not text or not bid:
+        return jsonify(error="Write the message first."), 400
+    if data.get("url") and not url:
+        return jsonify(error="The link must start with https://"), 400
+    if engine.is_blocked(acc):
+        return jsonify(error="Instagram is limiting this account right now. Try again later."), 400
+    if engine.over_limit(acc):
+        return jsonify(error="This month's DM limit is reached."), 400
+    done_key = store.account_key(acc["id"], f"bc:{bid}")
+    already = set(store.redis("SMEMBERS", done_key) or [])
+    todo = [i for i in engine.recent_chats(acc) if i not in already]
+    ig, sent, failed = engine.Instagram(acc), 0, 0
+    for igsid in todo[:BROADCAST_BATCH]:
+        if engine.over_limit(acc):
+            break
+        store.redis("SADD", done_key, igsid)
+        try:
+            msg = engine.track_text(acc, "broadcast", text)
+            if url:
+                ig.send_buttons({"id": igsid}, msg, links=[(button, engine.track(acc, "broadcast", url))])
+            else:
+                ig.send_dm({"id": igsid}, {"text": msg})
+            engine.note_dm(acc)
+            sent += 1
+        except Exception as e:
+            failed += 1
+            store.log_activity(acc["id"], "broadcast", igsid, text, "broadcast", "error", str(e)[:200])
+    store.redis("EXPIRE", done_key, 2 * 86400)
+    left = max(len(todo) - sent - failed, 0)
+    if not left:
+        total = len(store.redis("SMEMBERS", done_key) or [])
+        store.redis("LPUSH", store.account_key(acc["id"], "broadcasts"),
+                    json.dumps({"id": bid, "text": text[:120], "to": total, "at": int(time.time())}, ensure_ascii=False))
+        store.redis("LTRIM", store.account_key(acc["id"], "broadcasts"), 0, 9)
+        store.log_activity(acc["id"], "broadcast", "", text, "broadcast", "ok", f"Sent to {total} people")
+    return jsonify(sent=sent, failed=failed, left=left, done=not left)
+
+
+# ---------- notifications and the installable app ----------
+
+@app.get("/api/notifications")
+def api_notifications():
+    acc = current_account()
+    return jsonify(key=push.public_key(), devices=push.devices(acc["id"]), prefs=acc.get("notify") or {"handoff": True, "lead": True})
+
+
+@app.post("/api/notifications/subscribe")
+def api_push_subscribe():
+    acc = current_account()
+    data = request.get_json(force=True)
+    try:
+        push.subscribe(acc["id"], str(data.get("endpoint", "")))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(devices=push.devices(acc["id"]))
+
+
+@app.post("/api/notifications/unsubscribe")
+def api_push_unsubscribe():
+    acc = current_account()
+    push.unsubscribe(acc["id"], str(request.get_json(force=True).get("endpoint", "")))
+    return jsonify(devices=push.devices(acc["id"]))
+
+
+@app.put("/api/notifications/prefs")
+def api_push_prefs():
+    acc = current_account()
+    data = request.get_json(force=True)
+    acc["notify"] = {"handoff": bool(data.get("handoff")), "lead": bool(data.get("lead"))}
+    store.save_account(acc)
+    return jsonify(prefs=acc["notify"])
+
+
+@app.post("/api/notifications/test")
+def api_push_test():
+    acc = current_account()
+    sent = push.notify(acc, "ReplyInbox notifications are on ✅", "You'll hear about new leads and chats that need you.", "/app")
+    return jsonify(sent=sent)
+
+
+@app.get("/api/notifications/latest")
+def api_push_latest():
+    return jsonify(push.latest(current_account()["id"]) or {"title": BRAND, "body": "Open ReplyInbox", "url": "/app"})
+
+
+@app.get("/sw.js")
+def service_worker():
+    return app.send_static_file("sw.js"), 200, {"Content-Type": "text/javascript", "Service-Worker-Allowed": "/", "Cache-Control": "no-cache"}
+
+
+@app.get("/manifest.webmanifest")
+def manifest():
+    return jsonify({"name": BRAND, "short_name": BRAND, "start_url": "/app", "scope": "/", "display": "standalone",
+                    "background_color": "#0C0B10", "theme_color": "#0C0B10", "description": "Instagram DM automation for creators",
+                    "icons": [{"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                              {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"},
+                              {"src": "/static/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]}), \
+        200, {"Content-Type": "application/manifest+json"}
 
 
 @app.get("/api/activity")
@@ -1462,6 +1618,8 @@ def bio_signup(username):
     store.touch_contact(acc["id"], handle, "" if handle else f"web:{email or phone}", source="bio_page", email=email, phone=phone)
     store.count(acc["id"], "page_signups")
     engine.send_hook(acc, "lead", {"username": handle, "email": email, "phone": phone, "automation": "link page"})
+    if (acc.get("notify") or {}).get("lead", True):
+        push.notify(acc, "New signup 🎉", f"{email or phone} joined from your link page", "/app/contacts")
     return redirect(f"/{username}?joined=1#join")
 
 

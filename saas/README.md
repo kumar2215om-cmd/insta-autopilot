@@ -177,6 +177,7 @@ No Meta webhook change needed.
    | `CRON_SECRET` | any long random string |
    | `OWNER_PASSWORD` | password for `/owner` |
    | `PUBLIC_URL` | this project's address, e.g. `https://replyinbox.in` |
+   | `SHORT_LINK_URL` | optional: address for click-counting links `/l/<code>` (default `PUBLIC_URL`); set to the vercel.app address while the main domain is down |
    | `CONTACT_EMAIL` | shown on the privacy, terms and data-deletion pages |
    | optional | `BRAND_NAME` (default LikhoDM), `FREE_MONTHLY_DMS` (default 1000, 0 = no limit), `SIGNUPS=invite` + `INVITE_CODES=BETA1,BETA2` for an invite-only beta |
 4. **Meta app → Instagram → API setup with Instagram business login → Business login settings:**
@@ -224,6 +225,24 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
   public reply (`{username}` is left alone). The wizard's "Account safety" box explains it; the review shows the first option.
 - **Activity** (`/app/activity`): the latest 500 events (`store.ACTIVITY_KEEP`), filters (DMs, replies, leads, AI, errors),
   search, `GET /api/activity?all=1`, CSV at `/api/activity.csv`.
+
+## Choice menus, welcome message, link clicks, broadcast, phone app, notifications
+- **Let them choose (menu):** a rule's `menu` (≤3 `{title, text, url, button}`) sends the primary DM with postback buttons
+  `MENU|<key>|<i>`; `engine.handle_menu` sends that option's message (+ link button) and counts `menu_<i>` in `rs:<key>`.
+- **Welcome message** (Auto DM → Welcome): `acc.welcome = {enabled, text, buttons}`; sent once per person (claim
+  `welcomed:<igsid>`, 1 year) when a first DM matches no keyword, before the AI agent. Buttons open a link or post
+  `KW|<rule key>` to start an automation. `GET/PUT /api/welcome`.
+- **Link click counting:** links in DMs (text and buttons) become `<SHORT_LINK_URL or PUBLIC_URL>/l/<code>`
+  (`s:link:<code>`, 180 days) and `/l/<code>` redirects, counting `link_clicks` per rule and per day. Off per automation with
+  `track_links: false` (wizard → More options), and off entirely when neither URL is set.
+- **Broadcast** (Auto DM → Broadcast): `POST /api/broadcast {id, text, url, button}` sends to everyone who messaged in the
+  last 23 h (`s:t:<id>:recent`, Instagram's 24-hour window) in batches of 40; the page calls it again until `done`.
+- **Phone app:** `/manifest.webmanifest`, icons in `static/`, service worker `/sw.js` (no caching). Install from Settings →
+  Phone app and notifications (Android/desktop prompt; iPhone: Share → Add to Home Screen).
+- **Notifications:** `push.py` sends Web Push with no payload (VAPID ES256 signed with `cryptography`, key derived from
+  `SECRET_KEY`); the service worker shows `/api/notifications/latest`. Sent for new leads (email, phone, signup) and AI
+  handoffs, per `acc.notify` prefs. Endpoints only on known push hosts; dead ones (404/410) are removed. iPhone needs the
+  installed app (iOS 16.4+).
 
 ## Contact tags
 Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
