@@ -276,6 +276,193 @@ GUIDES = {
 }
 
 
+# ---------- more comparisons ----------
+
+COMPARE.update({
+    "replyrush": {
+        "name": "ReplyRush",
+        "title": "ReplyRush alternative",
+        "description": "{brand} vs ReplyRush: free plan, DM limits, follow gate, AI replies and pricing compared.",
+        "answer": "ReplyRush prices by DM volume: a free plan of about 1,500 DMs a month (follow gate, comment replies and email "
+                  "capture are on paid plans), then about $10 for 7,500 DMs and $25 for 40,000. {brand} gives 1,000 free DMs and "
+                  "unlimited DMs from ₹199 / $9, with the follow gate from Starter and AI replies on Creator.",
+        "them": ["Generous free DM count (about 1,500 a month)", "Paid plans capped by DM volume", "Instagram and Facebook",
+                 "Follow gate and email capture on paid plans"],
+        "us": ["No DM cap on Creator and above", "AI replies included", "Follow-ups, menus, broadcast", "Sales tracking per reel"],
+        "choose_them": "you need Facebook automation too, or the most free DMs with basic replies.",
+        "choose_us": "you expect a reel to go viral and don't want a DM cap, or you want AI replies and sales tracking.",
+    },
+    "creatorflow": {
+        "name": "CreatorFlow",
+        "title": "CreatorFlow alternative",
+        "description": "{brand} vs CreatorFlow: free plan, DM limits, follow-ups, AI and pricing for Instagram creators.",
+        "answer": "CreatorFlow has a free plan of about 500 DMs a month and Pro around $15 for about 5,000 DMs, with flows of one "
+                  "DM plus an optional step. {brand} offers 1,000 free DMs, unlimited DMs from $9 / ₹199, and multi-step flows "
+                  "(follow gate, email or WhatsApp, menu, follow-up offer) plus AI replies.",
+        "them": ["Free plan about 500 DMs", "Pro about $15/month for about 5,000 DMs", "Simple one-step flows", "Extra DM add-ons"],
+        "us": ["1,000 free DMs, unlimited from $9", "Multi-step flows: follow, email/WhatsApp, menu, follow-up", "AI replies included",
+               "Sales per reel"],
+        "choose_them": "you want the simplest possible setup and send modest volumes.",
+        "choose_us": "you want longer flows, AI replies and no DM cap for less.",
+    },
+    "zorcha": {
+        "name": "Zorcha",
+        "title": "Zorcha alternative",
+        "description": "{brand} vs Zorcha: Instagram DM automation plans, prices in ₹, email collection and AI compared.",
+        "answer": "Zorcha is an Indian Instagram DM tool with free core features and paid plans reported from about ₹1,199 a month "
+                  "(email collection on its higher plan). {brand}'s Creator plan is ₹199 a month and includes email and WhatsApp "
+                  "capture, follow-ups, broadcasts and AI replies.",
+        "them": ["Indian pricing in ₹", "Core automation free", "Paid plans from about ₹1,199", "AI credits"],
+        "us": ["Creator ₹199 with email and WhatsApp capture", "AI replies included", "Follow-ups and broadcast", "Sales per reel"],
+        "choose_them": "you're already set up on it and its credit model suits you.",
+        "choose_us": "you want lead capture, AI and follow-ups at a fraction of the price.",
+    },
+    "inro": {
+        "name": "Inrō",
+        "title": "Inrō alternative",
+        "description": "{brand} vs Inrō: AI DM agent, contact-based pricing and Instagram automation compared.",
+        "answer": "Inrō is an AI-first Instagram DM tool priced by active contacts (free for about 100 contacts, Pro from about "
+                  "€12.99 a month for 500+). {brand} has flat pricing (₹199 / $9 a month, unlimited DMs) with AI replies included, "
+                  "a follow gate, lead capture and sales tracking.",
+        "them": ["AI agent included", "Pricing by active contacts", "Done-for-you service on request", "Euro pricing"],
+        "us": ["Flat price, no per-contact charges", "AI replies included (300 a month on Creator)", "Follow gate, menus, follow-ups",
+               "Pricing in ₹ and $"],
+        "choose_them": "you want a done-for-you managed setup.",
+        "choose_us": "you want predictable flat pricing as your audience grows.",
+    },
+    "rapiddm": {
+        "name": "RapidDM",
+        "title": "RapidDM alternative",
+        "description": "{brand} vs RapidDM: Indian Instagram auto DM tools compared on price, follow gate and features.",
+        "answer": "RapidDM is an Indian Instagram auto DM tool; public sources report prices from about ₹499 a month (some list "
+                  "dollar plans instead) with a follow gate and story replies. {brand} starts free (1,000 DMs) and is ₹199 a "
+                  "month for unlimited DMs, AI replies, follow-ups and sales tracking.",
+        "them": ["Comment-to-DM, story replies, follow gate", "Paid plans reported around ₹499", "Short free trial"],
+        "us": ["Free plan, no trial clock", "Creator ₹199 with AI replies", "Follow-ups, menus, broadcast", "Sales per reel and insights"],
+        "choose_them": "you prefer its interface.",
+        "choose_us": "you want a free plan and more features for less.",
+    },
+})
+
+# ---------- more guides ----------
+
+GUIDES.update({
+    "best-instagram-dm-automation-tools": {
+        "title": "Best Instagram DM automation tools in 2026",
+        "description": "The best Instagram DM automation tools in 2026 for creators, coaches and businesses, with prices and who each is for.",
+        "answer": "The best Instagram DM automation tool depends on what you need: ManyChat for complex multi-channel bots, "
+                  "LinkDM or ReplyRush for simple comment-to-DM, Repli for Instagram plus WhatsApp, SuperProfile if you also "
+                  "want a store, and {brand} for creators who want comment-to-DM, AI replies and sales tracking at a flat, low price.",
+        "sections": [
+            ("Quick picks (checked " + CHECKED + ")", "<div class=\"scroll\"><table><thead><tr><th>Tool</th><th>Best for</th><th>Starts at</th></tr></thead><tbody>"
+             "<tr><td><b>{brand}</b></td><td>Creators who sell: AI replies, follow gate, sales per reel</td><td>Free; ₹199 / $9</td></tr>"
+             "<tr><td>ManyChat</td><td>Complex bots across many channels</td><td>Free; about $17, by contacts</td></tr>"
+             "<tr><td>LinkDM</td><td>Simple comment-to-DM</td><td>Free; about $19</td></tr>"
+             "<tr><td>ReplyRush</td><td>Most free DMs, Instagram and Facebook</td><td>Free; about $10</td></tr>"
+             "<tr><td>InstantDM</td><td>Low-cost global plan</td><td>Free; about $9.99</td></tr>"
+             "<tr><td>Repli</td><td>Instagram plus WhatsApp and CRM</td><td>Free; ₹249</td></tr>"
+             "<tr><td>SuperProfile</td><td>Store plus AutoDM</td><td>About ₹499 + fee on sales</td></tr>"
+             "<tr><td>ReplyKaro</td><td>Lowest price in India</td><td>Free; about ₹99</td></tr></tbody></table></div>"
+             "<p class=\"note\">Prices change often; check each tool's own pricing page.</p>"),
+            ("What to look for", "<ul><li>Built on Meta's <b>official API</b> (never give your password).</li>"
+             "<li><b>Flat vs per-contact</b> pricing: per-contact gets expensive when a reel goes viral.</li>"
+             "<li>Whether <b>follow gate, story replies and email capture</b> are on the plan you'll buy.</li>"
+             "<li>Whether <b>AI replies</b> are included or sold as credits.</li><li>Whether you can see <b>which reel made sales</b>.</li></ul>"),
+        ],
+        "faq": [("Which Instagram DM automation tool is free?", "Most have free plans of roughly 500–1,500 DMs a month, including {brand} (1,000 DMs a month)."),
+                ("Which is best for Indian creators?", "Look for ₹ pricing and UPI billing. {brand}, Repli, ReplyKaro and SuperProfile all price in ₹; {brand} includes AI replies from ₹199.")],
+    },
+    "manychat-alternatives": {
+        "title": "ManyChat alternatives for Instagram (2026)",
+        "description": "Cheaper, simpler ManyChat alternatives for Instagram comment-to-DM and AI replies, with prices.",
+        "answer": "Good ManyChat alternatives for Instagram are {brand} (flat ₹199 / $9 with AI replies included), LinkDM and "
+                  "ReplyRush (simple comment-to-DM), InstantDM (low-cost global plan) and Repli (Instagram plus WhatsApp). "
+                  "Most charge a flat price instead of ManyChat's per-contact pricing.",
+        "sections": [
+            ("Why people switch from ManyChat", "<ul><li>Pricing by active contacts rises fast when a reel goes viral.</li>"
+             "<li>The flow builder is powerful but slow to learn for simple comment-to-DM.</li><li>AI features cost more.</li></ul>"),
+            ("The alternatives", "<ul><li><a href=\"/vs/manychat\"><b>{brand}</b></a>: 4-step builder, follow gate, email/WhatsApp, AI replies included, sales per reel.</li>"
+             "<li><a href=\"/vs/linkdm\">LinkDM</a>: simple comment-to-DM with a free plan.</li><li><a href=\"/vs/replyrush\">ReplyRush</a>: free DMs, DM-volume plans.</li>"
+             "<li><a href=\"/vs/instantdm\">InstantDM</a>: low-cost plans.</li><li><a href=\"/vs/repli\">Repli</a>: adds WhatsApp and CRM.</li></ul>"),
+        ],
+        "faq": [("Is there a free ManyChat alternative?", "Yes. {brand}, LinkDM, ReplyRush and InstantDM have free plans.")],
+    },
+    "instagram-dm-limits": {
+        "title": "Instagram DM limits explained (24-hour window, 7-day replies, hourly caps)",
+        "description": "Instagram's rules for automated DMs: the 24-hour messaging window, private replies to comments, and rate limits.",
+        "answer": "Instagram lets automation tools send a private reply DM to a comment once, within 7 days of the comment; "
+                  "after someone messages you, you can reply freely for 24 hours from their last message; and accounts have "
+                  "hourly limits on automated messages. Good tools respect these limits and pause instead of failing.",
+        "sections": [
+            ("The three rules", "<ol><li><b>Private replies to comments</b>: one DM per comment, within 7 days.</li>"
+             "<li><b>24-hour window</b>: after a person sends you a message (or taps a button in your DM), you can message them for 24 hours.</li>"
+             "<li><b>Hourly limits</b>: Instagram caps how many automated messages an account sends per hour; viral reels can hit it.</li></ol>"),
+            ("What this means in practice", "<ul><li>Follow-up offers must go within 24 hours of the person's last message.</li>"
+             "<li>You can't DM all your followers at once, only people who messaged you in the last 24 hours (a broadcast to recent chats).</li>"
+             "<li>Old comments (older than 7 days) can't get a DM.</li></ul>"),
+            ("How {brand} handles them", "<p>It times follow-ups inside the 24-hour window, sends past-comment DMs only within 7 days, "
+             "queues and retries refused DMs, waits when Instagram slows sending, and alerts you if the account hits a problem.</p>"),
+        ],
+        "faq": [("Why didn't someone get my DM?", "Common reasons: the comment was older than 7 days, Instagram refused to open a new chat, or the hourly limit was reached. {brand} retries refused DMs for several days.")],
+    },
+    "how-to-collect-emails-from-instagram": {
+        "title": "How to collect emails from Instagram followers",
+        "description": "Collect emails from Instagram with a comment keyword and a DM that asks for the email before sending your freebie.",
+        "answer": "The easiest way to collect emails from Instagram is a comment-to-DM automation that asks for the email inside "
+                  "the DM before sending a freebie: people comment a keyword, get a DM asking for their email, reply with it, and "
+                  "receive the link. Emails are saved automatically and can go to Google Sheets or your email tool.",
+        "sections": [
+            ("Steps", "<ol><li>Create a freebie worth an email (checklist, template, mini-course).</li><li>Post a reel: \"Comment GUIDE and I'll send it\".</li>"
+             "<li>In {brand}, create a comment automation, turn on <b>Ask for email</b>, and add the link.</li>"
+             "<li>Optional: make the email required, and send leads to Google Sheets or Mailchimp via webhook.</li></ol>"),
+            ("Tips", "<ul><li>Say why you need the email (\"so I can send updates\").</li><li>Offer a Skip button if your goal is reach, not leads.</li>"
+             "<li>Tag leads by reel so you know which topic attracts buyers.</li></ul>"),
+        ],
+        "faq": [("Can I collect WhatsApp numbers too?", "Yes, {brand} can ask for a WhatsApp number in the same way.")],
+    },
+    "instagram-dm-automation-for-coaches": {
+        "title": "Instagram DM automation for coaches",
+        "description": "How coaches use Instagram DM automation to book calls, qualify leads and sell programs without living in the inbox.",
+        "answer": "Coaches use Instagram DM automation to turn reel comments into qualified leads: a keyword triggers a DM with a "
+                  "free resource, the DM collects an email or WhatsApp number, a choice menu sorts people by goal, a follow-up "
+                  "offers a call or program, and an AI agent answers common questions while handing serious leads to the coach.",
+        "sections": [
+            ("A simple funnel", "<ol><li>Reel with a clear promise and a keyword.</li><li>DM with the free resource and a 3-option menu (\"beginner / stuck / ready to work together\").</li>"
+             "<li>Ask for WhatsApp from the \"ready\" option.</li><li>Follow-up 3 hours later with your call or program link.</li>"
+             "<li>AI agent answers price and schedule questions; anything sensitive comes to you.</li></ol>"),
+            ("Measure it", "<p>Use sales tracking so every program sale is credited to the reel and automation that brought it.</p>"),
+        ],
+        "faq": [("Will the AI promise things I don't offer?", "No. It answers only from your FAQ and products, and hands anything unclear to you.")],
+    },
+    "sell-digital-products-on-instagram": {
+        "title": "How to sell digital products on Instagram with DMs",
+        "description": "Sell guides, courses and templates on Instagram: comment keyword, free value in DM, follow-up offer, track sales per reel.",
+        "answer": "To sell digital products on Instagram, give something free in exchange for a comment keyword, deliver it by DM, "
+                  "follow up a few hours later with the paid product, and track which reel made each sale so you can repeat what works.",
+        "sections": [
+            ("The playbook", "<ol><li>Reel → \"comment PROMPTS for the free pack\".</li><li>DM delivers the free pack (optionally after a follow).</li>"
+             "<li>3 hours later: \"The full pack is ₹149 today\" with a button.</li><li>Your payment page redirects to a {brand} sales link, so the sale is credited to the reel.</li>"
+             "<li>Broadcast launch-day messages to everyone who DMed in the last 24 hours.</li></ol>"),
+            ("Pricing tips", "<ul><li>Low-ticket first (₹99–₹499), then upsell.</li><li>Use a choice menu to offer free vs paid in one DM.</li></ul>"),
+        ],
+        "faq": [("Which payment pages work?", "Any page that can redirect after payment, such as Razorpay Payment Pages or Instamojo.")],
+    },
+    "instagram-story-auto-reply": {
+        "title": "How to set up Instagram story auto-reply",
+        "description": "Automatically DM people who reply to your Instagram story or mention you, with a keyword or for every reply.",
+        "answer": "To auto-reply to Instagram stories, connect a tool on the official API, create a story-reply automation (for "
+                  "every reply or only replies with a keyword like LINK), write the DM with your link, and turn it on. You can also "
+                  "thank everyone who mentions you in their story automatically.",
+        "sections": [
+            ("Steps in {brand}", "<ol><li>Auto DM → Create → When someone replies to your story.</li><li>Choose any reply or a keyword.</li>"
+             "<li>Write the DM and add a link button.</li><li>Optional: a separate automation for story mentions.</li></ol>"),
+            ("Ideas", "<ul><li>\"Reply LINK for today's offer\".</li><li>Poll follow-up: \"reply YES for the guide\".</li><li>Thank-you plus a discount for mentions.</li></ul>"),
+        ],
+        "faq": [("Is story auto-reply free?", "Yes, on every {brand} plan.")],
+    },
+})
+
+
 def all_paths():
     return (["/", "/features", "/compare", "/guides", "/privacy", "/terms"]
             + [f"/features/{k}" for k in FEATURES] + [f"/vs/{k}" for k in COMPARE] + [f"/guides/{k}" for k in GUIDES])

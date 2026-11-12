@@ -295,10 +295,11 @@ def feature_page(slug):
 @app.get("/compare")
 def compare_hub():
     return content_page({"kind": "hub", "title": "Compare Instagram DM automation tools", "h1": f"{BRAND} compared with other tools",
-                         "description": f"Honest comparisons of {BRAND} with ManyChat, LinkDM, SuperProfile, Repli, ReplyKaro and InstantDM.",
+                         "description": f"Honest comparisons of {BRAND} with ManyChat, LinkDM, SuperProfile, Repli, ReplyKaro, InstantDM, ReplyRush, CreatorFlow, Zorcha, Inrō and RapidDM.",
                          "intro": "Side-by-side comparisons with prices and features, checked " + seo.CHECKED + ".",
                          "cards": [card("compare", k, v) for k, v in seo.COMPARE.items()]
-                                  + [card("guide", "instagram-dm-automation-pricing", seo.GUIDES["instagram-dm-automation-pricing"])]},
+                                  + [card("guide", g, seo.GUIDES[g]) for g in ("best-instagram-dm-automation-tools", "manychat-alternatives",
+                                                                               "instagram-dm-automation-pricing")]},
                         "/compare", [("Compare", None)])
 
 
