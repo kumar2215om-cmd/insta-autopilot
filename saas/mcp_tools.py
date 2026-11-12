@@ -659,7 +659,7 @@ INSTRUCTIONS = """{brand} runs Instagram comment-to-DM automations, an AI DM age
 - Instagram rules: one DM per comment within 7 days; other DMs only within 24 hours of the person's last message.
 - Before anything that sends real messages (broadcast_to_recent_chats, send_to_past_comments, reply_in_dm) or deletes, show the
   user exactly what will happen and get a clear yes.
-- Write public copy in friendly Hinglish unless the creator writes in another language.
+- Write messages in the creator's language (the AI agent replies to fans in the language they write in).
 {mode}"""
 
 
@@ -678,7 +678,7 @@ def prompts():
          "render": lambda a: (
              f"Do a review of my last {a.get('days') or 7} days on ReplyInbox. Use get_trends, get_sales, list_automations "
              "(sort_by revenue and then link_clicks), get_best_posting_times and get_recent_activity with errors_only. "
-             "Tell me in short Hinglish: what grew or dropped (with numbers), which automation made the most money and why, "
+             "Tell me in short, simple words (in the language I write in): what grew or dropped (with numbers), which automation made the most money and why, "
              "anything broken, the best time to post, and exactly 3 concrete actions for next week. Don't change anything.")},
         {"name": "launch_plan", "title": "Plan a launch",
          "description": "Turn a product launch into automations: keyword, menu, follow-up, welcome, broadcast.",
