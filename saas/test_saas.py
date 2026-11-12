@@ -536,6 +536,30 @@ class SaasTest(unittest.TestCase):
         with mock.patch.object(saas, "SITE_URL", "https://replyinbox.in"):
             self.assertIn('<link rel="canonical" href="https://replyinbox.in/">', self.c.get("/").get_data(as_text=True))
 
+    def test_pillar_cluster_architecture(self):
+        import re as _re
+        import seo_content as seo
+        owner = seo.pillar_of()
+        every = [("feature", k) for k in seo.FEATURES] + [("compare", k) for k in seo.COMPARE] + [("guide", k) for k in seo.GUIDES]
+        self.assertEqual(sorted(owner), sorted(every))  # every page belongs to exactly one pillar
+        url = {"feature": "/features/", "compare": "/vs/", "guide": "/guides/"}
+        for slug, pillar in seo.PILLARS.items():
+            hub = self.c.get(f"/{slug}").get_data(as_text=True)
+            for kind, s_ in pillar["clusters"]:  # the hub links down to every spoke
+                self.assertIn(f'href="{url[kind]}{s_}"', hub, (slug, s_))
+            self.assertIn('"CollectionPage"', hub.replace('": "', '":"'))
+        for (kind, s_), pillar in owner.items():  # every spoke links up to its hub, with matching schema
+            page = self.c.get(f"{url[kind]}{s_}").get_data(as_text=True)
+            self.assertIn(f'<a href="/{pillar}">', page, s_)
+            self.assertIn(f'/{pillar}", "@type": "CollectionPage"'.replace('", "', '","'), page.replace('", "', '","'), s_)
+        glossary = self.c.get("/glossary").get_data(as_text=True)
+        anchors = set(_re.findall(r'<div id="([a-z0-9-]+)">', glossary))
+        self.assertEqual(anchors, set(seo.GLOSSARY))
+        for slug in seo.PILLARS:  # term links from hubs resolve
+            for term in _re.findall(r'/glossary#([a-z0-9-]+)', self.c.get(f"/{slug}").get_data(as_text=True)):
+                self.assertIn(term, anchors)
+        self.assertIn("### [Instagram lead generation with DMs]", self.c.get("/llms.txt").get_data(as_text=True))
+
     def test_demo_mode(self):
         r = self.c.get("/demo")
         self.assertTrue(r.location.endswith("/app"))

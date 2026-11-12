@@ -770,6 +770,196 @@ GUIDES.update({
 })
 
 
+# =====================================================================================================================
+# Pillar-cluster (hub-and-spoke) architecture with entity-first coverage.
+# Each PILLAR is a topic hub: a long overview page that links down to every cluster page in its topic. Every cluster
+# page (feature, comparison or guide) belongs to exactly one pillar, links back up to it and across to its siblings.
+# ENTITIES are the real-world things the topic is about (sent as schema.org "about"/"mentions" with sameAs links);
+# GLOSSARY defines the domain concepts as DefinedTerms that pages link to.
+# =====================================================================================================================
+
+ENTITIES = {
+    "instagram": {"name": "Instagram", "type": "Thing", "sameAs": "https://en.wikipedia.org/wiki/Instagram"},
+    "meta": {"name": "Meta Platforms", "type": "Organization", "sameAs": "https://en.wikipedia.org/wiki/Meta_Platforms"},
+    "whatsapp": {"name": "WhatsApp", "type": "Thing", "sameAs": "https://en.wikipedia.org/wiki/WhatsApp"},
+    "chatbot": {"name": "Chatbot", "type": "Thing", "sameAs": "https://en.wikipedia.org/wiki/Chatbot"},
+    "lead-generation": {"name": "Lead generation", "type": "Thing", "sameAs": "https://en.wikipedia.org/wiki/Lead_generation"},
+    "influencer-marketing": {"name": "Influencer marketing", "type": "Thing", "sameAs": "https://en.wikipedia.org/wiki/Influencer_marketing"},
+    "utm": {"name": "UTM parameters", "type": "Thing", "sameAs": "https://en.wikipedia.org/wiki/UTM_parameters"},
+    "claude": {"name": "Claude (language model)", "type": "Thing", "sameAs": "https://en.wikipedia.org/wiki/Claude_(language_model)"},
+    "ecommerce": {"name": "E-commerce", "type": "Thing", "sameAs": "https://en.wikipedia.org/wiki/E-commerce"},
+}
+
+PILLARS = {
+    "instagram-dm-automation": {
+        "title": "Instagram DM automation: the complete guide",
+        "short": "Instagram DM automation",
+        "description": "Everything about Instagram DM automation: how comment-to-DM and story replies work, Instagram's rules and limits, safety, setup and troubleshooting.",
+        "answer": "Instagram DM automation is software that sends Instagram direct messages for you when something happens: "
+                  "someone comments a keyword, replies to your story, mentions you, or messages you. It runs on Meta's official "
+                  "Instagram API, follows Instagram's messaging rules (a private reply within 7 days of a comment, a 24-hour "
+                  "window after their last message) and lets creators reply to thousands of people instantly.",
+        "about": ["instagram", "meta", "chatbot"],
+        "terms": ["comment-to-dm", "keyword-trigger", "private-reply", "messaging-window", "opening-dm", "story-reply-automation",
+                  "story-mention", "rate-limit", "professional-account", "instagram-api", "message-variations"],
+        "sections": [
+            ("How it works", "<p>A creator connects an Instagram <a href=\"/glossary#professional-account\">professional account</a> "
+             "through the <a href=\"/glossary#instagram-api\">official Instagram API</a> and sets triggers. The most common is "
+             "<a href=\"/features/comment-to-dm\">comment-to-DM</a>: a <a href=\"/glossary#keyword-trigger\">keyword</a> in a comment "
+             "starts a public reply and a DM. Others are <a href=\"/features/story-replies\">story replies and mentions</a> and keyword DMs. "
+             "Start with <a href=\"/guides/how-to-auto-dm-instagram-comments\">how to auto DM people who comment</a>.</p>"),
+            ("Instagram's rules", "<p>Instagram allows one <a href=\"/glossary#private-reply\">private reply</a> per comment within 7 days, "
+             "messages within the <a href=\"/glossary#messaging-window\">24-hour window</a> after a person's last message, and caps "
+             "messages per hour. <a href=\"/guides/instagram-dm-limits\">Instagram DM limits explained</a> covers each rule.</p>"),
+            ("Safety", "<p>Tools on the official API, without your password and with <a href=\"/glossary#message-variations\">message variations</a>, "
+             "stay within the rules. Read <a href=\"/guides/is-instagram-dm-automation-safe\">is Instagram DM automation safe?</a></p>"),
+            ("Setup and troubleshooting", "<ul><li><a href=\"/guides/switch-to-instagram-professional-account\">Switch to a professional account</a></li>"
+             "<li><a href=\"/guides/instagram-comment-keyword-ideas\">40 keyword ideas</a></li><li><a href=\"/guides/auto-reply-instagram-comments\">Auto-reply to comments</a></li>"
+             "<li><a href=\"/guides/instagram-story-auto-reply\">Story auto-reply</a></li><li><a href=\"/guides/why-instagram-dm-not-sent\">Why a DM wasn't sent</a></li></ul>"),
+        ],
+        "faq": [("What is Instagram DM automation?", "Software that sends Instagram DMs automatically when someone comments a keyword, replies to a story, mentions you or messages you, using Meta's official API."),
+                ("Is it allowed?", "Yes, when it uses the official Instagram API and follows Instagram's messaging rules."),
+                ("What do I need to start?", "An Instagram Business or Creator account and a tool such as {brand}; the free plan includes 1,000 DMs a month.")],
+        "clusters": [("feature", "comment-to-dm"), ("feature", "story-replies"), ("guide", "how-to-auto-dm-instagram-comments"),
+                     ("guide", "auto-reply-instagram-comments"), ("guide", "instagram-story-auto-reply"), ("guide", "instagram-comment-keyword-ideas"),
+                     ("guide", "instagram-dm-limits"), ("guide", "is-instagram-dm-automation-safe"), ("guide", "why-instagram-dm-not-sent"),
+                     ("guide", "switch-to-instagram-professional-account")],
+    },
+    "instagram-lead-generation": {
+        "title": "Instagram lead generation with DMs",
+        "short": "Instagram lead generation",
+        "description": "How to turn Instagram followers and reel viewers into leads: follow gates, email and WhatsApp capture, lead magnets and giveaways.",
+        "answer": "Instagram lead generation with DMs means offering something useful (a lead magnet) for a comment, then using the "
+                  "DM to win a follow, collect an email or WhatsApp number, and tag the person by interest, so you can follow up "
+                  "later instead of losing them after one view.",
+        "about": ["lead-generation", "instagram", "whatsapp"],
+        "terms": ["lead-magnet", "follow-gate", "lead-capture", "contact-tags", "giveaway-picker"],
+        "sections": [
+            ("The building blocks", "<ul><li>A <a href=\"/glossary#lead-magnet\">lead magnet</a>: see <a href=\"/guides/instagram-lead-magnet-ideas\">lead magnet ideas</a>.</li>"
+             "<li>A <a href=\"/glossary#follow-gate\">follow gate</a>: <a href=\"/features/follow-to-unlock\">follow to unlock</a> turns viewers into followers.</li>"
+             "<li><a href=\"/glossary#lead-capture\">Lead capture</a> in the DM: <a href=\"/features/lead-capture\">emails and WhatsApp numbers</a>.</li>"
+             "<li><a href=\"/glossary#contact-tags\">Tags</a> by topic, so follow-ups are relevant.</li></ul>"),
+            ("Playbooks", "<ul><li><a href=\"/guides/get-followers-from-reels\">Turn reel views into followers</a></li>"
+             "<li><a href=\"/guides/how-to-collect-emails-from-instagram\">Collect emails from Instagram</a></li>"
+             "<li><a href=\"/guides/run-instagram-giveaway\">Run a giveaway and pick a winner</a></li></ul>"),
+        ],
+        "faq": [("What's the best way to get leads from Instagram?", "Ask for a comment keyword in exchange for a free resource, then collect an email or WhatsApp number in the DM before sending it."),
+                ("Should I gate with a follow or an email?", "A follow grows your audience; an email or WhatsApp number lets you reach people outside Instagram. Many creators use both.")],
+        "clusters": [("feature", "follow-to-unlock"), ("feature", "lead-capture"), ("guide", "get-followers-from-reels"),
+                     ("guide", "how-to-collect-emails-from-instagram"), ("guide", "instagram-lead-magnet-ideas"), ("guide", "run-instagram-giveaway")],
+    },
+    "sell-on-instagram": {
+        "title": "Selling on Instagram with DMs",
+        "short": "Selling on Instagram",
+        "description": "How creators and stores sell on Instagram through DMs: follow-up offers, broadcasts, product links and tracking which reel made each sale.",
+        "answer": "Selling on Instagram with DMs works by giving value first (a freebie by DM), following up within 24 hours with "
+                  "the paid product, broadcasting launches to recent chats, and attributing each sale to the reel that brought it, "
+                  "so you know which content actually earns money.",
+        "about": ["ecommerce", "instagram", "utm"],
+        "terms": ["follow-up-message", "broadcast", "sales-attribution", "utm-parameters", "choice-menu"],
+        "sections": [
+            ("The selling loop", "<ol><li>Free value by DM.</li><li>A <a href=\"/glossary#follow-up-message\">follow-up offer</a> inside the 24-hour window.</li>"
+             "<li>A <a href=\"/glossary#broadcast\">broadcast</a> on launch day.</li><li><a href=\"/glossary#sales-attribution\">Sales attribution</a> per reel: <a href=\"/features/sales-tracking\">sales tracking</a>.</li></ol>"),
+            ("Playbooks", "<ul><li><a href=\"/guides/sell-digital-products-on-instagram\">Sell digital products</a></li>"
+             "<li><a href=\"/guides/instagram-dm-automation-for-ecommerce\">DM automation for online stores</a></li></ul>"),
+        ],
+        "faq": [("How do I know which reel made a sale?", "Use tracked links and a sales link on your payment page's thank-you redirect; {brand} credits each sale to the reel and automation."),
+                ("When should I send the paid offer?", "A few hours after the free resource, inside Instagram's 24-hour messaging window.")],
+        "clusters": [("feature", "sales-tracking"), ("guide", "sell-digital-products-on-instagram"), ("guide", "instagram-dm-automation-for-ecommerce")],
+    },
+    "ai-instagram-dm-replies": {
+        "title": "AI replies for Instagram DMs",
+        "short": "AI for Instagram DMs",
+        "description": "How AI agents answer Instagram DMs: what they should and shouldn't answer, languages, hand-offs to a human, and setup.",
+        "answer": "An AI DM agent for Instagram reads incoming messages that don't match an automation and replies from the "
+                  "creator's own FAQ, products and links, in the language the person writes in, and hands sensitive chats "
+                  "(refunds, collaborations, anything uncertain) to a human with a suggested reply.",
+        "about": ["chatbot", "claude", "instagram"],
+        "terms": ["ai-dm-agent", "human-handoff", "messaging-window"],
+        "sections": [
+            ("What a good AI agent does", "<ul><li>Answers only from your information; never invents prices or links.</li>"
+             "<li>Replies in the person's language.</li><li>Uses a <a href=\"/glossary#human-handoff\">human hand-off</a> for anything sensitive.</li></ul>"
+             "<p>See the <a href=\"/features/ai-dm-agent\">AI DM agent</a> and <a href=\"/guides/instagram-ai-chatbot\">how to set up an AI chatbot for Instagram</a>.</p>"),
+        ],
+        "faq": [("Can AI reply to Instagram DMs automatically?", "Yes, through the official API, within Instagram's 24-hour messaging window.")],
+        "clusters": [("feature", "ai-dm-agent"), ("guide", "instagram-ai-chatbot")],
+    },
+    "instagram-dm-automation-tools": {
+        "title": "Instagram DM automation tools compared",
+        "short": "DM automation tools",
+        "description": "Compare Instagram DM automation tools: prices, free plans, follow gates, AI replies and per-contact vs flat pricing.",
+        "answer": "Instagram DM automation tools differ mainly in pricing model (per contact, per DM volume or flat), free-plan size "
+                  "(about 500–1,500 DMs a month), whether the follow gate and story replies are on the plan you buy, and whether "
+                  "AI replies are included. Start with the overview, then compare tools one by one.",
+        "about": ["instagram", "chatbot", "influencer-marketing"],
+        "terms": ["per-contact-pricing", "follow-gate", "ai-dm-agent"],
+        "sections": [
+            ("Start here", "<ul><li><a href=\"/guides/best-instagram-dm-automation-tools\">Best Instagram DM automation tools in 2026</a></li>"
+             "<li><a href=\"/guides/instagram-dm-automation-pricing\">Pricing compared</a></li><li><a href=\"/guides/manychat-alternatives\">ManyChat alternatives</a></li></ul>"),
+            ("One-to-one comparisons", "<p>Each comparison is dated and notes where the other tool is the better choice. See them all below.</p>"),
+        ],
+        "faq": [("What does Instagram DM automation cost?", "From free (about 500–1,500 DMs a month) to about $9–$40 a month; Indian tools are typically ₹99–₹499. {brand} is ₹199 / $9.")],
+        "clusters": [("guide", "best-instagram-dm-automation-tools"), ("guide", "instagram-dm-automation-pricing"), ("guide", "manychat-alternatives")]
+                    + [("compare", k) for k in ("manychat", "linkdm", "superprofile", "repli", "replykaro", "instantdm", "replyrush",
+                                                 "creatorflow", "zorcha", "inro", "rapiddm")],
+    },
+    "instagram-automation-by-industry": {
+        "title": "Instagram DM automation by industry",
+        "short": "By industry",
+        "description": "Instagram DM automation playbooks for coaches, fitness, finance, education, food, beauty, travel, real estate and astrology.",
+        "answer": "Every industry uses the same building blocks (keyword, DM, lead capture, follow-up, AI answers), but the offer, "
+                  "keywords and compliance points differ. These playbooks give each niche a ready funnel, keyword list and the "
+                  "questions an AI agent should and shouldn't answer.",
+        "about": ["influencer-marketing", "lead-generation", "instagram"],
+        "terms": ["lead-magnet", "choice-menu", "human-handoff"],
+        "sections": [
+            ("How to use these playbooks", "<p>Pick your niche, copy the funnel into an automation, swap in your offer and keywords, and "
+             "list the hand-off topics for the AI. Compliance notes (finance, real estate, food, health) are included where they matter.</p>"),
+        ],
+        "faq": [("Does DM automation work for service businesses?", "Yes: real estate, salons, coaches, tutors and travel agencies use it to qualify enquiries before a call.")],
+        "clusters": [("guide", g) for g in ("instagram-dm-automation-for-coaches", "instagram-dm-automation-for-fitness-coaches",
+                                             "instagram-dm-automation-for-finance-creators", "instagram-dm-automation-for-educators",
+                                             "instagram-dm-automation-for-food-creators", "instagram-dm-automation-for-beauty-creators",
+                                             "instagram-dm-automation-for-travel-creators", "instagram-dm-automation-for-real-estate",
+                                             "instagram-dm-automation-for-astrologers")],
+    },
+}
+
+# Domain concepts, defined once and linked from pages (schema.org DefinedTerm on /glossary).
+GLOSSARY = {
+    "instagram-dm-automation": ("Instagram DM automation", "Software that sends Instagram direct messages automatically when a trigger happens, such as a keyword comment, story reply or DM.", "/instagram-dm-automation"),
+    "comment-to-dm": ("Comment-to-DM", "An automation that sends a DM (and often a public reply) to each person who comments a chosen keyword on a post or reel.", "/features/comment-to-dm"),
+    "keyword-trigger": ("Keyword trigger", "The word that starts an automation when it appears in a comment, story reply or DM, matched regardless of capitals, plurals and emojis.", "/guides/instagram-comment-keyword-ideas"),
+    "private-reply": ("Private reply", "Instagram's name for a DM sent to someone in response to their comment; allowed once per comment within 7 days.", "/guides/instagram-dm-limits"),
+    "messaging-window": ("24-hour messaging window", "The period after a person's last message during which a business account may send them messages.", "/guides/instagram-dm-limits"),
+    "opening-dm": ("Opening DM", "The first message of a flow, usually with a button; tapping it opens the chat so later messages and follow checks are allowed.", "/features/comment-to-dm"),
+    "follow-gate": ("Follow gate (follow to unlock)", "A step that sends the promised link only after the person follows the account, checked through the official API.", "/features/follow-to-unlock"),
+    "lead-magnet": ("Lead magnet", "A free resource (checklist, template, guide) offered in exchange for a comment, follow or contact details.", "/guides/instagram-lead-magnet-ideas"),
+    "lead-capture": ("Lead capture", "Asking for an email address or WhatsApp number inside the DM before sending the resource, and saving the answer.", "/features/lead-capture"),
+    "contact-tags": ("Contact tags", "Labels added to people automatically (for example by reel or topic) so follow-ups and exports can be targeted.", "/features/lead-capture"),
+    "story-reply-automation": ("Story reply automation", "A DM sent automatically when someone replies to your Instagram story, optionally only with a keyword.", "/features/story-replies"),
+    "story-mention": ("Story mention automation", "A DM sent automatically when someone mentions your account in their story, often a thank-you.", "/features/story-replies"),
+    "choice-menu": ("Choice menu", "A DM with up to three buttons, each sending its own message and link, so people pick what they want.", "/guides/instagram-dm-automation-for-coaches"),
+    "follow-up-message": ("Follow-up message", "A second DM sent hours after the first, inside the 24-hour window, usually with a paid offer.", "/guides/sell-digital-products-on-instagram"),
+    "broadcast": ("Broadcast to recent chats", "One message sent to everyone who messaged the account in the last 24 hours, the only group Instagram allows.", "/sell-on-instagram"),
+    "ai-dm-agent": ("AI DM agent", "An AI that answers DMs from the creator's own FAQ and products, in the person's language, and hands sensitive chats to a human.", "/features/ai-dm-agent"),
+    "human-handoff": ("Human hand-off", "When the AI stops answering a chat and passes it to the creator with the reason and a suggested reply.", "/guides/instagram-ai-chatbot"),
+    "message-variations": ("Message variations", "Writing {Hi|Hey|Hello} so each person gets one option at random, so automated DMs don't look identical.", "/guides/is-instagram-dm-automation-safe"),
+    "rate-limit": ("Rate limit", "Instagram's cap on how many automated messages an account can send in a period; good tools pause and resume.", "/guides/instagram-dm-limits"),
+    "professional-account": ("Instagram professional account", "A Business or Creator account, required for DM automation; switching is free.", "/guides/switch-to-instagram-professional-account"),
+    "instagram-api": ("Instagram API with Instagram Login", "Meta's official API that lets approved apps read comments and send DMs for a professional account without its password.", "/guides/is-instagram-dm-automation-safe"),
+    "utm-parameters": ("UTM parameters", "Tags added to a link (utm_source, utm_medium, utm_campaign) so analytics tools show where visitors came from.", "/features/sales-tracking"),
+    "sales-attribution": ("Sales attribution", "Crediting each sale to the reel and automation whose link the buyer tapped before paying.", "/features/sales-tracking"),
+    "per-contact-pricing": ("Per-contact pricing", "A pricing model that charges by the number of people messaged, which rises when a reel goes viral; the alternative is flat pricing.", "/instagram-dm-automation-tools"),
+    "giveaway-picker": ("Giveaway picker", "A tool that picks random winners from a post's comments, one entry per person, with optional rules.", "/guides/run-instagram-giveaway"),
+}
+
+
+def pillar_of():
+    """(kind, slug) → pillar slug, for every cluster page."""
+    return {c: p for p, data in PILLARS.items() for c in data["clusters"]}
+
+
 def all_paths():
-    return (["/", "/features", "/compare", "/guides", "/privacy", "/terms"]
+    return (["/", "/features", "/compare", "/guides", "/glossary", "/privacy", "/terms"] + [f"/{k}" for k in PILLARS]
             + [f"/features/{k}" for k in FEATURES] + [f"/vs/{k}" for k in COMPARE] + [f"/guides/{k}" for k in GUIDES])

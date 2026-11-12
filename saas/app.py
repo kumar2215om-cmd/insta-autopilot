@@ -242,7 +242,7 @@ def landing_schema():
                for k, (m, _) in plans.USD.items()]
     return [
         {"@context": "https://schema.org", **org_schema()},
-        {"@context": "https://schema.org", "@type": "WebSite", "name": BRAND, "url": f"{site_url()}/", "publisher": {"@id": f"{site_url()}/#org"}},
+        {"@context": "https://schema.org", "@type": "WebSite", "@id": f"{site_url()}/#website", "name": BRAND, "url": f"{site_url()}/", "publisher": {"@id": f"{site_url()}/#org"}},
         {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": BRAND, "url": f"{site_url()}/",
          "applicationCategory": "BusinessApplication", "applicationSubCategory": "Instagram DM automation", "operatingSystem": "Web, Android, iOS",
          "description": "Instagram DM automation for creators: comment-to-DM, follow to unlock, story replies, email and WhatsApp "
@@ -255,20 +255,55 @@ def landing_schema():
     ]
 
 
-def content_page(page, path, crumbs, related=()):
+def entity_ld(key):
+    e = seo.ENTITIES[key]
+    return {"@type": e["type"], "name": e["name"], "sameAs": e["sameAs"]}
+
+
+def term_ld(key):
+    name, text, _ = seo.GLOSSARY[key]
+    return {"@type": "DefinedTerm", "@id": f"{site_url()}/glossary#{key}", "name": name, "description": fill(text),
+            "inDefinedTermSet": f"{site_url()}/glossary"}
+
+
+def content_page(page, path, crumbs, related=(), pillar=None):
+    """Renders a public content page. pillar: the topic hub this page belongs to (hub-and-spoke linking + schema)."""
     page = fill(page)
     schema = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": i + 1, "name": name, "item": f"{site_url()}{url or path}"}
         for i, (name, url) in enumerate([("Home", "/")] + list(crumbs))]}]
-    if page.get("kind") != "hub":
-        schema.append({"@context": "https://schema.org", "@type": "Article", "headline": page.get("h1") or page["title"],
-                       "description": page["description"], "dateModified": seo.UPDATED, "datePublished": seo.UPDATED,
-                       "mainEntityOfPage": f"{site_url()}{path}", "author": {"@id": f"{site_url()}/#org"},
-                       "publisher": org_schema(), "image": f"{site_url()}/static/og.png"})
+    kind = page.get("kind")
+    if kind in ("feature", "compare", "guide"):
+        art = {"@context": "https://schema.org", "@type": "Article", "headline": page.get("h1") or page["title"],
+               "description": page["description"], "dateModified": seo.UPDATED, "datePublished": seo.UPDATED,
+               "mainEntityOfPage": f"{site_url()}{path}", "author": {"@id": f"{site_url()}/#org"},
+               "publisher": org_schema(), "image": f"{site_url()}/static/og.png"}
+        if pillar:
+            p = seo.PILLARS[pillar]
+            art["isPartOf"] = {"@type": "CollectionPage", "@id": f"{site_url()}/{pillar}", "name": fill(p["title"])}
+            art["about"] = [entity_ld(e) for e in p["about"]]
+            art["mentions"] = [term_ld(t) for t in p["terms"]]
+        schema.append(art)
     if page.get("faq"):
         schema.append(faq_schema(page["faq"]))
+    schema += page.pop("extra_schema", [])
+    topic = None
+    if pillar:
+        topic = {"url": f"/{pillar}", "title": fill(seo.PILLARS[pillar]["title"]), "short": seo.PILLARS[pillar]["short"]}
     return render_template("content.html", page=page, path=path, crumbs=crumbs, related=fill(list(related)), schema=schema,
-                           updated=seo.UPDATED, checked=seo.CHECKED)
+                           updated=seo.UPDATED, checked=seo.CHECKED, topic=topic)
+
+
+def cluster_item(kind, slug):
+    return {"feature": seo.FEATURES, "compare": seo.COMPARE, "guide": seo.GUIDES}[kind][slug]
+
+
+def cluster_context(kind, slug, title):
+    """The pillar a cluster page belongs to, its breadcrumbs and its sibling pages (spokes link up and across)."""
+    pillar = seo.pillar_of()[(kind, slug)]
+    p = seo.PILLARS[pillar]
+    siblings = [card(k, s_, cluster_item(k, s_)) for k, s_ in p["clusters"] if (k, s_) != (kind, slug)]
+    return pillar, [(p["short"], f"/{pillar}"), (title, None)], siblings[:6]
 
 
 def card(kind, slug, item):
@@ -288,8 +323,8 @@ def features_hub():
 @app.get("/features/<slug>")
 def feature_page(slug):
     item = seo.FEATURES.get(slug) or abort(404)
-    related = [card("feature", k, v) for k, v in seo.FEATURES.items() if k != slug][:3]
-    return content_page({**item, "kind": "feature"}, f"/features/{slug}", [("Features", "/features"), (item["title"], None)], related)
+    pillar, crumbs, related = cluster_context("feature", slug, item["title"])
+    return content_page({**item, "kind": "feature"}, f"/features/{slug}", crumbs, related, pillar)
 
 
 @app.get("/compare")
@@ -310,23 +345,57 @@ def compare_page(slug):
             "title": f"{item['title']} ({BRAND} vs {item['name']})",
             "faq": [(f"Is {BRAND} a good {item['name']} alternative?", f"Yes, if {item['choose_us']}"),
                     (f"How much does {BRAND} cost?", "Free for 1,000 DMs a month; Creator is ₹199 / $9 a month with unlimited DMs and AI replies included.")]}
-    related = [card("compare", k, v) for k, v in seo.COMPARE.items() if k != slug][:3]
-    return content_page(page, f"/vs/{slug}", [("Compare", "/compare"), (f"vs {item['name']}", None)], related)
+    pillar, crumbs, related = cluster_context("compare", slug, f"vs {item['name']}")
+    return content_page(page, f"/vs/{slug}", crumbs, related, pillar)
 
 
 @app.get("/guides")
 def guides_hub():
-    return content_page({"kind": "hub", "title": "Instagram DM automation guides", "h1": "Guides: grow and sell with Instagram DMs",
-                         "description": "Practical guides on Instagram comment-to-DM, follow gates, DM automation pricing and account safety.",
-                         "intro": "Short, practical guides you can follow today.",
-                         "cards": [card("guide", k, v) for k, v in seo.GUIDES.items()]}, "/guides", [("Guides", None)])
+    """The learning centre: every topic (pillar) with all its pages."""
+    groups = [{"title": fill(p["title"]), "url": f"/{k}", "text": fill(p["description"]),
+               "cards": [card(kind, s_, cluster_item(kind, s_)) for kind, s_ in p["clusters"]]} for k, p in seo.PILLARS.items()]
+    return content_page({"kind": "hub", "title": "Instagram DM automation guides", "h1": "Learn Instagram DM automation",
+                         "description": "Guides on Instagram DM automation, lead generation, selling, AI replies, tools and industry playbooks.",
+                         "intro": "Six topics, each with a complete overview and step-by-step pages. Start with a topic, or jump to a guide.",
+                         "groups": groups}, "/guides", [("Guides", None)])
 
 
 @app.get("/guides/<slug>")
 def guide_page(slug):
     item = seo.GUIDES.get(slug) or abort(404)
-    related = [card("guide", k, v) for k, v in seo.GUIDES.items() if k != slug][:2] + [card("feature", "comment-to-dm", seo.FEATURES["comment-to-dm"])]
-    return content_page({**item, "kind": "guide"}, f"/guides/{slug}", [("Guides", "/guides"), (item["title"], None)], related)
+    pillar, crumbs, related = cluster_context("guide", slug, item["title"])
+    return content_page({**item, "kind": "guide"}, f"/guides/{slug}", crumbs, related, pillar)
+
+
+def pillar_page(slug):
+    """A topic hub: the full overview, then every page in the topic, the key terms and the other topics."""
+    p = seo.PILLARS[slug]
+    clusters = [card(kind, s_, cluster_item(kind, s_)) for kind, s_ in p["clusters"]]
+    others = [{"url": f"/{k}", "title": fill(o["title"]), "text": fill(o["description"])} for k, o in seo.PILLARS.items() if k != slug]
+    page = {**p, "kind": "pillar", "h1": p["title"], "cards": clusters,
+            "terms_list": [(k, seo.GLOSSARY[k][0], seo.GLOSSARY[k][1]) for k in p["terms"]],
+            "extra_schema": [{"@context": "https://schema.org", "@type": "CollectionPage", "@id": f"{site_url()}/{slug}",
+                              "name": fill(p["title"]), "description": fill(p["description"]), "url": f"{site_url()}/{slug}",
+                              "dateModified": seo.UPDATED, "isPartOf": {"@id": f"{site_url()}/#website", "@type": "WebSite", "name": BRAND},
+                              "about": [entity_ld(e) for e in p["about"]], "mentions": [term_ld(t) for t in p["terms"]],
+                              "hasPart": [{"@type": "WebPage", "url": f"{site_url()}{c['url']}", "name": c["title"]} for c in clusters]}]}
+    return content_page(page, f"/{slug}", [(p["short"], None)], others)
+
+
+for _slug in seo.PILLARS:
+    app.add_url_rule(f"/{_slug}", f"pillar_{_slug.replace('-', '_')}", lambda _slug=_slug: pillar_page(_slug))
+
+
+@app.get("/glossary")
+def glossary_page():
+    terms = [(k, name, fill(text), url) for k, (name, text, url) in seo.GLOSSARY.items()]
+    page = {"kind": "glossary", "title": "Instagram DM automation glossary", "h1": "Instagram DM automation glossary",
+            "description": "Definitions of Instagram DM automation terms: comment-to-DM, private reply, 24-hour window, follow gate, lead magnet and more.",
+            "answer": f"Plain definitions of the terms used in Instagram DM automation, each linked to a page that explains it in depth.",
+            "terms": terms,
+            "extra_schema": [{"@context": "https://schema.org", "@type": "DefinedTermSet", "@id": f"{site_url()}/glossary",
+                              "name": "Instagram DM automation glossary", "hasDefinedTerm": [term_ld(k) for k in seo.GLOSSARY]}]}
+    return content_page(page, "/glossary", [("Glossary", None)])
 
 
 @app.get("/robots.txt")
@@ -361,9 +430,14 @@ def llms_txt():
            f"- Pro: ₹{p['pro']['price']} / ${plans.USD['pro'][0]}, 3 Instagram accounts, 2,000 AI replies, Claude (MCP), Google Sheets and webhooks, team",
            f"- Agency: ₹{p['agency']['price']:,} / ${plans.USD['agency'][0]}, 10 accounts, 10,000 AI replies",
            "- During the beta every feature is free.", "",
-           "## Features"] + [f"- [{fill(v['title'])}]({u}/features/{k}): {fill(v['answer'])}" for k, v in seo.FEATURES.items()] + [
-           "", "## Comparisons"] + [f"- [{BRAND} vs {v['name']}]({u}/vs/{k}): {fill(v['answer'])}" for k, v in seo.COMPARE.items()] + [
-           "", "## Guides"] + [f"- [{fill(v['title'])}]({u}/guides/{k}): {fill(v['answer'])}" for k, v in seo.GUIDES.items()] + [
+           "## Topics"]
+    for k, pil in seo.PILLARS.items():
+        out += ["", f"### [{fill(pil['title'])}]({u}/{k})", fill(pil["answer"])]
+        for kind, s_ in pil["clusters"]:
+            c = card(kind, s_, cluster_item(kind, s_))
+            out.append(f"- [{c['title']}]({u}{c['url']}): {fill(cluster_item(kind, s_)['answer'])}")
+    out += ["", "## Glossary", f"- [{BRAND} glossary]({u}/glossary): definitions of Instagram DM automation terms"]
+    out += [
            "", "## Links", f"- Website: {u}/", f"- Pricing: {u}/#pricing", f"- Live demo: {u}/demo", f"- Privacy: {u}/privacy"]
     return "\n".join(out) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
 

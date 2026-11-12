@@ -279,6 +279,15 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
 - **Pages** (`seo_content.py` → `templates/content.html`): `/features` + 6 feature pages, `/compare` + 6 `/vs/<tool>` pages,
   `/guides` + 4 guides. Each starts with a direct answer, has short sections, a FAQ, an "Updated" date, related links and a CTA.
   Competitor facts are dated (`CHECKED`) with a "not affiliated" note; refresh them when competitors change prices.
+- **Pillar-cluster (hub-and-spoke) architecture** (`seo_content.PILLARS`): 6 topic hubs at the top level
+  (`/instagram-dm-automation`, `/instagram-lead-generation`, `/sell-on-instagram`, `/ai-instagram-dm-replies`,
+  `/instagram-dm-automation-tools`, `/instagram-automation-by-industry`). Every feature, comparison and guide belongs to
+  exactly one hub (`pillar_of()`): its breadcrumb runs Home → hub → page, it shows "Part of …", and "More in …" links to its
+  siblings; the hub links down to every page in its topic and across to the other hubs. `/guides` lists all hubs with
+  their pages. Adding a page: write it in FEATURES / COMPARE / GUIDES and add it to one hub's `clusters` (a test enforces this).
+- **Entity-first coverage**: `ENTITIES` (Instagram, Meta, WhatsApp, chatbots, lead generation… with Wikipedia `sameAs`)
+  are each hub's `about`; `GLOSSARY` defines 25 domain terms on `/glossary` (DefinedTermSet, one anchor per term) that hubs
+  link to and every page `mentions` in its Article schema, with `isPartOf` pointing at its hub (CollectionPage + `hasPart`).
 - **Structured data (JSON-LD)**: landing page has Organization, WebSite, SoftwareApplication (₹ and $ offers from `plans.py`)
   and FAQPage (read from the landing FAQ itself); content pages have BreadcrumbList, Article and FAQPage.
 - **`/robots.txt`** allows everything public (including AI crawlers) and blocks private paths; **`/sitemap.xml`** lists every
