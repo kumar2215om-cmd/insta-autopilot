@@ -311,12 +311,13 @@ who joined (`GET /api/referrals`).
 All plan numbers live in `plans.py`; `store.is_pro`, `engine.monthly_limit` and `ai_agent.allowance` read them.
 | Plan | ₹/month (yearly) | DMs/month | AI replies | Accounts | Fee on sales through ReplyInbox |
 |---|---|---|---|---|---|
-| free | 0 | 1,000 | 25 once | 1 | 5% + 18% GST |
-| starter (decoy) | 149 (1,499) | 3,000 | 25 once | 1 | 2% + GST |
-| creator | 199 (1,999) | no limit | 300/month | 1 | 2% + GST |
-| pro | 499 (4,999) | no limit | 2,000/month | 3 | 2% + GST |
-| agency | 1,499 (14,999) | no limit | 10,000/month | 10 | 2% + GST |
-- Two revenue streams: subscriptions, and a SuperProfile-style platform fee (`plans.platform_fee`) on payments collected
+| free | 0 | 1,000 | 25 once | 1 | 5% + 18% GST, all-in |
+| starter (decoy) | 149 (1,499) | 3,000 | 25 once | 1 | 2% + GST + gateway charges |
+| creator | 199 (1,999) | no limit | 300/month | 1 | 2% + GST + gateway charges |
+| pro | 499 (4,999) | no limit | 2,000/month | 3 | 2% + GST + gateway charges |
+| agency | 1,499 (14,999) | no limit | 10,000/month | 10 | 2% + GST + gateway charges |
+- Two revenue streams: subscriptions, and a SuperProfile-style platform fee (`plans.platform_fee`; paid plans also pass
+  the gateway's charge through at cost, `GATEWAY_FEE_PCT` = 2 by default, or the real fee per payment) on payments collected
   through ReplyInbox (UPI/card in DM, once Razorpay is connected). Sales on the creator's own payment pages (Sales page
   tracking links) carry no fee. **The fee is not shown on the landing page** (owner's decision).
 - Plans are set by hand on `/owner` (plan picker per account, MRR and plan counts on top) until billing exists. Referral

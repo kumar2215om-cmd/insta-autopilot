@@ -453,9 +453,11 @@ class SaasTest(unittest.TestCase):
         # SuperProfile-style fee: ₹499 on Free = 5% + 18% GST on the fee
         f = plans.platform_fee(free, 499)
         self.assertEqual((f["fee"], f["gst"], f["total_fee"], f["creator_gets"]), (24.95, 4.49, 29.44, 469.56))
-        self.assertEqual(plans.platform_fee(creator, 499)["total_fee"], 11.78)
-        self.assertEqual(plans.platform_fee(pro, 499)["total_fee"], 11.78)
-        self.assertEqual(plans.platform_fee({"plan": "agency"}, 499)["total_fee"], 11.78)
+        self.assertEqual(f["gateway"], 0)  # Free's 5% is all-in
+        c = plans.platform_fee(creator, 499)  # 2% + GST, plus the gateway's charge passed through
+        self.assertEqual((c["fee"], c["gst"], c["gateway"], c["total_fee"], c["creator_gets"]), (9.98, 1.8, 11.78, 23.56, 475.44))
+        self.assertEqual(plans.platform_fee(pro, 499, gateway_fee=5.0)["total_fee"], 16.78)  # real gateway charge when known
+        self.assertEqual(plans.platform_fee({"plan": "agency"}, 499)["total_fee"], 23.56)
         # referral months count as Pro; unknown plans as Free
         self.assertEqual(plans.plan_of({"plan": "free", "pro_until": _t.time() + 99}), "pro")
         self.assertEqual(plans.plan_of({"plan": "gold"}), "free")
@@ -463,7 +465,7 @@ class SaasTest(unittest.TestCase):
         # Starter (the decoy): paid, 3,000 DMs, no monthly AI, 2% fee
         self.assertEqual(engine.monthly_limit({"plan": "starter"}), 3000)
         self.assertEqual(ai_agent.allowance({"plan": "starter"}), ("trial", 25))
-        self.assertEqual(plans.platform_fee({"plan": "starter"}, 499)["total_fee"], 11.78)
+        self.assertEqual(plans.platform_fee({"plan": "starter"}, 499)["total_fee"], 23.56)
         self.assertFalse(store.is_pro(free))
         # limits follow the plan
         self.assertEqual(ai_agent.allowance({"plan": "creator"}), ("month", 300))
