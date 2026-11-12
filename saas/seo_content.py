@@ -770,6 +770,185 @@ GUIDES.update({
 })
 
 
+# ---------- guides, batch 4 ----------
+
+GUIDES.update({
+    # selling
+    "instagram-follow-up-messages": {
+        "title": "How to write Instagram follow-up messages that sell",
+        "description": "Write follow-up DMs that turn freebie takers into buyers: timing inside the 24-hour window, templates and mistakes to avoid.",
+        "answer": "A good Instagram follow-up message is sent a few hours after the freebie, inside Instagram's 24-hour window, "
+                  "asks how the freebie went or adds one tip, then makes one clear paid offer with a single button. Timing (1 to "
+                  "20 hours later) and a specific, time-bound offer matter more than long copy.",
+        "sections": [
+            ("When to send it", "<p>{brand} lets you send the follow-up 1, 3, 6, 12 or 20 hours after the first DM. Three hours works well for "
+             "most freebies; use 12–20 hours for longer resources. It must arrive within 24 hours of the person's last message.</p>"),
+            ("Templates", "<ul><li>\"Did you get a chance to try it, {username}? The full pack (39 more) is ₹149 today 👇\"</li>"
+             "<li>\"Quick tip to get more from the guide: … If you want the complete course, it's here 👇\"</li>"
+             "<li>\"A few spots left in this week's batch. Want in? 👇\"</li></ul>"),
+            ("Mistakes to avoid", "<ul><li>Several offers in one message.</li><li>Sending after the 24-hour window (it won't deliver).</li>"
+             "<li>Fake urgency; use real deadlines.</li><li>No link button; buttons get more taps than links in text.</li></ul>"),
+        ],
+        "faq": [("How many follow-ups can I send?", "One per person per automation in {brand}, timed inside Instagram's 24-hour window.")],
+    },
+    "instagram-broadcast-messages": {
+        "title": "How to send an Instagram broadcast to your DMs",
+        "description": "Message everyone who DMed you recently in one go: what Instagram allows, when to use it and what to send.",
+        "answer": "Instagram only lets business accounts message people inside the 24-hour window after their last message, so a "
+                  "DM broadcast reaches everyone who messaged you in the last day, not all followers. Use it for launches, live "
+                  "sessions and last-call offers, with one short message and one button.",
+        "sections": [
+            ("Who it reaches", "<p>Everyone who DMed you (or tapped a button in your DM) in roughly the last 24 hours. A reel with a "
+             "comment keyword fills this list fast, so post a keyword reel the day before a launch.</p>"),
+            ("What to send", "<ul><li>\"Live in 1 hour 🔴 Join here 👇\"</li><li>\"Doors close tonight for the course 👇\"</li>"
+             "<li>\"New drop is live, first 50 get the early price 👇\"</li></ul>"),
+            ("In {brand}", "<p>Auto DM → Broadcast shows how many people you can reach now, sends in batches, and counts link clicks.</p>"),
+        ],
+        "faq": [("Can I message all my followers?", "No. Instagram doesn't allow that; only people who messaged you in the last 24 hours.")],
+    },
+    "instagram-dm-sales-funnel": {
+        "title": "How to build an Instagram DM sales funnel",
+        "description": "A complete Instagram DM funnel: reel, keyword, freebie, lead capture, follow-up offer, broadcast and tracking.",
+        "answer": "An Instagram DM sales funnel has six steps: a reel with a comment keyword, an automatic DM with a freebie, a follow "
+                  "or contact capture, a follow-up offer a few hours later, a broadcast on launch days, and sales tracking so you "
+                  "know which reels sell.",
+        "sections": [
+            ("The six steps", "<ol><li><b>Attention</b>: a reel with one promise and a keyword.</li><li><b>Delivery</b>: DM with the freebie.</li>"
+             "<li><b>Capture</b>: follow gate, email or WhatsApp.</li><li><b>Offer</b>: follow-up with the paid product.</li>"
+             "<li><b>Push</b>: broadcast to recent chats on launch day.</li><li><b>Measure</b>: sales per reel, then repeat the winners.</li></ol>"),
+            ("Numbers to watch", "<ul><li>Comments per 1,000 views.</li><li>Link opens per DM sent.</li><li>Follows and leads per DM.</li>"
+             "<li>Sales per link open.</li></ul><p>{brand}'s insights show each step for every automation.</p>"),
+        ],
+        "faq": [("How long does it take to set up?", "About 10 minutes for the first automation; after that, copy it to new reels in one tap.")],
+    },
+    "track-instagram-sales-with-utm": {
+        "title": "How to track Instagram sales with UTM links",
+        "description": "See which Instagram reel and DM brought each visitor and sale using UTM parameters and a sales link.",
+        "answer": "To track Instagram sales, add UTM parameters (utm_source=instagram, utm_medium=dm, utm_campaign=reel-name) to "
+                  "every link you send so analytics shows where visitors came from, and credit each completed payment to the DM "
+                  "link the buyer tapped. {brand} adds the UTM tags automatically and records sales through a sales link.",
+        "sections": [
+            ("UTM basics", "<ul><li><code>utm_source=instagram</code>: the platform.</li><li><code>utm_medium=dm</code>: the channel.</li>"
+             "<li><code>utm_campaign=prompts-reel</code>: the reel or automation.</li></ul><p>Google Analytics, Shopify and most website tools read these automatically.</p>"),
+            ("From visits to sales", "<p>UTM tags show visits; to count sales, set your payment page's \"redirect after payment\" to your "
+             "product's {brand} sales link. Each sale is credited to the last DM link the buyer tapped.</p>"),
+        ],
+        "faq": [("Do UTM tags break affiliate links?", "They can. {brand} skips links that already have UTM tags, and you can turn click tracking off for affiliate automations.")],
+    },
+    # AI
+    "write-faq-for-ai-dm-agent": {
+        "title": "How to write an FAQ for your Instagram AI DM agent",
+        "description": "What to put in the FAQ your AI DM agent answers from: products, prices, links, policies and hand-off rules, with a template.",
+        "answer": "Write your AI agent's FAQ as short facts it can quote: each product with price, what's included and link; how "
+                  "delivery and payment work; your refund policy; and real questions from your DMs with your answers. Then list "
+                  "the topics it must hand to you.",
+        "sections": [
+            ("Template", "<pre style=\"white-space:pre-wrap\">PRODUCTS\n- AI Prompt Pack: ₹149. 39 prompts + guide. Instant download. Link: https://…\n"
+             "- Reels Masterclass: ₹999. 6 videos, lifetime access. Link: https://…\n\nPAYMENT AND DELIVERY\n- UPI, cards, netbanking. Access email arrives in 2 minutes.\n\n"
+             "POLICIES\n- Refunds: hand to me.\n\nCOMMON QUESTIONS\n- Is it for beginners? Yes, no experience needed.\n- Language? Hindi and English.</pre>"),
+            ("Hand-off topics", "<p>Refunds, payment failures, collaborations, complaints, anything personal or legal, and anything not in the FAQ.</p>"),
+            ("Test it", "<p>Ask 10 real questions from your inbox in the test box, including one in another language and one it should hand over.</p>"),
+        ],
+        "faq": [("How long should the FAQ be?", "As long as needed, but each answer short; {brand} accepts up to about 6,000 characters.")],
+    },
+    "ai-vs-keyword-dm-automation": {
+        "title": "AI replies vs keyword automations for Instagram DMs",
+        "description": "When to use keyword automations and when to use an AI DM agent on Instagram, and how they work together.",
+        "answer": "Use keyword automations for predictable, high-volume flows (comment GUIDE, get the guide) because they are "
+                  "instant, exact and free of AI cost. Use an AI DM agent for open questions people type in their own words "
+                  "(price, how it works, which plan). The best setup uses both: keywords first, AI for everything else.",
+        "sections": [
+            ("Side by side", "<div class=\"scroll\"><table><thead><tr><th></th><th>Keyword automation</th><th>AI DM agent</th></tr></thead><tbody>"
+             "<tr><td>Best for</td><td>Freebies, links, lead capture</td><td>Questions in free text</td></tr>"
+             "<tr><td>Speed</td><td>Instant</td><td>Seconds</td></tr><tr><td>Cost</td><td>Included</td><td>Uses AI replies</td></tr>"
+             "<tr><td>Languages</td><td>The text you wrote</td><td>Replies in their language</td></tr></tbody></table></div>"),
+            ("How {brand} combines them", "<p>A DM that matches a keyword runs the automation; anything else goes to the AI (if on), "
+             "or to a welcome message for first-time chats.</p>"),
+        ],
+        "faq": [("Do I need AI to start?", "No. Most creators start with keyword automations and add AI when DMs get busy.")],
+    },
+    # lead generation
+    "collect-whatsapp-numbers-from-instagram": {
+        "title": "How to collect WhatsApp numbers from Instagram",
+        "description": "Ask for a WhatsApp number inside the Instagram DM before sending your freebie, and send leads to Sheets or your CRM.",
+        "answer": "To collect WhatsApp numbers from Instagram, use a comment-to-DM automation that asks for the number in the DM "
+                  "before sending the freebie. The number is checked, saved to your contacts and can go to Google Sheets or a "
+                  "CRM, so you can follow up on WhatsApp.",
+        "sections": [
+            ("Setup", "<ol><li>Create a comment or DM keyword automation.</li><li>Turn on <b>Ask for WhatsApp number</b>; choose required or with a Skip button.</li>"
+             "<li>Write why you need it (\"to send updates and the class link\").</li><li>Connect Google Sheets or a webhook if your team follows up.</li></ol>"),
+            ("Respect consent", "<p>Only message numbers people gave you for that purpose, say what you'll send, and make it easy to opt out.</p>"),
+        ],
+        "faq": [("Does it check the number format?", "Yes, and it asks again politely if the reply isn't a valid number.")],
+    },
+    "instagram-dm-choice-menus": {
+        "title": "How to use choice menus in Instagram DMs",
+        "description": "Let people pick what they want in your Instagram DM with up to 3 buttons: free vs paid, by goal, by level or by product.",
+        "answer": "A choice menu is a DM with up to three buttons, each sending its own message and link. Use it to let people "
+                  "pick free vs paid, their goal, their level or a product, so one automation serves different people and you "
+                  "learn what your audience wants from the picks.",
+        "sections": [
+            ("Menu ideas", "<ul><li>\"Free guide / Full course / Book a call\".</li><li>\"Beginner / Intermediate / Advanced\".</li>"
+             "<li>\"Skincare / Makeup / Outfit\".</li><li>\"Class 10 / Class 12 / Competitive exams\".</li></ul>"),
+            ("Learn from the picks", "<p>{brand}'s insights count how many people picked each option, so you know what to make next.</p>"),
+        ],
+        "faq": [("Why only three options?", "Instagram allows up to three buttons in a DM message.")],
+    },
+    # DM automation
+    "instagram-next-post-automation": {
+        "title": "How to set up Instagram auto DMs before you post",
+        "description": "Create the comment-to-DM automation before posting a reel, so the first comments get answered instantly.",
+        "answer": "To have auto DMs ready before you post, create the automation for your next post instead of a specific reel. "
+                  "When you publish, the automation attaches to the new reel by itself, so even the first comments get their DM "
+                  "within seconds.",
+        "sections": [
+            ("Steps in {brand}", "<ol><li>Auto DM → Create → Comments on your post or reel → <b>Next post</b>.</li><li>Add the keyword, replies and DM.</li>"
+             "<li>Publish the reel whenever you like; the automation moves onto it automatically.</li></ol>"),
+            ("Auto-setup from the caption", "<p>Or turn on auto-setup: write \"Comment GUIDE\" in the caption and {brand} creates the automation from your template.</p>"),
+        ],
+        "faq": [("What if I post a story or another reel first?", "It attaches to the next post or reel published after you created it.")],
+    },
+    "instagram-live-comment-automation": {
+        "title": "How to auto DM people who comment on your Instagram Live",
+        "description": "Send a link by DM to everyone who comments a keyword during your Instagram Live, without stopping the stream.",
+        "answer": "To auto DM people during an Instagram Live, set up a Live-comment automation with a keyword such as LINK; "
+                  "everyone who comments it during the Live gets a DM with your link, so you can keep talking while the links go out.",
+        "sections": [
+            ("Setup", "<ol><li>Auto DM → Create → Comments on your Live.</li><li>Keyword (LINK, JOIN, OFFER) and the DM with a button.</li>"
+             "<li>Say \"comment LINK\" a few times during the Live.</li></ol>"),
+            ("Good to know", "<p>Live comments get a DM only (no public reply). The feature is in beta and needs Live comment events enabled for the app.</p>"),
+        ],
+        "faq": [("Does it work after the Live ends?", "Comments made during the Live are handled; the DM must go within Instagram's private-reply window.")],
+    },
+    "instagram-welcome-message": {
+        "title": "How to set an automatic welcome message on Instagram",
+        "description": "Greet everyone who DMs you for the first time with an automatic message and buttons to your links or automations.",
+        "answer": "An Instagram welcome message is sent automatically the first time someone DMs you (when their message doesn't "
+                  "match a keyword), with buttons to your main links or automations, so new chats get an instant answer instead "
+                  "of waiting.",
+        "sections": [
+            ("What to write", "<p>\"Hey {username}! 👋 Thanks for the message. What are you looking for?\" with up to three buttons: "
+             "\"Free guide\", \"Courses\", \"Work with me\".</p>"),
+            ("Welcome message vs chat menu", "<ul><li>The <b>welcome message</b> is sent once to new chats.</li>"
+             "<li>The <b>chat menu</b> (ice breakers) shows up to four questions before someone types.</li><li>Use both for the smoothest first contact.</li></ul>"),
+        ],
+        "faq": [("Will regulars get it again?", "No, each person gets it once.")],
+    },
+    "instagram-ice-breakers": {
+        "title": "Instagram ice breakers: set up a DM chat menu",
+        "description": "Add up to 4 ice breaker questions to your Instagram DMs and answer them automatically or start an automation.",
+        "answer": "Instagram ice breakers are up to four questions shown to people when they open a chat with you for the first "
+                  "time. Tapping one sends it, and {brand} answers it automatically or starts one of your automations.",
+        "sections": [
+            ("Good ice breakers", "<ul><li>\"How do I buy the course?\"</li><li>\"Where are the free guides?\"</li>"
+             "<li>\"Do you do collaborations?\"</li><li>\"What's the price?\"</li></ul>"),
+            ("Setup", "<p>Auto DM → Chat menu: add up to four questions, choose an answer or an automation for each, and publish.</p>"),
+        ],
+        "faq": [("How many questions can I add?", "Up to four, Instagram's limit.")],
+    },
+})
+
+
 # =====================================================================================================================
 # Pillar-cluster (hub-and-spoke) architecture with entity-first coverage.
 # Each PILLAR is a topic hub: a long overview page that links down to every cluster page in its topic. Every cluster
@@ -815,12 +994,14 @@ PILLARS = {
              "stay within the rules. Read <a href=\"/guides/is-instagram-dm-automation-safe\">is Instagram DM automation safe?</a></p>"),
             ("Setup and troubleshooting", "<ul><li><a href=\"/guides/switch-to-instagram-professional-account\">Switch to a professional account</a></li>"
              "<li><a href=\"/guides/instagram-comment-keyword-ideas\">40 keyword ideas</a></li><li><a href=\"/guides/auto-reply-instagram-comments\">Auto-reply to comments</a></li>"
-             "<li><a href=\"/guides/instagram-story-auto-reply\">Story auto-reply</a></li><li><a href=\"/guides/why-instagram-dm-not-sent\">Why a DM wasn't sent</a></li></ul>"),
+             "<li><a href=\"/guides/instagram-story-auto-reply\">Story auto-reply</a></li><li><a href=\"/guides/instagram-next-post-automation\">Set it up before you post</a></li>"
+             "<li><a href=\"/guides/instagram-live-comment-automation\">Auto DM on Live comments</a></li><li><a href=\"/guides/instagram-welcome-message\">Welcome message</a> and <a href=\"/guides/instagram-ice-breakers\">ice breakers</a></li>"
+             "<li><a href=\"/guides/why-instagram-dm-not-sent\">Why a DM wasn't sent</a></li></ul>"),
         ],
         "faq": [("What is Instagram DM automation?", "Software that sends Instagram DMs automatically when someone comments a keyword, replies to a story, mentions you or messages you, using Meta's official API."),
                 ("Is it allowed?", "Yes, when it uses the official Instagram API and follows Instagram's messaging rules."),
                 ("What do I need to start?", "An Instagram Business or Creator account and a tool such as {brand}; the free plan includes 1,000 DMs a month.")],
-        "clusters": [("feature", "comment-to-dm"), ("feature", "story-replies"), ("guide", "how-to-auto-dm-instagram-comments"),
+        "clusters": [("guide", "instagram-next-post-automation"), ("guide", "instagram-live-comment-automation"), ("guide", "instagram-welcome-message"), ("guide", "instagram-ice-breakers"), ("feature", "comment-to-dm"), ("feature", "story-replies"), ("guide", "how-to-auto-dm-instagram-comments"),
                      ("guide", "auto-reply-instagram-comments"), ("guide", "instagram-story-auto-reply"), ("guide", "instagram-comment-keyword-ideas"),
                      ("guide", "instagram-dm-limits"), ("guide", "is-instagram-dm-automation-safe"), ("guide", "why-instagram-dm-not-sent"),
                      ("guide", "switch-to-instagram-professional-account")],
@@ -841,11 +1022,12 @@ PILLARS = {
              "<li><a href=\"/glossary#contact-tags\">Tags</a> by topic, so follow-ups are relevant.</li></ul>"),
             ("Playbooks", "<ul><li><a href=\"/guides/get-followers-from-reels\">Turn reel views into followers</a></li>"
              "<li><a href=\"/guides/how-to-collect-emails-from-instagram\">Collect emails from Instagram</a></li>"
-             "<li><a href=\"/guides/run-instagram-giveaway\">Run a giveaway and pick a winner</a></li></ul>"),
+             "<li><a href=\"/guides/run-instagram-giveaway\">Run a giveaway and pick a winner</a></li>"
+             "<li><a href=\"/guides/collect-whatsapp-numbers-from-instagram\">Collect WhatsApp numbers</a></li><li><a href=\"/guides/instagram-dm-choice-menus\">Use choice menus</a> to sort leads by interest</li></ul>"),
         ],
         "faq": [("What's the best way to get leads from Instagram?", "Ask for a comment keyword in exchange for a free resource, then collect an email or WhatsApp number in the DM before sending it."),
                 ("Should I gate with a follow or an email?", "A follow grows your audience; an email or WhatsApp number lets you reach people outside Instagram. Many creators use both.")],
-        "clusters": [("feature", "follow-to-unlock"), ("feature", "lead-capture"), ("guide", "get-followers-from-reels"),
+        "clusters": [("guide", "collect-whatsapp-numbers-from-instagram"), ("guide", "instagram-dm-choice-menus"), ("feature", "follow-to-unlock"), ("feature", "lead-capture"), ("guide", "get-followers-from-reels"),
                      ("guide", "how-to-collect-emails-from-instagram"), ("guide", "instagram-lead-magnet-ideas"), ("guide", "run-instagram-giveaway")],
     },
     "sell-on-instagram": {
@@ -860,12 +1042,14 @@ PILLARS = {
         "sections": [
             ("The selling loop", "<ol><li>Free value by DM.</li><li>A <a href=\"/glossary#follow-up-message\">follow-up offer</a> inside the 24-hour window.</li>"
              "<li>A <a href=\"/glossary#broadcast\">broadcast</a> on launch day.</li><li><a href=\"/glossary#sales-attribution\">Sales attribution</a> per reel: <a href=\"/features/sales-tracking\">sales tracking</a>.</li></ol>"),
-            ("Playbooks", "<ul><li><a href=\"/guides/sell-digital-products-on-instagram\">Sell digital products</a></li>"
+            ("Playbooks", "<ul><li><a href=\"/guides/instagram-dm-sales-funnel\">Build a DM sales funnel</a></li><li><a href=\"/guides/instagram-follow-up-messages\">Write follow-ups that sell</a></li>"
+             "<li><a href=\"/guides/instagram-broadcast-messages\">Broadcast to recent chats</a></li><li><a href=\"/guides/track-instagram-sales-with-utm\">Track sales with UTM links</a></li>"
+             "<li><a href=\"/guides/sell-digital-products-on-instagram\">Sell digital products</a></li>"
              "<li><a href=\"/guides/instagram-dm-automation-for-ecommerce\">DM automation for online stores</a></li></ul>"),
         ],
         "faq": [("How do I know which reel made a sale?", "Use tracked links and a sales link on your payment page's thank-you redirect; {brand} credits each sale to the reel and automation."),
                 ("When should I send the paid offer?", "A few hours after the free resource, inside Instagram's 24-hour messaging window.")],
-        "clusters": [("feature", "sales-tracking"), ("guide", "sell-digital-products-on-instagram"), ("guide", "instagram-dm-automation-for-ecommerce")],
+        "clusters": [("guide", "instagram-dm-sales-funnel"), ("guide", "instagram-follow-up-messages"), ("guide", "instagram-broadcast-messages"), ("guide", "track-instagram-sales-with-utm"), ("feature", "sales-tracking"), ("guide", "sell-digital-products-on-instagram"), ("guide", "instagram-dm-automation-for-ecommerce")],
     },
     "ai-instagram-dm-replies": {
         "title": "AI replies for Instagram DMs",
@@ -879,10 +1063,11 @@ PILLARS = {
         "sections": [
             ("What a good AI agent does", "<ul><li>Answers only from your information; never invents prices or links.</li>"
              "<li>Replies in the person's language.</li><li>Uses a <a href=\"/glossary#human-handoff\">human hand-off</a> for anything sensitive.</li></ul>"
-             "<p>See the <a href=\"/features/ai-dm-agent\">AI DM agent</a> and <a href=\"/guides/instagram-ai-chatbot\">how to set up an AI chatbot for Instagram</a>.</p>"),
+             "<p>See the <a href=\"/features/ai-dm-agent\">AI DM agent</a>, <a href=\"/guides/instagram-ai-chatbot\">how to set up an AI chatbot for Instagram</a>, "
+             "<a href=\"/guides/write-faq-for-ai-dm-agent\">how to write its FAQ</a> and <a href=\"/guides/ai-vs-keyword-dm-automation\">when to use AI vs keywords</a>.</p>"),
         ],
         "faq": [("Can AI reply to Instagram DMs automatically?", "Yes, through the official API, within Instagram's 24-hour messaging window.")],
-        "clusters": [("feature", "ai-dm-agent"), ("guide", "instagram-ai-chatbot")],
+        "clusters": [("guide", "write-faq-for-ai-dm-agent"), ("guide", "ai-vs-keyword-dm-automation"), ("feature", "ai-dm-agent"), ("guide", "instagram-ai-chatbot")],
     },
     "instagram-dm-automation-tools": {
         "title": "Instagram DM automation tools compared",
