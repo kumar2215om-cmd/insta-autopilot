@@ -474,7 +474,7 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.c.post("/owner/plan", headers=auth, json={"id": "1789", "plan": "gold"}).status_code, 400)
         self.assertEqual(self.c.post("/owner/plan", headers=auth, json={"id": "1789", "plan": "creator"}).get_json()["plan"], "creator")
         page = self.c.get("/owner", headers=auth).get_data(as_text=True)
-        self.assertIn("MRR ₹149", page)
+        self.assertIn("MRR ₹199", page)
         self.assertNotIn("sale_fee", self.c.get("/").get_data(as_text=True))
 
     def test_demo_mode(self):
@@ -941,7 +941,7 @@ class SaasTest(unittest.TestCase):
         html = self.c.get("/").get_data(as_text=True)
         self.assertIn('property="og:image" content="http://localhost/static/og.png"', html)
         self.assertEqual(self.c.get("/static/og.png").status_code, 200)
-        for text in ("₹149", "₹399", "₹1,499", "MOST POPULAR", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
+        for text in ("₹199", "₹499", "₹1,499", "MOST POPULAR", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
             self.assertIn(text, html)
 
     def test_referrals(self):

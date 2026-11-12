@@ -17,9 +17,9 @@ GST = 0.18  # charged on our fee, as SuperProfile does
 PLANS = {
     "free": {"name": "Free", "price": 0, "yearly": 0, "monthly_dms": 1000, "ai_replies": 25, "ai_kind": "trial",
              "accounts": 1, "sale_fee_pct": 5.0},
-    "creator": {"name": "Creator", "price": 149, "yearly": 1199, "monthly_dms": 0, "ai_replies": 300, "ai_kind": "month",
+    "creator": {"name": "Creator", "price": 199, "yearly": 1999, "monthly_dms": 0, "ai_replies": 300, "ai_kind": "month",
                 "accounts": 1, "sale_fee_pct": 2.0},
-    "pro": {"name": "Pro", "price": 399, "yearly": 3499, "monthly_dms": 0, "ai_replies": 2000, "ai_kind": "month",
+    "pro": {"name": "Pro", "price": 499, "yearly": 4999, "monthly_dms": 0, "ai_replies": 2000, "ai_kind": "month",
             "accounts": 3, "sale_fee_pct": 2.0},
     "agency": {"name": "Agency", "price": 1499, "yearly": 14999, "monthly_dms": 0, "ai_replies": 10000, "ai_kind": "month",
                "accounts": 10, "sale_fee_pct": 2.0},
