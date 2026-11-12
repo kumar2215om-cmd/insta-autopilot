@@ -599,6 +599,75 @@ GUIDES.update({
 })
 
 
+# ---------- niche guides ----------
+
+GUIDES.update({
+    "instagram-dm-automation-for-fitness-coaches": {
+        "title": "Instagram DM automation for fitness coaches and trainers",
+        "description": "How fitness coaches use Instagram comment-to-DM to send free plans, collect WhatsApp leads and sell coaching programs.",
+        "answer": "Fitness coaches use Instagram DM automation to send a free workout or meal plan to everyone who comments a "
+                  "keyword like PLAN, collect WhatsApp numbers from people who want coaching, follow up with a program offer "
+                  "a few hours later, and let an AI answer common questions about price, duration and diet.",
+        "sections": [
+            ("A funnel that works for fitness", "<ol><li><b>Reel</b>: a quick result (\"3 moves for lower back pain\", \"high-protein breakfast in 5 minutes\") ending with \"comment PLAN\".</li>"
+             "<li><b>DM</b>: the free 7-day plan, sent after they follow you.</li>"
+             "<li><b>Choice menu</b>: \"Fat loss / Muscle gain / Just staying fit\", each with its own plan, so you know their goal.</li>"
+             "<li><b>WhatsApp capture</b> on the \"I want coaching\" option, so you can call serious leads.</li>"
+             "<li><b>Follow-up</b> 3 hours later: \"Want me to build this around your schedule? Coaching starts at ₹1,999/month.\"</li></ol>"),
+            ("Keyword ideas", "<p>PLAN, ABS, MEAL, PROTEIN, STRETCH, HOME, GYM, 30DAY, YOGA, RUN.</p>"),
+            ("What the AI agent should answer", "<ul><li>Program price, length and what's included.</li><li>Online vs in-person, timings, language.</li>"
+             "<li>How to pay and when it starts.</li></ul><p>Hand over anything about injuries, medical conditions, pregnancy or medication to yourself.</p>"),
+            ("Stay responsible", "<ul><li>Add a short disclaimer to free plans (\"consult a doctor if you have a condition\").</li>"
+             "<li>Don't promise guaranteed results in automated DMs.</li><li>Keep medical questions out of the AI's hands.</li></ul>"),
+        ],
+        "faq": [("Which plan do fitness coaches need?", "Creator (₹199 / $9) covers unlimited DMs, menus, WhatsApp capture, follow-ups and 300 AI replies a month."),
+                ("Can I see which reel brought paying clients?", "Yes, sales tracking credits each payment to the reel and automation that brought it.")],
+    },
+    "instagram-dm-automation-for-finance-creators": {
+        "title": "Instagram DM automation for finance creators",
+        "description": "How personal-finance creators use Instagram comment-to-DM for budget sheets, checklists and courses, while staying compliant.",
+        "answer": "Finance creators use Instagram DM automation to deliver budget sheets, tax checklists and calculators to people who "
+                  "comment a keyword like SHEET, collect emails for a newsletter, and promote courses or webinars, while keeping "
+                  "automated DMs educational and free of personalised investment advice.",
+        "sections": [
+            ("A funnel for finance content", "<ol><li><b>Reel</b>: one clear concept (\"the 50/30/20 rule\", \"5 tax-saving options\") ending with \"comment SHEET\".</li>"
+             "<li><b>DM</b>: the budget sheet or checklist, after asking for their email.</li>"
+             "<li><b>Choice menu</b>: \"Budgeting / Investing basics / Taxes\", each with its own resource.</li>"
+             "<li><b>Follow-up</b>: invite them to your free webinar or paid course.</li>"
+             "<li><b>Tags</b> by topic, so your newsletter can send the right content.</li></ol>"),
+            ("Keyword ideas", "<p>SHEET, BUDGET, TAX, SIP, EMI, SAVE, CALC, CHECKLIST, GUIDE, WEBINAR.</p>"),
+            ("Stay compliant", "<ul><li>Keep DMs <b>educational</b>: explain concepts, share tools, not \"buy this stock\".</li>"
+             "<li>In India, unregistered creators should not give investment advice or stock tips; follow SEBI's current rules for finfluencers. Elsewhere, follow your country's rules.</li>"
+             "<li>Add a disclaimer to resources (\"for education, not financial advice\").</li>"
+             "<li>Tell the AI agent to hand over any question asking what to buy or sell.</li></ul>"),
+        ],
+        "faq": [("Can the AI agent answer money questions?", "It answers from your FAQ (your products, prices, how your course works). Set it to hand over any request for personal investment advice."),
+                ("How do I send leads to my newsletter?", "Ask for the email in the DM and send it to Google Sheets, Mailchimp or another tool through a webhook (Pro).")],
+    },
+    "instagram-dm-automation-for-educators": {
+        "title": "Instagram DM automation for teachers and education creators",
+        "description": "How teachers, tutors and exam-prep creators use Instagram DMs to share notes, run batch enrolments and answer parents and students.",
+        "answer": "Teachers and education creators use Instagram DM automation to send notes, PDFs and practice sets to students who "
+                  "comment a keyword like NOTES, collect WhatsApp numbers for batch or class groups, announce new batches to "
+                  "recent chats, and let an AI answer questions about fees, timings and syllabus.",
+        "sections": [
+            ("A funnel for education", "<ol><li><b>Reel</b>: a quick concept, trick or exam tip ending with \"comment NOTES for the PDF\".</li>"
+             "<li><b>DM</b>: the notes or practice set, optionally after a follow.</li>"
+             "<li><b>Choice menu</b>: by class, exam or subject (\"Class 10 / Class 12 / Competitive exams\").</li>"
+             "<li><b>WhatsApp capture</b> for students (or parents) who want batch details.</li>"
+             "<li><b>Broadcast</b> on enrolment day to everyone who messaged in the last 24 hours.</li></ol>"),
+            ("Keyword ideas", "<p>NOTES, PDF, PYQ, MOCK, FORMULA, SYLLABUS, BATCH, DEMO, MAP, VOCAB.</p>"),
+            ("What the AI agent should answer", "<ul><li>Fees, batch timings, language, online or offline.</li><li>Syllabus covered and study material.</li>"
+             "<li>How to join and pay.</li></ul><p>Hand over refund requests, complaints and anything about a specific student's results.</p>"),
+            ("Tips", "<ul><li>One keyword per chapter or topic, so you see which topics drive enrolments.</li>"
+             "<li>Use story replies for daily quiz answers.</li><li>Track which reel brought each enrolment with sales tracking.</li></ul>"),
+        ],
+        "faq": [("Can it reply in Hindi or regional languages?", "Yes, the AI agent replies in the language the student or parent writes in."),
+                ("Can I send different notes for different classes?", "Yes, use a choice menu with one option per class or exam, each with its own PDF link.")],
+    },
+})
+
+
 def all_paths():
     return (["/", "/features", "/compare", "/guides", "/privacy", "/terms"]
             + [f"/features/{k}" for k in FEATURES] + [f"/vs/{k}" for k in COMPARE] + [f"/guides/{k}" for k in GUIDES])
