@@ -205,12 +205,16 @@
   .plan .yr { font:500 12.5px var(--mono); color:var(--violet); margin:-2px 0 6px; }
   .plan.pro .yr { color:var(--lav); }
   .billing { display:inline-flex; gap:4px; margin-top:26px; padding:4px; border:1px solid var(--line); border-radius:99px; background:var(--card); }
-  .billing button { border:0; background:none; border-radius:99px; padding:9px 18px; font:600 14px var(--text); color:var(--muted); cursor:pointer; }
+  .billing button { border:0; background:none; border-radius:99px; padding:9px 18px; font:600 14px var(--sans); color:var(--muted); cursor:pointer; }
   .billing button[aria-pressed="true"] { background:var(--ink); color:#fff; }
   .billing button span { font:500 11px var(--mono); color:var(--violet); margin-left:4px; }
   .billing button[aria-pressed="true"] span { color:var(--lav); }
   .compare.wide { max-width:1200px; }
-  .agency { max-width:1200px; margin:22px auto 0; text-align:center; font-size:15px; color:var(--muted); }
+  .trust { list-style:none; display:flex; flex-wrap:wrap; justify-content:center; gap:8px 10px; margin:18px auto 0; padding:0; max-width:820px; }
+  .trust li { font:500 13px/1.4 var(--sans); color:var(--muted); background:var(--card); border:1px solid var(--line); border-radius:99px; padding:6px 12px; }
+  .plan .ai { margin:12px 0 0; font-size:13.5px; font-weight:600; color:var(--violet-ink); background:#EEEAFF; border-radius:10px; padding:8px 11px; position:relative; }
+  .plan.pro .ai { color:#fff; background:rgba(185,168,255,.18); }
+  .agency { max-width:1200px; line-height:1.8; margin:22px auto 0; text-align:center; font-size:15px; color:var(--muted); }
   .agency a { font-weight:600; color:var(--violet-ink); white-space:nowrap; }
   .compare.wide td + td, .compare.wide th + th { width:14%; }
   .compare { max-width:900px; margin:28px auto 0; overflow-x:auto; }
@@ -540,6 +544,10 @@
         <button type="button" data-bill="month" aria-pressed="true">Monthly</button>
         <button type="button" data-bill="year" aria-pressed="false">Yearly <span>2+ months free</span></button>
       </div>
+      <ul class="trust" aria-label="Safety">
+        <li>✓ Official Instagram API, approved by Meta</li><li>✓ No Instagram password, ever</li>
+        <li>✓ Alerts if anything goes wrong</li><li>✓ Disconnect and delete your data anytime</li>
+      </ul>
     </div>
     <div class="plans four">
       <div class="plan">
@@ -563,9 +571,10 @@
         <div class="price" data-m="₹199" data-y="₹167">₹199 <small>/ month</small></div>
         <div class="yr" hidden>Billed ₹1,999 a year</div>
         <p class="sub">For creators who sell from Instagram.</p>
+        <p class="ai">🤖 300 AI replies included every month</p>
         <ul><li class="big">No monthly DM limit*</li><li class="big">See which reel makes money</li><li>Everything in Free</li>
           <li>Choice menus, follow-ups, welcome message</li><li>Message today's chats (broadcast)</li><li>Insights, UTM tags, alerts on your phone</li>
-          <li>300 AI replies every month</li><li>No "Powered by {{ brand }}" on your link page</li></ul>
+<li>No "Powered by {{ brand }}" on your link page</li></ul>
         <a class="btn primary" href="#start">Start free</a>
       </div>
       <div class="plan">
@@ -573,12 +582,14 @@
         <div class="price" data-m="₹499" data-y="₹417">₹499 <small>/ month</small></div>
         <div class="yr" hidden>Billed ₹4,999 a year</div>
         <p class="sub">For full-time creators and coaches.</p>
-        <ul><li class="big">2,000 AI replies every month</li><li class="big">3 Instagram accounts</li><li>Everything in Creator</li>
+        <p class="ai">🤖 2,000 AI replies included every month</p>
+        <ul><li class="big">3 Instagram accounts</li><li>Everything in Creator</li>
           <li>Run it from Claude</li><li>Google Sheets and webhooks</li><li>A/B test your DMs, team of 5</li><li>Priority support on WhatsApp</li></ul>
         <a class="btn line" href="#start">Start free</a>
       </div>
     </div>
-    <p class="agency">Managing 10+ Instagram accounts? <b>Agency ₹1,499 / month</b>: 10 accounts, 10,000 AI replies, team access.
+    <p class="agency">Need one more Instagram account? Add it to Creator or Pro for <b>₹149 / month</b>.<br>
+      Managing 10+ Instagram accounts? <b>Agency ₹1,499 / month</b>: 10 accounts, 10,000 AI replies, team access.
       <a href="{% if contact_email %}mailto:{{ contact_email }}?subject={{ brand }}%20Agency{% else %}#start{% endif %}">Talk to us →</a></p>
     <div class="compare wide">
       <table aria-label="Compare plans">
@@ -587,7 +598,7 @@
           <tr><td>Price per month</td><td>₹0</td><td>₹149</td><td>₹199</td><td>₹499</td></tr>
           <tr><td>DMs per month</td><td>1,000</td><td>3,000</td><td>No limit*</td><td>No limit*</td></tr>
           <tr><td>Instagram accounts</td><td>1</td><td>1</td><td>1</td><td>3</td></tr>
-          <tr><td>AI DM replies</td><td>25 to try</td><td>25 to try</td><td>300 / month</td><td>2,000 / month</td></tr>
+          <tr><td>AI DM replies (included, no credits to buy)</td><td>25 to try</td><td>25 to try</td><td>300 / month</td><td>2,000 / month</td></tr>
           <tr><td>Comment → DM, keywords, story and Live automations</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
           <tr><td>Follow to unlock (link only for followers)</td><td>–</td><td>✓</td><td>✓</td><td>✓</td></tr>
           <tr><td>Email and WhatsApp capture</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
@@ -597,6 +608,7 @@
           <tr><td>Remove "Powered by {{ brand }}"</td><td>–</td><td>–</td><td>✓</td><td>✓</td></tr>
           <tr><td>Run it from Claude, Google Sheets and webhooks, A/B tests</td><td>–</td><td>–</td><td>–</td><td>✓</td></tr>
           <tr><td>Team members</td><td>–</td><td>–</td><td>–</td><td>Up to 5</td></tr>
+          <tr><td>Extra Instagram account</td><td>–</td><td>–</td><td>₹149 / month</td><td>₹149 / month</td></tr>
           <tr><td>Extra AI replies</td><td>–</td><td>–</td><td>₹99 / 1,000</td><td>₹99 / 1,000</td></tr>
           <tr><td>Support</td><td>Email</td><td>Email</td><td>Email</td><td>Priority, WhatsApp</td></tr>
         </tbody>

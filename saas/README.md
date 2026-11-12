@@ -320,6 +320,8 @@ All plan numbers live in `plans.py`; `store.is_pro`, `engine.monthly_limit` and 
   the gateway's charge through at cost, `GATEWAY_FEE_PCT` = 2 by default, or the real fee per payment) on payments collected
   through ReplyInbox (UPI/card in DM, once Razorpay is connected). Sales on the creator's own payment pages (Sales page
   tracking links) carry no fee. **The fee is not shown on the landing page** (owner's decision).
+- **Add-ons** (`plans.py`): extra AI replies ₹99 per 1,000; one more Instagram account on Creator or Pro ₹149/month
+  (`EXTRA_ACCOUNT`; each Instagram account is its own account here, so this is charged once billing exists).
 - **Paid-only features** (`plans.PAID_FEATURES`, checked with `plans.has(acc, feature)`): the follow gate. Locked only
   when `PLAN_LOCKS=on` (set it in Vercel when billing goes live; during the beta every feature is free). With locks on, a
   Free account's automations skip the follow check and send the link, and the wizard shows "Upgrade" instead of the toggle.

@@ -36,6 +36,8 @@ PLANS = {
 }
 PAID = ("starter", "creator", "pro", "agency")
 AI_TOPUP = {"replies": 1000, "price": 99}  # extra AI replies, any paid plan
+# One more Instagram account on Creator or Pro, per month (each Instagram account is its own account here; charged with billing)
+EXTRA_ACCOUNT = {"price": 149, "plans": ("creator", "pro")}
 
 
 def plan_of(acc):
