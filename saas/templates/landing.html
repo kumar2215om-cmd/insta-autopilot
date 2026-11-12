@@ -199,6 +199,18 @@
   .plan.pro li::before { background-color:rgba(185,168,255,.18); background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M5 9.3l2.6 2.5L13 6.5' fill='none' stroke='%23B9A8FF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
   .plan li.big { font-weight:600; }
   .plan .btn { margin-top:auto; width:100%; position:relative; }
+  .plans.four { grid-template-columns:repeat(4, 1fr); max-width:1200px; margin-top:40px; }
+  .plans.four .plan { padding:26px; }
+  .plans.four .price { font-size:44px; }
+  .plan .yr { font:500 12.5px var(--mono); color:var(--violet); margin:-2px 0 6px; }
+  .plan.pro .yr { color:var(--lav); }
+  .billing { display:inline-flex; gap:4px; margin-top:26px; padding:4px; border:1px solid var(--line); border-radius:99px; background:var(--card); }
+  .billing button { border:0; background:none; border-radius:99px; padding:9px 18px; font:600 14px var(--text); color:var(--muted); cursor:pointer; }
+  .billing button[aria-pressed="true"] { background:var(--ink); color:#fff; }
+  .billing button span { font:500 11px var(--mono); color:var(--violet); margin-left:4px; }
+  .billing button[aria-pressed="true"] span { color:var(--lav); }
+  .compare.wide { max-width:1200px; }
+  .compare.wide td + td, .compare.wide th + th { width:14%; }
   .compare { max-width:900px; margin:28px auto 0; overflow-x:auto; }
   .compare table { width:100%; min-width:540px; border-collapse:collapse; font-size:14.5px; }
   .compare th, .compare td { padding:13px 6px; border-bottom:1px solid var(--line); text-align:left; }
@@ -248,10 +260,11 @@
     .strip .wrap { grid-template-columns:repeat(2, 1fr); } .strip div:nth-child(3) { border-left:0; } .strip div:nth-child(n+3) { border-top:1px solid var(--line); }
     footer .wrap { grid-template-columns:1fr 1fr; }
   }
+  @media (max-width: 1100px) { .plans.four { grid-template-columns:repeat(2, 1fr); max-width:900px; } }
   @media (max-width: 720px) {
     .nav .links, .nav .right .login { display:none; }
     section.block { padding:80px 0; }
-    .plans { grid-template-columns:1fr; }
+    .plans, .plans.four { grid-template-columns:1fr; }
     .hero { padding-top:48px; }
     .f1 { display:none; }
     .msg { max-width:90%; }
@@ -520,46 +533,72 @@
     <div class="head center">
       <div class="eyebrow">Pricing</div>
       <h2 style="margin-top:14px">Start free. <span class="serif">Upgrade when you grow.</span></h2>
-      <p class="lede">Every feature is on the free plan. Pro removes the limits.</p>
+      <p class="lede">Simple Indian pricing, GST included. Paid plans are launching soon: <b>during the beta every feature is free</b>, and everything you set up stays when you upgrade.</p>
+      <div class="billing" role="group" aria-label="Billing period">
+        <button type="button" data-bill="month" aria-pressed="true">Monthly</button>
+        <button type="button" data-bill="year" aria-pressed="false">Yearly <span>2+ months free</span></button>
+      </div>
     </div>
-    <div class="plans">
+    <div class="plans four">
       <div class="plan">
         <div class="name">Free</div>
         <div class="price">₹0 <small>forever</small></div>
         <p class="sub">For creators getting started.</p>
-        <ul><li class="big">1,000 DMs every month</li><li>25 AI replies to try the AI agent</li><li>All automations, story replies and follow-ups</li>
-          <li>Email and WhatsApp capture, Contacts</li><li>Link in bio, reel report, giveaway picker</li><li>Team access</li></ul>
+        <ul><li class="big">1,000 DMs every month</li><li>Comment → DM on every reel and post</li><li>Follow to unlock, story replies</li>
+          <li>Email and WhatsApp capture, Contacts</li><li>Link in bio, reel report, giveaway</li><li>25 AI replies to try the AI agent</li></ul>
         <a class="btn line" href="#start">Start free</a>
       </div>
       <div class="plan pro">
-        <div class="name">Pro <em>LAUNCHING SOON</em></div>
-        <div class="price">₹299 <small>/ month</small></div>
-        <p class="sub">For creators whose reels go viral.</p>
-        <ul><li class="big">No monthly DM limit</li><li class="big">1,000 AI replies every month</li><li>Everything in Free</li>
-          <li>Priority support on WhatsApp</li><li>New features first</li></ul>
-        <a class="btn primary" href="#start">Start free, upgrade later</a>
+        <div class="name">Creator <em>MOST POPULAR</em></div>
+        <div class="price" data-m="₹149" data-y="₹100">₹149 <small>/ month</small></div>
+        <div class="yr" hidden>Billed ₹1,199 a year</div>
+        <p class="sub">For creators who sell from Instagram.</p>
+        <ul><li class="big">No monthly DM limit*</li><li class="big">See which reel makes money</li><li>Everything in Free</li>
+          <li>Choice menus, follow-ups, welcome message</li><li>Message today's chats (broadcast)</li><li>Insights, UTM tags, alerts on your phone</li>
+          <li>300 AI replies every month</li><li>No "Powered by {{ brand }}" on your link page</li></ul>
+        <a class="btn primary" href="#start">Start free</a>
+      </div>
+      <div class="plan">
+        <div class="name">Pro</div>
+        <div class="price" data-m="₹399" data-y="₹292">₹399 <small>/ month</small></div>
+        <div class="yr" hidden>Billed ₹3,499 a year</div>
+        <p class="sub">For full-time creators and coaches.</p>
+        <ul><li class="big">2,000 AI replies every month</li><li class="big">3 Instagram accounts</li><li>Everything in Creator</li>
+          <li>Run it from Claude</li><li>Google Sheets and webhooks</li><li>A/B test your DMs, team of 5</li><li>Priority support on WhatsApp</li></ul>
+        <a class="btn line" href="#start">Start free</a>
+      </div>
+      <div class="plan">
+        <div class="name">Agency</div>
+        <div class="price" data-m="₹1,499" data-y="₹1,250">₹1,499 <small>/ month</small></div>
+        <div class="yr" hidden>Billed ₹14,999 a year</div>
+        <p class="sub">For agencies and creator teams.</p>
+        <ul><li class="big">10 Instagram accounts</li><li class="big">10,000 AI replies every month</li><li>Everything in Pro</li>
+          <li>One login for every client</li><li>Team access without passwords</li><li>Priority support on WhatsApp</li></ul>
+        <a class="btn line" href="{% if contact_email %}mailto:{{ contact_email }}?subject={{ brand }}%20Agency{% else %}#start{% endif %}">Talk to us</a>
       </div>
     </div>
-    <div class="compare">
+    <div class="compare wide">
       <table aria-label="Compare plans">
-        <thead><tr><th scope="col">Compare plans</th><th scope="col">Free</th><th scope="col">Pro</th></tr></thead>
+        <thead><tr><th scope="col">Compare plans</th><th scope="col">Free</th><th scope="col">Creator</th><th scope="col">Pro</th><th scope="col">Agency</th></tr></thead>
         <tbody>
-          <tr><td>DMs per month</td><td>1,000</td><td>No limit*</td></tr>
-          <tr><td>AI DM replies</td><td>25 to try</td><td>1,000 / month</td></tr>
-          <tr><td>Reels, keywords, story automations</td><td>Unlimited</td><td>Unlimited</td></tr>
-          <tr><td>Follow to unlock, email and phone capture</td><td>✓</td><td>✓</td></tr>
-          <tr><td>Follow-up offers, A/B tests, schedules</td><td>✓</td><td>✓</td></tr>
-          <tr><td>Choice menus, welcome message, broadcast to recent chats</td><td>✓</td><td>✓</td></tr>
-          <tr><td>Link click counts, phone app and notifications</td><td>✓</td><td>✓</td></tr>
-          <tr><td>Sales per reel, automation insights, UTM tags, health alerts</td><td>✓</td><td>✓</td></tr>
-          <tr><td>Link in bio, Contacts, CSV export</td><td>✓</td><td>✓</td></tr>
-          <tr><td>Reel report, weekly summary, giveaway picker</td><td>✓</td><td>✓</td></tr>
-          <tr><td>Team members</td><td>Up to 5</td><td>Up to 5</td></tr>
-          <tr><td>Support</td><td>Email</td><td>Priority, WhatsApp</td></tr>
+          <tr><td>Price per month</td><td>₹0</td><td>₹149</td><td>₹399</td><td>₹1,499</td></tr>
+          <tr><td>DMs per month</td><td>1,000</td><td>No limit*</td><td>No limit*</td><td>No limit*</td></tr>
+          <tr><td>Instagram accounts</td><td>1</td><td>1</td><td>3</td><td>10</td></tr>
+          <tr><td>AI DM replies</td><td>25 to try</td><td>300 / month</td><td>2,000 / month</td><td>10,000 / month</td></tr>
+          <tr><td>Comment → DM, keywords, story and Live automations</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Follow to unlock, email and WhatsApp capture</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Link in bio, Contacts, CSV export, reel report</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Choice menus, follow-ups, welcome message, broadcast</td><td>–</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Sales per reel, insights, UTM tags, phone alerts</td><td>–</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Remove "Powered by {{ brand }}"</td><td>–</td><td>✓</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Run it from Claude, Google Sheets and webhooks, A/B tests</td><td>–</td><td>–</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Team members</td><td>–</td><td>–</td><td>Up to 5</td><td>Up to 5</td></tr>
+          <tr><td>Extra AI replies</td><td>–</td><td>₹99 / 1,000</td><td>₹99 / 1,000</td><td>₹99 / 1,000</td></tr>
+          <tr><td>Support</td><td>Email</td><td>Email</td><td>Priority, WhatsApp</td><td>Priority, WhatsApp</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="note">* Instagram's own limits still apply: one DM per comment within 7 days, and hourly request limits on very busy reels.</p>
+    <p class="note">* Fair use. Instagram's own limits still apply: one DM per comment within 7 days, and hourly limits on very busy reels.</p>
   </div>
 </section>
 
@@ -576,7 +615,7 @@
       <details><summary>How does the AI DM agent work?</summary><p>It answers DMs that aren't one of your keywords, using only your FAQ, products and links, in the language the fan writes in. It never makes up prices or links. Refunds, brand deals and anything it's unsure about are handed to you with a suggested reply.</p></details>
       <details><summary>Why do people tap a button before getting the link?</summary><p>Instagram only lets apps check whether someone follows you after they reply to your DM. The button tap is that reply.</p></details>
       <details><summary>What are Instagram's limits?</summary><p>An app can DM someone who commented once per comment, within 7 days. Follow-ups must go within 24 hours of the person's last message. Very busy reels can hit Instagram's hourly limit; {{ brand }} then waits and continues.</p></details>
-      <details><summary>When can I buy Pro?</summary><p>Pro is launching soon. Start on Free today: everything you set up stays when you upgrade.</p></details>
+      <details><summary>When can I buy a paid plan?</summary><p>Creator, Pro and Agency are launching soon. During the beta every feature is free. Start today: everything you set up stays when you upgrade, and yearly plans give you more than 2 months free.</p></details>
       <details><summary>Can I manage more than one Instagram account?</summary><p>Yes. Log in with each account once, then switch between them from the sidebar. Each account has its own automations, inbox and contacts.</p></details>
       <details><summary>Is there a phone app?</summary><p>Yes. Open {{ brand }} on your phone and install it from Settings (Android: Install app; iPhone: Share → Add to Home Screen). Turn on notifications to hear about new leads right away.</p></details>
       <details><summary>Can I message all my followers at once?</summary><p>Instagram only allows messages to people who DMed you in the last 24 hours, so Broadcast sends to them. That's still everyone who reacted to your latest reel or story.</p></details>
@@ -605,5 +644,16 @@
   </div>
   <div class="wrap" style="display:block; margin-top:36px; font:500 12.5px var(--mono); color:var(--muted)">© {{ brand }}</div>
 </footer>
+<script>
+/* monthly / yearly prices; without JS the monthly prices show */
+document.querySelectorAll("[data-bill]").forEach(b => b.addEventListener("click", () => {
+  const y = b.dataset.bill === "year";
+  document.querySelectorAll("[data-bill]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  document.querySelectorAll(".price[data-m]").forEach(p => {
+    p.firstChild.textContent = (y ? p.dataset.y : p.dataset.m) + " ";
+    p.nextElementSibling.hidden = !y;
+  });
+}));
+</script>
 </body>
 </html>

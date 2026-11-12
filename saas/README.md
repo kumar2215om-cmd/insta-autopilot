@@ -321,7 +321,7 @@ All plan numbers live in `plans.py`; `store.is_pro`, `engine.monthly_limit` and 
 - Plans are set by hand on `/owner` (plan picker per account, MRR and plan counts on top) until billing exists. Referral
   months (`pro_until`) count as Pro but not in MRR. `"dm_limit"` / `"ai_limit"` on an account override the plan; the env
   vars `FREE_MONTHLY_DMS`, `FREE_AI_TRIAL_REPLIES`, `PRO_MONTHLY_DMS`, `PAID_MONTHLY_AI_REPLIES` override too when set.
-- The landing page still shows Free + Pro ₹299 "launching soon"; update `templates/landing.html` when the new prices go public.
+- The landing page shows the four plans (monthly/yearly switch, "launching soon", beta = every feature free) but not the sale fee; keep it in sync with `plans.py`.
 
 ## Limits and notes
 - One DM per comment, within 7 days of the comment (Instagram rule). The follow check only works after the
