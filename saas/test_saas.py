@@ -460,6 +460,10 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(plans.plan_of({"plan": "free", "pro_until": _t.time() + 99}), "pro")
         self.assertEqual(plans.plan_of({"plan": "gold"}), "free")
         self.assertTrue(store.is_pro(creator))
+        # Starter (the decoy): paid, 3,000 DMs, no monthly AI, 2% fee
+        self.assertEqual(engine.monthly_limit({"plan": "starter"}), 3000)
+        self.assertEqual(ai_agent.allowance({"plan": "starter"}), ("trial", 25))
+        self.assertEqual(plans.platform_fee({"plan": "starter"}, 499)["total_fee"], 11.78)
         self.assertFalse(store.is_pro(free))
         # limits follow the plan
         self.assertEqual(ai_agent.allowance({"plan": "creator"}), ("month", 300))
@@ -941,7 +945,7 @@ class SaasTest(unittest.TestCase):
         html = self.c.get("/").get_data(as_text=True)
         self.assertIn('property="og:image" content="http://localhost/static/og.png"', html)
         self.assertEqual(self.c.get("/static/og.png").status_code, 200)
-        for text in ("₹199", "₹499", "₹1,499", "MOST POPULAR", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
+        for text in ("₹149", "₹199", "₹499", "Agency ₹1,499", "MOST POPULAR", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
             self.assertIn(text, html)
 
     def test_referrals(self):

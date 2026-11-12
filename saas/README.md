@@ -312,6 +312,7 @@ All plan numbers live in `plans.py`; `store.is_pro`, `engine.monthly_limit` and 
 | Plan | ₹/month (yearly) | DMs/month | AI replies | Accounts | Fee on sales through ReplyInbox |
 |---|---|---|---|---|---|
 | free | 0 | 1,000 | 25 once | 1 | 5% + 18% GST |
+| starter (decoy) | 149 (1,499) | 3,000 | 25 once | 1 | 2% + GST |
 | creator | 199 (1,999) | no limit | 300/month | 1 | 2% + GST |
 | pro | 499 (4,999) | no limit | 2,000/month | 3 | 2% + GST |
 | agency | 1,499 (14,999) | no limit | 10,000/month | 10 | 2% + GST |
