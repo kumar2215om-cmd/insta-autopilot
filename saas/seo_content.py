@@ -755,7 +755,7 @@ GUIDES.update({
                   "questions about consultation types, prices and booking, while personal readings stay with the reader.",
         "sections": [
             ("A funnel for astrology content", "<ol><li><b>Reel</b>: \"this week for your sign\" ending with \"comment your sign\" (one automation with all 12 signs as keywords).</li>"
-             "<li><b>DM</b>: a choice menu by sign, each with its weekly reading or guide.</li>"
+             "<li><b>DM</b>: a choice menu so they pick their sign group, each option with its reading (a menu has up to 3 options, so group signs, e.g. by element, or make one automation per sign).</li>"
              "<li><b>Follow-up</b>: \"Want a personal reading? Consultations start at ₹499.\"</li>"
              "<li><b>WhatsApp capture</b> for booking, then collect birth details there.</li></ol>"),
             ("What the AI agent should answer", "<ul><li>Consultation types (call, chat, report), prices and duration.</li><li>How to book and pay, languages offered.</li></ul>"
@@ -764,7 +764,7 @@ GUIDES.update({
              "<li>Ask for birth details only for paid readings, and keep them private.</li></ul>"),
             ("Keyword ideas", "<p>The 12 signs (ARIES … PISCES), TAROT, READING, KUNDLI, NUMEROLOGY, LOVE, CAREER, REMEDY, CONSULT.</p>"),
         ],
-        "faq": [("Can one reel react to all 12 signs?", "Yes, add all 12 signs as keywords to one automation, and use a choice menu or the sign keyword to send the right reading."),
+        "faq": [("Can one reel react to all 12 signs?", "Yes. Either add all 12 signs as keywords to one automation that sends a menu, or create one automation per sign so each sign gets its own reading."),
                 ("Can the AI give readings?", "Set it to answer only about your services and booking; personal readings should come from you.")],
     },
 })
