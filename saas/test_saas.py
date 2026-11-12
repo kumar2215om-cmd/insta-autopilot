@@ -1082,7 +1082,8 @@ class SaasTest(unittest.TestCase):
         self.c.get("/logout")
         r = self.c.get(f"/l/{codes[0]}")
         self.assertEqual(r.status_code, 302)
-        self.assertIn(r.location, ("https://g.com/x?a=1", "https://shop.com"))
+        self.assertTrue(r.location.startswith(("https://g.com/x?a=1&utm_source=instagram&utm_medium=dm&utm_campaign=guide",
+                                                "https://shop.com?utm_source=instagram")), r.location)
         self.c.get(f"/l/{codes[1]}")
         self.assertEqual(self.c.get("/l/0000000000").status_code, 404)
         self.assertEqual(self.c.get("/l/../etc").status_code, 404)
@@ -1139,6 +1140,102 @@ class SaasTest(unittest.TestCase):
         self.c.put("/api/notifications/prefs", json={"lead": False, "handoff": True})
         self.assertEqual(self.c.get("/api/notifications").get_json()["prefs"]["lead"], False)
         self.assertEqual(push.notify({"demo": True, "id": "d"}, "x", "y"), 0)
+
+    def test_automation_insights(self):
+        self.login()
+        self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", dm="Guide https://g.com",
+                      menu=[{"title": "A", "text": "a"}, {"title": "B", "text": "b"}])
+        self.hook(dm("GUIDE", sender="31"))
+        self.tap("MENU|kw:GUIDE|1", sender="31")
+        r = self.c.get("/api/rules/kw:GUIDE/insights").get_json()
+        self.assertEqual(len(r["daily"]), 30)
+        self.assertEqual(r["daily"][-1]["runs"], 1)
+        self.assertEqual(r["last30"]["runs"], 1)
+        self.assertEqual(sum(r["hours"]), 1)
+        self.assertEqual(len(r["best_hours"]), 3)
+        self.assertEqual([m["picked"] for m in r["menu"]], [0, 1])
+        self.assertEqual(self.c.get("/api/rules/kw:NOPE/insights").status_code, 404)
+        # stats follow a next-post automation onto the reel, and go away with the automation
+        store.rule_count("1789", "next", "runs", 2)
+        store.move_rule_stats("1789", "next", "777")
+        self.assertEqual(store.rule_daily("1789", "777", 1)[0][1]["runs"], 2)
+        self.c.delete("/api/rules/kw:GUIDE", json={})
+        self.assertEqual(store.hash_all(store.account_key("1789", "rsd:kw:GUIDE")), {})
+
+    def test_sales_tracking_and_utm(self):
+        self.login()
+        self.assertEqual(self.c.post("/api/products", json={"name": "", "price": 1}).status_code, 400)
+        self.assertEqual(self.c.post("/api/products", json={"name": "X", "price": "abc"}).status_code, 400)
+        self.assertEqual(self.c.post("/api/products", json={"name": "X", "price": 9, "thanks_url": "javascript:alert(1)"}).status_code, 400)
+        prods = self.c.post("/api/products", json={"name": "Prompt pack", "price": "₹149"}).get_json()["products"]
+        self.c.post("/api/products", json={"name": "Course", "price": 999, "thanks_url": "https://me.com/thanks"})
+        pid, pid2 = [p["id"] for p in self.c.get("/api/sales").get_json()["products"]]
+        self.assertTrue(prods[0]["link"].endswith(f"/s/{pid}"))
+        with mock.patch.object(engine, "PUBLIC_URL", "https://replyinbox.in"):
+            self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", dm="Buy https://shop.com/p", label="Prompts reel")
+            self.hook(dm("GUIDE", sender="51"))
+            code = __import__("re").search(r"/l/([0-9a-f]{10})", json.dumps(self.ig.messages()[-1])).group(1)
+        self.c.get("/logout")
+        buyer = saas.app.test_client()
+        r = buyer.get(f"/l/{code}")
+        self.assertIn("utm_campaign=prompts-reel", r.location)
+        r = buyer.get(f"/s/{pid}")  # the payment page sends the buyer back here
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Payment received", r.get_data(as_text=True))
+        buyer.get(f"/s/{pid}")  # a refresh isn't a second sale
+        self.assertEqual(buyer.get(f"/s/{pid2}?order=ord_1").location, "https://me.com/thanks")
+        buyer.get(f"/s/{pid2}?order=ord_1")
+        saas.app.test_client().get(f"/s/{pid}")  # someone who never tapped a DM link
+        self.assertEqual(buyer.get("/s/ffffffffffff").status_code, 404)
+        self.login()
+        s = self.c.get("/api/sales").get_json()
+        self.assertEqual((s["sales"], s["revenue"]), (3, 149 + 999 + 149))
+        self.assertEqual(s["by_rule"]["kw:GUIDE"], {"sales": 2, "revenue": 1148, "link_clicks": 1})
+        self.assertEqual(s["daily"][-1]["revenue"], 1297)
+        self.assertEqual(s["recent"][0]["key"], "")
+        self.assertEqual(self.c.get("/api/rules/kw:GUIDE/insights").get_json()["last30"]["revenue"], 1148)
+        # UTM off: links go out as they are; existing utm tags are never touched
+        self.c.put("/api/utm", json={"on": False})
+        self.assertEqual(saas.app.test_client().get(f"/l/{code}").location, "https://shop.com/p")
+        self.assertEqual(engine.with_utm("https://a.com/?utm_source=yt", "x"), "https://a.com/?utm_source=yt")
+        self.assertEqual(engine.campaign_of("18001234567890", {}), "reel-567890")
+        self.c.delete(f"/api/products/{pid}", json={})
+        self.assertEqual(saas.app.test_client().get(f"/s/{pid}").status_code, 404)
+        self.assertEqual(self.c.get("/app/sales").status_code, 200)
+
+    def test_health_alerts(self):
+        import push
+        self.login()
+        notes = []
+        with mock.patch.object(push, "notify", lambda acc, title, body, url="/app": notes.append(title) or 1):
+            acc = store.load_account("1789")
+            store.redis("DEL", store.account_key("1789", "counts"))
+            self.put_rule("kw:A", keywords=["A"], require_follow=False, comment_reply="", dm="hi")
+            acc["dm_limit"] = 5
+            store.save_account(acc)
+            for i in range(5):
+                self.hook(dm("A", sender=f"6{i}", mid=f"h{i}"))
+            self.assertEqual([n for n in notes if "DM" in n], ["80% of your DMs used ⚠️", "Monthly DM limit reached ⛔"])
+            notes.clear()
+            self.ig.dead = True
+            store.redis("DEL", store.account_key("1789", "counts"))
+            self.hook(dm("A", sender="69", mid="h9"))
+            store.redis("DEL", store.account_key("1789", "counts"))
+            self.hook(dm("A", sender="70", mid="h10"))
+            self.assertEqual(notes.count("Instagram logged you out ⚠️"), 1)  # once a day, not on every failure
+            self.ig.dead = False
+            store.redis("DEL", store.account_key("1789", "token_dead"))
+            notes.clear()
+            acc = store.load_account("1789")
+            for i in range(engine.REFUSED_ALERT):
+                engine.add_retry(acc, f"cm{i}", {"key": "kw:A"})
+            self.assertEqual(notes, ["Instagram is refusing DMs"])
+            notes.clear()
+            self.c.put("/api/notifications/prefs", json={"health": False, "lead": True, "handoff": True, "sale": True})
+            store.redis("DEL", f"s:seen:1789:alert:refused")
+            engine.add_retry(store.load_account("1789"), "cmx", {"key": "kw:A"})
+            self.assertEqual(notes, [])
+        self.assertIn("health", [a["action"] for a in self.c.get("/api/activity?all=1").get_json()])
 
     def test_pages_render(self):
         for path in ("/", "/privacy", "/terms", "/data-deletion"):

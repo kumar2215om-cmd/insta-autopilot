@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import requests
-from flask import Flask, abort, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, session, url_for
 
 import ai_agent
 import demo
@@ -114,6 +114,7 @@ def public_account(acc):
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
+    ("sales", "/app/sales", "Sales", True),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("settings", "/app/settings", "Settings", True),
@@ -760,7 +761,7 @@ def api_delete_rule(key):
     rules = store.load_rules(acc["id"])
     rules.get("reels", {}).pop(key, None)
     store.save_rules(acc["id"], rules)
-    store.redis("DEL", store.account_key(acc["id"], f"rs:{key}"), store.account_key(acc["id"], f"ab:{key}"))
+    store.redis("DEL", *[store.account_key(acc["id"], f"{p}:{key}") for p in ("rs", "rsd", "rsh", "ab")])
     return jsonify(rules)
 
 
@@ -983,10 +984,112 @@ def api_test_integration():
 
 # ---------- welcome message, short links, send to recent chats ----------
 
+COOKIE_DAYS = 30
+
+
 @app.get("/l/<code>")
 def short_link(code):
     url = engine.link_click(code) if re.fullmatch(r"[0-9a-f]{10}", code) else ""
-    return redirect(url) if url else abort(404)
+    if not url:
+        abort(404)
+    # Remember the last DM link this browser tapped, so a sale on the creator's payment page can be credited to it.
+    resp = redirect(url)
+    resp.set_cookie("ri_l", code, max_age=COOKIE_DAYS * 86400, secure=request.is_secure, httponly=True, samesite="Lax")
+    return resp
+
+
+@app.get("/s/<pid>")
+def sale_return(pid):
+    """Payment pages redirect here after a successful payment (set as their "redirect URL"). Counts the sale."""
+    if not re.fullmatch(r"[0-9a-f]{12}", pid):
+        abort(404)
+    visitor = request.cookies.get("ri_v") or secrets.token_hex(8)
+    order = re.sub(r"[^A-Za-z0-9_-]", "", request.args.get("order") or request.args.get("razorpay_payment_id")
+                   or request.args.get("payment_id") or "")[:64]
+    acc, prod = engine.record_sale(pid, request.cookies.get("ri_l", ""), visitor, order)
+    if not prod:
+        abort(404)
+    resp = redirect(prod["thanks_url"]) if prod.get("thanks_url") else make_response(render_template(
+        "thanks.html", product=prod["name"], creator=acc.get("username", "")))
+    resp.set_cookie("ri_v", visitor, max_age=365 * 86400, secure=request.is_secure, httponly=True, samesite="Lax")
+    return resp
+
+
+@app.get("/api/sales")
+def api_sales():
+    acc = current_account()
+    days = store.days(acc["id"], 30)
+    keys = list(store.load_rules(acc["id"]).get("reels", {}))
+    by_rule = {k: v for k, v in store.rule_stats(acc["id"], keys).items() if v.get("sales")}
+    c = store.counts(acc["id"])
+    return jsonify(products=[{**p, "link": f"{base_url()}/s/{p['id']}"} for p in engine.products(acc)],
+                   sales=c.get("sales", 0), revenue=c.get("revenue", 0), link_clicks=c.get("link_clicks", 0),
+                   daily=[{"date": d, "sales": v.get("sales", 0), "revenue": v.get("revenue", 0)} for d, v in days],
+                   recent=[json.loads(x) for x in store.redis("LRANGE", store.account_key(acc["id"], "sales"), 0, 19) or []],
+                   by_rule={k: {"sales": v.get("sales", 0), "revenue": v.get("revenue", 0), "link_clicks": v.get("link_clicks", 0)}
+                            for k, v in by_rule.items()},
+                   utm=acc.get("utm", True))
+
+
+@app.post("/api/products")
+def api_add_product():
+    acc = current_account()
+    data = request.get_json(force=True)
+    name = str(data.get("name", "")).strip()[:80]
+    try:
+        price = int(float(str(data.get("price", "0")).replace(",", "").replace("₹", "").strip() or 0))
+    except ValueError:
+        price = -1
+    thanks = str(data.get("thanks_url", "")).strip()
+    if not name:
+        return jsonify(error="Give the product a name."), 400
+    if not 0 <= price <= 1_000_000:
+        return jsonify(error="Price must be a number in ₹."), 400
+    if thanks and not safe_url(thanks):
+        return jsonify(error="The thank-you page must start with https://"), 400
+    items = engine.products(acc)
+    if len(items) >= engine.MAX_PRODUCTS:
+        return jsonify(error=f"Up to {engine.MAX_PRODUCTS} products."), 400
+    pid = secrets.token_hex(6)
+    store.redis("SET", f"s:prod:{pid}", acc["id"])
+    acc["products"] = items + [{"id": pid, "name": name, "price": price, "thanks_url": safe_url(thanks) if thanks else ""}]
+    store.save_account(acc)
+    return api_sales()
+
+
+@app.delete("/api/products/<pid>")
+def api_delete_product(pid):
+    acc = current_account()
+    acc["products"] = [p for p in engine.products(acc) if p["id"] != pid]
+    store.save_account(acc)
+    if store.redis("GET", f"s:prod:{pid}") == acc["id"]:
+        store.redis("DEL", f"s:prod:{pid}")
+    return api_sales()
+
+
+@app.put("/api/utm")
+def api_utm():
+    acc = current_account()
+    acc["utm"] = bool(request.get_json(force=True).get("on"))
+    store.save_account(acc)
+    return jsonify(utm=acc["utm"])
+
+
+@app.get("/api/rules/<key>/insights")
+def api_rule_insights(key):
+    """30 days of one automation's numbers, its busiest hours and how its menu options were picked."""
+    acc = current_account()
+    rule = store.load_rules(acc["id"]).get("reels", {}).get(key)
+    if not rule:
+        return jsonify(error="Automation not found"), 404
+    fields = ("runs", "clicks", "link_clicks", "follows", "leads", "sales", "revenue")
+    daily = [{"date": d, **{f: v.get(f, 0) for f in fields}} for d, v in store.rule_daily(acc["id"], key, 30)]
+    total = store.rule_stats(acc["id"], [key])[key]
+    hours = store.rule_hours(acc["id"], key)
+    best = sorted(range(24), key=lambda h: -hours[h])[:3] if any(hours) else []
+    menu = [{"title": m.get("title", ""), "picked": total.get(f"menu_{i}", 0)} for i, m in enumerate(rule.get("menu") or [])]
+    return jsonify(daily=daily, total={f: total.get(f, 0) for f in fields}, hours=hours, best_hours=best, menu=menu,
+                   last30={f: sum(d[f] for d in daily) for f in fields})
 
 
 @app.get("/api/welcome")
@@ -1075,7 +1178,7 @@ def api_broadcast():
 @app.get("/api/notifications")
 def api_notifications():
     acc = current_account()
-    return jsonify(key=push.public_key(), devices=push.devices(acc["id"]), prefs=acc.get("notify") or {"handoff": True, "lead": True})
+    return jsonify(key=push.public_key(), devices=push.devices(acc["id"]), prefs={"handoff": True, "lead": True, "sale": True, "health": True, **(acc.get("notify") or {})})
 
 
 @app.post("/api/notifications/subscribe")
@@ -1100,7 +1203,7 @@ def api_push_unsubscribe():
 def api_push_prefs():
     acc = current_account()
     data = request.get_json(force=True)
-    acc["notify"] = {"handoff": bool(data.get("handoff")), "lead": bool(data.get("lead"))}
+    acc["notify"] = {k: bool(data.get(k, True)) for k in ("handoff", "lead", "sale", "health")}
     store.save_account(acc)
     return jsonify(prefs=acc["notify"])
 
@@ -1153,6 +1256,11 @@ def api_activity_csv():
 @app.get("/app/activity")
 def activity_page():
     return render_app("activity.html", "activity")
+
+
+@app.get("/app/sales")
+def sales_page():
+    return render_app("sales.html", "sales")
 
 
 @app.post("/api/pause")
@@ -1548,6 +1656,8 @@ def cron_refresh_tokens():
             failed += 1
             store.log_activity(ig_id, "", "", "", "token_refresh", "error",
                                f"Couldn't renew the Instagram login. Log in again. | {e}")
+            engine.alert(acc, "renew", "Your Instagram login needs renewing ⚠️",
+                         "Log in with Instagram again soon, or Auto DMs will stop when the login expires.", "/app")
     return jsonify(refreshed=done, failed=failed)
 
 

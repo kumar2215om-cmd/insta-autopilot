@@ -1,0 +1,136 @@
+{% extends "_base.html" %}
+{% block title %}Sales{% endblock %}
+{% block heading %}Sales{% endblock %}
+{% block head %}
+<style>
+  .chart svg { width:100%; height:auto; display:block; }
+  .chart .ax { display:flex; justify-content:space-between; font:500 11px var(--mono); color:var(--mute); margin-top:4px; }
+  .tbl { width:100%; border-collapse:collapse; font-size:14px; }
+  .tbl th { text-align:left; font:500 11px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); padding:0 8px 8px; }
+  .tbl td { padding:10px 8px; border-top:1px solid var(--line2); }
+  .tbl td.n, .tbl th.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .prod { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:10px; align-items:center; padding:12px 0; border-top:1px solid var(--line2); }
+  .prod:first-child { border-top:0; }
+  .prod code { display:block; font:500 12.5px var(--mono); color:var(--mute); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
+  .addp { display:grid; grid-template-columns:minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr) auto; gap:10px; align-items:end; }
+  .addp input { width:100%; }
+  code { overflow-wrap:anywhere; }
+  .steps { margin:0; padding-left:20px; display:grid; gap:6px; font-size:14px; color:var(--body); }
+  .scroll { overflow-x:auto; }
+  @media (max-width: 760px) { .addp { grid-template-columns:1fr 1fr; } .addp .wide { grid-column:1 / -1; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="grid">
+  <div class="card tile"><div class="k">Revenue</div><div class="n" id="tRev">–</div><div class="d">all time, from your sales links</div></div>
+  <div class="card tile"><div class="k">Sales</div><div class="n" id="tSales">–</div><div class="d" id="tSalesD">all time</div></div>
+  <div class="card tile"><div class="k">DM link opens</div><div class="n" id="tClicks">–</div><div class="d" id="tConv">–</div></div>
+</div>
+
+<section class="card">
+  <div class="row"><h2 style="margin-right:auto">Last 30 days</h2><span class="small muted" id="rev30"></span></div>
+  <div class="chart" id="chart"><div class="empty">Loading…</div></div>
+</section>
+
+<section class="card">
+  <h2>Sales by automation</h2>
+  <p class="muted small" style="margin:4px 0 10px">A sale counts for the last DM link the buyer tapped (within 30 days, same phone).</p>
+  <div class="scroll"><table class="tbl" id="byRule"></table></div>
+</section>
+
+<section class="card" style="display:grid; gap:14px">
+  <div><h2>Your products</h2>
+    <p class="muted small" style="margin:4px 0 0">Add each thing you sell, then paste its sales link into your payment page as the page people land on after paying.</p></div>
+  <div id="prods"></div>
+  <form class="addp" id="addForm">
+    <div><label class="lbl" for="pName">Product</label><input id="pName" name="name" type="text" maxlength="80" placeholder="Prompt pack" required></div>
+    <div><label class="lbl" for="pPrice">Price (₹)</label><input id="pPrice" name="price" type="number" min="0" max="1000000" step="1" placeholder="149" required></div>
+    <div class="wide"><label class="lbl" for="pThanks">Your thank-you page <span class="muted">(optional)</span></label><input id="pThanks" name="thanks_url" type="url" placeholder="https://… (else we show a simple thank-you page)"></div>
+    <button class="btn" type="submit">Add product</button>
+  </form>
+  <p class="small" id="addMsg" style="margin:0"></p>
+  <details class="blk"><summary><b>How to connect your payment page</b></summary>
+    <ol class="steps" style="margin-top:10px">
+      <li>Open your payment page's settings (for example Razorpay Payment Pages or Instamojo) and look for <b>"Redirect after payment"</b> or <b>"Thank-you page URL"</b>.</li>
+      <li>Paste the product's sales link from above and save.</li>
+      <li>Put your payment page's link in your Auto DMs as usual. {{ brand }} counts the click, and the sale when the buyer lands on the sales link.</li>
+      <li>Optional: add <code>?order=ORDER_ID</code> if your payment page can pass the order number, so a refresh is never counted twice.</li>
+    </ol>
+    <p class="hint" style="margin:10px 0 0">No redirect option on your payment page? Clicks and UTM tags still work; only the ₹ numbers need the redirect.</p>
+  </details>
+</section>
+
+<section class="card">
+  <div class="row"><h2 style="margin-right:auto">Where buyers come from (UTM tags)</h2><label class="small"><input type="checkbox" id="utm"> <b>Add UTM tags to DM links</b></label></div>
+  <p class="muted small" style="margin:6px 0 0">Your website, Shopify or Google Analytics then shows which reel each visitor came from, e.g.
+    <code id="utmEx">?utm_source=instagram&amp;utm_medium=dm&amp;utm_campaign=prompts-reel</code>. Links that already have UTM tags, and automations with click counting off, are left as they are.</p>
+</section>
+
+<section class="card">
+  <h2>Recent sales</h2>
+  <div id="recent" class="small"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let data = null, reels = {};
+const day = (d) => new Date(d + "T00:00:00").toLocaleDateString(undefined, {day: "numeric", month: "short"});
+function ruleName(key) {
+  const r = reels[key];
+  if (!key) return "Not from a DM link";
+  if (!r) return "Deleted automation";
+  return r.label || (r.keywords || [])[0] || ({"*": "Any post", next: "Next post", live: "Live comments", "story:reply": "Story replies", "story:mention": "Story mentions"}[key])
+    || (/^\d+$/.test(key) ? "Reel " + key.slice(-5) : key.replace("kw:", ""));
+}
+function chart(daily) {
+  const W = 600, H = 160, v = daily.map(d => d.revenue), max = Math.max(1, ...v), bw = W / v.length;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Revenue per day: ${esc(daily.map(d => `${day(d.date)} ₹${d.revenue}`).join(", "))}">${v.map((x, i) => {
+    const h = x ? Math.max(3, x / max * (H - 8)) : 0;
+    return `<rect x="${(i * bw + bw * .15).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="url(#rg)"><title>${esc(day(daily[i].date))}: ₹${fmt(x)} · ${fmt(daily[i].sales)} sales</title></rect>`;
+  }).join("")}<defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7B5CFF"/><stop offset="1" stop-color="#FF7A59"/></linearGradient></defs>
+  <line x1="0" y1="${H - .5}" x2="${W}" y2="${H - .5}" stroke="currentColor" stroke-opacity=".15"/></svg>
+  <div class="ax"><span>${day(daily[0].date)}</span><span>${day(daily[14].date)}</span><span>Today</span></div>`;
+}
+function draw() {
+  const d = data;
+  $("tRev").textContent = "₹" + fmt(d.revenue); $("tSales").textContent = fmt(d.sales); $("tClicks").textContent = fmt(d.link_clicks);
+  $("tConv").textContent = d.link_clicks ? `${(100 * d.sales / d.link_clicks).toFixed(1)}% of opens became a sale` : "links in your DMs, tapped";
+  const r30 = d.daily.reduce((a, x) => a + x.revenue, 0), s30 = d.daily.reduce((a, x) => a + x.sales, 0);
+  $("rev30").textContent = `₹${fmt(r30)} · ${fmt(s30)} sales`;
+  $("chart").innerHTML = d.sales ? chart(d.daily) : `<div class="empty">No sales yet. Add a product below and connect your payment page.</div>`;
+  const rows = Object.entries(d.by_rule).sort((a, b) => b[1].revenue - a[1].revenue);
+  $("byRule").innerHTML = rows.length ? `<thead><tr><th>Automation</th><th class="n">Link opens</th><th class="n">Sales</th><th class="n">Revenue</th></tr></thead><tbody>${rows.map(([k, v]) =>
+    `<tr><td><a href="/app/automations#${encodeURIComponent(k)}">${esc(ruleName(k))}</a></td><td class="n">${fmt(v.link_clicks)}</td><td class="n">${fmt(v.sales)}</td><td class="n"><b>₹${fmt(v.revenue)}</b></td></tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="muted">Sales from your Auto DMs will show here.</td></tr></tbody>`;
+  $("prods").innerHTML = d.products.length ? d.products.map(p => `<div class="prod"><div><b>${esc(p.name)}</b> · ₹${fmt(p.price)}
+      <code title="${esc(p.link)}">${esc(p.link)}</code></div>
+      <div class="row"><button class="btn ghost sm" type="button" data-copy="${esc(p.link)}">Copy sales link</button><button class="btn danger sm" type="button" data-del="${esc(p.id)}" aria-label="Delete ${esc(p.name)}">Delete</button></div></div>`).join("")
+    : `<p class="muted small" style="margin:0">No products yet.</p>`;
+  $("utm").checked = d.utm;
+  $("recent").innerHTML = d.recent.length ? d.recent.map(x => `<div class="prod"><div><b>₹${fmt(x.price)}</b> · ${esc(x.product)}<div class="muted">${esc(ruleName(x.key))}</div></div>
+      <span class="muted">${esc(new Date(x.at * 1000).toLocaleString())}</span></div>`).join("") : `<p class="muted" style="margin:0">Nothing yet.</p>`;
+}
+$("addForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const f = e.target, msg = $("addMsg");
+  try { data = await api("/api/products", {method: "POST", body: JSON.stringify({name: f.name.value, price: f.price.value, thanks_url: f.thanks_url.value})});
+    draw(); f.reset(); msg.className = "small ok"; msg.textContent = "Added. Copy its sales link into your payment page ✓";
+  } catch (err) { msg.className = "small err"; msg.textContent = err.message; }
+};
+document.addEventListener("click", async (e) => {
+  const c = e.target.closest("[data-copy]");
+  if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); toast("Sales link copied"); } catch (err) { prompt("Copy this link", c.dataset.copy); } return; }
+  const d = e.target.closest("[data-del]");
+  if (d) {
+    if (!d.dataset.sure) { d.dataset.sure = "1"; d.textContent = "Sure? Its link stops working"; return; }
+    try { data = await api(`/api/products/${d.dataset.del}`, {method: "DELETE", body: "{}"}); draw(); toast("Product deleted"); } catch (err) { toast(err.message); }
+  }
+});
+$("utm").onchange = async () => { try { await api("/api/utm", {method: "PUT", body: JSON.stringify({on: $("utm").checked})}); toast($("utm").checked ? "UTM tags on" : "UTM tags off"); } catch (err) { toast(err.message); } };
+(async () => {
+  loadBanners();
+  try { reels = (await api("/api/rules")).reels || {}; } catch (e) {}
+  data = await api("/api/sales"); draw();
+})();
+</script>
+{% endblock %}

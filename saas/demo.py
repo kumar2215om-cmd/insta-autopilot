@@ -63,7 +63,7 @@ def seed():
            "auto_setup": {"enabled": True, "since": "2026-01-01T00:00:00+0000",
                           "template": {"comment_reply": "@{username} Check your DM 📩", "require_follow": True,
                                        "dm": "Here you go 🎁 https://example.com/free?k={keyword}"}},
-           "plan": "pro",
+           "plan": "pro", "products": DEMO_PRODUCTS,
            "saved_replies": [{"title": "UPI kaise karu?", "text": "Link pe UPI, card ya netbanking sab chalta hai {username} 🙌 Payment ke turant baad download mil jayega."},
                              {"title": "Refund", "text": "Sorry {username}! Apna payment screenshot bhej do, main 24 ghante mein check karke batata hoon 🙏"},
                              {"title": "Collab", "text": "Thanks for reaching out! 🙌 Please email your brief and budget, I'll reply within 2 days."}],
@@ -163,6 +163,7 @@ def seed():
             store.rule_count(DEMO_ID, key, field, n)
     for field, n in (("emails", 29), ("phones", 18)):
         store.count(DEMO_ID, field, n)
+    seed_insights()
     store.redis("DEL", store.account_key(DEMO_ID, "ab:18000000000000001"))
     for field, n in (("sent_A", 176), ("tap_A", 118), ("link_A", 97), ("follow_A", 41),
                      ("sent_B", 181), ("tap_B", 139), ("link_B", 121), ("follow_B", 52)):
@@ -192,3 +193,58 @@ def is_demo(acc):
 
 def dumps(value):
     return json.dumps(value, ensure_ascii=False)
+
+
+DEMO_PRODUCTS = [{"id": "d0d0d0d0d001", "name": "AI Prompt Pack", "price": 149, "thanks_url": ""},
+                 {"id": "d0d0d0d0d002", "name": "Reels Masterclass", "price": 999, "thanks_url": ""}]
+
+
+def seed_insights():
+    """30 days of believable per-automation numbers, busiest hours, link opens and sales for the demo."""
+    import math
+    import random as rnd
+    rng = rnd.Random(7)
+    plan = {"18000000000000001": (12, .82, .45, 6), "18000000000000002": (4, .8, .4, 2), "kw:AUDIT": (1.4, .6, 0, .3),
+            "story:reply": (2, .7, .2, .4)}
+    hours = [1, 0, 0, 0, 0, 1, 2, 4, 6, 7, 8, 9, 10, 9, 8, 8, 9, 11, 14, 17, 20, 22, 16, 7]
+    revenue = sales = 0
+    log, per_day = [], {}
+    for key, (base, open_rate, follow_rate, buy) in plan.items():
+        for p in ("rsd", "rsh"):
+            store.redis("DEL", store.account_key(DEMO_ID, f"{p}:{key}"))
+        tot = {}
+        for i in range(30):
+            wave = 1 + .6 * math.sin(i / 3.2) + (2.2 if i in (3, 4) else 0)
+            day = {"runs": max(0, round(base * wave * rng.uniform(.6, 1.4)))}
+            day["link_clicks"] = round(day["runs"] * open_rate * rng.uniform(.8, 1.05))
+            day["follows"] = round(day["runs"] * follow_rate * rng.uniform(.7, 1.1))
+            day["leads"] = round(day["runs"] * .12 * rng.uniform(.5, 1.5))
+            s = sum(1 for _ in range(day["link_clicks"]) if rng.random() < buy / 100 * 6)
+            prod = DEMO_PRODUCTS[0] if key != "kw:AUDIT" else DEMO_PRODUCTS[1]
+            day["sales"], day["revenue"] = s, s * prod["price"]
+            for f, n in day.items():
+                if n:
+                    store.redis("HINCRBY", store.account_key(DEMO_ID, f"rsd:{key}"), f"{store.day_str(i)}|{f}", n)
+                    tot[f] = tot.get(f, 0) + n
+            if s:
+                sales += s
+                revenue += day["revenue"]
+                per_day.setdefault(i, [0, 0])
+                per_day[i][0] += s
+                per_day[i][1] += day["revenue"]
+                log.append({"product": prod["name"], "price": prod["price"], "key": key, "at": int(time.time()) - i * 86400 - rng.randint(0, 80000)})
+        for h, w in enumerate(hours):
+            store.redis("HSET", store.account_key(DEMO_ID, f"rsh:{key}"), f"{h}|runs", round(w * base * 1.3))
+        for f in ("runs", "link_clicks", "follows", "leads", "sales", "revenue"):
+            store.redis("HSET", store.account_key(DEMO_ID, f"rs:{key}"), f, tot.get(f, 0))
+    for i, (n, rev) in per_day.items():  # HSET, so visiting the demo again doesn't add the numbers twice
+        store.redis("HSET", store.account_key(DEMO_ID, f"day:{store.day_str(i)}"), "sales", n)
+        store.redis("HSET", store.account_key(DEMO_ID, f"day:{store.day_str(i)}"), "revenue", rev)
+    store.redis("HSET", store.account_key(DEMO_ID, "counts"), "sales", sales)
+    store.redis("HSET", store.account_key(DEMO_ID, "counts"), "revenue", revenue)
+    store.redis("HSET", store.account_key(DEMO_ID, "counts"), "link_clicks", 1240)
+    store.redis("DEL", store.account_key(DEMO_ID, "sales"))
+    for x in sorted(log, key=lambda x: x["at"])[-20:]:
+        store.redis("LPUSH", store.account_key(DEMO_ID, "sales"), json.dumps(x))
+    for p in DEMO_PRODUCTS:
+        store.redis("SET", f"s:prod:{p['id']}", DEMO_ID)

@@ -18,6 +18,19 @@
   .toolbar input { flex:1; min-width:200px; }
   .toolbar select { width:auto; }
   /* list */
+  .numbtn { border:0; background:none; font:inherit; color:inherit; cursor:pointer; padding:4px 8px; border-radius:8px; text-decoration:underline dotted var(--line); text-underline-offset:4px; }
+  .numbtn:hover { background:var(--accent-soft); color:var(--accent-ink); }
+  .ins-m { display:grid; grid-template-columns:repeat(auto-fit, minmax(92px, 1fr)); gap:8px; }
+  .ins-m button { text-align:left; border:1px solid var(--line); background:var(--card); border-radius:12px; padding:10px 12px; cursor:pointer; font:inherit; color:var(--ink); }
+  .ins-m button[aria-pressed="true"] { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .ins-m .k { font:500 10.5px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
+  .ins-m .v { font:600 20px var(--display); letter-spacing:-.03em; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .ins-chart svg { width:100%; height:auto; display:block; }
+  .ins-chart .ax { display:flex; justify-content:space-between; font:500 11px var(--mono); color:var(--mute); margin-top:4px; }
+  .funnel { display:grid; gap:6px; }
+  .funnel div { display:grid; grid-template-columns:120px minmax(0, 1fr) 70px; gap:10px; align-items:center; font-size:13.5px; }
+  .funnel i { display:block; height:10px; border-radius:99px; background:var(--grad); min-width:2px; }
+  .funnel b { text-align:right; font-variant-numeric:tabular-nums; }
   .thead, .arow { display:grid; grid-template-columns:minmax(0, 1fr) 120px 80px 110px 110px 44px; gap:12px; align-items:center; }
   .thead { padding:0 18px; font:500 11.5px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
   .thead span:not(:first-child), .arow .num { text-align:center; }
@@ -180,6 +193,11 @@
   <div class="tpls" id="tpls"></div>
 </div>
 
+<dialog class="wiz" id="ins" aria-labelledby="insTitle">
+  <div class="wh"><span aria-hidden="true">📊</span><b id="insTitle">Insights</b><button class="x" type="button" id="insClose" aria-label="Close">×</button></div>
+  <div class="wb" id="insBody"></div>
+</dialog>
+
 <dialog class="wiz" id="wiz" aria-labelledby="wizTitle">
   <div class="wh"><span id="wizIcon" aria-hidden="true"></span><b id="wizTitle">Create automation</b><button class="x" type="button" id="wizClose" aria-label="Close">×</button></div>
   <div class="wb" id="wizBody"></div>
@@ -259,9 +277,9 @@ function rowHtml(key) {
   return `<div class="arow" data-key="${esc(key)}">
     <div class="who2" data-edit="${esc(key)}" role="button" tabindex="0" aria-label="Edit ${esc(title)}">${thumb}<div class="t"><b>${esc(title)}</b>
       <div class="chips"><span class="chip">${esc(t.label)}</span>${(r.keywords || []).slice(0, 4).map(k => `<span class="chip kw">${esc(k)}</span>`).join("")}
-        ${r.auto ? `<span class="chip">✨ auto-setup</span>` : ""}${r.opening_dm_b ? `<span class="chip">A/B</span>` : ""}${(r.menu || []).length ? `<span class="chip">☰ menu</span>` : ""}${st.link_clicks ? `<span class="chip">🔗 ${fmt(st.link_clicks)} opened</span>` : ""}</div></div></div>
+        ${r.auto ? `<span class="chip">✨ auto-setup</span>` : ""}${r.opening_dm_b ? `<span class="chip">A/B</span>` : ""}${(r.menu || []).length ? `<span class="chip">☰ menu</span>` : ""}${st.link_clicks ? `<span class="chip">🔗 ${fmt(st.link_clicks)} opened</span>` : ""}${st.revenue ? `<span class="chip" style="background:var(--ok-soft); border-color:transparent">💰 ₹${fmt(st.revenue)}</span>` : ""}</div></div></div>
     <div class="num fcol"><span class="fire">🔥 ${fmt(st.follows || 0)}</span></div>
-    <div class="num">${fmt(st.runs || 0)}</div>
+    <div class="num"><button class="numbtn" type="button" data-ins="${esc(key)}" title="See insights" aria-label="${fmt(st.runs || 0)} runs, see insights">${fmt(st.runs || 0)}</button></div>
     <div class="num">${fmt(st.clicks || 0)}</div>
     <div class="num"><span class="pill ${cls}">${lbl}</span></div>
     <button class="dots" type="button" data-menu="${esc(key)}" aria-label="More actions" aria-haspopup="true">⋮</button>
@@ -285,6 +303,7 @@ function drawList() {
 function menuHtml(key) {
   const r = rules.reels[key], m = mediaById(key);
   return `<div class="menu" role="menu">
+    <button type="button" data-act="insights">📊 Insights</button>
     <button type="button" data-act="edit">✏️ Edit</button>
     <button type="button" data-act="rename">🏷️ Rename</button>
     <button type="button" data-act="toggle">${r.enabled === false ? "▶️ Resume automation" : "⏸️ Pause automation"}</button>
@@ -314,6 +333,7 @@ document.addEventListener("click", async (e) => {
     if (a.dataset.act === "past" && !a.dataset.sure) { a.dataset.sure = "1"; a.textContent = "⏪ Click again: sends real DMs"; return; }
     closeMenu();
     try {
+      if (a.dataset.act === "insights") return openInsights(key);
       if (a.dataset.act === "edit") return openWizard({key});
       if (a.dataset.act === "dup") return openWizard({key, duplicate: true});
       if (a.dataset.act === "rename") { const name = prompt("Name this automation", r.label || ""); if (name === null) return; await saveRule(key, {...r, label: name}); toast("Renamed"); }
@@ -617,6 +637,47 @@ $("wizNext").onclick = async () => {
   } catch (e) { $("wizErr").textContent = e.message; }
   $("wizNext").disabled = false;
 };
+
+/* ---------- insights for one automation ---------- */
+const INS_FIELDS = [["runs", "Runs"], ["link_clicks", "Link opens"], ["follows", "Follows"], ["leads", "Leads"], ["revenue", "Revenue"]];
+let ins = null;
+const hourName = (h) => `${h % 12 || 12} ${h < 12 ? "am" : "pm"}`;
+function barChart(values, labelOf) {
+  const W = 600, H = 150, n = values.length, max = Math.max(1, ...values), bw = W / n;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(labelOf(-1))}">${values.map((v, i) => {
+    const h = v ? Math.max(3, (v / max) * (H - 8)) : 0;
+    return `<rect x="${(i * bw + bw * .15).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${v === max && v ? "#6A4CFF" : "#B9AAFF"}"><title>${esc(labelOf(i))}</title></rect>`;
+  }).join("")}<line x1="0" y1="${H - .5}" x2="${W}" y2="${H - .5}" stroke="currentColor" stroke-opacity=".15"/></svg>`;
+}
+function drawInsights() {
+  const d = ins.data, f = ins.field, money = f === "revenue", fmtv = (v) => money ? "₹" + fmt(v) : fmt(v);
+  const vals = d.daily.map(x => x[f]), day = (i) => new Date(d.daily[i].date + "T00:00:00").toLocaleDateString(undefined, {day: "numeric", month: "short"});
+  const label = INS_FIELDS.find(x => x[0] === f)[1];
+  const L = d.last30, steps = [["Got the DM", L.runs], ["Opened the link", L.link_clicks], ["Followed you", L.follows], ["Shared contact", L.leads], ["Bought", L.sales]];
+  const top = Math.max(1, L.runs);
+  let h = `<div class="ins-m" role="group" aria-label="Pick a number">${INS_FIELDS.map(([k, n]) => `<button type="button" data-insf="${k}" aria-pressed="${k === f}"><div class="k">${n}</div><div class="v">${k === "revenue" ? "₹" + fmt(L[k]) : fmt(L[k])}</div></button>`).join("")}</div>
+    <p class="hint" style="margin:-8px 0 0">Last 30 days · all time: ${fmt(d.total.runs)} runs${d.total.revenue ? ` · ₹${fmt(d.total.revenue)} earned` : ""}</p>
+    <div class="ins-chart">${barChart(vals, (i) => i < 0 ? `${label} per day, last 30 days: ${vals.map((v, j) => `${day(j)} ${fmtv(v)}`).join(", ")}` : `${day(i)}: ${fmtv(vals[i])}`)}
+      <div class="ax"><span>${day(0)}</span><span>${day(14)}</span><span>Today</span></div></div>`;
+  if (L.runs) h += `<div><p class="lbl" style="margin:0 0 8px">From DM to sale (30 days)</p><div class="funnel">${steps.filter(([, v], i) => i === 0 || v).map(([n, v]) =>
+      `<div><span>${n}</span><i style="width:${Math.round(100 * v / top)}%"></i><b>${fmt(v)}${n === "Got the DM" ? "" : ` · ${Math.round(100 * v / top)}%`}</b></div>`).join("")}</div></div>`;
+  if (d.best_hours.length) h += `<div><p class="lbl" style="margin:0 0 4px">Busiest hours (India time)</p>
+      <p class="hint" style="margin:0 0 8px">Most activity around <b>${d.best_hours.map(hourName).join(", ")}</b>. Post a little before that.</p>
+      <div class="ins-chart">${barChart(d.hours, (i) => i < 0 ? "Runs by hour of the day" : `${hourName(i)}: ${fmt(d.hours[i])}`)}<div class="ax"><span>12 am</span><span>6 am</span><span>12 pm</span><span>6 pm</span><span>11 pm</span></div></div></div>`;
+  if (d.menu.length) h += `<div><p class="lbl" style="margin:0 0 8px">Menu options picked</p><div class="funnel">${d.menu.map(m => {
+      const all = Math.max(1, ...d.menu.map(x => x.picked)); return `<div><span>${esc(m.title)}</span><i style="width:${Math.round(100 * m.picked / all)}%"></i><b>${fmt(m.picked)}</b></div>`; }).join("")}</div></div>`;
+  $("insBody").innerHTML = h;
+}
+async function openInsights(key) {
+  const r = rules.reels[key];
+  $("insTitle").textContent = r.label || short((mediaById(key)?.caption || "").split("\n")[0], 50) || TKIND[triggerOf(key, r).trigger] || "Insights";
+  $("insBody").innerHTML = `<div class="empty">Loading…</div>`; $("ins").showModal();
+  try { ins = {field: "runs", data: await api(`/api/rules/${encodeURIComponent(key)}/insights`)}; drawInsights(); }
+  catch (err) { $("insBody").innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+}
+$("insClose").onclick = () => $("ins").close();
+$("ins").addEventListener("click", (e) => { if (e.target === $("ins")) $("ins").close(); const b = e.target.closest("[data-insf]"); if (b) { ins.field = b.dataset.insf; drawInsights(); } });
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-ins]"); if (b) openInsights(b.dataset.ins); });
 
 /* ---------- A/B numbers (shown in the wizard) ---------- */
 function abBox(key) {

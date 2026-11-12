@@ -1,0 +1,28 @@
+{% import "_logo.html" as logo %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="{{ logo.favicon }}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Payment received</title>
+{% include "_style.html" %}
+<style>
+  main { max-width:460px; margin:0 auto; padding:64px 16px; }
+  .card { text-align:center; }
+  h1 { font-size:28px; margin:8px 0 12px; }
+  .big { font-size:48px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <div class="big" aria-hidden="true">🎉</div>
+    <h1>Payment received</h1>
+    <p>Thank you for buying <b>{{ product }}</b>! Check your email or Instagram DMs for the next steps.</p>
+    {% if creator %}<p><a class="btn" href="https://instagram.com/{{ creator }}" rel="noopener">Back to @{{ creator }}</a></p>{% endif %}
+    <p class="muted small" style="margin-top:24px">Powered by {{ brand }}</p>
+  </div>
+</main>
+</body>
+</html>

@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timezone
 
 import requests
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import ai_agent
 import push
@@ -62,8 +63,10 @@ class Instagram:
         body = r.text.replace(" ", "")
         if '"code":190' in body:
             store.redis("SET", store.account_key(self.acc["id"], "token_dead"), 1)
+            alert(self.acc, "login", "Instagram logged you out ⚠️", "Auto DMs are paused. Open ReplyInbox and log in with Instagram again.", "/app")
         elif any(f'"code":{c},' in body for c in RATE_LIMIT_CODES):
             store.redis("SET", store.account_key(self.acc["id"], "rate_limited"), 1, "EX", RATE_LIMIT_BACKOFF)
+            alert(self.acc, "rate", "Instagram is slowing your DMs", "Too many DMs in a short time. ReplyInbox waits and continues on its own.", "/app/activity", 6 * 3600)
         raise RuntimeError(f"{r.status_code}: {r.text}")
 
     def get(self, path, **params):
@@ -152,6 +155,7 @@ def over_limit(acc):
 def note_dm(acc):
     store.count(acc["id"], f"dms:{month()}")
     store.count(acc["id"], "dms")
+    check_limit(acc)
 
 
 # ---------- matching ----------
@@ -439,13 +443,19 @@ PRIVATE_REPLY_WINDOW = 7 * 86400  # Instagram allows a DM reply to a comment onl
 MAX_RETRIES = 500
 
 
+REFUSED_ALERT = 10  # refused comment DMs waiting before the creator is told
+
+
 def retry_key(acc):
     return store.account_key(acc["id"], "retry")
 
 
 def add_retry(acc, comment_id, item):
-    if int(store.redis("HLEN", retry_key(acc)) or 0) < MAX_RETRIES:
+    waiting = int(store.redis("HLEN", retry_key(acc)) or 0)
+    if waiting < MAX_RETRIES:
         store.redis("HSET", retry_key(acc), comment_id, json.dumps(item, ensure_ascii=False))
+    if waiting + 1 >= REFUSED_ALERT:
+        alert(acc, "refused", "Instagram is refusing DMs", f"{waiting + 1} comment DMs couldn't be delivered. They'll be retried; check Auto DM for details.", "/app/automations")
 
 
 def pending_retries(acc):
@@ -892,8 +902,30 @@ def track(acc, key, url, rule=None):
     if not url or not PUBLIC_URL or (rule or {}).get("track_links") is False or url.startswith(PUBLIC_URL + "/l/"):
         return url
     code = hashlib.sha1(f"{acc['id']}|{key}|{url}".encode()).hexdigest()[:10]
-    store.redis("SET", f"s:link:{code}", json.dumps({"acc": acc["id"], "key": key, "url": url}), "EX", 180 * 86400)
+    store.redis("SET", f"s:link:{code}", json.dumps({"acc": acc["id"], "key": key, "url": url, "campaign": campaign_of(key, rule)}),
+                "EX", 180 * 86400)
     return f"{PUBLIC_URL}/l/{code}"
+
+
+def campaign_of(key, rule=None):
+    """A readable utm_campaign: the automation's name, else its keyword, else what triggers it."""
+    rule = rule or {}
+    name = rule.get("label") or ((rule.get("keywords") or [""])[0]) or key.replace("kw:", "")
+    if name.isdigit():
+        name = "reel-" + name[-6:]
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40]
+    return slug or "dm"
+
+
+def with_utm(url, campaign):
+    """Adds utm_source/medium/campaign so the creator's analytics shows the sale came from an Instagram DM.
+    Links that already carry utm_ tags are left as they are."""
+    parts = urlsplit(url)
+    query = parse_qsl(parts.query, keep_blank_values=True)
+    if any(k.startswith("utm_") for k, _ in query):
+        return url
+    query += [("utm_source", "instagram"), ("utm_medium", "dm"), ("utm_campaign", campaign or "dm")]
+    return urlunsplit(parts._replace(query=urlencode(query)))
 
 
 def track_text(acc, key, text, rule=None):
@@ -901,14 +933,81 @@ def track_text(acc, key, text, rule=None):
 
 
 def link_click(code):
-    """The target of a short link, counting the click; "" when unknown."""
+    """The target of a short link, counting the click; "" when unknown. UTM tags are added unless the creator turned them off."""
     raw = store.redis("GET", f"s:link:{code}")
     if not raw:
         return ""
     link = json.loads(raw)
     store.rule_count(link["acc"], link["key"], "link_clicks")
     store.count(link["acc"], "link_clicks")
-    return link["url"]
+    acc = store.load_account(link["acc"]) or {}
+    return with_utm(link["url"], link.get("campaign")) if acc.get("utm", True) else link["url"]
+
+
+# ---------- sales: a payment page redirects to /s/<product>, the last DM link they tapped gets the credit ----------
+
+MAX_PRODUCTS = 20
+
+
+def products(acc):
+    return acc.get("products") or []
+
+
+def record_sale(product_id, click_code, visitor, order=""):
+    """Counts one sale of the product (once per order, or once per visitor per 10 minutes). Returns (account, product)
+    or (None, None) when the product doesn't exist."""
+    owner = store.redis("GET", f"s:prod:{product_id}")
+    acc = store.load_account(owner) if owner else None
+    prod = next((p for p in products(acc or {}) if p["id"] == product_id), None)
+    if not prod:
+        return None, None
+    once = f"s:sale:{product_id}:{order}" if order else f"s:sale:{product_id}:v:{visitor}"
+    if not store.claim(once, 90 * 86400 if order else 600):
+        return acc, prod
+    key = ""
+    raw = store.redis("GET", f"s:link:{click_code}") if click_code else None
+    if raw:
+        link = json.loads(raw)
+        key = link["key"] if link["acc"] == acc["id"] else ""
+    price = int(prod.get("price") or 0)
+    store.count(acc["id"], "sales")
+    store.count(acc["id"], "revenue", price)
+    if key:
+        store.rule_count(acc["id"], key, "sales")
+        store.rule_count(acc["id"], key, "revenue", price)
+    sales = store.account_key(acc["id"], "sales")
+    store.redis("LPUSH", sales, json.dumps({"product": prod["name"], "price": price, "key": key, "at": int(time.time())},
+                                           ensure_ascii=False))
+    store.redis("LTRIM", sales, 0, 99)
+    store.log_activity(acc["id"], key, "", prod["name"], "sale", "ok", f"₹{price}" + ("" if key else " (not from a DM link)"))
+    send_hook(acc, "sale", {"product": prod["name"], "price": price, "automation": key})
+    if (acc.get("notify") or {}).get("sale", True):
+        push.notify(acc, f"New sale 💰 ₹{price:,}", f"{prod['name']}" + (" · from your Auto DM" if key else ""), "/app/sales")
+    return acc, prod
+
+
+# ---------- account health alerts ----------
+
+def alert(acc, kind, title, body, url="/app", every=86400):
+    """A push notification about a problem with the account, at most once per `every` seconds for each kind."""
+    if acc.get("demo") or (acc.get("notify") or {}).get("health") is False:
+        return False
+    if not store.claim(f"s:seen:{acc['id']}:alert:{kind}", every):
+        return False
+    store.log_activity(acc["id"], "", "", "", "health", "error", f"{title}: {body}")
+    push.notify(acc, title, body, url)
+    return True
+
+
+def check_limit(acc):
+    limit = monthly_limit(acc)
+    if not limit:
+        return
+    used = dms_this_month(acc["id"])
+    if used >= limit:
+        alert(acc, f"limit100:{month()}", "Monthly DM limit reached ⛔", f"All {limit:,} DMs are used. New comments won't get a DM until next month or you upgrade.", "/app/settings", 40 * 86400)
+    elif used >= 0.8 * limit:
+        alert(acc, f"limit80:{month()}", "80% of your DMs used ⚠️", f"{used:,} of {limit:,} DMs sent this month.", "/app/settings", 40 * 86400)
 
 
 # ---------- welcome message for people who DM for the first time ----------
@@ -1110,6 +1209,7 @@ def handle_email_reply(acc, igsid, text):
         store.redis("DEL", pending_key(acc, igsid))
         store.touch_contact(acc["id"], username, igsid, source=field, **{field: value})
         store.count(acc["id"], f"{field}s")
+        store.rule_count(acc["id"], wait["key"], "leads")
         send_hook(acc, "lead", {"username": username, field: value, "automation": wait["key"]})
         if (acc.get("notify") or {}).get("lead", True):
             push.notify(acc, "New lead 🎉", f"@{username or 'someone'} shared their {'email' if field == 'email' else 'WhatsApp number'}", "/app/contacts")
@@ -1163,9 +1263,7 @@ def attach_next(acc, media):
     rule["label"] = rule.get("label") or (media.get("caption") or "").strip().split("\n")[0][:120]
     reels[media["id"]] = rule
     store.save_rules(acc["id"], rules)
-    for f, n in store.hash_all(store.account_key(acc["id"], "rs:next")).items():
-        store.rule_count(acc["id"], media["id"], f, n)
-    store.redis("DEL", store.account_key(acc["id"], "rs:next"))
+    store.move_rule_stats(acc["id"], "next", media["id"])
     store.log_activity(acc["id"], media["id"], "", rule["label"], "auto_setup", "ok", "Next-post automation is now on this reel")
     return True
 

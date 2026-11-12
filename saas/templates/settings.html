@@ -12,7 +12,7 @@
 {% block content %}
 <section class="card" id="appCard">
   <div class="row"><h2 style="margin-right:auto">Phone app and notifications</h2><span class="badge" id="pushStatus">off</span></div>
-  <p class="muted small" style="margin:6px 0 12px">Put {{ brand }} on your home screen like an app, and get a notification when a new lead comes in or the AI hands you a chat.</p>
+  <p class="muted small" style="margin:6px 0 12px">Put {{ brand }} on your home screen like an app, and get a notification for new leads and sales, chats the AI hands you, and problems with your account.</p>
   <div class="row">
     <button class="btn sm" type="button" id="installBtn" hidden>📲 Install the app</button>
     <button class="btn sm" type="button" id="pushOn">🔔 Turn on notifications on this device</button>
@@ -23,6 +23,8 @@
   <div class="row small" style="margin-top:10px">
     <label><input type="checkbox" id="nLead"> New leads (email, WhatsApp, signups)</label>
     <label><input type="checkbox" id="nHandoff"> Chats the AI hands to you</label>
+    <label><input type="checkbox" id="nSale"> Sales</label>
+    <label><input type="checkbox" id="nHealth"> Account problems (logged out, DMs refused, limit near)</label>
   </div>
   <p class="small" id="pushMsg" style="margin:8px 0 0"></p>
 </section>
@@ -220,7 +222,7 @@ async function pushState() {
   const on = !!sub;
   $("pushStatus").className = `badge ${on ? "on" : ""}`; $("pushStatus").textContent = on ? `on · ${info.devices} device${info.devices === 1 ? "" : "s"}` : info.devices ? `${info.devices} other device${info.devices === 1 ? "" : "s"}` : "off";
   $("pushOn").hidden = on; $("pushOff").hidden = !on; $("pushTest").hidden = !on;
-  $("nLead").checked = info.prefs.lead !== false; $("nHandoff").checked = info.prefs.handoff !== false;
+  for (const [id, k] of [["nLead", "lead"], ["nHandoff", "handoff"], ["nSale", "sale"], ["nHealth", "health"]]) $(id).checked = info.prefs[k] !== false;
   return info;
 }
 $("pushOn").onclick = async () => {
@@ -242,7 +244,8 @@ $("pushOff").onclick = async () => {
 };
 $("pushTest").onclick = async () => { const r = await api("/api/notifications/test", {method: "POST", body: "{}"});
   $("pushMsg").className = "small ok"; $("pushMsg").textContent = r.sent ? "Test sent. It should arrive in a few seconds." : "Couldn't reach this device. Turn notifications off and on again."; };
-for (const id of ["nLead", "nHandoff"]) $(id).onchange = () => api("/api/notifications/prefs", {method: "PUT", body: JSON.stringify({lead: $("nLead").checked, handoff: $("nHandoff").checked})}).then(() => toast("Saved"));
+for (const id of ["nLead", "nHandoff", "nSale", "nHealth"]) $(id).onchange = () => api("/api/notifications/prefs", {method: "PUT", body: JSON.stringify(
+  {lead: $("nLead").checked, handoff: $("nHandoff").checked, sale: $("nSale").checked, health: $("nHealth").checked})}).then(() => toast("Saved"));
 pushState().catch(() => {});
 loadGuard();
 {% if role == "owner" %}

@@ -168,6 +168,37 @@ def take_due(limit=25):
 
 def rule_count(ig_id, key, field, n=1):
     redis("HINCRBY", account_key(ig_id, f"rs:{key}"), field, n)
+    # per day ("2026-11-12|runs") and per hour of the day in India ("21|runs") for the automation's insights
+    daily, hourly = account_key(ig_id, f"rsd:{key}"), account_key(ig_id, f"rsh:{key}")
+    redis("HINCRBY", daily, f"{day_str()}|{field}", n)
+    redis("EXPIRE", daily, 120 * 86400)
+    redis("HINCRBY", hourly, f"{time.gmtime(time.time() + 19800).tm_hour}|{field}", n)
+
+
+def rule_daily(ig_id, key, n=30):
+    """[(date, {field: count})] for the last n days, oldest first; days older than 90 are dropped."""
+    flat = hash_all(account_key(ig_id, f"rsd:{key}"))
+    old = [f for f in flat if f.split("|")[0] < day_str(90)]
+    if old:
+        redis("HDEL", account_key(ig_id, f"rsd:{key}"), *old)
+    out = []
+    for i in range(n - 1, -1, -1):
+        d = day_str(i)
+        out.append((d, {f.split("|", 1)[1]: v for f, v in flat.items() if f.startswith(d + "|")}))
+    return out
+
+
+def rule_hours(ig_id, key, field="runs"):
+    flat = hash_all(account_key(ig_id, f"rsh:{key}"))
+    return [flat.get(f"{h}|{field}", 0) for h in range(24)]
+
+
+def move_rule_stats(ig_id, old, new):
+    """Numbers follow an automation that moved (e.g. a next-post automation landing on the new reel)."""
+    for p in ("rs", "rsd", "rsh"):
+        for f, n in hash_all(account_key(ig_id, f"{p}:{old}")).items():
+            redis("HINCRBY", account_key(ig_id, f"{p}:{new}"), f, n)
+        redis("DEL", account_key(ig_id, f"{p}:{old}"))
 
 
 def rule_stats(ig_id, keys):
@@ -221,7 +252,7 @@ def delete_account(ig_id):
     if acc.get("username") and redis("GET", f"s:user:{acc['username'].lower()}") == ig_id:
         redis("DEL", f"s:user:{acc['username'].lower()}")
     redis("DEL", *[account_key(ig_id, f"day:{day_str(i)}") for i in range(41)])
-    abs_ = [account_key(ig_id, f"{p}:{k}") for k in load_rules(ig_id).get("reels", {}) for p in ("ab", "rs")]
+    abs_ = [account_key(ig_id, f"{p}:{k}") for k in load_rules(ig_id).get("reels", {}) for p in ("ab", "rs", "rsd", "rsh")]
     if abs_:
         redis("DEL", *abs_)
     threads = redis("HGETALL", account_key(ig_id, "threads")) or []

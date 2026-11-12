@@ -244,6 +244,22 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
   handoffs, per `acc.notify` prefs. Endpoints only on known push hosts; dead ones (404/410) are removed. iPhone needs the
   installed app (iOS 16.4+).
 
+## Automation insights, sales, UTM tags, health alerts
+- **Insights** (Auto DM → ⋮ → Insights, or click the Runs number): `GET /api/rules/<key>/insights` gives 30 days of
+  runs, link opens, follows, leads, sales and revenue, a DM-to-sale funnel, busiest hours (India time) and menu picks.
+  `store.rule_count` also writes `rsd:<key>` (`<date>|<field>`, days older than 90 pruned on read) and `rsh:<key>`
+  (`<hour>|<field>`). `store.move_rule_stats` moves all three when a next-post automation lands on its reel.
+- **Sales** (`/app/sales`): the creator adds products (name, ₹ price, optional thank-you page) and pastes each product's
+  sales link `/s/<12 hex>` into their payment page as the "redirect after payment" URL. `/l/<code>` sets the `ri_l` cookie
+  (last DM link tapped, 30 days); `/s/<id>` credits the sale to that automation (`engine.record_sale`: counts `sales` and
+  `revenue` per account, day and automation, logs it, sends the `sale` integration event and a push). One sale per
+  `?order=` / `razorpay_payment_id`, else per visitor (`ri_v`) per 10 minutes. No payment details are received.
+- **UTM tags:** `/l/<code>` adds `utm_source=instagram&utm_medium=dm&utm_campaign=<automation name>` unless the link
+  already has utm_ tags or the creator turned it off (`acc.utm`, Sales page, `PUT /api/utm`).
+- **Health alerts** (`engine.alert`, push + activity log, pref `notify.health`): logged out by Instagram (daily), rate
+  limited (6 h), 10+ refused comment DMs waiting (`REFUSED_ALERT`, daily), 80% and 100% of the monthly DM limit (once a
+  month), and login renewal failing in the daily cron.
+
 ## Contact tags
 Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
 to 5) adds tags to everyone who goes through it (comments, keyword DMs, story replies and mentions). Creators edit tags
