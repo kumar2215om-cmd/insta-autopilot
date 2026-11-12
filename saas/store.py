@@ -10,6 +10,8 @@ import time
 
 import requests
 
+import plans
+
 REDIS_URL = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
 REDIS_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
 
@@ -208,8 +210,8 @@ def rule_stats(ig_id, keys):
 # ---------- plans ----------
 
 def is_pro(acc):
-    """Pro by plan (set by hand until billing exists) or by free months earned through referrals."""
-    return bool(acc) and (acc.get("plan") == "pro" or acc.get("pro_until", 0) > time.time())
+    """Any paid plan (set by hand until billing exists), or free Pro months earned through referrals. See plans.py."""
+    return bool(acc) and plans.is_paid(acc)
 
 
 def grant_pro_days(acc, days):

@@ -446,6 +446,36 @@ class SaasTest(unittest.TestCase):
         self.assertIn("read-only", rpc("initialize", {})["result"]["instructions"])
         self.assertFalse(store.load_account("1789").get("paused"))
 
+    def test_plans_and_sale_fee(self):
+        import plans
+        import time as _t
+        free, creator, pro = {"plan": "free"}, {"plan": "creator"}, {"plan": "pro"}
+        # SuperProfile-style fee: ₹499 on Free = 5% + 18% GST on the fee
+        f = plans.platform_fee(free, 499)
+        self.assertEqual((f["fee"], f["gst"], f["total_fee"], f["creator_gets"]), (24.95, 4.49, 29.44, 469.56))
+        self.assertEqual(plans.platform_fee(creator, 499)["total_fee"], 11.78)
+        self.assertEqual(plans.platform_fee(pro, 499)["total_fee"], 0)
+        # referral months count as Pro; unknown plans as Free
+        self.assertEqual(plans.plan_of({"plan": "free", "pro_until": _t.time() + 99}), "pro")
+        self.assertEqual(plans.plan_of({"plan": "gold"}), "free")
+        self.assertTrue(store.is_pro(creator))
+        self.assertFalse(store.is_pro(free))
+        # limits follow the plan
+        self.assertEqual(ai_agent.allowance({"plan": "creator"}), ("month", 300))
+        self.assertEqual(ai_agent.allowance({"plan": "agency"}), ("month", 10000))
+        self.assertEqual(ai_agent.allowance({}), ("trial", 25))
+        self.assertEqual(engine.monthly_limit({"plan": "creator"}), 0)
+        # the owner sets plans by hand; MRR shows on /owner
+        self.login()
+        auth = {"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}
+        self.assertEqual(self.c.post("/owner/plan", json={"id": "1789", "plan": "pro"}).status_code, 401)
+        self.assertEqual(self.c.post("/owner/plan", headers=auth, data="id=1789&plan=pro").status_code, 415)
+        self.assertEqual(self.c.post("/owner/plan", headers=auth, json={"id": "1789", "plan": "gold"}).status_code, 400)
+        self.assertEqual(self.c.post("/owner/plan", headers=auth, json={"id": "1789", "plan": "creator"}).get_json()["plan"], "creator")
+        page = self.c.get("/owner", headers=auth).get_data(as_text=True)
+        self.assertIn("MRR ₹149", page)
+        self.assertNotIn("sale_fee", self.c.get("/").get_data(as_text=True))
+
     def test_demo_mode(self):
         r = self.c.get("/demo")
         self.assertTrue(r.location.endswith("/app"))
@@ -571,7 +601,7 @@ class SaasTest(unittest.TestCase):
         acc["plan"] = "pro"
         store.save_account(acc)
         state = self.c.get("/api/inbox").get_json()
-        self.assertEqual((state["kind"], state["limit"], state["over"]), ("month", 1000, False))
+        self.assertEqual((state["kind"], state["limit"], state["over"]), ("month", 2000, False))
         self.hook(dm("question 3", sender="73"))
         self.assertEqual(len(claude.requests), 3)
         with mock.patch.object(ai_agent, "AI_MODEL", "claude-opus-5-5"):

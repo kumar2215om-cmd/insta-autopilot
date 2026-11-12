@@ -8,6 +8,7 @@ import os
 import time
 
 import store
+import plans
 
 AI_MODEL = os.environ.get("AI_MODEL", "claude-haiku-5-5")
 # Free plan: a one-time trial. Paid plan ("plan": "pro" on the account): a monthly allowance.
@@ -100,7 +101,10 @@ def allowance(acc):
     """("month", n) for paid plans or a custom "ai_limit"; ("trial", n) for the free plan's one-time trial."""
     if acc.get("ai_limit") is not None:
         return "month", int(acc["ai_limit"])
-    return ("month", PAID_MONTHLY_AI_REPLIES) if is_paid(acc) else ("trial", FREE_AI_TRIAL)
+    p = plans.plan(acc)
+    if p["ai_kind"] == "trial":
+        return "trial", FREE_AI_TRIAL
+    return "month", int(os.environ["PAID_MONTHLY_AI_REPLIES"]) if "PAID_MONTHLY_AI_REPLIES" in os.environ else p["ai_replies"]
 
 
 def used(acc):

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 import ai_agent
 import engine
+import plans
 import push
 import store
 from mcp_protocol import ToolError
@@ -103,7 +104,7 @@ def tools_for(acc, svc, read_only=False):
         last30 = store.days(ig_id, 30)
         s30 = lambda *f: sum(d.get(x, 0) for _, d in last30 for x in f)
         return {"account": "@" + str(acc.get("username")), "followers": acc.get("followers"),
-                "plan": "pro" if store.is_pro(acc) else "free",
+                "plan": plans.plan_of(acc),
                 "dms_this_month": c.get(f"dms:{engine.month()}", 0), "monthly_dm_limit": engine.monthly_limit(acc) or "no limit",
                 "last_30_days": {"dms": s30("dms"), "leads": s30("emails", "phones", "page_signups"), "follows_won": s30("gate_follows"),
                                  "link_opens": s30("link_clicks"), "sales": s30("sales"), "revenue_inr": s30("revenue")},

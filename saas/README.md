@@ -307,11 +307,21 @@ invited them. When a **new** account is created at login (`reward_referral`), bo
 `pro_until` in the future; it drives the DM and AI limits. Settings → "Invite creators" shows the link, a WhatsApp share and
 who joined (`GET /api/referrals`).
 
-## Plans (landing page pricing)
-- **Free:** `FREE_MONTHLY_DMS` (1,000) DMs a month, `FREE_AI_TRIAL_REPLIES` (25) AI replies once, every feature.
-- **Pro (₹299/month, "launching soon" until billing exists):** account field `"plan": "pro"` → `PRO_MONTHLY_DMS`
-  (default 0 = no ReplyInbox limit) and `PAID_MONTHLY_AI_REPLIES` (1,000). Set by hand for now; `"dm_limit"` / `"ai_limit"`
-  on an account override both. Keep `templates/landing.html` in sync if these change.
+## Plans and revenue model (`plans.py`)
+All plan numbers live in `plans.py`; `store.is_pro`, `engine.monthly_limit` and `ai_agent.allowance` read them.
+| Plan | ₹/month (yearly) | DMs/month | AI replies | Accounts | Fee on sales through ReplyInbox |
+|---|---|---|---|---|---|
+| free | 0 | 1,000 | 25 once | 1 | 5% + 18% GST |
+| creator | 149 (1,199) | no limit | 300/month | 1 | 2% + GST |
+| pro | 399 (3,499) | no limit | 2,000/month | 3 | 0% |
+| agency | 1,499 (14,999) | no limit | 10,000/month | 10 | 0% |
+- Two revenue streams: subscriptions, and a SuperProfile-style platform fee (`plans.platform_fee`) on payments collected
+  through ReplyInbox (UPI/card in DM, once Razorpay is connected). Sales on the creator's own payment pages (Sales page
+  tracking links) carry no fee. **The fee is not shown on the landing page** (owner's decision).
+- Plans are set by hand on `/owner` (plan picker per account, MRR and plan counts on top) until billing exists. Referral
+  months (`pro_until`) count as Pro but not in MRR. `"dm_limit"` / `"ai_limit"` on an account override the plan; the env
+  vars `FREE_MONTHLY_DMS`, `FREE_AI_TRIAL_REPLIES`, `PRO_MONTHLY_DMS`, `PAID_MONTHLY_AI_REPLIES` override too when set.
+- The landing page still shows Free + Pro ₹299 "launching soon"; update `templates/landing.html` when the new prices go public.
 
 ## Limits and notes
 - One DM per comment, within 7 days of the comment (Instagram rule). The follow check only works after the

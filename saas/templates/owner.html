@@ -17,20 +17,30 @@
 <main class="wrap">
   <h1>Connected accounts <span class="hl">{{ rows|length }}</span></h1>
   <p class="muted">Newest first. DMs are counted when the automation sends them.</p>
+  <p><b>MRR ₹{{ "{:,}".format(mrr) }}</b> ·
+    {% for k, p in plans.items() %}{{ p.name }} {{ by_plan[k] }}{{ " · " if not loop.last }}{% endfor %}
+    <span class="muted small">(plans are set by hand below until billing is live; referral months show as Pro but add nothing to MRR)</span></p>
   <div class="scroll"><table>
-    <tr><th>Account</th><th>Followers</th><th>Joined</th><th>Rules</th><th>DMs this month</th><th>DMs total</th><th>Status</th><th>Invite</th></tr>
+    <tr><th>Account</th><th>Followers</th><th>Joined</th><th>Rules</th><th>DMs this month</th><th>DMs total</th><th>Status</th><th>Plan</th><th>Invite</th></tr>
     {% for r in rows %}
     <tr><td><a href="https://www.instagram.com/{{ r.username }}/" target="_blank" rel="noopener">@{{ r.username }}</a></td>
       <td>{{ "{:,}".format(r.followers) if r.followers is not none else "–" }}</td>
       <td><span class="joined" data-t="{{ r.created or 0 }}"></span></td>
       <td>{{ r.rules }}</td><td>{{ r.dms_month }}</td><td>{{ r.dms }}</td>
-      <td>{{ "paused" if r.paused else (r.blocked or "active") }}</td><td>{{ r.invite }}</td></tr>
+      <td>{{ "paused" if r.paused else (r.blocked or "active") }}</td>
+      <td><select data-acc="{{ r.id }}" aria-label="Plan for @{{ r.username }}">{% for k, p in plans.items() %}<option value="{{ k }}" {{ "selected" if k == r.plan_set }}>{{ p.name }}{{ " ₹" ~ p.price if p.price }}</option>{% endfor %}</select>
+        {% if r.referral_pro %}<span class="muted small">Pro via referral</span>{% endif %}</td>
+      <td>{{ r.invite }}</td></tr>
     {% else %}
-    <tr><td colspan="8" class="muted">No accounts yet.</td></tr>
+    <tr><td colspan="9" class="muted">No accounts yet.</td></tr>
     {% endfor %}
   </table></div>
 </main>
 <script>
+document.querySelectorAll("[data-acc]").forEach(sel => sel.onchange = async () => {
+  const r = await fetch("/owner/plan", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: sel.dataset.acc, plan: sel.value})});
+  if (r.ok) location.reload(); else alert((await r.json()).error || "Couldn't change the plan");
+});
 document.querySelectorAll(".joined").forEach(el => { el.textContent = new Date(el.dataset.t * 1000).toLocaleDateString(); });
 </script>
 </body>

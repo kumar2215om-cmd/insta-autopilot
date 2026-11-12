@@ -16,6 +16,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import ai_agent
 import push
 import store
+import plans
 
 API_VERSION = os.environ.get("IG_API_VERSION", "v23.0")
 GRAPH = f"https://graph.instagram.com/{API_VERSION}"
@@ -140,7 +141,8 @@ PRO_MONTHLY_DMS = int(os.environ.get("PRO_MONTHLY_DMS", "0"))  # 0 = no ReplyInb
 def monthly_limit(acc):
     if acc.get("dm_limit") is not None:
         return int(acc["dm_limit"])
-    return PRO_MONTHLY_DMS if store.is_pro(acc) else FREE_MONTHLY_DMS
+    return PRO_MONTHLY_DMS if store.is_pro(acc) else FREE_MONTHLY_DMS if "FREE_MONTHLY_DMS" in os.environ \
+        else plans.PLANS["free"]["monthly_dms"]
 
 
 def dms_this_month(ig_id):

@@ -1548,6 +1548,7 @@ def api_contacts_csv():
 # ---------- MCP server: creators run ReplyInbox from Claude ----------
 
 import mcp_tools  # noqa: E402
+import plans  # noqa: E402
 from mcp_protocol import handle_http  # noqa: E402
 
 
@@ -1731,10 +1732,30 @@ def cron_refresh_tokens():
 
 # ---------- owner view ----------
 
+def owner_ok():
+    auth = request.authorization
+    return bool(OWNER_PASSWORD and auth and hmac.compare_digest(auth.password or "", OWNER_PASSWORD))
+
+
+@app.post("/owner/plan")
+def owner_set_plan():
+    """Sets an account's plan by hand until billing exists. JSON only, so a cross-site form can't trigger it."""
+    if not owner_ok():
+        return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="owner"'})
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    data = request.get_json(force=True)
+    acc = store.load_account(str(data.get("id", "")))
+    if not acc or data.get("plan") not in plans.PLANS:
+        return jsonify(error="Unknown account or plan."), 400
+    acc["plan"] = data["plan"]
+    store.save_account(acc)
+    return jsonify(id=acc["id"], plan=plans.plan_of(acc))
+
+
 @app.get("/owner")
 def owner():
-    auth = request.authorization
-    if not OWNER_PASSWORD or not auth or not hmac.compare_digest(auth.password or "", OWNER_PASSWORD):
+    if not owner_ok():
         return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="owner"'})
     rows = []
     for ig_id in store.account_ids():
@@ -1743,9 +1764,13 @@ def owner():
             c = store.counts(ig_id)
             rows.append({**public_account(acc), "invite": acc.get("invite", ""), "blocked": engine.is_blocked(acc),
                          "dms_month": c.get(f"dms:{engine.month()}", 0), "dms": c.get("dms", 0),
-                         "rules": len(store.load_rules(ig_id).get("reels", {}))})
+                         "rules": len(store.load_rules(ig_id).get("reels", {})), "plan_id": plans.plan_of(acc),
+                         "plan_set": acc.get("plan") or "free", "referral_pro": acc.get("pro_until", 0) > time.time()})
     rows.sort(key=lambda r: -(r.get("created") or 0))
-    return render_template("owner.html", rows=rows)
+    by_plan = {k: sum(1 for r in rows if r["plan_id"] == k) for k in plans.PLANS}
+    # MRR counts only plans set by hand (paying); free Pro months from referrals bring no money
+    mrr = sum(plans.PLANS[r["plan_set"]]["price"] for r in rows if r["plan_set"] in plans.PLANS)
+    return render_template("owner.html", rows=rows, plans=plans.PLANS, by_plan=by_plan, mrr=mrr)
 
 
 # ---------- public link-in-bio page: replyinbox.in/<username> ----------
