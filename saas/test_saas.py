@@ -1509,5 +1509,32 @@ class CarouselTest(unittest.TestCase):
                 self.assertIn("checked", text)
 
 
+class ComicTest(unittest.TestCase):
+    """tools/comic.py: comic carousel specs and pose picking (no rendering here)."""
+
+    def setUp(self):
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+        import comic
+        self.m = comic
+
+    def test_sample_spec_is_valid(self):
+        root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "content", "comic")
+        specs = [os.path.join(d, f) for d, _, fs in os.walk(root) for f in fs if f.endswith(".json") and f != "poses.json"]
+        self.assertTrue(specs)
+        for p in specs:
+            spec = json.load(open(p))
+            self.assertEqual(self.m.validate(spec), [], p)
+            self.assertIn(f"Comment {spec['keyword']}", self.m.caption(spec))
+
+    def test_pose_picking_avoids_repeats_and_honours_override(self):
+        index = {f"p{k}": {"src": "x", "emotion": "", "tags": [t]} for k, t in enumerate(["sad", "happy", "think"])}
+        slides = [{"mood": ["happy"]}, {"mood": ["happy"]}, {"mood": ["think"]}, {"pose": "p1"}]
+        poses = self.m.pick_poses(slides, index)
+        self.assertEqual(poses[0], "p1")
+        self.assertEqual(len(set(poses[:3])), 3)
+        self.assertEqual(poses[3], "p1")
+
+
 if __name__ == "__main__":
     unittest.main()
