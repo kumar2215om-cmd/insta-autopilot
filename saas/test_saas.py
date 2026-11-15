@@ -1454,5 +1454,60 @@ class SaasTest(unittest.TestCase):
         self.assertIn("@creator", self.c.get("/app").get_data(as_text=True))
 
 
+
+class CarouselTest(unittest.TestCase):
+    """tools/carousels.py: every guide, comparison and feature becomes a postable carousel (no rendering here)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+        import carousels
+        cls.m = carousels
+        cls.all = [(kind, slug, page, carousels.build(kind, slug, page)) for kind, slug, page in carousels.pages()]
+
+    def test_every_page_gets_a_readable_carousel(self):
+        import re
+        import seo_content
+        self.assertEqual(len(self.all), len(seo_content.GUIDES) + len(seo_content.COMPARE) + len(seo_content.FEATURES))
+        for kind, slug, page, c in self.all:
+            slides = c["slides"]
+            self.assertTrue(6 <= len(slides) <= 8, (slug, len(slides)))
+            self.assertEqual((slides[0]["kind"], slides[-1]["kind"]), ("hook", "cta"), slug)
+            self.assertEqual(slides[-1]["keyword"], c["keyword"])
+            source = json.dumps(page, ensure_ascii=False) + seo_content.CHECKED
+            for i, s in enumerate(slides, 1):
+                self.assertLessEqual(self.m.slide_words(s), 25, (slug, i))
+                text = json.dumps(s, ensure_ascii=False)
+                self.assertNotIn("{brand}", text)
+                for num in re.findall(r"\d[\d,.]*\d|\d", " ".join(str(s.get(k, "")) for k in ("title", "accent", "sub", "body", "note", "cta"))):
+                    self.assertIn(num, source, f"{slug} slide {i}: {num} is not in the page text")
+                self.assertIn(f"{i}/{len(slides)}", self.m.slide_html(s, i, len(slides), ""))
+
+    def test_keywords_and_automations_fit_the_rule_form(self):
+        kws = [c["keyword"] for *_, c in self.all]
+        self.assertEqual(len(kws), len(set(kws)), "comment keywords must be unique")
+        for kind, slug, page, c in self.all:
+            url = self.m.page_url(kind, slug, "https://replyinbox.in")
+            a = self.m.automation(c, url)
+            self.assertTrue(saas.valid_rule_key(a["key"]), a["key"])
+            saved = saas.save_rule({"id": "carousel-test"}, a["key"], a["rule"])
+            rule = saved["reels"][a["key"]]
+            self.assertEqual({k: rule[k] for k in a["rule"]}, a["rule"], "save_rule must keep every field as written")
+            self.assertEqual(rule["dm_button_url"], url)
+            self.assertIn(url, rule["dm"])
+            self.assertTrue(2 <= len(rule["comment_reply"].splitlines()) <= 3)
+            self.assertEqual(rule["keywords"], [c["keyword"]])
+
+    def test_caption(self):
+        for kind, slug, page, c in self.all:
+            text = self.m.caption_text(c, page)
+            self.assertIn(f"Comment {c['keyword']}", text)
+            tags = text.strip().splitlines()[-1].split()
+            self.assertTrue(5 <= len(tags) <= 8 and all(t.startswith("#") for t in tags), (slug, tags))
+            if kind == "compare":
+                self.assertIn("checked", text)
+
+
 if __name__ == "__main__":
     unittest.main()

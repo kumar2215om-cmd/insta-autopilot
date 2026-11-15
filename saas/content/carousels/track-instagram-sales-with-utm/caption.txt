@@ -1,0 +1,11 @@
+How to track Instagram sales with UTM links
+
+→ utm_source=instagram: the platform.
+→ utm_medium=dm: the channel.
+→ utm_campaign=prompts-reel: the reel or automation.
+→ Google Analytics, Shopify and most website tools read these automatically.
+→ UTM tags show visits; to count sales, set your payment page's "redirect after payment" to your product's ReplyInbox sales link.
+
+Comment UTM and I'll DM you the full guide 📩
+
+#instagramtips #instagramautomation #creatortips #digitalproducts #onlinebusiness #dmautomation

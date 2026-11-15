@@ -354,6 +354,17 @@ All plan numbers live in `plans.py`; `store.is_pro`, `engine.monthly_limit` and 
   vars `FREE_MONTHLY_DMS`, `FREE_AI_TRIAL_REPLIES`, `PRO_MONTHLY_DMS`, `PAID_MONTHLY_AI_REPLIES` override too when set.
 - The landing page shows the four plans (monthly/yearly switch, "launching soon", beta = every feature free) but not the sale fee; keep it in sync with `plans.py`.
 
+## Instagram carousels (`tools/carousels.py`, seo-launch)
+Turns every guide, comparison and feature page in `seo_content.py` into a ready-to-post carousel for @replyinbox:
+6–8 slides at 1080×1350 (hook → one idea per slide → "Comment KEYWORD" CTA), `caption.txt` and `automation.json`
+(a `kw:KEYWORD` rule with the same fields `save_rule` accepts; the DM links to `{SITE_URL}/guides/<slug>`, `/vs/` or `/features/`).
+- Run from `saas/`: `python3 tools/carousels.py` (all, ~5 min), `python3 tools/carousels.py SLUG …`, `--list` (text only),
+  `--no-png` (captions + automations), `--voice hinglish` (light-Hinglish CTA for @aiwith.om, writes `<slug>-hinglish/`).
+- Output: `content/carousels/<slug>/`. Only three samples' PNGs are in git (`content/.gitignore`); rebuild the rest locally.
+- Text is only shortened from the page (never reworded); competitor slides keep the "as checked" date. Max 25 words and
+  min 40px text per slide; keywords are set in `KEYWORDS` (must stay unique). Tests: `CarouselTest` in `test_saas.py`.
+- Rendering uses the pre-installed Playwright Chromium through Node; fonts load from Google Fonts (Inter if offline).
+
 ## Limits and notes
 - One DM per comment, within 7 days of the comment (Instagram rule). The follow check only works after the
   person taps a button in the DM, which is why the first DM has one.

@@ -1,0 +1,23 @@
+{
+  "key": "kw:REPLYKARO",
+  "rule": {
+    "enabled": true,
+    "keywords": [
+      "REPLYKARO"
+    ],
+    "comment_reply": "@{username} Sent! Check your DMs 📩\nDone ✅ check your inbox\n@{username} DM sent! Peek in your requests if you don't see it 🙌",
+    "replies_on": true,
+    "opening_dm": "Hey {username}! 👋 Tap below and I'll send it right over.",
+    "button_text": "Send it",
+    "require_follow": true,
+    "follow_dm": "Almost there! 👀 Follow us first, then tap \"I followed\" below.",
+    "followed_button_text": "I followed ✅",
+    "dm": "Here's the full comparison 👇\nhttps://replyinbox.in/vs/replykaro\n\nQuestions? Just reply here 🙌",
+    "dm_button_text": "Open it",
+    "dm_button_url": "https://replyinbox.in/vs/replykaro",
+    "once_per_person": true,
+    "track_links": true,
+    "tags": "carousel",
+    "label": "Carousel: replykaro"
+  }
+}

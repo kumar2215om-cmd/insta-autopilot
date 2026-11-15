@@ -1,0 +1,23 @@
+{
+  "key": "kw:AUTODM",
+  "rule": {
+    "enabled": true,
+    "keywords": [
+      "AUTODM"
+    ],
+    "comment_reply": "@{username} Sent! Check your DMs 📩\nDone ✅ check your inbox\n@{username} DM sent! Peek in your requests if you don't see it 🙌",
+    "replies_on": true,
+    "opening_dm": "Hey {username}! 👋 Tap below and I'll send it right over.",
+    "button_text": "Send it",
+    "require_follow": true,
+    "follow_dm": "Almost there! 👀 Follow us first, then tap \"I followed\" below.",
+    "followed_button_text": "I followed ✅",
+    "dm": "Here's the full guide 👇\nhttps://replyinbox.in/guides/how-to-auto-dm-instagram-comments\n\nQuestions? Just reply here 🙌",
+    "dm_button_text": "Open the guide",
+    "dm_button_url": "https://replyinbox.in/guides/how-to-auto-dm-instagram-comments",
+    "once_per_person": true,
+    "track_links": true,
+    "tags": "carousel",
+    "label": "Carousel: how-to-auto-dm-instagram-comments"
+  }
+}
