@@ -20,7 +20,8 @@ don't need one. Without a characters folder, the code-drawn placeholder in tools
 
 Run (from saas/):
   python3 tools/comic.py content/comic/replyinbox/ai-dm-agent-examples.json    # → content/comic/replyinbox/<slug>/
-  python3 tools/comic.py --check replyinbox                                   # check Om's character PNGs + list index
+  python3 tools/comic.py --check replyinbox     # cut out white backgrounds (originals kept in originals/), trim, check
+                                                # size, update characters.json, write contact-sheet.png to review
 """
 import argparse
 import html
@@ -127,6 +128,50 @@ def character_svg(src, sticker, outfit, uid):
             f'preserveAspectRatio="xMidYMax meet" filter="url(#{uid})"/></svg>')
 
 
+def cutout(path, tol=28):
+    """Removes a plain light background connected to the image edges (white eyes/teeth inside the figure stay), trims to
+    the figure and saves a transparent PNG in place. The original is kept in originals/."""
+    from collections import deque
+    from PIL import Image
+    im = Image.open(path).convert("RGBA")
+    w, h = im.size
+    px = im.load()
+    bg = px[0, 0][:3]
+    close = lambda c: max(abs(c[0] - bg[0]), abs(c[1] - bg[1]), abs(c[2] - bg[2])) <= tol
+    seen = bytearray(w * h)
+    q = deque((x, y) for x in range(w) for y in (0, h - 1)) + deque((x, y) for y in range(h) for x in (0, w - 1))
+    while q:
+        x, y = q.popleft()
+        i = y * w + x
+        if seen[i] or not close(px[x, y]):
+            continue
+        seen[i] = 1
+        px[x, y] = (0, 0, 0, 0)
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if 0 <= nx < w and 0 <= ny < h and not seen[ny * w + nx]:
+                q.append((nx, ny))
+    box = im.getchannel("A").getbbox()
+    orig = os.path.join(os.path.dirname(path), "originals")
+    os.makedirs(orig, exist_ok=True)
+    os.replace(path, os.path.join(orig, os.path.basename(path)))
+    (im.crop(box) if box else im).save(os.path.splitext(path)[0] + ".png")
+
+
+def contact_sheet(page, out):
+    """All cut-outs of a page on a grey checker background, with their pose names."""
+    d = char_dir(page)
+    files = sorted(f for f in os.listdir(d) if f.lower().endswith(".png") and f != "contact-sheet.png")
+    cells = "".join(f'<figure><img src="file://{html.escape(os.path.join(d, f))}"><figcaption>{html.escape(f[:-4])}</figcaption></figure>' for f in files)
+    doc = ('<!doctype html><body style="margin:0;padding:20px;width:1600px;font:600 20px sans-serif;display:flex;flex-wrap:wrap;gap:14px;'
+           'background:repeating-conic-gradient(#ddd 0 25%,#f6f6f6 0 50%) 0 0/24px 24px">'
+           '<style>figure{margin:0;width:240px;text-align:center}img{width:240px;height:300px;object-fit:contain}</style>' + cells + "</body>")
+    with tempfile.TemporaryDirectory() as tmp:
+        open(os.path.join(tmp, "s.html"), "w").write(doc)
+        js = ("const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:1640,height:800}});"
+              f"await p.goto('file://{tmp}/s.html');await p.screenshot({{path:'{os.path.abspath(out)}',fullPage:true}});await b.close();}})()")
+        subprocess.run(["node", "-e", js], check=True, cwd=tmp, env={**os.environ, "NODE_PATH": __import__("carousels").node_path()})
+
+
 def check(page):
     """Checks Om's character PNGs: transparent background, ≥1000px tall. Writes a starter characters.json for new files."""
     from PIL import Image
@@ -136,8 +181,15 @@ def check(page):
     idx_path = os.path.join(d, "characters.json")
     idx = json.load(open(idx_path)) if os.path.exists(idx_path) else {}
     problems, sizes = [], []
+    for f in sorted(os.listdir(d)):             # white/solid backgrounds (PNG or JPG) are cut out first
+        path = os.path.join(d, f)
+        if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) and os.path.isfile(path):
+            im = Image.open(path)
+            if "A" not in im.convert("RGBA").getbands() or im.convert("RGBA").getchannel("A").getextrema()[0] == 255:
+                cutout(path)
+                print("cut out background:", f)
     for f in sorted(os.listdir(d)):
-        if not f.lower().endswith(".png"):
+        if not f.lower().endswith(".png") or f == "contact-sheet.png":
             continue
         im = Image.open(os.path.join(d, f))
         sizes.append((f, im.size))
@@ -156,6 +208,9 @@ def check(page):
     json.dump(idx, open(idx_path, "w"), ensure_ascii=False, indent=2)
     print(f"{len(sizes)} PNG(s); index: {os.path.relpath(idx_path, SAAS)}")
     print("\n".join(problems) or "All files pass (transparent, tall enough). Check by eye that it's the same character.")
+    sheet = os.path.join(d, "contact-sheet.png")
+    contact_sheet(page, sheet)
+    print("contact sheet:", os.path.relpath(sheet, SAAS))
 
 
 # ---------- slide HTML ----------
