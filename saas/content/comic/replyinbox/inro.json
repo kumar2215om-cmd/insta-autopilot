@@ -1,0 +1,98 @@
+{
+ "page": "replyinbox",
+ "kind": "compare",
+ "slug": "inro",
+ "keyword": "INR",
+ "source": "seo_content.COMPARE['inro']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#inr",
+  "#dmautomation",
+  "#contentcreator"
+ ],
+ "cta_caption": "Comment INR aur main full comparison DM kar dunga 📩 (Competitor details as checked November 2026; prices change.)",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "INRŌ YA [REPLYINBOX]?",
+   "lines": [
+    "AI DM tools, checked **November 2026** 👇"
+   ],
+   "bubble": "AI VS AI 🤖",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "INRŌ: [AI]-FIRST",
+   "label": "THEM",
+   "lines": [
+    "**AI agent** included. Request pe **done-for-you** service. **Euro** pricing."
+   ],
+   "bubble": "FANCY",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "[CONTACTS] PE PRICE",
+   "label": "THEM · NOV 2026",
+   "lines": [
+    "Free about **100 contacts**, Pro about **€12.99**/month for **500+**."
+   ],
+   "bubble": "BADHTA BILL",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "REPLYINBOX: [FLAT]",
+   "label": "US",
+   "lines": [
+    "**₹199 / $9** a month, **unlimited DMs**, **no per-contact** charges."
+   ],
+   "bubble": "FIXED 🔒",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "[AI] BHI INCLUDED",
+   "label": "US",
+   "lines": [
+    "**300 AI replies**/month on Creator, follow gate, menus, follow-ups."
+   ],
+   "bubble": "SAB MILA",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "INRŌ [CHUNO] AGAR",
+   "label": "PICK THEM IF",
+   "lines": [
+    "**Done-for-you** managed setup chahiye."
+   ],
+   "bubble": "FAIR",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "REPLYINBOX [CHUNO] AGAR",
+   "label": "PICK US IF",
+   "lines": [
+    "Audience badhe tab bhi **predictable flat** pricing chahiye."
+   ],
+   "bubble": "NO SURPRISE",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [INR]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full comparison **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

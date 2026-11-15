@@ -1528,13 +1528,14 @@ class ComicTest(unittest.TestCase):
             self.assertIn(f"Comment {spec['keyword']}", self.m.caption(spec))
 
     def test_comic_facts_come_from_the_guides(self):
-        """Every number on a @replyinbox comic slide (except single-digit step numbers) is in the guide it came from."""
+        """Every number on a @replyinbox comic slide (except single-digit step numbers) is in the page it came from."""
         import glob
         import re
         import seo_content
         for p in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "content", "comic", "replyinbox", "*.json")):
             spec = json.load(open(p))
-            src = json.dumps(seo_content.GUIDES[spec["slug"]], ensure_ascii=False) + seo_content.CHECKED
+            pages = {"guide": seo_content.GUIDES, "compare": seo_content.COMPARE, "feature": seo_content.FEATURES}
+            src = json.dumps(pages[spec.get("kind", "guide")][spec["slug"]], ensure_ascii=False) + seo_content.CHECKED
             for k, s in enumerate(spec["slides"], 1):
                 text = self.m.plain(" ".join([s.get("headline", ""), s.get("bubble", "")] + s.get("lines", []) + s.get("steps", [])
                                              + [" ".join(c) for c in s.get("chat", [])]))

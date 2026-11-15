@@ -1,0 +1,102 @@
+{
+ "page": "replyinbox",
+ "kind": "feature",
+ "slug": "sales-tracking",
+ "keyword": "SALES",
+ "source": "seo_content.FEATURES['sales-tracking']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#digitalproducts",
+  "#onlinebusiness",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment SALES aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "KAUNSI REEL NE [KAMAAYA]?",
+   "lines": [
+    "**Sales tracking** per reel 👇"
+   ],
+   "bubble": "PAISA KAHAN SE? 🤔",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "SALE KA [CREDIT]",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Har sale us **reel** aur **DM automation** ko credit jo buyer laaya."
+   ],
+   "bubble": "CLEAR",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "[2 MIN] SETUP",
+   "label": "SETUP",
+   "steps": [
+    "**Sales** page pe product + price",
+    "Sales link = \"**redirect after payment**\"",
+    "DMs mein **normal link**"
+   ],
+   "bubble": "DONE",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "[RAZORPAY] CHALEGA",
+   "label": "WORKS WITH",
+   "lines": [
+    "**Razorpay** Payment Pages, **Instamojo** aur zyada pages pe redirect hota hai."
+   ],
+   "bubble": "EASY",
+   "bg": "grid"
+  },
+  {
+   "role": "result",
+   "headline": "[₹] PER REEL",
+   "label": "RESULT",
+   "lines": [
+    "**₹ ya $ revenue** per reel aur per automation."
+   ],
+   "bubble": "DATA 💰",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "[BONUS] FEATURES",
+   "label": "ALSO INCLUDED",
+   "steps": [
+    "**Click counts**",
+    "Auto **UTM tags**",
+    "Har sale pe **notification**"
+   ],
+   "bubble": "TING TING",
+   "bg": "dots"
+  },
+  {
+   "role": "mistake",
+   "headline": "CARD [DETAILS]? NAHI",
+   "label": "PRIVACY",
+   "lines": [
+    "Sirf sale hua (product, price, automation). **Card ya UPI** details kabhi nahi."
+   ],
+   "bubble": "SAFE 🔒",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [SALES]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

@@ -1,0 +1,104 @@
+{
+ "page": "replyinbox",
+ "kind": "feature",
+ "slug": "comment-to-dm",
+ "keyword": "COMMENTDM",
+ "source": "seo_content.FEATURES['comment-to-dm']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment COMMENTDM aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "COMMENT KARO, [DM] PAAO",
+   "lines": [
+    "**Comment-to-DM** automation kya hai 👇"
+   ],
+   "bubble": "MAGIC TRICK 🪄",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[KEYWORD] = DM",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Keyword (jaise **GUIDE**) comment karne wale **har bande** ko **DM** + link."
+   ],
+   "bubble": "AUTOMATIC",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "KAISE [KAAM] KARTA",
+   "label": "HOW IT WORKS",
+   "steps": [
+    "Post, **any post** ya **next post**",
+    "**Keyword** chuno",
+    "Public reply + **DM**",
+    "**On** karo"
+   ],
+   "bubble": "4 STEPS",
+   "bg": "dots"
+  },
+  {
+   "role": "easy",
+   "headline": "[TYPO] BHI CHALE",
+   "label": "SMART MATCH",
+   "lines": [
+    "**Plurals, capitals, emojis** ke saath bhi keyword match."
+   ],
+   "bubble": "PHEW",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "AUR [ADD] KARO",
+   "label": "ADD-ONS",
+   "steps": [
+    "**Follow to unlock**",
+    "Email / **WhatsApp**",
+    "Choice **menu**",
+    "**Follow-up** offer"
+   ],
+   "bubble": "LEVEL UP",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[ALLOWED] HAI?",
+   "label": "FAQ",
+   "lines": [
+    "Haan, **official Meta API** pe. Comment ke **7 din** ke andar **ek private reply**."
+   ],
+   "bubble": "SAFE ✅",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "[1,000] DMS FREE",
+   "label": "FREE PLAN",
+   "lines": [
+    "Free plan **1,000 DMs**/month. Paid plans pe **ReplyInbox limit nahi**."
+   ],
+   "bubble": "FREE 🎉",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [COMMENTDM]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}
