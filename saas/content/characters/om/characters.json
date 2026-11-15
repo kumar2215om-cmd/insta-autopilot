@@ -1,0 +1,1121 @@
+{
+ "standing-hands-in-pockets": {
+  "file": "sheet1-01.png",
+  "emotion": "calm",
+  "tags": [
+   "neutral",
+   "intro",
+   "confident"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "standing, hands in pockets"
+ },
+ "arms-crossed-smile": {
+  "file": "sheet1-02.png",
+  "emotion": "confident",
+  "tags": [
+   "confident",
+   "expert",
+   "intro"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "arms crossed, smile"
+ },
+ "pointing-at-the-viewer": {
+  "file": "sheet1-03.png",
+  "emotion": "playful",
+  "tags": [
+   "you",
+   "cta",
+   "callout"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "pointing at the viewer"
+ },
+ "thumbs-up": {
+  "file": "sheet1-04.png",
+  "emotion": "happy",
+  "tags": [
+   "recommend",
+   "approve",
+   "result",
+   "cta"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "thumbs up"
+ },
+ "peace-sign-hand-in-pocket": {
+  "file": "sheet1-05.png",
+  "emotion": "playful",
+  "tags": [
+   "fun",
+   "friendly",
+   "intro"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "peace sign, hand in pocket"
+ },
+ "arms-open-palms-up": {
+  "file": "sheet1-06.png",
+  "emotion": "friendly",
+  "tags": [
+   "explain",
+   "welcome",
+   "options"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "arms open, palms up"
+ },
+ "sitting-hands-clasped-leaning-in": {
+  "file": "sheet1-07.png",
+  "emotion": "serious",
+  "tags": [
+   "serious",
+   "advice",
+   "listen"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting, hands clasped, leaning in"
+ },
+ "sitting-hand-on-chin": {
+  "file": "sheet1-08.png",
+  "emotion": "thinking",
+  "tags": [
+   "thinking",
+   "question",
+   "plan"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting, hand on chin"
+ },
+ "crouching-relaxed-smile": {
+  "file": "sheet1-09.png",
+  "emotion": "calm",
+  "tags": [
+   "casual",
+   "chill",
+   "story"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "crouching, relaxed smile"
+ },
+ "hands-behind-head": {
+  "file": "sheet1-10.png",
+  "emotion": "relaxed",
+  "tags": [
+   "chill",
+   "relief",
+   "automation",
+   "easy"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "hands behind head"
+ },
+ "hand-on-chin-arm-crossed-smirk": {
+  "file": "sheet1-11.png",
+  "emotion": "thinking",
+  "tags": [
+   "thinking",
+   "sceptical",
+   "question"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "hand on chin, arm crossed, smirk"
+ },
+ "standing-side-on-hands-in-pockets": {
+  "file": "sheet1-12.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "confident",
+   "neutral"
+  ],
+  "framing": "half",
+  "faces": "right",
+  "pose": "standing side-on, hands in pockets"
+ },
+ "holding-a-laptop-typing": {
+  "file": "sheet1-13.png",
+  "emotion": "focused",
+  "tags": [
+   "tool",
+   "laptop",
+   "work",
+   "setup",
+   "step"
+  ],
+  "framing": "half",
+  "faces": "right",
+  "pose": "holding a laptop, typing"
+ },
+ "looking-at-the-phone-smiling": {
+  "file": "sheet1-14.png",
+  "emotion": "happy",
+  "tags": [
+   "phone",
+   "dm",
+   "notification",
+   "result"
+  ],
+  "framing": "half",
+  "faces": "right",
+  "pose": "looking at the phone, smiling"
+ },
+ "shrug-palms-up": {
+  "file": "sheet1-15.png",
+  "emotion": "confused",
+  "tags": [
+   "problem",
+   "confused",
+   "hook",
+   "why"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "shrug, palms up"
+ },
+ "standing-hands-on-hips-pockets": {
+  "file": "sheet1-16.png",
+  "emotion": "calm",
+  "tags": [
+   "neutral",
+   "confident"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "standing, hands on hips/pockets"
+ },
+ "fist-raised-shouting": {
+  "file": "sheet1-17.png",
+  "emotion": "excited",
+  "tags": [
+   "hype",
+   "win",
+   "yes",
+   "result"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "fist raised, shouting"
+ },
+ "flexing-both-arms": {
+  "file": "sheet1-18.png",
+  "emotion": "proud",
+  "tags": [
+   "strong",
+   "win",
+   "power",
+   "result"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "flexing both arms"
+ },
+ "adjusting-sunglasses": {
+  "file": "sheet1-19.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "boss",
+   "pro-tip",
+   "flex"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "adjusting sunglasses"
+ },
+ "sunglasses-arms-crossed": {
+  "file": "sheet1-20.png",
+  "emotion": "cool",
+  "tags": [
+   "boss",
+   "confident",
+   "pro-tip"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "sunglasses, arms crossed"
+ },
+ "stop-gesture-open-palm": {
+  "file": "sheet1-21.png",
+  "emotion": "serious",
+  "tags": [
+   "stop",
+   "mistake",
+   "dont",
+   "warning",
+   "hook"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "stop gesture, open palm"
+ },
+ "beckoning-hand-gesture": {
+  "file": "sheet1-22.png",
+  "emotion": "inviting",
+  "tags": [
+   "explain",
+   "come",
+   "cta",
+   "secret"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "beckoning hand gesture"
+ },
+ "scratching-head-sheepish-smile": {
+  "file": "sheet1-23.png",
+  "emotion": "embarrassed",
+  "tags": [
+   "oops",
+   "confused",
+   "mistake",
+   "relatable"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "scratching head, sheepish smile"
+ },
+ "chin-up-proud": {
+  "file": "sheet1-24.png",
+  "emotion": "proud",
+  "tags": [
+   "proud",
+   "result",
+   "success"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "chin up, proud"
+ },
+ "walking-towards-viewer": {
+  "file": "sheet1-25.png",
+  "emotion": "confident",
+  "tags": [
+   "next",
+   "lets-go",
+   "journey"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "walking towards viewer"
+ },
+ "standing-legs-crossed-hands-in-pockets": {
+  "file": "sheet1-26.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "casual",
+   "confident"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "standing, legs crossed, hands in pockets"
+ },
+ "jumping-fists-up": {
+  "file": "sheet1-27.png",
+  "emotion": "ecstatic",
+  "tags": [
+   "celebrate",
+   "win",
+   "result",
+   "hype"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "jumping, fists up"
+ },
+ "sitting-cross-legged-with-a-laptop": {
+  "file": "sheet1-28.png",
+  "emotion": "focused",
+  "tags": [
+   "tool",
+   "laptop",
+   "work",
+   "setup",
+   "easy"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting cross-legged with a laptop"
+ },
+ "sitting-thumbs-up": {
+  "file": "sheet1-29.png",
+  "emotion": "happy",
+  "tags": [
+   "recommend",
+   "approve",
+   "easy",
+   "result"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting, thumbs up"
+ },
+ "sitting-cross-legged-arms-open": {
+  "file": "sheet1-30.png",
+  "emotion": "friendly",
+  "tags": [
+   "explain",
+   "options",
+   "story"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting cross-legged, arms open"
+ },
+ "portrait-neutral": {
+  "file": "sheet2-01.png",
+  "emotion": "calm",
+  "tags": [
+   "intro",
+   "neutral",
+   "talking-head"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, neutral"
+ },
+ "portrait-arms-crossed-smirk": {
+  "file": "sheet2-02a.png",
+  "emotion": "confident",
+  "tags": [
+   "confident",
+   "expert",
+   "intro"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, arms crossed, smirk"
+ },
+ "portrait-hand-on-chin-frowning": {
+  "file": "sheet2-02b.png",
+  "emotion": "sceptical",
+  "tags": [
+   "sceptical",
+   "thinking",
+   "question",
+   "hook"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, hand on chin, frowning"
+ },
+ "portrait-pointing-at-the-viewer": {
+  "file": "sheet2-03.png",
+  "emotion": "playful",
+  "tags": [
+   "you",
+   "cta",
+   "callout"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, pointing at the viewer"
+ },
+ "portrait-thumbs-up": {
+  "file": "sheet2-04.png",
+  "emotion": "happy",
+  "tags": [
+   "recommend",
+   "approve",
+   "cta"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, thumbs up"
+ },
+ "portrait-peace-sign-wink": {
+  "file": "sheet2-05.png",
+  "emotion": "playful",
+  "tags": [
+   "fun",
+   "friendly",
+   "bye"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, peace sign, wink"
+ },
+ "arms-wide-open": {
+  "file": "sheet2-06.png",
+  "emotion": "welcoming",
+  "tags": [
+   "welcome",
+   "explain",
+   "big-idea"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "arms wide open"
+ },
+ "sitting-on-a-cube-hand-on-chin": {
+  "file": "sheet2-07.png",
+  "emotion": "thinking",
+  "tags": [
+   "thinking",
+   "plan",
+   "question"
+  ],
+  "framing": "sitting",
+  "faces": "right",
+  "pose": "sitting on a cube, hand on chin"
+ },
+ "sitting-cross-legged-smiling": {
+  "file": "sheet2-08.png",
+  "emotion": "calm",
+  "tags": [
+   "calm",
+   "story",
+   "easy"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting cross-legged, smiling"
+ },
+ "on-a-beanbag-with-a-laptop": {
+  "file": "sheet2-09.png",
+  "emotion": "focused",
+  "tags": [
+   "tool",
+   "laptop",
+   "work",
+   "setup"
+  ],
+  "framing": "sitting",
+  "faces": "right",
+  "pose": "on a beanbag with a laptop"
+ },
+ "portrait-reading-the-phone": {
+  "file": "sheet2-10.png",
+  "emotion": "focused",
+  "tags": [
+   "phone",
+   "dm",
+   "reading",
+   "notification"
+  ],
+  "framing": "bust",
+  "faces": "right",
+  "pose": "portrait, reading the phone"
+ },
+ "portrait-adjusting-sunglasses": {
+  "file": "sheet2-11.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "boss",
+   "pro-tip"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, adjusting sunglasses"
+ },
+ "portrait-shrug": {
+  "file": "sheet2-12a.png",
+  "emotion": "confused",
+  "tags": [
+   "problem",
+   "confused",
+   "why",
+   "hook"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, shrug"
+ },
+ "portrait-both-fists-up-shouting": {
+  "file": "sheet2-12b.png",
+  "emotion": "excited",
+  "tags": [
+   "hype",
+   "win",
+   "yes",
+   "result"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, both fists up, shouting"
+ },
+ "portrait-flexing": {
+  "file": "sheet2-13.png",
+  "emotion": "proud",
+  "tags": [
+   "strong",
+   "win",
+   "result"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, flexing"
+ },
+ "leaning-on-a-pillar": {
+  "file": "sheet2-14.png",
+  "emotion": "relaxed",
+  "tags": [
+   "chill",
+   "casual",
+   "confident"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "leaning on a pillar"
+ },
+ "walking-side-view": {
+  "file": "sheet2-15.png",
+  "emotion": "confident",
+  "tags": [
+   "next",
+   "lets-go",
+   "journey",
+   "step"
+  ],
+  "framing": "full",
+  "faces": "right",
+  "pose": "walking, side view"
+ },
+ "portrait-stop-gesture": {
+  "file": "sheet2-16.png",
+  "emotion": "serious",
+  "tags": [
+   "stop",
+   "mistake",
+   "dont",
+   "warning",
+   "hook"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, stop gesture"
+ },
+ "checking-his-watch": {
+  "file": "sheet2-17.png",
+  "emotion": "impatient",
+  "tags": [
+   "time",
+   "deadline",
+   "waiting",
+   "time-waste",
+   "hook"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "checking his watch"
+ },
+ "holding-a-mug-smiling": {
+  "file": "sheet2-18.png",
+  "emotion": "relaxed",
+  "tags": [
+   "chai",
+   "coffee",
+   "chill",
+   "easy",
+   "automation"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "holding a mug, smiling"
+ },
+ "crouching-hand-over-mouth": {
+  "file": "sheet2-19.png",
+  "emotion": "worried",
+  "tags": [
+   "worried",
+   "problem",
+   "stress",
+   "hook"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "crouching, hand over mouth"
+ },
+ "arms-out-looking-up": {
+  "file": "sheet2-20.png",
+  "emotion": "proud",
+  "tags": [
+   "showcase",
+   "big-idea",
+   "result"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "arms out, looking up"
+ },
+ "jumping-fists-up-sheet2-21": {
+  "file": "sheet2-21.png",
+  "emotion": "ecstatic",
+  "tags": [
+   "celebrate",
+   "win",
+   "result"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "jumping, fists up"
+ },
+ "on-a-stool-legs-crossed-hand-on-chin": {
+  "file": "sheet2-22.png",
+  "emotion": "thinking",
+  "tags": [
+   "thinking",
+   "plan",
+   "question"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "on a stool, legs crossed, hand on chin"
+ },
+ "sitting-hands-clasped-serious": {
+  "file": "sheet2-23.png",
+  "emotion": "serious",
+  "tags": [
+   "serious",
+   "advice",
+   "truth"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting, hands clasped, serious"
+ },
+ "portrait-sunglasses-arms-crossed": {
+  "file": "sheet2-24.png",
+  "emotion": "cool",
+  "tags": [
+   "boss",
+   "confident",
+   "pro-tip"
+  ],
+  "framing": "bust",
+  "faces": "front",
+  "pose": "portrait, sunglasses, arms crossed"
+ },
+ "portrait-pointing-to-his-left-viewer-s-r": {
+  "file": "sheet2-25.png",
+  "emotion": "friendly",
+  "tags": [
+   "point-right",
+   "look",
+   "step",
+   "tool"
+  ],
+  "framing": "bust",
+  "faces": "right",
+  "pose": "portrait, pointing to his left (viewer's right)"
+ },
+ "sitting-cross-legged-smiling-sheet2-26": {
+  "file": "sheet2-26.png",
+  "emotion": "calm",
+  "tags": [
+   "calm",
+   "easy",
+   "story"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting cross-legged, smiling"
+ },
+ "hands-behind-head-eyes-closed": {
+  "file": "sheet2-27.png",
+  "emotion": "relieved",
+  "tags": [
+   "chill",
+   "relief",
+   "automation",
+   "easy"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "hands behind head, eyes closed"
+ },
+ "presenting-with-one-hand-other-in-pocket": {
+  "file": "sheet2-28.png",
+  "emotion": "friendly",
+  "tags": [
+   "explain",
+   "point-right",
+   "step",
+   "tool"
+  ],
+  "framing": "half",
+  "faces": "right",
+  "pose": "presenting with one hand, other in pocket"
+ },
+ "standing-hands-in-pockets-sheet3-01": {
+  "file": "sheet3-01.png",
+  "emotion": "calm",
+  "tags": [
+   "neutral",
+   "intro",
+   "confident"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "standing, hands in pockets"
+ },
+ "arms-crossed-smile-sheet3-02": {
+  "file": "sheet3-02.png",
+  "emotion": "confident",
+  "tags": [
+   "confident",
+   "expert",
+   "intro"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "arms crossed, smile"
+ },
+ "pointing-at-the-viewer-sheet3-03": {
+  "file": "sheet3-03.png",
+  "emotion": "playful",
+  "tags": [
+   "you",
+   "cta",
+   "callout"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "pointing at the viewer"
+ },
+ "thumbs-up-sheet3-04": {
+  "file": "sheet3-04.png",
+  "emotion": "happy",
+  "tags": [
+   "recommend",
+   "approve",
+   "result",
+   "cta"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "thumbs up"
+ },
+ "peace-sign": {
+  "file": "sheet3-05.png",
+  "emotion": "playful",
+  "tags": [
+   "fun",
+   "friendly"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "peace sign"
+ },
+ "arms-open-palms-up-sheet3-06": {
+  "file": "sheet3-06.png",
+  "emotion": "friendly",
+  "tags": [
+   "explain",
+   "welcome",
+   "options"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "arms open, palms up"
+ },
+ "sitting-on-a-cube-hand-on-chin-sheet3-07": {
+  "file": "sheet3-07.png",
+  "emotion": "thinking",
+  "tags": [
+   "thinking",
+   "question",
+   "plan"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting on a cube, hand on chin"
+ },
+ "sitting-cross-legged-with-a-laptop-sheet3-08": {
+  "file": "sheet3-08.png",
+  "emotion": "focused",
+  "tags": [
+   "tool",
+   "laptop",
+   "work",
+   "setup"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting cross-legged with a laptop"
+ },
+ "sitting-on-a-cube-chin-on-hand-bored": {
+  "file": "sheet3-09.png",
+  "emotion": "bored",
+  "tags": [
+   "bored",
+   "waiting",
+   "problem",
+   "time-waste"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting on a cube, chin on hand, bored"
+ },
+ "hands-behind-head-sheet3-10": {
+  "file": "sheet3-10.png",
+  "emotion": "relaxed",
+  "tags": [
+   "chill",
+   "relief",
+   "automation",
+   "easy"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "hands behind head"
+ },
+ "arms-crossed-big-smile": {
+  "file": "sheet3-11.png",
+  "emotion": "confident",
+  "tags": [
+   "confident",
+   "expert",
+   "result"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "arms crossed, big smile"
+ },
+ "standing-side-on-hands-in-pockets-sheet3-12": {
+  "file": "sheet3-12.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "neutral"
+  ],
+  "framing": "half",
+  "faces": "right",
+  "pose": "standing side-on, hands in pockets"
+ },
+ "looking-at-the-phone-smiling-sheet3-13": {
+  "file": "sheet3-13.png",
+  "emotion": "happy",
+  "tags": [
+   "phone",
+   "dm",
+   "notification"
+  ],
+  "framing": "half",
+  "faces": "right",
+  "pose": "looking at the phone, smiling"
+ },
+ "texting-grinning": {
+  "file": "sheet3-14.png",
+  "emotion": "happy",
+  "tags": [
+   "phone",
+   "dm",
+   "reply",
+   "result"
+  ],
+  "framing": "half",
+  "faces": "right",
+  "pose": "texting, grinning"
+ },
+ "shrug-palms-up-sheet3-15": {
+  "file": "sheet3-15.png",
+  "emotion": "confused",
+  "tags": [
+   "problem",
+   "confused",
+   "why",
+   "hook"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "shrug, palms up"
+ },
+ "walking-hand-in-pocket": {
+  "file": "sheet3-16.png",
+  "emotion": "confident",
+  "tags": [
+   "next",
+   "lets-go"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "walking, hand in pocket"
+ },
+ "both-fists-up-shouting": {
+  "file": "sheet3-17.png",
+  "emotion": "excited",
+  "tags": [
+   "hype",
+   "win",
+   "yes",
+   "result"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "both fists up, shouting"
+ },
+ "flexing-both-arms-sheet3-18": {
+  "file": "sheet3-18.png",
+  "emotion": "proud",
+  "tags": [
+   "strong",
+   "win",
+   "result"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "flexing both arms"
+ },
+ "adjusting-sunglasses-sheet3-19": {
+  "file": "sheet3-19.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "boss",
+   "pro-tip"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "adjusting sunglasses"
+ },
+ "sunglasses-arms-crossed-sheet3-20": {
+  "file": "sheet3-20.png",
+  "emotion": "cool",
+  "tags": [
+   "boss",
+   "confident",
+   "pro-tip"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "sunglasses, arms crossed"
+ },
+ "stop-gesture-open-palm-sheet3-21": {
+  "file": "sheet3-21.png",
+  "emotion": "serious",
+  "tags": [
+   "stop",
+   "mistake",
+   "dont",
+   "warning",
+   "hook"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "stop gesture, open palm"
+ },
+ "beckoning-hand-gesture-sheet3-22": {
+  "file": "sheet3-22.png",
+  "emotion": "inviting",
+  "tags": [
+   "explain",
+   "come",
+   "cta",
+   "secret"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "beckoning hand gesture"
+ },
+ "scratching-head-sheepish": {
+  "file": "sheet3-23.png",
+  "emotion": "embarrassed",
+  "tags": [
+   "oops",
+   "confused",
+   "relatable"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "scratching head, sheepish"
+ },
+ "chin-up-proud-sheet3-24": {
+  "file": "sheet3-24.png",
+  "emotion": "proud",
+  "tags": [
+   "proud",
+   "result",
+   "success"
+  ],
+  "framing": "half",
+  "faces": "front",
+  "pose": "chin up, proud"
+ },
+ "walking-towards-viewer-sheet3-25": {
+  "file": "sheet3-25.png",
+  "emotion": "confident",
+  "tags": [
+   "next",
+   "lets-go",
+   "journey"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "walking towards viewer"
+ },
+ "standing-legs-crossed": {
+  "file": "sheet3-26.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "casual"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "standing, legs crossed"
+ },
+ "jumping-fists-up-sheet3-27": {
+  "file": "sheet3-27.png",
+  "emotion": "ecstatic",
+  "tags": [
+   "celebrate",
+   "win",
+   "result"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "jumping, fists up"
+ },
+ "standing-arms-wide-open": {
+  "file": "sheet3-28.png",
+  "emotion": "welcoming",
+  "tags": [
+   "welcome",
+   "explain",
+   "big-idea"
+  ],
+  "framing": "full",
+  "faces": "front",
+  "pose": "standing, arms wide open"
+ },
+ "sitting-cross-legged-hand-on-chin-smilin": {
+  "file": "sheet3-29.png",
+  "emotion": "thinking",
+  "tags": [
+   "thinking",
+   "plan",
+   "idea"
+  ],
+  "framing": "sitting",
+  "faces": "front",
+  "pose": "sitting cross-legged, hand on chin, smiling"
+ },
+ "crouching-pointing-to-his-left-viewer-s-": {
+  "file": "sheet3-30.png",
+  "emotion": "friendly",
+  "tags": [
+   "point-right",
+   "look",
+   "step",
+   "tool"
+  ],
+  "framing": "sitting",
+  "faces": "right",
+  "pose": "crouching, pointing to his left (viewer's right)"
+ }
+}

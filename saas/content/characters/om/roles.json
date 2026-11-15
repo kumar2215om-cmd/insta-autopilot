@@ -1,0 +1,68 @@
+{
+ "slide_roles": {
+  "hook": [
+   "problem",
+   "confused",
+   "stop",
+   "worried",
+   "time-waste",
+   "sceptical",
+   "hook"
+  ],
+  "explain": [
+   "explain",
+   "point-right",
+   "welcome",
+   "options",
+   "big-idea",
+   "come"
+  ],
+  "tool": [
+   "tool",
+   "laptop",
+   "phone",
+   "point-right"
+  ],
+  "steps": [
+   "step",
+   "point-right",
+   "explain",
+   "laptop",
+   "next"
+  ],
+  "tip": [
+   "pro-tip",
+   "boss",
+   "secret",
+   "thinking"
+  ],
+  "mistake": [
+   "stop",
+   "mistake",
+   "oops",
+   "warning"
+  ],
+  "result": [
+   "win",
+   "celebrate",
+   "hype",
+   "result",
+   "proud",
+   "strong"
+  ],
+  "easy": [
+   "chill",
+   "relief",
+   "easy",
+   "automation",
+   "chai"
+  ],
+  "cta": [
+   "you",
+   "cta",
+   "recommend",
+   "come"
+  ]
+ },
+ "note": "For each slide pick a pose whose tags match the slide's role (first tags first); never repeat a pose in one carousel; prefer bust/half framing for text-heavy slides and full/jumping poses for result and CTA slides."
+}
