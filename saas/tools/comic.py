@@ -78,8 +78,29 @@ def headline_html(text):
 
 # ---------- characters ----------
 
-def char_dir(page):
-    return os.path.join(SAAS, "content", "characters", page)
+CHARACTER_SET = {"aiwithom": "om-v1", "decodingwithom": "om-v1", "replyinbox": "om-v1"}   # page → content/characters/<set>
+HD_CACHE = os.path.join(tempfile.gettempdir(), "comic-characters-hd")
+
+
+def char_dir(name):
+    return os.path.join(SAAS, "content", "characters", CHARACTER_SET.get(name, name))
+
+
+def hd(path, min_h=1100):
+    """Low-res PNGs are upscaled for the slides (Lanczos + a light unsharp mask), cached outside the repo."""
+    from PIL import Image, ImageFilter
+    im = Image.open(path)
+    if im.size[1] >= min_h:
+        return path
+    os.makedirs(HD_CACHE, exist_ok=True)
+    out = os.path.join(HD_CACHE, f"{int(os.path.getmtime(path))}-{os.path.basename(path)}")
+    if not os.path.exists(out):
+        k = min_h / im.size[1]
+        big = im.convert("RGBA").resize((round(im.size[0] * k), min_h), Image.LANCZOS)
+        rgb = big.convert("RGB").filter(ImageFilter.UnsharpMask(radius=2.2, percent=90, threshold=2))
+        rgb.putalpha(big.getchannel("A"))
+        rgb.save(out)
+    return out
 
 
 def load_index(page):
@@ -87,7 +108,7 @@ def load_index(page):
     path = os.path.join(char_dir(page), "characters.json")
     if os.path.exists(path):
         idx = json.load(open(path))
-        return {k: dict(v, src=os.path.join(char_dir(page), v["file"])) for k, v in idx.items()}
+        return {k: dict(v, src=hd(os.path.join(char_dir(page), v["file"]))) for k, v in idx.items()}
     import character
     tags = {"stressed": ["stressed", "problem", "overload", "worried", "hook"], "pointing": ["tool", "laptop", "smug", "show", "how"],
             "chilling": ["relax", "automatic", "cool", "result", "easy"], "thinking": ["question", "think", "doubt", "why", "choose"],
