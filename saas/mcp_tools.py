@@ -11,6 +11,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import ai_agent
+import content_drafts
 import engine
 import plans
 import push
@@ -95,6 +96,53 @@ def tools_for(acc, svc, read_only=False):
             return svc.build_report(acc, fresh)
         except RuntimeError as e:
             raise ToolError(f"Instagram didn't answer: {e}")
+
+    # ---------- content plan ----------
+
+    def _draft_out(d):
+        return {k: d[k] for k in ("id", "date", "format", "hook", "outline", "caption", "keyword", "status", "note")}
+
+    def draft_week(args):
+        try:
+            new = content_drafts.fill_week(store.load_account(ig_id) or acc, args.get("brief", ""), args.get("days", 7),
+                                           args.get("start_date"), args.get("posts_per_day", 1))
+        except ValueError as e:
+            raise ToolError(str(e))
+        except Exception as e:
+            raise ToolError(f"The AI couldn't draft right now: {e}")
+        return {"added": len(new), "drafts": [_draft_out(d) for d in new],
+                "next_step": "Show the creator the drafts; approve, edit or reject each with approve_draft / edit_draft."}
+
+    def list_drafts(args):
+        status = str(args.get("status") or "draft")
+        items = content_drafts.list_drafts(acc, "" if status == "all" else status, bool(args.get("upcoming_only")))
+        return {"drafts": [_draft_out(d) for d in items[:int(args.get("limit") or 50)]], **content_drafts.summary(acc)}
+
+    def approve_draft(args):
+        decision = str(args.get("decision") or "approve")
+        status = {"approve": "approved", "reject": "rejected", "posted": "posted", "back_to_review": "draft"}.get(decision)
+        if not status:
+            raise ToolError("decision must be approve, reject, posted or back_to_review.")
+        body = {"status": status}
+        if args.get("note") is not None:
+            body["note"] = args["note"]
+        try:
+            return {"draft": _draft_out(content_drafts.update(acc, str(args.get("draft_id", "")), body))}
+        except ValueError as e:
+            raise ToolError(str(e))
+
+    def edit_draft(args):
+        did = str(args.get("draft_id", ""))
+        try:
+            if args.get("ai_feedback"):
+                d = content_drafts.rewrite(store.load_account(ig_id) or acc, did, args["ai_feedback"])
+            else:
+                d = content_drafts.update(acc, did, {k: args[k] for k in ("date", "format", "hook", "outline", "caption", "keyword") if k in args})
+        except ValueError as e:
+            raise ToolError(str(e))
+        except Exception as e:
+            raise ToolError(f"The AI couldn't rewrite right now: {e}")
+        return {"draft": _draft_out(d)}
 
     # ---------- overview ----------
 
@@ -578,6 +626,32 @@ def tools_for(acc, svc, read_only=False):
         {"name": "set_utm_tags", "title": "UTM tags on DM links", "fn": utm,
          "description": "Turns automatic utm_source=instagram&utm_medium=dm&utm_campaign=<automation> tags on DM links on or off.",
          "input_schema": {"type": "object", "required": ["on"], "properties": {"on": _BOOL}}},
+        # content plan
+        {"name": "list_drafts", "title": "Content plan drafts", "read_only": True, "fn": list_drafts,
+         "description": "Post drafts in the content plan (default: the ones waiting for review), with date, format, hook, "
+                        "script/slide outline, caption and comment keyword. status=all shows every draft.",
+         "input_schema": {"type": "object", "properties": {
+             "status": {"type": "string", "enum": ["draft", "approved", "posted", "rejected", "all"]},
+             "upcoming_only": _BOOL, "limit": {"type": "integer", "minimum": 1, "maximum": 80}}}},
+        {"name": "draft_week", "title": "Fill my week", "fn": draft_week,
+         "description": "The AI drafts Instagram posts (mostly reels and carousels) for the coming days from the creator's About, "
+                        "products and keywords, learning from past approvals and rejections. Uses one AI credit per draft. "
+                        "Nothing is posted; drafts wait for the creator's approval.",
+         "input_schema": {"type": "object", "properties": {
+             "brief": {"type": "string", "description": "This week's focus, launches, topics to include or avoid."},
+             "days": {"type": "integer", "minimum": 1, "maximum": 14}, "posts_per_day": {"type": "integer", "minimum": 1, "maximum": 2},
+             "start_date": {"type": "string", "description": "YYYY-MM-DD, default tomorrow"}}}},
+        {"name": "approve_draft", "title": "Approve or reject a draft", "fn": approve_draft,
+         "description": "Records the creator's decision on a draft: approve, reject (note = why, so the next drafts avoid it), "
+                        "posted, or back_to_review. Only on the creator's say-so.",
+         "input_schema": {"type": "object", "required": ["draft_id"], "properties": {
+             "draft_id": _STR, "decision": {"type": "string", "enum": ["approve", "reject", "posted", "back_to_review"]}, "note": _STR}}},
+        {"name": "edit_draft", "title": "Change a draft", "fn": edit_draft,
+         "description": "Changes a draft: either set fields directly (hook, caption, outline, format, date, keyword) or give "
+                        "ai_feedback to have the AI rewrite it (one AI credit).",
+         "input_schema": {"type": "object", "required": ["draft_id"], "properties": {
+             "draft_id": _STR, "ai_feedback": _STR, "hook": _STR, "caption": _STR, "outline": {"type": "array", "items": _STR},
+             "format": {"type": "string", "enum": ["reel", "carousel", "post", "story"]}, "date": _STR, "keyword": _STR}}},
         # people
         {"name": "search_contacts", "title": "Find contacts", "read_only": True, "fn": search_contacts,
          "description": "People who interacted: search by username/email/phone/keyword, filter by tag, has_email, has_phone, followed. "
@@ -703,6 +777,14 @@ def prompts():
              f"Target: {'reel ' + a['reel_id'] if a.get('reel_id') else 'my next post (next_post)'}. Suggest one short keyword, "
              "3 rotating public replies, the DM with {Hi|Hey} variations, and whether to ask for follow or email, based on what "
              "worked best in list_automations. Show me the draft, then save it with save_automation once I approve.")},
+        {"name": "plan_my_week", "title": "Plan my week",
+         "description": "Draft next week's posts, then review them together.",
+         "arguments": [{"name": "focus", "description": "Launches or topics for the week", "required": False}],
+         "render": lambda a: (
+             "Plan my Instagram week on ReplyInbox. First check get_best_posting_times and list_automations (sort_by link_clicks) to see "
+             "what works, then call draft_week" + (f" with the brief '{a['focus']}'" if a.get("focus") else "") + ". Show me the drafts "
+             "day by day in a short, readable list. For each one I approve, call approve_draft; for changes use edit_draft; for ones "
+             "I reject, ask me why and pass it as the note. For approved drafts with a new keyword, offer to set up its automation.")},
         {"name": "fix_problems", "title": "Health check",
          "description": "Find anything broken: logins, refused DMs, limits, errors, paused automations.",
          "render": lambda a: (

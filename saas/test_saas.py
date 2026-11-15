@@ -367,7 +367,7 @@ class SaasTest(unittest.TestCase):
         self.assertGreaterEqual(len(rpc("tools/list")["result"]["tools"]), 30)
         # prompts
         names = [p["name"] for p in rpc("prompts/list")["result"]["prompts"]]
-        self.assertEqual(names, ["weekly_review", "launch_plan", "new_reel_automation", "fix_problems", "inbox_catchup"])
+        self.assertEqual(names, ["weekly_review", "launch_plan", "new_reel_automation", "plan_my_week", "fix_problems", "inbox_catchup"])
         msg = rpc("prompts/get", {"name": "launch_plan", "arguments": {"product": "Prompt pack", "price": "149"}})["result"]["messages"][0]
         self.assertIn("Prompt pack", msg["content"]["text"])
         self.assertIn("error", rpc("prompts/get", {"name": "launch_plan", "arguments": {}}))  # product is required
@@ -1310,6 +1310,71 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(store.rule_daily("1789", "777", 1)[0][1]["runs"], 2)
         self.c.delete("/api/rules/kw:GUIDE", json={})
         self.assertEqual(store.hash_all(store.account_key("1789", "rsd:kw:GUIDE")), {})
+
+    def test_content_plan_approval_queue(self):
+        self.login()
+        claude = FakeClaude()
+        self.enterContext(mock.patch.object(ai_agent, "client", lambda: claude))
+        self.enterContext(mock.patch.object(ai_agent, "FREE_AI_TRIAL", 5))
+        week = lambda n, start="2030-01-01": {"drafts": [
+            {"date": f"2030-01-0{i + 1}", "format": "reel" if i % 2 == 0 else "carousel", "hook": f"Hook {i}",
+             "outline": ["beat 1", "beat 2"], "caption": f"Caption {i}. Comment GUIDE", "keyword": "guide" if i == 0 else ""}
+            for i in range(n)]}
+        self.assertIn("Content plan", self.c.get("/app/plan").get_data(as_text=True))
+        # 7 days needs 7 credits; the free trial here has 5
+        r = self.c.post("/api/drafts/fill", json={"days": 7, "start": "2030-01-01"})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("7 AI credits", r.get_json()["error"])
+        self.assertEqual(claude.requests, [])
+        claude.answers.append(week(3))
+        d = self.c.post("/api/drafts/fill", json={"days": 3, "start": "2030-01-01", "brief": "Launch on Friday"}).get_json()
+        self.assertEqual((d["added"], d["counts"]["draft"], d["credits_left"]), (3, 3, 2))
+        self.assertIn("Launch on Friday", claude.requests[0]["messages"][0]["content"])
+        self.assertEqual(claude.requests[0]["model"], ai_agent.AI_MODEL)
+        first = d["drafts"][0]
+        self.assertEqual((first["keyword"], first["status"], first["format"]), ("GUIDE", "draft", "reel"))
+        # approve / reject with a note / edit / bad status; PATCH-style changes go through PUT so viewers stay read-only
+        did = first["id"]
+        self.assertEqual(self.c.put(f"/api/drafts/{did}", json={"status": "approved"}).get_json()["counts"]["approved"], 1)
+        other = d["drafts"][1]["id"]
+        self.c.put(f"/api/drafts/{other}", json={"status": "rejected", "note": "too salesy"})
+        self.assertEqual(self.c.put(f"/api/drafts/{did}", json={"status": "nope"}).status_code, 400)
+        edited = self.c.put(f"/api/drafts/{did}", json={"hook": "New hook", "outline": "a\nb\n", "format": "story"}).get_json()
+        e = next(x for x in edited["drafts"] if x["id"] == did)
+        self.assertEqual((e["hook"], e["outline"], e["format"], e["edited"], e["status"]), ("New hook", ["a", "b"], "story", True, "approved"))
+        # the next week's prompt learns from approvals and rejections
+        claude.answers.append({"drafts": [{"date": "2030-01-03", "format": "carousel", "hook": "Better hook", "outline": [],
+                                           "caption": "c", "keyword": ""}]})
+        r = self.c.post(f"/api/drafts/{d['drafts'][2]['id']}/rewrite", json={"feedback": "funnier"}).get_json()
+        rw = next(x for x in r["drafts"] if x["id"] == d["drafts"][2]["id"])
+        self.assertEqual((rw["hook"], rw["note"], r["credits_left"]), ("Better hook", "funnier", 1))
+        system = claude.requests[1]["system"][0]["text"]
+        self.assertIn("New hook", system)
+        self.assertIn("too salesy", system)
+        self.assertIn("funnier", claude.requests[1]["messages"][0]["content"])
+        # delete; unknown id
+        self.assertEqual(self.c.delete(f"/api/drafts/{other}", json={}).get_json()["counts"]["rejected"], 0)
+        self.assertEqual(self.c.delete("/api/drafts/zzz", json={}).status_code, 400)
+        # Claude (MCP) sees and decides on drafts
+        key = self.c.post("/api/mcp-key", json={}).get_json()["key"]
+        H = {"Authorization": f"Bearer {key}"}
+        call = lambda name, args={}: self.c.post("/mcp", headers=H, json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                                                                          "params": {"name": name, "arguments": args}}).get_json()["result"]
+        listed = call("list_drafts", {})["structuredContent"]
+        self.assertEqual([x["hook"] for x in listed["drafts"]], ["Better hook"])
+        self.assertEqual(call("approve_draft", {"draft_id": listed["drafts"][0]["id"], "decision": "approve"})["structuredContent"]["draft"]["status"], "approved")
+        self.assertTrue(call("approve_draft", {"draft_id": "zzz"})["isError"])
+        claude.answers.append(week(1))
+        self.assertEqual(call("draft_week", {"days": 1, "start_date": "2030-02-01"})["structuredContent"]["added"], 1)
+        self.assertTrue(call("draft_week", {"days": 2})["isError"])  # out of credits
+        self.assertEqual(call("edit_draft", {"draft_id": did, "caption": "Short"})["structuredContent"]["draft"]["caption"], "Short")
+        self.assertIn("plan", [a["action"] for a in self.c.get("/api/activity").get_json()])
+
+    def test_content_plan_demo(self):
+        self.c.get("/demo")
+        d = self.c.post("/api/drafts/fill", json={"days": 7}).get_json()
+        self.assertEqual(d["added"], 7)
+        self.assertTrue(all(x["hook"] and x["caption"] for x in d["drafts"]))
 
     def test_sales_tracking_and_utm(self):
         self.login()

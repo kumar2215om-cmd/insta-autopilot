@@ -1,0 +1,179 @@
+{% extends "_base.html" %}
+{% block title %}Content plan{% endblock %}
+{% block heading %}Content plan{% endblock %}
+{% block head %}
+<style>
+  .fill { display:grid; grid-template-columns:minmax(0, 1fr) auto auto auto; gap:10px; align-items:end; }
+  .fill .lbl, .edit .lbl { display:block; margin-bottom:6px; }
+  .fill input, .fill select { width:100%; }
+  .fill textarea { width:100%; min-height:44px; resize:vertical; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .tabs button { border:1px solid var(--line); background:var(--card); border-radius:99px; padding:9px 16px; font:600 14px var(--text); color:var(--body); cursor:pointer; }
+  .tabs button[aria-selected="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .tabs .c { font:500 12px var(--mono); opacity:.7; margin-left:4px; }
+  .day { font:500 12px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); margin:18px 0 8px; }
+  .draft { display:grid; gap:10px; }
+  .draft .dtop { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .draft h3 { margin:0; font:700 17px/1.35 var(--display); color:var(--ink); }
+  .draft ol { margin:0; padding-left:20px; display:grid; gap:4px; font-size:14px; color:var(--body); }
+  .draft pre { margin:0; white-space:pre-wrap; font:400 14px/1.5 var(--text); color:var(--body); background:var(--bg); border:1px solid var(--line2); border-radius:12px; padding:12px; }
+  .draft .acts { display:flex; gap:8px; flex-wrap:wrap; }
+  .draft[data-status="approved"] { border-color:var(--ok); }
+  .draft[data-status="rejected"] { opacity:.6; }
+  .fmt { font:600 11px var(--mono); letter-spacing:.08em; text-transform:uppercase; padding:4px 9px; border-radius:99px; background:var(--accent-soft); color:var(--accent-ink); }
+  .st { font:600 11px var(--mono); letter-spacing:.06em; text-transform:uppercase; padding:4px 9px; border-radius:99px; background:var(--line2); color:var(--mute); }
+  .st.approved { background:var(--ok-soft); color:var(--ok); }
+  .st.rejected { background:var(--bad-soft); color:var(--bad); }
+  .kw { font:600 12px var(--mono); padding:4px 9px; border-radius:8px; border:1px dashed var(--line); color:var(--ink); }
+  .edit { display:grid; gap:10px; }
+  .edit input, .edit textarea, .edit select { width:100%; }
+  .edit textarea { resize:vertical; }
+  .edit .two { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  @media (max-width: 760px) { .fill { grid-template-columns:1fr 1fr; } .fill .wide { grid-column:1 / -1; } .edit .two { grid-template-columns:1fr 1fr; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="grid">
+  <div class="card tile"><div class="k">To review</div><div class="n" id="tReview">–</div><div class="d">drafts waiting for you</div></div>
+  <div class="card tile"><div class="k">Approved</div><div class="n" id="tApproved">–</div><div class="d">ready to film or post</div></div>
+  <div class="card tile"><div class="k">AI credits left</div><div class="n" id="tCredits">–</div><div class="d" id="tCreditsD">each draft uses 1</div></div>
+</div>
+
+<section class="card" style="display:grid; gap:12px">
+  <div><h2>Fill my week</h2>
+    <p class="muted small" style="margin:4px 0 0">The AI drafts reels and carousels from your About, products and freebie keywords (set them in <a href="/app/inbox">AI Inbox</a>), and learns from what you approve and reject. Nothing is posted for you.</p></div>
+  <form class="fill" id="fillForm">
+    <div class="wide"><label class="lbl" for="brief">This week's focus <span class="muted">(optional)</span></label>
+      <textarea id="brief" maxlength="1000" rows="1" placeholder="e.g. launching my prompt pack on Friday, more beginner tips, one story-time reel"></textarea></div>
+    <div><label class="lbl" for="days">Days</label><select id="days"><option value="3">3</option><option value="7" selected>7</option><option value="14">14</option></select></div>
+    <div><label class="lbl" for="start">Starting</label><input id="start" type="date"></div>
+    <button class="btn" type="submit" id="fillBtn">Draft my week</button>
+  </form>
+  <p class="small" id="fillMsg" style="margin:0" role="status"></p>
+</section>
+
+<section class="card">
+  <div class="tabs" role="tablist" aria-label="Drafts">
+    <button type="button" role="tab" data-tab="draft" aria-selected="true">To review<span class="c" id="cDraft"></span></button>
+    <button type="button" role="tab" data-tab="approved" aria-selected="false">Approved<span class="c" id="cApproved"></span></button>
+    <button type="button" role="tab" data-tab="posted" aria-selected="false">Posted<span class="c" id="cPosted"></span></button>
+    <button type="button" role="tab" data-tab="rejected" aria-selected="false">Rejected<span class="c" id="cRejected"></span></button>
+  </div>
+  <div id="list" role="tabpanel"><div class="empty">Loading…</div></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let data = null, tab = "draft", editing = null;
+const canEdit = {{ "false" if role == "viewer" else "true" }};
+const dayName = (d) => new Date(d + "T00:00:00").toLocaleDateString(undefined, {weekday: "long", day: "numeric", month: "short"});
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const EMPTY = {draft: "No drafts waiting. Use “Draft my week” above.", approved: "Approve a draft and it shows here, ready to film.",
+               posted: "Mark approved drafts as posted to keep your plan tidy.", rejected: "Nothing rejected."};
+
+function card(d) {
+  const st = d.status !== "draft" ? `<span class="st ${d.status}">${esc(d.status)}</span>` : "";
+  const kw = d.keyword ? `<span class="kw" title="Comment keyword for an Auto DM">💬 ${esc(d.keyword)}</span>` : "";
+  if (editing === d.id) return `<div class="card draft" data-id="${esc(d.id)}" data-status="${esc(d.status)}"><form class="edit" data-save="${esc(d.id)}">
+    <div class="two"><div><label class="lbl">Format</label><select name="format">${["reel", "carousel", "post", "story"].map(f => `<option ${f === d.format ? "selected" : ""}>${f}</option>`).join("")}</select></div>
+      <div><label class="lbl">Date</label><input name="date" type="date" value="${esc(d.date)}"></div>
+      <div><label class="lbl">Keyword</label><input name="keyword" type="text" maxlength="20" value="${esc(d.keyword)}" placeholder="optional"></div></div>
+    <div><label class="lbl">Hook</label><input name="hook" type="text" maxlength="200" value="${esc(d.hook)}"></div>
+    <div><label class="lbl">${d.format === "carousel" ? "Slides" : "Script beats"} <span class="muted">(one per line)</span></label><textarea name="outline" rows="5">${esc(d.outline.join("\n"))}</textarea></div>
+    <div><label class="lbl">Caption</label><textarea name="caption" rows="7" maxlength="2200">${esc(d.caption)}</textarea></div>
+    <div class="acts"><button class="btn sm" type="submit">Save</button><button class="btn ghost sm" type="button" data-cancel>Cancel</button></div>
+    <div style="border-top:1px solid var(--line2); padding-top:10px"><label class="lbl" for="fb-${esc(d.id)}">Or tell the AI what to change</label>
+      <div class="row" style="gap:8px"><input id="fb-${esc(d.id)}" type="text" style="flex:1; min-width:180px" maxlength="500" placeholder="e.g. funnier hook, shorter caption, make it a carousel">
+      <button class="btn ghost sm" type="button" data-rewrite="${esc(d.id)}">Rewrite with AI</button></div></div>
+  </form></div>`;
+  const acts = !canEdit ? "" : d.status === "draft"
+    ? `<button class="btn sm" type="button" data-set="approved">Approve</button><button class="btn ghost sm" type="button" data-edit>Change</button><button class="btn ghost sm" type="button" data-reject>Reject</button>`
+    : d.status === "approved"
+    ? `<button class="btn sm" type="button" data-set="posted">Mark posted</button><button class="btn ghost sm" type="button" data-edit>Change</button><button class="btn ghost sm" type="button" data-set="draft">Back to review</button>`
+    : `<button class="btn ghost sm" type="button" data-set="draft">Back to review</button><button class="btn danger sm" type="button" data-del>Delete</button>`;
+  return `<div class="card draft" data-id="${esc(d.id)}" data-status="${esc(d.status)}">
+    <div class="dtop"><span class="fmt">${esc(d.format)}</span>${st}${kw}${d.edited ? `<span class="muted small">edited</span>` : ""}</div>
+    <h3>${esc(d.hook)}</h3>
+    ${d.outline.length ? `<ol>${d.outline.map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : ""}
+    <details><summary class="small"><b>Caption</b></summary><pre style="margin-top:8px">${esc(d.caption)}</pre>
+      <button class="btn ghost sm" type="button" data-copy style="margin-top:8px">Copy caption</button></details>
+    ${d.note ? `<p class="muted small" style="margin:0">Your note: ${esc(d.note)}</p>` : ""}
+    <div class="acts">${acts}</div>
+    <div data-ask hidden class="row" style="gap:8px"><input type="text" style="flex:1; min-width:180px" maxlength="500" placeholder="Why? (optional, the AI learns from it)" aria-label="Reason for rejecting">
+      <button class="btn danger sm" type="button" data-set="rejected">Reject</button></div>
+  </div>`;
+}
+function draw() {
+  const c = data.counts;
+  $("tReview").textContent = fmt(c.draft); $("tApproved").textContent = fmt(c.approved);
+  $("tCredits").textContent = data.credits_left == null ? "∞" : fmt(data.credits_left);
+  $("tCreditsD").textContent = data.credit_kind === "trial" ? "free trial · each draft uses 1" : "this month · each draft uses 1";
+  for (const [k, id] of [["draft", "cDraft"], ["approved", "cApproved"], ["posted", "cPosted"], ["rejected", "cRejected"]]) $(id).textContent = c[k] ? c[k] : "";
+  document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  const items = data.drafts.filter(d => d.status === tab);
+  if (tab === "posted" || tab === "rejected") items.reverse();
+  let last = "", html = "";
+  for (const d of items) {
+    if (d.date !== last) { html += `<div class="day">${esc(dayName(d.date))}</div>`; last = d.date; }
+    html += card(d);
+  }
+  $("list").innerHTML = html || `<div class="empty" style="margin-top:14px">${EMPTY[tab]}</div>`;
+}
+async function set(id, body, msg) {
+  try { data = await api(`/api/drafts/${id}`, {method: "PUT", body: JSON.stringify(body)}); editing = null; draw(); if (msg) toast(msg); }
+  catch (err) { toast(err.message); }
+}
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-tab]");
+  if (t) { tab = t.dataset.tab; editing = null; draw(); return; }
+  const el = e.target.closest(".draft");
+  if (!el) return;
+  const id = el.dataset.id, d = data.drafts.find(x => x.id === id);
+  if (e.target.closest("[data-copy]")) { try { await navigator.clipboard.writeText(d.caption); toast("Caption copied"); } catch (err) { prompt("Copy the caption", d.caption); } return; }
+  if (e.target.closest("[data-edit]")) { editing = id; draw(); return; }
+  if (e.target.closest("[data-cancel]")) { editing = null; draw(); return; }
+  if (e.target.closest("[data-reject]")) { const a = el.querySelector("[data-ask]"); a.hidden = false; a.querySelector("input").focus(); return; }
+  const s = e.target.closest("[data-set]");
+  if (s) {
+    const body = {status: s.dataset.set};
+    if (s.dataset.set === "rejected") body.note = el.querySelector("[data-ask] input").value;
+    return set(id, body, {approved: "Approved ✓", posted: "Marked as posted", rejected: "Rejected. The AI will avoid this", draft: "Back in review"}[s.dataset.set]);
+  }
+  const r = e.target.closest("[data-rewrite]");
+  if (r) {
+    r.disabled = true; r.textContent = "Rewriting…";
+    try { data = await api(`/api/drafts/${id}/rewrite`, {method: "POST", body: JSON.stringify({feedback: $("fb-" + id).value})}); editing = null; draw(); toast("Rewritten ✓"); }
+    catch (err) { toast(err.message); r.disabled = false; r.textContent = "Rewrite with AI"; }
+    return;
+  }
+  const del = e.target.closest("[data-del]");
+  if (del) {
+    if (!del.dataset.sure) { del.dataset.sure = "1"; del.textContent = "Sure?"; return; }
+    try { data = await api(`/api/drafts/${id}`, {method: "DELETE", body: "{}"}); draw(); toast("Deleted"); } catch (err) { toast(err.message); }
+  }
+});
+document.addEventListener("submit", (e) => {
+  const f = e.target.closest("[data-save]");
+  if (!f) return;
+  e.preventDefault();
+  set(f.dataset.save, {format: f.format.value, date: f.date.value, keyword: f.keyword.value, hook: f.hook.value,
+                       outline: f.outline.value, caption: f.caption.value}, "Saved ✓");
+});
+$("fillForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const b = $("fillBtn"), msg = $("fillMsg");
+  b.disabled = true; b.textContent = "Drafting…"; msg.className = "small muted"; msg.textContent = "The AI is writing your week. This takes up to a minute.";
+  try {
+    data = await api("/api/drafts/fill", {method: "POST", body: JSON.stringify({brief: $("brief").value, days: +$("days").value, start: $("start").value})});
+    tab = "draft"; draw(); msg.className = "small ok"; msg.textContent = `${data.added} drafts added. Approve, change or reject each one below.`;
+  } catch (err) { msg.className = "small err"; msg.textContent = err.message; }
+  b.disabled = false; b.textContent = "Draft my week";
+};
+if (!canEdit) { $("fillBtn").disabled = true; }
+(async () => {
+  loadBanners();
+  const t = new Date(); t.setDate(t.getDate() + 1); $("start").value = iso(t);
+  data = await api("/api/drafts"); draw();
+})();
+</script>
+{% endblock %}

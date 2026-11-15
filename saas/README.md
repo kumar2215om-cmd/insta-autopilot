@@ -275,6 +275,14 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
   limited (6 h), 10+ refused comment DMs waiting (`REFUSED_ALERT`, daily), 80% and 100% of the monthly DM limit (once a
   month), and login renewal failing in the daily cron.
 
+## Content plan: AI drafts your week, you approve (`/app/plan`, `content_drafts.py`)
+- **Draft my week**: the AI (same model as the AI agent, `AI_MODEL`) drafts 3, 7 or 14 days of posts (mostly reels and carousels): date, format, hook, script beats or slide lines, a ready caption and, when it fits, a comment keyword for an Auto DM. It writes from the AI agent's About/FAQ, the link-in-bio products and existing keyword freebies, plus an optional brief for the week.
+- **Approval queue**: tabs To review / Approved / Posted / Rejected. Approve, Change (edit any field, or "Rewrite with AI" with feedback), Reject (optional reason). Approved and rejected drafts (with reasons) go into the next prompt, so drafts learn the creator's taste. Nothing is posted automatically.
+- **Cost**: one AI credit per draft or rewrite, from the plan's AI allowance; the request is refused up front if credits are short. The demo account gets sample drafts without the AI.
+- Stored as JSON at `s:t:<id>:drafts` (newest 80; old rejected/posted ones are dropped first). Viewers can look but not change (PUT/POST/DELETE are blocked for them).
+- **Claude (MCP)**: `list_drafts`, `draft_week`, `approve_draft` (approve / reject with note / posted / back_to_review), `edit_draft` (fields or `ai_feedback`), and the prompt "Plan my week".
+- An app on the Apps page (on by default), in the "Grow and sell" group.
+
 ## Contact tags
 Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
 to 5) adds tags to everyone who goes through it (comments, keyword DMs, story replies and mentions). Creators edit tags

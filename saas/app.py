@@ -23,6 +23,7 @@ import requests
 from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, session, url_for
 
 import ai_agent
+import content_drafts
 import demo
 import push
 import engine
@@ -116,12 +117,12 @@ def public_account(acc):
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
-    ("sales", "/app/sales", "Sales", True),
+    ("sales", "/app/sales", "Sales", True), ("plan", "/app/plan", "Content plan", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"inbox": True, "report": True, "links": True, "contacts": True, "giveaway": True}
+DEFAULT_APPS = {"plan": True, "inbox": True, "report": True, "links": True, "contacts": True, "giveaway": True}
 
 
 def apps_of(acc):
@@ -1300,6 +1301,68 @@ def activity_page():
 @app.get("/app/sales")
 def sales_page():
     return render_app("sales.html", "sales")
+
+
+# ---------- content plan: AI drafts a week of posts, the creator approves ----------
+
+@app.get("/app/plan")
+def plan_page():
+    return render_app("plan.html", "plan")
+
+
+def drafts_view(acc):
+    return {"drafts": content_drafts.list_drafts(acc), **content_drafts.summary(acc)}
+
+
+@app.get("/api/drafts")
+def api_drafts():
+    return jsonify(drafts_view(current_account()))
+
+
+@app.post("/api/drafts/fill")
+def api_drafts_fill():
+    acc = current_account()
+    data = request.get_json(force=True)
+    try:
+        new = content_drafts.fill_week(acc, data.get("brief", ""), data.get("days", 7), data.get("start"), data.get("per_day", 1))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    except Exception as e:
+        return jsonify(error=f"The AI couldn't draft right now: {e}"), 502
+    store.log_activity(acc["id"], "", "", "", "plan", "ok", f"{len(new)} post drafts written")
+    return jsonify({**drafts_view(acc), "added": len(new)})
+
+
+@app.put("/api/drafts/<draft_id>")
+def api_draft_update(draft_id):
+    acc = current_account()
+    try:
+        content_drafts.update(acc, draft_id, request.get_json(force=True))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(drafts_view(acc))
+
+
+@app.post("/api/drafts/<draft_id>/rewrite")
+def api_draft_rewrite(draft_id):
+    acc = current_account()
+    try:
+        content_drafts.rewrite(acc, draft_id, request.get_json(force=True).get("feedback", ""))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    except Exception as e:
+        return jsonify(error=f"The AI couldn't rewrite right now: {e}"), 502
+    return jsonify(drafts_view(acc))
+
+
+@app.delete("/api/drafts/<draft_id>")
+def api_draft_delete(draft_id):
+    acc = current_account()
+    try:
+        content_drafts.delete(acc, draft_id)
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(drafts_view(acc))
 
 
 @app.post("/api/pause")
