@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "auto-reply-instagram-comments",
+ "keyword": "REPLIES",
+ "source": "seo_content.GUIDES['auto-reply-instagram-comments']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment REPLIES aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "HAR COMMENT KA [REPLY]?",
+   "lines": [
+    "Comments pe **auto-reply** 👇"
+   ],
+   "bubble": "UNGLIYAN DUKH GAYI",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "PUBLIC REPLY + [DM]",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Har matching comment pe **public reply**, aur chaho toh **DM** bhi."
+   ],
+   "bubble": "DOUBLE",
+   "bg": "grid"
+  },
+  {
+   "role": "tip",
+   "headline": "[2–3] REPLIES ROTATE",
+   "label": "STAY NATURAL",
+   "lines": [
+    "2–3 alag replies, **random** pick, **@username** ke saath. Spam nahi lagta."
+   ],
+   "bubble": "SMART",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "PUBLIC [KYUN]?",
+   "label": "WHY",
+   "lines": [
+    "Log dekhte hain commenting **kaam karta** hai, toh aur comments, reel aur **reach**."
+   ],
+   "bubble": "ALGO KHUSH",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "LINK [MAT] DAALO",
+   "label": "STAY SAFE",
+   "lines": [
+    "Public reply mein **link nahi**. Variations use karo jaise **{Sent|Done}**."
+   ],
+   "bubble": "DHYAAN SE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "[SPAM] CHUPAO",
+   "label": "COMMENT GUARD",
+   "lines": [
+    "**Comment guard** se spam comments **auto hide**."
+   ],
+   "bubble": "CLEAN FEED",
+   "bg": "dots"
+  },
+  {
+   "role": "easy",
+   "headline": "SIRF [DM]?",
+   "label": "FAQ",
+   "lines": [
+    "Haan, automation mein **public replies off** kar do."
+   ],
+   "bubble": "AAPKI MARZI",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [REPLIES]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-automation-for-ecommerce",
+ "keyword": "STORE",
+ "source": "seo_content.GUIDES['instagram-dm-automation-for-ecommerce']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#digitalproducts",
+  "#onlinebusiness",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment STORE aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "\"PRICE?\" [BAAR] BAAR?",
+   "lines": [
+    "Online store ke liye **DM automation** 👇"
+   ],
+   "bubble": "COPY PASTE BAS 😩",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "COMMENT [PRICE]",
+   "label": "AUTOMATION 1",
+   "lines": [
+    "Product reel pe **PRICE** comment → DM mein **price** + **Buy button**."
+   ],
+   "bubble": "SALE READY",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "STORY [REPLY]",
+   "label": "AUTOMATION 2",
+   "lines": [
+    "Story reply → story wale **product** ka **link**."
+   ],
+   "bubble": "DIRECT",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "MENTION = [DISCOUNT]",
+   "label": "AUTOMATION 3",
+   "lines": [
+    "Story **mentions** pe **thank-you** + **discount code**."
+   ],
+   "bubble": "LOYAL FANS",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "SIZE? [AI] BATAYEGA",
+   "label": "AUTOMATION 4",
+   "lines": [
+    "**AI agent** sizes, shipping, returns ka jawab **FAQ** se."
+   ],
+   "bubble": "AUTO HELP",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tip",
+   "headline": "SALE DAY [BROADCAST]",
+   "label": "AUTOMATION 5",
+   "lines": [
+    "Last **24 ghante** mein DM karne walon ko **broadcast**."
+   ],
+   "bubble": "SALE ALERT 📢",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "KAUNSI POST [BECHI]?",
+   "label": "MEASURE",
+   "lines": [
+    "**UTM tags** + **sales link**: har order uski **post** ko credit. **Shopify** bhi chalega."
+   ],
+   "bubble": "DATA 🤑",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [STORE]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

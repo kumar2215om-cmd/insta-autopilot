@@ -1527,6 +1527,21 @@ class ComicTest(unittest.TestCase):
             self.assertEqual(self.m.validate(spec), [], p)
             self.assertIn(f"Comment {spec['keyword']}", self.m.caption(spec))
 
+    def test_comic_facts_come_from_the_guides(self):
+        """Every number on a @replyinbox comic slide (except single-digit step numbers) is in the guide it came from."""
+        import glob
+        import re
+        import seo_content
+        for p in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "content", "comic", "replyinbox", "*.json")):
+            spec = json.load(open(p))
+            src = json.dumps(seo_content.GUIDES[spec["slug"]], ensure_ascii=False) + seo_content.CHECKED
+            for k, s in enumerate(spec["slides"], 1):
+                text = self.m.plain(" ".join([s.get("headline", ""), s.get("bubble", "")] + s.get("lines", []) + s.get("steps", [])
+                                             + [" ".join(c) for c in s.get("chat", [])]))
+                for n in re.findall(r"\d[\d,.]*\d|\d", text):
+                    if len(n) > 1:
+                        self.assertIn(n, src, f"{spec['slug']} slide {k}: {n}")
+
     def test_pose_picking_avoids_repeats_and_honours_override(self):
         index = {f"p{k}": {"src": "x", "emotion": "", "tags": [t]} for k, t in enumerate(["sad", "happy", "think"])}
         slides = [{"mood": ["happy"]}, {"mood": ["happy"]}, {"mood": ["think"]}, {"pose": "p1"}]

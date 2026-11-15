@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-automation-for-educators",
+ "keyword": "EDUCATORS",
+ "source": "seo_content.GUIDES['instagram-dm-automation-for-educators']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#edtech",
+  "#dmautomation",
+  "#contentcreator"
+ ],
+ "cta_caption": "Comment EDUCATORS aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "STUDENTS: [NOTES] DO!",
+   "lines": [
+    "Teachers ke liye **DM automation** 👇"
+   ],
+   "bubble": "DMS HI DMS 😵",
+   "bg": "sunburst"
+  },
+  {
+   "role": "steps",
+   "headline": "REEL + [NOTES]",
+   "label": "STEP 1",
+   "lines": [
+    "Exam tip reel, end mein \"comment **NOTES** for the PDF\"."
+   ],
+   "bubble": "PADHAI ON",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "DM: [PDF] JAAYE",
+   "label": "STEP 2",
+   "lines": [
+    "**Notes** ya **practice set**, chaho toh **follow** ke baad."
+   ],
+   "bubble": "INSTANT",
+   "bg": "dots"
+  },
+  {
+   "role": "steps",
+   "headline": "CLASS [MENU]",
+   "label": "STEP 3",
+   "lines": [
+    "Menu: **Class 10 / Class 12 / Competitive**, har ek ka alag **PDF**."
+   ],
+   "bubble": "SORTED",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "BATCH? [WHATSAPP]",
+   "label": "STEP 4",
+   "lines": [
+    "Batch details ke liye students/parents ka **WhatsApp**. Enrolment day **broadcast**."
+   ],
+   "bubble": "ADMISSIONS 📢",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "AI: [FEES] + TIMINGS",
+   "label": "AI AGENT",
+   "lines": [
+    "Fees, timings, syllabus, kaise join karein. **Hindi** ya regional language mein bhi."
+   ],
+   "bubble": "AUTO HELP",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "[CHAPTER] WISE KEYWORD",
+   "label": "TIP",
+   "lines": [
+    "Har chapter ka **alag keyword**: pata chalega kaunsa topic **enrolments** laata hai."
+   ],
+   "bubble": "SMART TEACHER",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [EDUCATORS]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

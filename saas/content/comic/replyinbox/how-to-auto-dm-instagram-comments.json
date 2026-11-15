@@ -1,0 +1,102 @@
+{
+ "page": "replyinbox",
+ "slug": "how-to-auto-dm-instagram-comments",
+ "keyword": "AUTODM",
+ "source": "seo_content.GUIDES['how-to-auto-dm-instagram-comments']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment AUTODM aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "COMMENTS AA RAHE… [DM] KAUN BHEJE?",
+   "lines": [
+    "Har comment pe **auto DM**, seconds mein 👇"
+   ],
+   "bubble": "HAATH THAK GAYE 😩",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "PEHLE YE [CHAHIYE]",
+   "label": "WHAT YOU NEED",
+   "steps": [
+    "**Business/Creator** account",
+    "**Official API** wala tool",
+    "Ek solid **freebie**"
+   ],
+   "bubble": "SIMPLE HAI",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "PASSWORD MAT [DENA]",
+   "label": "SAFETY",
+   "lines": [
+    "Jo tool **password** maange, usse door raho. **Official Meta API** hi use karo."
+   ],
+   "bubble": "NO SHORTCUTS",
+   "bg": "dots"
+  },
+  {
+   "role": "steps",
+   "headline": "SETUP IN [4] STEPS",
+   "label": "STEP BY STEP",
+   "steps": [
+    "Reel choose karo",
+    "**Keyword** set karo, e.g. GUIDE",
+    "DM mein **link** daalo",
+    "**Launch!**"
+   ],
+   "bubble": "HO GAYA",
+   "bg": "grid"
+  },
+  {
+   "role": "tip",
+   "headline": "KEYWORD [3 SEC] MEIN BOLO",
+   "label": "PRO TIP",
+   "lines": [
+    "Keyword reel ke **first 3 seconds** mein bolo aur **caption** mein bhi likho."
+   ],
+   "bubble": "YAAD RAKHNA",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tip",
+   "headline": "FOLLOWERS BHI [BADHAO]",
+   "label": "BONUS",
+   "lines": [
+    "**Follow gate** lagao: link tabhi milega jab woh **follow** karein."
+   ],
+   "bubble": "DOUBLE FAYDA",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "FREE MEIN [1,000] DMS",
+   "label": "PRICE",
+   "lines": [
+    "ReplyInbox free plan: **1,000 DMs** har mahine."
+   ],
+   "bubble": "PAISA BACHA 🤑",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [AUTODM]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

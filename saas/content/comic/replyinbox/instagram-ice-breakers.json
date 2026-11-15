@@ -1,0 +1,101 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-ice-breakers",
+ "keyword": "ICEBREAKERS",
+ "source": "seo_content.GUIDES['instagram-ice-breakers']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment ICEBREAKERS aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "CHAT KHOLI, [KYA] LIKHE?",
+   "lines": [
+    "Instagram **ice breakers** set karo 👇"
+   ],
+   "bubble": "AWKWARD SILENCE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[4] SAWAAL READY",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Pehli baar chat kholne pe **4 sawaal** tak dikhte hain. **Tap = sent**."
+   ],
+   "bubble": "EASY START",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "ACHHE [SAWAAL]",
+   "label": "EXAMPLES",
+   "steps": [
+    "\"How do I **buy the course**?\"",
+    "\"Where are the **free guides**?\"",
+    "\"**What's the price**?\""
+   ],
+   "bubble": "COPY KARO",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "[COLLAB] WALA BHI",
+   "label": "EXAMPLE",
+   "lines": [
+    "\"Do you do **collaborations**?\""
+   ],
+   "bubble": "BRANDS 👀",
+   "bg": "grid"
+  },
+  {
+   "role": "easy",
+   "headline": "[AUTO] JAWAB",
+   "label": "WHAT HAPPENS",
+   "lines": [
+    "ReplyInbox **auto answer** deta hai ya tumhara **automation** start karta hai."
+   ],
+   "bubble": "SORTED",
+   "bg": "sunburst"
+  },
+  {
+   "role": "steps",
+   "headline": "[SETUP]",
+   "label": "STEPS",
+   "steps": [
+    "Auto DM → **Chat menu**",
+    "4 sawaal add karo",
+    "Answer ya **automation** chuno, **publish**"
+   ],
+   "bubble": "DONE",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "[4] HI KYUN?",
+   "label": "FAQ",
+   "lines": [
+    "**Four** Instagram ki **limit** hai."
+   ],
+   "bubble": "RULE HAI",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [ICEBREAKERS]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

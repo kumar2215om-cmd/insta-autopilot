@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-automation-for-food-creators",
+ "keyword": "FOOD",
+ "source": "seo_content.GUIDES['instagram-dm-automation-for-food-creators']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#homebaker",
+  "#dmautomation",
+  "#contentcreator"
+ ],
+ "cta_caption": "Comment FOOD aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "\"RECIPE PLS\" [BAAR] BAAR?",
+   "lines": [
+    "Food creators ke liye **DM automation** 👇"
+   ],
+   "bubble": "KHANA THANDA HO GAYA",
+   "bg": "sunburst"
+  },
+  {
+   "role": "steps",
+   "headline": "REEL: [30 SEC] DISH",
+   "label": "STEP 1",
+   "lines": [
+    "Dish 30 sec mein, end mein \"comment **RECIPE**\"."
+   ],
+   "bubble": "YUMMY",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "DM: FULL [RECIPE]",
+   "label": "STEP 2",
+   "lines": [
+    "**Measurements** ke saath recipe, **follow** ke baad."
+   ],
+   "bubble": "FOLLOWERS UP",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "[E-BOOK] BECHO",
+   "label": "STEP 3",
+   "lines": [
+    "Follow-up: \"**50 more** like this? E-book aaj **₹199**.\""
+   ],
+   "bubble": "KAMAI 🤑",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "BAKER? [ORDER] MENU",
+   "label": "FOR BAKERS",
+   "lines": [
+    "Menu: **Order a cake / See the menu / Baking classes**. Orders ke liye **WhatsApp**."
+   ],
+   "bubble": "CAKE TIME 🎂",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "AI: MENU + [DELIVERY]",
+   "label": "AI AGENT",
+   "lines": [
+    "Menu, prices, delivery areas, **eggless/vegan** **FAQ** se. Custom orders **tumhe**."
+   ],
+   "bubble": "HELPER",
+   "bg": "dots"
+  },
+  {
+   "role": "mistake",
+   "headline": "FOOD BECHO? [FSSAI]",
+   "label": "IF YOU SELL",
+   "lines": [
+    "India: home food business ke liye **FSSAI** registration, **allergens** clearly likho."
+   ],
+   "bubble": "RULES FIRST",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [FOOD]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

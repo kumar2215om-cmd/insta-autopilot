@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "sell-digital-products-on-instagram",
+ "keyword": "SELL",
+ "source": "seo_content.GUIDES['sell-digital-products-on-instagram']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#digitalproducts",
+  "#onlinebusiness",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment SELL aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "PRODUCT HAI, [SALE] NAHI?",
+   "lines": [
+    "DMs se **digital products** becho 👇"
+   ],
+   "bubble": "KOI KHARIDTA NAHI 😩",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "PEHLE [FREE] DO",
+   "label": "THE IDEA",
+   "lines": [
+    "Keyword pe kuch **free** do, DM mein bhejo, phir **paid product** offer karo."
+   ],
+   "bubble": "TRUST PEHLE",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "COMMENT [PROMPTS]",
+   "label": "STEP 1",
+   "lines": [
+    "Reel: \"comment **PROMPTS** for the free pack\". DM free pack bhejta hai."
+   ],
+   "bubble": "FREEBIE GAYA",
+   "bg": "dots"
+  },
+  {
+   "role": "steps",
+   "headline": "3 GHANTE [BAAD]",
+   "label": "STEP 2",
+   "lines": [
+    "\"Full pack aaj **₹149**\" + **button** wala follow-up."
+   ],
+   "bubble": "AB SALE",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "SALE KA [CREDIT]",
+   "label": "STEP 3",
+   "lines": [
+    "Payment page **ReplyInbox sales link** pe redirect: sale **reel** ko credit."
+   ],
+   "bubble": "TRACKED",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tip",
+   "headline": "PEHLE [LOW]-TICKET",
+   "label": "PRICING TIP",
+   "lines": [
+    "**₹99–₹499** se shuru karo, phir **upsell**. Menu mein **free vs paid**."
+   ],
+   "bubble": "STEP BY STEP",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "KAUNSA [PAYMENT] PAGE?",
+   "label": "FAQ",
+   "lines": [
+    "Jo payment ke baad **redirect** kare: **Razorpay** Payment Pages ya **Instamojo**."
+   ],
+   "bubble": "NOTE KARO",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [SELL]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

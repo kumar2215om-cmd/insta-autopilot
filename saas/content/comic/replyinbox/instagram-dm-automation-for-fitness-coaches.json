@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-automation-for-fitness-coaches",
+ "keyword": "FITNESS",
+ "source": "seo_content.GUIDES['instagram-dm-automation-for-fitness-coaches']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#coachingbusiness",
+  "#fitnesscoach",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment FITNESS aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "FITNESS COACH? [CLIENTS] KAHAN?",
+   "lines": [
+    "Comments se **coaching clients** 👇"
+   ],
+   "bubble": "GYM KHAALI 😅",
+   "bg": "sunburst"
+  },
+  {
+   "role": "steps",
+   "headline": "REEL: [QUICK] RESULT",
+   "label": "STEP 1",
+   "lines": [
+    "\"3 moves for **lower back pain**\" type reel, end mein \"comment **PLAN**\"."
+   ],
+   "bubble": "ACTION",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "DM: [7-DAY] PLAN",
+   "label": "STEP 2",
+   "lines": [
+    "Free **7-day plan**, **follow** karne ke baad."
+   ],
+   "bubble": "FREE MEIN",
+   "bg": "dots"
+  },
+  {
+   "role": "steps",
+   "headline": "[GOAL] POOCHO",
+   "label": "STEP 3",
+   "lines": [
+    "Menu: **Fat loss / Muscle gain / Just staying fit**, har ek ka alag plan."
+   ],
+   "bubble": "GOAL CLEAR",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "COACHING? [WHATSAPP]",
+   "label": "STEP 4",
+   "lines": [
+    "\"I want coaching\" pe **WhatsApp** lo. **3 ghante** baad **program offer**."
+   ],
+   "bubble": "CALL KARO",
+   "bg": "sunburst"
+  },
+  {
+   "role": "mistake",
+   "headline": "INJURY? [AI] NAHI",
+   "label": "STAY RESPONSIBLE",
+   "lines": [
+    "Injury, medical, pregnancy: **tumhare paas**. **Guaranteed results** promise mat karo."
+   ],
+   "bubble": "SAFETY FIRST",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "[₹199] MEIN SAB",
+   "label": "PLAN",
+   "lines": [
+    "Creator: **unlimited DMs**, menus, WhatsApp capture, follow-ups, **300 AI replies**/month."
+   ],
+   "bubble": "BULK DEAL 💪",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [FITNESS]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

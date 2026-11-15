@@ -1,0 +1,99 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-follow-up-messages",
+ "keyword": "FOLLOWUP",
+ "source": "seo_content.GUIDES['instagram-follow-up-messages']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment FOLLOWUP aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "FREEBIE GAYA, [SALE] NAHI?",
+   "lines": [
+    "Follow-up message jo **bechta** hai 👇"
+   ],
+   "bubble": "AB KYA KARU",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[KUCH] GHANTE BAAD",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Freebie ke kuch ghante baad: **ek tip** ya check-in, phir **ek clear offer**."
+   ],
+   "bubble": "SIMPLE",
+   "bg": "grid"
+  },
+  {
+   "role": "tip",
+   "headline": "[3 GHANTE] BEST",
+   "label": "TIMING",
+   "lines": [
+    "**1, 3, 6, 12 ya 20** ghante. Zyada freebies ke liye **3 ghante** best."
+   ],
+   "bubble": "TIMING IS KEY",
+   "bg": "dots"
+  },
+  {
+   "role": "mistake",
+   "headline": "[24 GHANTE] KE ANDAR",
+   "label": "THE RULE",
+   "lines": [
+    "Person ke last message ke **24 ghante** ke andar, warna **deliver nahi** hoga."
+   ],
+   "bubble": "DEADLINE",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "TEMPLATE [COPY] KARO",
+   "label": "TEMPLATE",
+   "lines": [
+    "\"Did you try it? **Full pack** (39 more) **₹149** today 👇\""
+   ],
+   "bubble": "COPY PASTE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "mistake",
+   "headline": "YE [GALTI] MAT KARO",
+   "label": "MISTAKES",
+   "steps": [
+    "Ek message, **kai offers**",
+    "**Fake urgency**",
+    "**Button** ke bina link"
+   ],
+   "bubble": "OOPS",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "KITNE [FOLLOW-UPS]?",
+   "label": "FAQ",
+   "lines": [
+    "**Ek per person** per automation, **24-hour** window ke andar."
+   ],
+   "bubble": "CLEAR",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [FOLLOWUP]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

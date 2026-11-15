@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "write-faq-for-ai-dm-agent",
+ "keyword": "FAQ",
+ "source": "seo_content.GUIDES['write-faq-for-ai-dm-agent']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#aitools",
+  "#chatbot",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment FAQ aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "AI [GALAT] BOL DE TOH?",
+   "lines": [
+    "Aisa **FAQ** likho jo AI quote kare 👇"
+   ],
+   "bubble": "DARR LAGTA HAI",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "SHORT [FACTS] LIKHO",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Short **facts** jo AI **quote** kar sake."
+   ],
+   "bubble": "SIMPLE",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "[PRODUCTS] PEHLE",
+   "label": "TEMPLATE",
+   "lines": [
+    "Har product: **price**, kya included, **link**. E.g. Prompt Pack **₹149**, 39 prompts + guide."
+   ],
+   "bubble": "CLEAR",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "PAYMENT + [DELIVERY]",
+   "label": "TEMPLATE",
+   "lines": [
+    "**UPI, cards, netbanking**. Access email **2 minute** mein."
+   ],
+   "bubble": "SORTED",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "REAL [SAWAAL] DAALO",
+   "label": "TEMPLATE",
+   "lines": [
+    "Apne **DMs** ke real sawaal + tumhare **answers**. \"Beginners ke liye? **Haan**.\""
+   ],
+   "bubble": "COPY KARO",
+   "bg": "sunburst"
+  },
+  {
+   "role": "mistake",
+   "headline": "YE [AI] NAHI KAREGA",
+   "label": "HAND-OFF",
+   "lines": [
+    "Refunds, payment fails, **collabs**, complaints, legal, aur jo **FAQ** mein nahi."
+   ],
+   "bubble": "MERE PAAS",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "[10] SAWAAL TEST",
+   "label": "TEST IT",
+   "lines": [
+    "Inbox ke **10 real sawaal** test karo: ek **doosri language** mein, ek hand-off wala."
+   ],
+   "bubble": "PASS ✅",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [FAQ]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

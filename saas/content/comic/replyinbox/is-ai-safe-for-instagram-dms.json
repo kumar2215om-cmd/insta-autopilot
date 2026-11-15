@@ -1,0 +1,99 @@
+{
+ "page": "replyinbox",
+ "slug": "is-ai-safe-for-instagram-dms",
+ "keyword": "AISAFE",
+ "source": "seo_content.GUIDES['is-ai-safe-for-instagram-dms']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#aitools",
+  "#chatbot",
+  "#instagramhelp"
+ ],
+ "cta_caption": "Comment AISAFE aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "AI PE [BHAROSA] KARUN?",
+   "lines": [
+    "AI ko DMs dena **safe** hai? 👇"
+   ],
+   "bubble": "THODA DARR HAI",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[FAQ] SE HI JAWAB",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Safe hai jab AI sirf **tumhare FAQ** se bole, **prices/links invent** na kare."
+   ],
+   "bubble": "TRUST",
+   "bg": "grid"
+  },
+  {
+   "role": "tip",
+   "headline": "[ACCURACY] KE LIYE",
+   "label": "ACCURACY",
+   "steps": [
+    "**Facts** do: prices, links",
+    "FAQ ke bahar → **hand over**",
+    "On se pehle **test**"
+   ],
+   "bubble": "PAKKA",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "[PRIVACY]",
+   "label": "PRIVACY",
+   "lines": [
+    "ReplyInbox API se **Claude** use karta hai: chats **model training** mein nahi jaate."
+   ],
+   "bubble": "SAFE 🔒",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "REFUND? [TUMHE]",
+   "label": "BRAND SAFETY",
+   "lines": [
+    "Refunds, complaints, collabs **hand off**. Jo FAQ mein nahi, **promise** nahi."
+   ],
+   "bubble": "CONTROL",
+   "bg": "sunburst"
+  },
+  {
+   "role": "easy",
+   "headline": "KABHI BHI [TAKE OVER]",
+   "label": "CONTROL",
+   "lines": [
+    "Tum **kisi bhi chat** ko kabhi bhi **take over** kar sakte ho."
+   ],
+   "bubble": "BOSS MAIN",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "AI HAI, [BATA] DO",
+   "label": "FAQ",
+   "lines": [
+    "\"**Replies may be assisted by AI**\" About ya welcome mein likho."
+   ],
+   "bubble": "HONESTY 👍",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [AISAFE]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

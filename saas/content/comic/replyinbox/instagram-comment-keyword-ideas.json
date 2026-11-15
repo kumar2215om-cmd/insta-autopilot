@@ -1,0 +1,100 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-comment-keyword-ideas",
+ "keyword": "KEYWORDS",
+ "source": "seo_content.GUIDES['instagram-comment-keyword-ideas']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#reelstips",
+  "#instagramgrowth",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment KEYWORDS aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "KEYWORD [KYA] RAKHUN?",
+   "lines": [
+    "**40** keyword ideas wali guide 👇"
+   ],
+   "bubble": "DIMAAG BLANK HAI",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[EK] SHORT WORD",
+   "label": "RULE 1",
+   "lines": [
+    "**Ek word**, easy spelling, **no symbols**: GUIDE, PROMPTS, RECIPE, PLAN."
+   ],
+   "bubble": "SIMPLE",
+   "bg": "grid"
+  },
+  {
+   "role": "tip",
+   "headline": "PROMISE SE [MATCH]",
+   "label": "RULE 2",
+   "lines": [
+    "Recipe chahiye? Comment **RECIPE**. Har reel ka **alag** keyword."
+   ],
+   "bubble": "LOGIC HAI",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "[3 SEC] MEIN BOLO",
+   "label": "RULE 3",
+   "lines": [
+    "**First 3 seconds** mein bolo, **screen** aur **caption** pe likho."
+   ],
+   "bubble": "LOUD",
+   "bg": "grid"
+  },
+  {
+   "role": "explain",
+   "headline": "NICHE [IDEAS]",
+   "label": "EXAMPLES",
+   "steps": [
+    "AI: **PROMPTS**, TOOLS",
+    "Fitness: **PLAN**, ABS",
+    "Finance: **BUDGET**, SIP",
+    "Food: **RECIPE**"
+   ],
+   "bubble": "MIL GAYA",
+   "bg": "sunburst"
+  },
+  {
+   "role": "easy",
+   "headline": "[TYPO] CHALEGA",
+   "label": "FAQ",
+   "lines": [
+    "\"prompts!!\" bhi **PROMPTS** count hota hai: capitals, plurals, emojis match."
+   ],
+   "bubble": "PHEW",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "SCRIPT [COPY] KARO",
+   "label": "REEL LINE",
+   "lines": [
+    "\"Want the full plan? **Comment PLAN.**\""
+   ],
+   "bubble": "EASY PEASY",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [KEYWORDS]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

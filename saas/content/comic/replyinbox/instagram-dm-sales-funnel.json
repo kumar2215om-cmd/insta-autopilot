@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-sales-funnel",
+ "keyword": "FUNNEL",
+ "source": "seo_content.GUIDES['instagram-dm-sales-funnel']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#digitalproducts",
+  "#onlinebusiness",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment FUNNEL aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "DMS SE [SALES]? KAISE?",
+   "lines": [
+    "**6-step** DM sales funnel 👇"
+   ],
+   "bubble": "BATAO BATAO",
+   "bg": "sunburst"
+  },
+  {
+   "role": "steps",
+   "headline": "1. [ATTENTION]",
+   "label": "STEP 1",
+   "lines": [
+    "Reel: **ek promise** aur ek **keyword**."
+   ],
+   "bubble": "HOOK",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "2. [DELIVERY]",
+   "label": "STEP 2",
+   "lines": [
+    "Auto **DM** mein **freebie**."
+   ],
+   "bubble": "FREE GIFT",
+   "bg": "dots"
+  },
+  {
+   "role": "steps",
+   "headline": "3. [CAPTURE]",
+   "label": "STEP 3",
+   "lines": [
+    "**Follow gate**, **email** ya **WhatsApp**."
+   ],
+   "bubble": "LEAD MILA",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "4. [OFFER] 5. [PUSH]",
+   "label": "STEP 4–5",
+   "lines": [
+    "Kuch ghante baad **paid offer**. Launch day pe recent chats ko **broadcast**."
+   ],
+   "bubble": "SALE TIME",
+   "bg": "sunburst"
+  },
+  {
+   "role": "result",
+   "headline": "6. [MEASURE]",
+   "label": "STEP 6",
+   "lines": [
+    "**Sales per reel** dekho, **winners repeat** karo."
+   ],
+   "bubble": "SCALE KARO 📈",
+   "bg": "dots"
+  },
+  {
+   "role": "easy",
+   "headline": "SETUP: [10 MIN]",
+   "label": "FAQ",
+   "lines": [
+    "Pehla automation about **10 minute**. Phir naye reels pe **one tap** copy."
+   ],
+   "bubble": "EASY HAI",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [FUNNEL]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

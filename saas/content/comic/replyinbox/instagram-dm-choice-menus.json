@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-choice-menus",
+ "keyword": "MENU",
+ "source": "seo_content.GUIDES['instagram-dm-choice-menus']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment MENU aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "SABKO [EK] HI DM?",
+   "lines": [
+    "DM mein **choice menu** use karo 👇"
+   ],
+   "bubble": "BORING 😴",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[3] BUTTONS, 3 RAASTE",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Menu = **3 buttons** tak, har button ka **apna message** aur link."
+   ],
+   "bubble": "CHOICE",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "[FREE] YA PAID?",
+   "label": "IDEA",
+   "lines": [
+    "\"**Free guide / Full course / Book a call**\""
+   ],
+   "bubble": "SALES",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "[LEVEL] POOCHO",
+   "label": "IDEA",
+   "lines": [
+    "\"**Beginner / Intermediate / Advanced**\""
+   ],
+   "bubble": "PERSONAL",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "[PRODUCT] CHUNO",
+   "label": "IDEA",
+   "lines": [
+    "\"**Skincare / Makeup / Outfit**\" ya \"**Class 10 / Class 12**\""
+   ],
+   "bubble": "SORTED",
+   "bg": "sunburst"
+  },
+  {
+   "role": "result",
+   "headline": "PICKS SE [SEEKHO]",
+   "label": "INSIGHTS",
+   "lines": [
+    "Insights batata hai har option **kitne logon** ne choose kiya: next kya banana hai."
+   ],
+   "bubble": "DATA 💡",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "SIRF [3] KYUN?",
+   "label": "FAQ",
+   "lines": [
+    "Instagram ek DM mein **max 3 buttons** allow karta hai."
+   ],
+   "bubble": "RULE HAI",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [MENU]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-broadcast-messages",
+ "keyword": "BROADCAST",
+ "source": "seo_content.GUIDES['instagram-broadcast-messages']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment BROADCAST aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "SAB FOLLOWERS KO [DM]?",
+   "lines": [
+    "**Broadcast** ka sach 👇"
+   ],
+   "bubble": "HAAN NA? 🤔",
+   "bg": "sunburst"
+  },
+  {
+   "role": "mistake",
+   "headline": "[NAHI], SIRF 24 GHANTE",
+   "label": "THE RULE",
+   "lines": [
+    "Broadcast sirf unko jinhone last **24 ghante** mein DM kiya. **All followers** nahi."
+   ],
+   "bubble": "OHH",
+   "bg": "grid"
+  },
+  {
+   "role": "tip",
+   "headline": "PEHLE [KEYWORD] REEL",
+   "label": "PRO TIP",
+   "lines": [
+    "Launch se **ek din pehle** keyword reel daalo: **list fast** bharti hai."
+   ],
+   "bubble": "JUGAAD",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "KAB [USE] KAREIN?",
+   "label": "USE IT FOR",
+   "lines": [
+    "**Launches**, live sessions, **last-call** offers. **Ek message, ek button.**"
+   ],
+   "bubble": "SHORT RAKHO",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "[LIVE] ALERT",
+   "label": "EXAMPLE",
+   "lines": [
+    "\"**Live in 1 hour** 🔴 Join here 👇\""
+   ],
+   "bubble": "COPY KARO",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "[LAST CALL]",
+   "label": "EXAMPLE",
+   "lines": [
+    "\"**Doors close tonight** for the course 👇\""
+   ],
+   "bubble": "FOMO",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "REPLYINBOX [DIKHATA] HAI",
+   "label": "IN REPLYINBOX",
+   "lines": [
+    "Kitne log reach honge, **batches** mein bhejta hai, **link clicks** count karta hai."
+   ],
+   "bubble": "SORTED 📢",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [BROADCAST]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

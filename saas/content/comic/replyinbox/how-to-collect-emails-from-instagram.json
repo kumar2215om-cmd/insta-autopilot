@@ -1,0 +1,99 @@
+{
+ "page": "replyinbox",
+ "slug": "how-to-collect-emails-from-instagram",
+ "keyword": "EMAILS",
+ "source": "seo_content.GUIDES['how-to-collect-emails-from-instagram']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#leadgeneration",
+  "#emailmarketing",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment EMAILS aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "FOLLOWERS HAI, [EMAILS] NAHI?",
+   "lines": [
+    "Instagram se **email list** banao 👇"
+   ],
+   "bubble": "LIST KHAALI HAI 😬",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "DM MEIN [EMAIL] MAANGO",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Comment → DM **email maangta** hai → reply → **link** milta hai."
+   ],
+   "bubble": "EASY",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "[FREEBIE] BANAO",
+   "label": "STEP 1",
+   "lines": [
+    "Email ke layak **freebie**: checklist, template, mini-course."
+   ],
+   "bubble": "VALUE DO",
+   "bg": "dots"
+  },
+  {
+   "role": "steps",
+   "headline": "REEL [POST] KARO",
+   "label": "STEP 2",
+   "lines": [
+    "\"Comment **GUIDE** and I'll send it\" wali reel daalo."
+   ],
+   "bubble": "CAMERA ON",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "[ASK FOR EMAIL] ON",
+   "label": "STEP 3",
+   "lines": [
+    "ReplyInbox mein comment automation banao, **Ask for email** on karo, link add karo."
+   ],
+   "bubble": "DONE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tip",
+   "headline": "[KYUN] BATAO",
+   "label": "TIPS",
+   "steps": [
+    "Email **kyun** chahiye, batao",
+    "**Skip** button agar reach chahiye",
+    "Reel se leads **tag** karo"
+   ],
+   "bubble": "PRO MOVE",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "[SHEETS] MEIN SAVE",
+   "label": "AUTO SAVE",
+   "lines": [
+    "Emails **auto save**, Google Sheets ya email tool mein. **WhatsApp** number bhi le sakte ho."
+   ],
+   "bubble": "LIST BAN GAYI 🎉",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [EMAILS]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

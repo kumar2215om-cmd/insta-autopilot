@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-automation-for-beauty-creators",
+ "keyword": "BEAUTY",
+ "source": "seo_content.GUIDES['instagram-dm-automation-for-beauty-creators']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#beautycreator",
+  "#dmautomation",
+  "#contentcreator"
+ ],
+ "cta_caption": "Comment BEAUTY aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "\"LINK PLS\" [HAR] REEL PE?",
+   "lines": [
+    "Beauty creators ke liye **DM automation** 👇"
+   ],
+   "bubble": "LINKS HI LINKS",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "COMMENT [LINK]",
+   "label": "FOR CREATORS",
+   "lines": [
+    "\"Comment **LINK** for everything I used\" → DM mein **product links**."
+   ],
+   "bubble": "SHOP KARO",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "STORY: [SHOP]",
+   "label": "STORY REPLIES",
+   "lines": [
+    "\"Reply **SHOP** for today's finds\". Menu: **Skincare / Makeup / Outfit**."
+   ],
+   "bubble": "ORGANISED",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "SALON? [BOOK] KARO",
+   "label": "FOR SALONS",
+   "lines": [
+    "Comment **BOOK** → **price list** + **booking link**. Bridal enquiries ka **WhatsApp**."
+   ],
+   "bubble": "BOOKINGS ✨",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "AFFILIATE? [CLICKS] OFF",
+   "label": "AFFILIATE LINKS",
+   "lines": [
+    "Affiliate links pe **click counting off**, aur zaroori ho toh **affiliate** batao."
+   ],
+   "bubble": "RULES",
+   "bg": "sunburst"
+  },
+  {
+   "role": "mistake",
+   "headline": "PUBLIC MEIN [LINK] NAHI",
+   "label": "FAQ",
+   "lines": [
+    "DMs mein links **fine**. **Public comment replies** mein links mat daalo."
+   ],
+   "bubble": "NOTED",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "KAUNSA [PRODUCT] HIT?",
+   "label": "FAQ",
+   "lines": [
+    "Click counting on: har link ke **clicks** per automation dikhte hain."
+   ],
+   "bubble": "DATA ❤️",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [BEAUTY]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

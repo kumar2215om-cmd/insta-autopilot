@@ -136,12 +136,24 @@ def side_of(i):
     return "left" if i % 2 else "right"
 
 
-def pick_poses(slides, index, roles=None):
+def _aspect(src):
+    try:
+        from PIL import Image
+        w, h = Image.open(src).size
+        return w / h
+    except Exception:
+        return 0.6
+
+
+def pick_poses(slides, index, roles=None, seed=""):
     """One pose per slide: matches the slide's role tags (earlier tags weigh more) and mood, never repeats while unused
     poses remain, prefers bust/half framing on text-heavy slides and full/jumping poses on result and CTA slides,
     and a right-facing pose when the character stands left of the content. "pose" on a slide overrides."""
+    import zlib
     roles = roles or {}
     used, out, n = {}, [], len(slides)
+    salt = zlib.crc32(seed.encode())          # different carousels pick different near-equal poses
+    wide = {p: _aspect(v["src"]) > 0.78 for p, v in index.items() if not v["src"].startswith("svg:")}
     order = {p: k for k, p in enumerate(index)}
     for k, s in enumerate(slides):
         if s.get("pose"):
@@ -157,17 +169,22 @@ def pick_poses(slides, index, roles=None):
             def score(p):
                 v = index[p]
                 tags = [x.lower() for x in v.get("tags", [])]
-                fit = sum(len(want) - want.index(x) for x in tags if x in want) * 2
+                fit = sum(3 + (1 if want.index(x) < 2 else 0) for x in tags if x in want)
                 fit += 3 * len(mood & set(tags)) + (3 if v.get("emotion", "").lower() in mood else 0)
                 fr = v.get("framing", "half")
                 if role in ("result", "cta"):
-                    fit += 4 if fr == "full" else 0
+                    fit += 2 if fr == "full" else 0
                 elif heavy:
-                    fit += 4 if fr in ("bust", "half") else -4 if fr == "full" else 0
+                    fit += 2 if fr in ("bust", "half") else -3 if fr == "full" else 0
                 if side_of(k + 1) == "left" and v.get("faces") == "right":
-                    fit += 3
-                return (-used.get(p, 0), fit, -order[p])
-            choice = max(index, key=score)
+                    fit += 2
+                if wide.get(p):                       # wide-armed poses render small
+                    fit -= 2
+                return (-used.get(p, 0), fit)
+            scored = {p: score(p) for p in index}
+            best = max(scored.values())
+            near = sorted(p for p, sc in scored.items() if sc[0] == best[0] and sc[1] >= best[1] - 2)
+            choice = near[(salt + k) % len(near)]
         used[choice] = used.get(choice, 0) + 1
         out.append(choice)
     return out
@@ -464,7 +481,7 @@ def build(spec_path, out_dir=None):
         sys.exit("Spec problems:\n  " + "\n  ".join(errs))
     t = PAGES[spec["page"]]
     index = load_index(spec["page"])
-    poses = pick_poses(spec["slides"], index, load_roles(spec["page"]))
+    poses = pick_poses(spec["slides"], index, load_roles(spec["page"]), seed=spec.get("slug", ""))
     out = out_dir or os.path.join(SAAS, "content", "comic", spec["page"], spec["slug"])
     os.makedirs(out, exist_ok=True)
     for f in os.listdir(out):
