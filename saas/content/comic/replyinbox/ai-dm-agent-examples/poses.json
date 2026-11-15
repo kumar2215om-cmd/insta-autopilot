@@ -1,12 +1,12 @@
 {
   "poses": [
-    "hand-on-head-oops",
-    "sitting-hands-clasped",
+    "shrug-palms-up",
+    "arms-open-palms-up",
+    "holding-a-laptop-typing",
     "hands-behind-head",
-    "sunglasses-adjust",
-    "sitting-chin-on-hand",
-    "phone-smirk",
-    "arms-crossed",
-    "fist-pump-shout"
+    "stop-gesture-open-palm",
+    "adjusting-sunglasses",
+    "sunglasses-arms-crossed",
+    "pointing-at-the-viewer"
   ]
 }

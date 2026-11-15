@@ -78,7 +78,7 @@ def headline_html(text):
 
 # ---------- characters ----------
 
-CHARACTER_SET = {"aiwithom": "om-v1", "decodingwithom": "om-v1", "replyinbox": "om-v1"}   # page → content/characters/<set>
+CHARACTER_SET = {"aiwithom": "om", "decodingwithom": "om", "replyinbox": "om"}   # page → content/characters/<set>
 HD_CACHE = os.path.join(tempfile.gettempdir(), "comic-characters-hd")
 
 
@@ -116,19 +116,57 @@ def load_index(page):
     return {p: {"src": "svg:" + p, "emotion": character.POSES[p]["expression"], "tags": tags.get(p, [])} for p in character.POSES}
 
 
-def pick_poses(slides, index):
-    used, out = {}, []
+def load_roles(page):
+    path = os.path.join(char_dir(page), "roles.json")
+    return json.load(open(path))["slide_roles"] if os.path.exists(path) else {}
+
+
+def slide_role(s, k, n):
+    if s.get("role"):
+        return s["role"]
+    if k == 0:
+        return "hook"
+    if k == n - 1:
+        return "cta"
+    return "steps" if s.get("steps") else "explain"
+
+
+def side_of(i):
+    """Character side on slide i (1-based): left on odd slides, right on even ones."""
+    return "left" if i % 2 else "right"
+
+
+def pick_poses(slides, index, roles=None):
+    """One pose per slide: matches the slide's role tags (earlier tags weigh more) and mood, never repeats while unused
+    poses remain, prefers bust/half framing on text-heavy slides and full/jumping poses on result and CTA slides,
+    and a right-facing pose when the character stands left of the content. "pose" on a slide overrides."""
+    roles = roles or {}
+    used, out, n = {}, [], len(slides)
+    order = {p: k for k, p in enumerate(index)}
     for k, s in enumerate(slides):
         if s.get("pose"):
             if s["pose"] not in index:
-                sys.exit(f"Slide {k + 1}: unknown pose {s['pose']!r}; have {sorted(index)}")
+                sys.exit(f"Slide {k + 1}: unknown pose {s['pose']!r}")
             choice = s["pose"]
         else:
+            role = slide_role(s, k, n)
+            want = [w.lower() for w in roles.get(role, [])]
             mood = set(m.lower() for m in s.get("mood", []))
+            heavy = slide_words(s) >= 14 or bool(s.get("chat") or s.get("steps"))
+
             def score(p):
                 v = index[p]
-                hit = len(mood & set(t.lower() for t in v.get("tags", []))) + (2 if v.get("emotion", "").lower() in mood else 0)
-                return (-used.get(p, 0), hit, -list(index).index(p))   # unused first, then best match
+                tags = [x.lower() for x in v.get("tags", [])]
+                fit = sum(len(want) - want.index(x) for x in tags if x in want) * 2
+                fit += 3 * len(mood & set(tags)) + (3 if v.get("emotion", "").lower() in mood else 0)
+                fr = v.get("framing", "half")
+                if role in ("result", "cta"):
+                    fit += 4 if fr == "full" else 0
+                elif heavy:
+                    fit += 4 if fr in ("bust", "half") else -4 if fr == "full" else 0
+                if side_of(k + 1) == "left" and v.get("faces") == "right":
+                    fit += 3
+                return (-used.get(p, 0), fit, -order[p])
             choice = max(index, key=score)
         used[choice] = used.get(choice, 0) + 1
         out.append(choice)
@@ -191,6 +229,24 @@ def contact_sheet(page, out):
         js = ("const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:1640,height:800}});"
               f"await p.goto('file://{tmp}/s.html');await p.screenshot({{path:'{os.path.abspath(out)}',fullPage:true}});await b.close();}})()")
         subprocess.run(["node", "-e", js], check=True, cwd=tmp, env={**os.environ, "NODE_PATH": __import__("carousels").node_path()})
+
+
+def roles_sheet(page, out):
+    """Contact sheet of every pose with the slide roles it fits (from roles.json), framing and facing."""
+    index, roles = load_index(page), load_roles(page)
+    cells = []
+    for name, v in index.items():
+        fits = [r for r, tags in roles.items() if set(tags) & set(v.get("tags", []))]
+        cells.append(f'<figure><img src="file://{html.escape(v["src"])}"><figcaption><b>{html.escape(name)}</b><br>'
+                     f'{html.escape(", ".join(fits) or "—")}<br><i>{v.get("framing", "")} · {v.get("faces", "")}</i></figcaption></figure>')
+    doc = ('<!doctype html><body style="margin:0;padding:16px;width:1800px;font:500 15px sans-serif;display:flex;flex-wrap:wrap;gap:10px;'
+           'background:#F6F2E7"><style>figure{margin:0;width:168px;text-align:center;background:#fff;border:3px solid #111;border-radius:12px;padding:6px}'
+           'img{width:150px;height:190px;object-fit:contain}figcaption{line-height:1.25}b{font-size:13px}</style>' + "".join(cells) + "</body>")
+    with tempfile.TemporaryDirectory() as tmp:
+        open(os.path.join(tmp, "s.html"), "w").write(doc)
+        js = ("const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:1832,height:800}});"
+              f"await p.goto('file://{tmp}/s.html');await p.screenshot({{path:'{os.path.abspath(out)}',fullPage:true}});await b.close();}})()")
+        subprocess.run(["node", "-e", js], check=True, cwd=tmp)
 
 
 def check(page):
@@ -281,7 +337,7 @@ mark{{background:{t['hl']};color:{t['hl_ink']};padding:0 14px;border:6px solid #
 
 
 def slide_html(s, i, n, t, char):
-    side = "left" if i % 2 else "right"
+    side = side_of(i)
     bg = s.get("bg") or BGS[(i - 1) % len(BGS)]
     if s.get("steps"):
         body = '<ol class="steps">' + "".join(f'<li><span class="n">{k}</span><span>{rich(x, t["key"])}</span></li>'
@@ -408,7 +464,7 @@ def build(spec_path, out_dir=None):
         sys.exit("Spec problems:\n  " + "\n  ".join(errs))
     t = PAGES[spec["page"]]
     index = load_index(spec["page"])
-    poses = pick_poses(spec["slides"], index)
+    poses = pick_poses(spec["slides"], index, load_roles(spec["page"]))
     out = out_dir or os.path.join(SAAS, "content", "comic", spec["page"], spec["slug"])
     os.makedirs(out, exist_ok=True)
     for f in os.listdir(out):
@@ -417,6 +473,8 @@ def build(spec_path, out_dir=None):
     jobs = []
     for i, (s, pose) in enumerate(zip(spec["slides"], poses), 1):
         char = character_svg(index[pose]["src"], t["sticker"], t["outfit"], f"c{i}")
+        if index[pose].get("faces") == "right" and side_of(i) == "right":   # turn him towards the content
+            char = char.replace("<svg ", '<svg style="transform:scaleX(-1)" ', 1)
         jobs.append((slide_html(s, i, SLIDES, t, char), os.path.join(out, f"{i:02d}.png")))
     bad = render(jobs)
     open(os.path.join(out, "caption.txt"), "w").write(caption(spec))
@@ -432,9 +490,12 @@ def main(argv=None):
     ap.add_argument("specs", nargs="*")
     ap.add_argument("--check", metavar="PAGE", help="check content/characters/PAGE/*.png and update characters.json")
     ap.add_argument("--out")
+    ap.add_argument("--roles-sheet", metavar="PAGE", help="write a contact sheet of every pose and the slide roles it fits")
     a = ap.parse_args(argv)
     if a.check:
         return check(a.check)
+    if a.roles_sheet:
+        return roles_sheet(a.roles_sheet, a.out or "poses-and-roles.png")
     for p in a.specs:
         build(p, a.out)
 
