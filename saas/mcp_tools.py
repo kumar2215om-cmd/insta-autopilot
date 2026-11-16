@@ -16,6 +16,7 @@ import engine
 import plans
 import push
 import store
+import youtube
 from mcp_protocol import ToolError
 
 _STR = {"type": "string"}
@@ -143,6 +144,43 @@ def tools_for(acc, svc, read_only=False):
         except Exception as e:
             raise ToolError(f"The AI couldn't rewrite right now: {e}")
         return {"draft": _draft_out(d)}
+
+    # ---------- YouTube ----------
+
+    def _yt(v):
+        return {k: v.get(k) for k in ("id", "status", "title", "description", "tags", "publish_at", "short", "studio_url", "error", "thumb_error")}
+
+    def yt_list(args):
+        st = str(args.get("status") or "review")
+        groups = {"review": ("draft", "approved"), "scheduled": ("scheduled",), "published": ("published",),
+                  "other": ("uploading", "failed", "rejected")}
+        items = youtube.refresh_statuses(acc)
+        if st != "all":
+            items = [v for v in items if v["status"] in groups.get(st, ())]
+        return {"connected": bool(youtube.connection(acc).get("refresh_token")) or bool(acc.get("demo")),
+                "videos": [_yt(youtube.view(acc, v)) for v in items],
+                "note": "Videos are uploaded in the ReplyInbox dashboard (YouTube page); here you can review, edit and schedule them."}
+
+    def yt_decide(args):
+        vid, decision = str(args.get("video_id", "")), str(args.get("decision") or "approve")
+        try:
+            if decision == "approve":
+                v = youtube.approve(store.load_account(ig_id) or acc, vid, args.get("publish_at"))
+            elif decision == "reject":
+                v = youtube.reject(acc, vid, args.get("note", ""))
+            else:
+                raise ToolError("decision must be approve or reject.")
+        except youtube.YTError as e:
+            raise ToolError(str(e))
+        return {"video": _yt(youtube.view(acc, v))}
+
+    def yt_edit(args):
+        try:
+            v = youtube.update(acc, str(args.get("video_id", "")),
+                               {k: args[k] for k in ("title", "description", "tags", "category", "publish_at") if k in args})
+        except youtube.YTError as e:
+            raise ToolError(str(e))
+        return {"video": _yt(youtube.view(acc, v))}
 
     # ---------- overview ----------
 
@@ -701,6 +739,22 @@ def tools_for(acc, svc, read_only=False):
          "description": "Shows what the AI agent would answer to a sample fan message, without sending. Uses one AI reply credit.",
          "input_schema": {"type": "object", "required": ["message"], "properties": {"message": _STR}}},
     ]
+    if youtube.available(acc):
+        tools += [
+            {"name": "list_youtube_videos", "title": "YouTube queue", "read_only": True, "fn": yt_list,
+             "description": "Videos uploaded to the creator's YouTube channel through ReplyInbox: waiting for review, scheduled, "
+                            "published or other, with title, description, tags, publish time (UTC) and a YouTube Studio link.",
+             "input_schema": {"type": "object", "properties": {"status": {"type": "string", "enum": ["review", "scheduled", "published", "other", "all"]}}}},
+            {"name": "approve_youtube_video", "title": "Approve or reject a YouTube video", "destructive": True, "fn": yt_decide,
+             "description": "approve: schedules the video to go public on YouTube at publish_at (ISO time with timezone, at least 10 minutes "
+                            "ahead; default the time already set). reject: keeps it private and never publishes. Get the creator's clear yes first.",
+             "input_schema": {"type": "object", "required": ["video_id", "decision"], "properties": {
+                 "video_id": _STR, "decision": {"type": "string", "enum": ["approve", "reject"]}, "publish_at": _STR, "note": _STR}}},
+            {"name": "edit_youtube_video", "title": "Change a YouTube video's details", "fn": yt_edit,
+             "description": "Changes title (max 100), description (max 5000), tags, category id or publish_at. A scheduled video is updated on YouTube too.",
+             "input_schema": {"type": "object", "required": ["video_id"], "properties": {
+                 "video_id": _STR, "title": _STR, "description": _STR, "tags": {"type": "array", "items": _STR}, "category": _STR, "publish_at": _STR}}},
+        ]
     if read_only:
         tools = [t for t in tools if t.get("read_only")]
     for t in tools:

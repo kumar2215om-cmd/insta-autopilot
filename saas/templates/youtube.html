@@ -1,0 +1,414 @@
+{% extends "_base.html" %}
+{% block title %}YouTube{% endblock %}
+{% block heading %}YouTube{% endblock %}
+{% block head %}
+<style>
+  .chan { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .chan img, .chan .av { width:40px; height:40px; border-radius:50%; background:var(--line2); }
+  .add { display:grid; gap:14px; }
+  .add .lbl, .edit .lbl { display:block; margin-bottom:6px; }
+  .add input:not([type=checkbox]):not([type=radio]):not([type=range]), .add textarea, .add select,
+  .edit input, .edit textarea, .edit select { width:100%; }
+  .add textarea, .edit textarea { resize:vertical; }
+  .cols { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; }
+  .drop { position:relative; display:block; border:2px dashed var(--line); border-radius:16px; padding:22px; text-align:center; cursor:pointer; background:var(--bg); }
+  .drop:hover, .drop:focus-within { border-color:var(--accent); }
+  .drop input { position:absolute; left:0; top:0; opacity:0; width:1px; height:1px; }
+  .meta { font:500 12.5px var(--mono); color:var(--mute); }
+  .cover { display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(0, 1fr); gap:14px; align-items:start; }
+  .cover canvas { width:100%; aspect-ratio:16/9; border-radius:12px; border:1px solid var(--line); background:#111; display:block; }
+  .cover .opts { display:grid; gap:10px; }
+  .cover input[type=range] { width:100%; accent-color:var(--accent); }
+  .count { font:500 11px var(--mono); color:var(--mute); float:right; }
+  .bar { height:10px; border-radius:99px; background:var(--line2); overflow:hidden; }
+  .bar i { display:block; height:100%; width:0; background:var(--grad); transition:width .3s; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+  .tabs button { border:1px solid var(--line); background:var(--card); border-radius:99px; padding:9px 16px; font:600 14px var(--text); color:var(--body); cursor:pointer; }
+  .tabs button[aria-selected="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .tabs .c { font:500 12px var(--mono); opacity:.7; margin-left:4px; }
+  .vid { display:grid; grid-template-columns:200px minmax(0, 1fr); gap:16px; margin-top:12px; }
+  .vid .th { width:100%; aspect-ratio:16/9; border-radius:10px; background:var(--line2) center/cover; display:grid; place-items:center; color:var(--mute); font-size:28px; }
+  .vid h3 { margin:0 0 6px; font:700 17px/1.35 var(--display); color:var(--ink); overflow-wrap:anywhere; }
+  .vid .chips { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+  .chip { font:600 11px var(--mono); letter-spacing:.06em; text-transform:uppercase; padding:4px 9px; border-radius:99px; background:var(--line2); color:var(--mute); }
+  .chip.ok { background:var(--ok-soft); color:var(--ok); } .chip.bad { background:var(--bad-soft); color:var(--bad); }
+  .chip.acc { background:var(--accent-soft); color:var(--accent-ink); }
+  .vid pre { margin:8px 0 0; white-space:pre-wrap; font:400 13.5px/1.5 var(--text); color:var(--body); background:var(--bg); border:1px solid var(--line2); border-radius:12px; padding:12px; max-height:260px; overflow:auto; }
+  .vid .acts { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .vid .acts input[type=datetime-local] { width:auto; }
+  .edit { display:grid; gap:10px; margin-top:10px; }
+  @media (max-width: 760px) { .cols, .cover { grid-template-columns:1fr; } .vid { grid-template-columns:1fr; } .vid .th { max-width:220px; } }
+</style>
+{% endblock %}
+{% block content %}
+{% if yt_error %}<div class="banner bad">{{ yt_error }}</div>{% endif %}
+{% if yt_connected %}<div class="banner info">YouTube channel connected ✓ Add your first video below.</div>{% endif %}
+
+<section class="card" id="connectCard">
+  <div class="chan" id="chan"><div class="empty">Loading…</div></div>
+</section>
+
+<section class="card add" id="addCard" hidden>
+  <div><h2>Add a video</h2>
+    <p class="muted small" style="margin:4px 0 0">It uploads to your channel as <b>private</b> and waits for your approval. When you approve, YouTube publishes it on its own at the time you pick.</p></div>
+  <label class="drop" id="drop"><input type="file" id="file" accept="video/*">
+    <b id="fileName">Choose a video file</b><div class="meta" id="fileMeta">MP4 or MOV · any size · the upload goes straight to YouTube</div></label>
+  <video id="probe" muted playsinline preload="metadata" hidden></video>
+
+  <div class="cols">
+    <div><label class="lbl" for="notes">What's it about? <span class="muted">(for the AI)</span></label>
+      <textarea id="notes" rows="4" maxlength="4000" placeholder="e.g. 5 free AI tools for students, tool names, the main tip, your Instagram freebie"></textarea>
+      <details style="margin-top:8px"><summary class="small"><b>Paste a transcript</b> <span class="muted">(better details, real chapters)</span></summary>
+        <textarea id="transcript" rows="6" maxlength="20000" style="margin-top:8px" placeholder="0:00 Intro …"></textarea></details>
+      <button class="btn ghost sm" type="button" id="aiBtn" style="margin-top:10px">✦ Write title, description and tags with AI</button>
+      <p class="hint" id="aiMsg" style="margin:6px 0 0">Uses 1 AI credit.</p></div>
+    <div style="display:grid; gap:10px">
+      <div><label class="lbl" for="publish">Publish on</label><input id="publish" type="datetime-local"></div>
+      <div><label class="lbl" for="category">Category</label><select id="category"></select></div>
+    </div>
+  </div>
+
+  <div><label class="lbl" for="title">Title <span class="count" id="tCount">0/100</span></label><input id="title" type="text" maxlength="100"></div>
+  <div><label class="lbl" for="desc">Description <span class="count" id="dCount">0/5000</span></label><textarea id="desc" rows="8" maxlength="5000"></textarea></div>
+  <div><label class="lbl" for="tags">Tags <span class="muted">(comma separated)</span></label><input id="tags" type="text" maxlength="500"></div>
+
+  <div>
+    <h3 style="margin:0 0 8px; font-size:15px">Cover</h3>
+    <div class="cover">
+      <canvas id="canvas" width="1280" height="720" aria-label="Cover preview"></canvas>
+      <div class="opts">
+        <label class="small"><input type="radio" name="cmode" value="frame" checked> Make it from a video frame</label>
+        <div id="frameOpts" style="display:grid; gap:8px">
+          <label class="lbl" for="frameAt" style="margin:0">Frame <span class="meta" id="frameT">0:00</span></label><input id="frameAt" type="range" min="0" max="100" value="20">
+          <label class="lbl" for="coverText" style="margin:0">Text on the cover</label><input id="coverText" type="text" maxlength="60" placeholder="3-5 big words">
+        </div>
+        <label class="small"><input type="radio" name="cmode" value="own"> Upload my own image</label>
+        <input id="coverFile" type="file" accept="image/png,image/jpeg" hidden>
+        <label class="small"><input type="radio" name="cmode" value="none"> No cover (YouTube picks one)</label>
+        <p class="hint" style="margin:0">Saved as 1280×720 JPG under 2 MB. Custom covers need a phone-verified channel. Shorts usually show a frame instead.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="progress" hidden><div class="bar"><i id="barFill"></i></div><p class="small muted" id="progMsg" style="margin:6px 0 0" role="status"></p></div>
+  <div class="row"><button class="btn" type="button" id="uploadBtn">Upload and send for approval</button><span class="small" id="addMsg" role="status"></span></div>
+</section>
+
+<section class="card" id="queueCard" hidden>
+  <div class="tabs" role="tablist" aria-label="Videos">
+    <button type="button" role="tab" data-tab="review" aria-selected="true">To review<span class="c" id="cReview"></span></button>
+    <button type="button" role="tab" data-tab="scheduled" aria-selected="false">Scheduled<span class="c" id="cScheduled"></span></button>
+    <button type="button" role="tab" data-tab="published" aria-selected="false">Published<span class="c" id="cPublished"></span></button>
+    <button type="button" role="tab" data-tab="other" aria-selected="false">Other<span class="c" id="cOther"></span></button>
+  </div>
+  <div id="list" role="tabpanel"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let S = null, tab = "review", editing = null, file = null, dur = 0, vertical = false, coverImg = null, uploading = false;
+const canEdit = {{ "false" if role == "viewer" else "true" }};
+const CHUNK = 32 * 256 * 1024;  // 8 MB, a multiple of 256 KB as YouTube requires
+const pad = (n) => String(n).padStart(2, "0");
+const localInput = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const toIso = (v) => v ? new Date(v).toISOString() : "";
+const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, {weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit"}) : "No time set";
+const mmss = (s) => `${Math.floor(s / 60)}:${pad(Math.floor(s % 60))}`;
+const mb = (b) => (b / 1048576).toFixed(b > 1e9 ? 0 : 1) + " MB";
+const GROUP = {review: ["draft", "approved"], scheduled: ["scheduled"], published: ["published"], other: ["uploading", "failed", "rejected"]};
+const YT_REASONS = {quotaExceeded: "YouTube's daily upload limit for this app is used up. Try again after midnight Pacific time; nothing is lost.",
+  uploadLimitExceeded: "Your channel hit YouTube's upload limit for today. Try again tomorrow.",
+  forbidden: "YouTube refused this. For covers, the channel must be phone-verified (youtube.com/verify).",
+  youtubeSignupRequired: "This Google account has no YouTube channel yet.", invalidTitle: "YouTube didn't accept the title.",
+  invalidDescription: "YouTube didn't accept the description.", mediaBodyRequired: "The file was empty.", invalidImage: "YouTube didn't accept the cover image."};
+
+function ytError(xhr) {
+  try { const e = JSON.parse(xhr.responseText).error; const r = (e.errors || [{}])[0].reason; return YT_REASONS[r] || e.message || `YouTube error ${xhr.status}`; }
+  catch (err) { return xhr.status ? `YouTube error ${xhr.status}` : "The connection dropped."; }
+}
+
+// ---------- connection ----------
+function drawChannel() {
+  const c = S.channel, el = $("chan");
+  if (!S.configured && !S.demo) {
+    el.innerHTML = `<div><h2>YouTube isn't set up on the server yet</h2><p class="muted small" style="margin:4px 0 0">The app owner adds the Google keys (YT_CLIENT_ID and YT_CLIENT_SECRET) in Vercel.</p></div>`;
+    return;
+  }
+  if (!c) {
+    el.innerHTML = `<div style="flex:1; min-width:220px"><h2>Connect your YouTube channel</h2>
+      <p class="muted small" style="margin:4px 0 0">Sign in with Google once. {{ brand }} uploads videos as private, sets the title, description, tags and cover, and schedules them for the time you approve. It never publishes without your yes.</p></div>
+      ${canEdit ? `<a class="btn" href="/youtube/connect">Connect YouTube</a>` : ""}`;
+    return;
+  }
+  el.innerHTML = `${c.pic ? `<img src="${esc(c.pic)}" alt="">` : `<span class="av" aria-hidden="true"></span>`}
+    <div style="flex:1"><b>${esc(c.title || "Your channel")}</b><div class="muted small">${c.broken ? `<span class="err">Access expired: connect again.</span>` : "Connected"}</div></div>
+    ${c.broken && canEdit ? `<a class="btn sm" href="/youtube/connect">Connect again</a>` : ""}
+    ${canEdit && !S.demo ? `<button class="btn ghost sm" type="button" id="disc">Disconnect</button>` : ""}`;
+  const d = $("disc");
+  if (d) d.onclick = async () => {
+    if (!d.dataset.sure) { d.dataset.sure = 1; d.textContent = "Sure? Scheduled videos stay scheduled"; return; }
+    try { S = await api("/api/youtube/disconnect", {method: "POST", body: "{}"}); draw(); } catch (e) { toast(e.message); }
+  };
+}
+
+// ---------- queue ----------
+function card(v) {
+  const short = v.short ? `<span class="chip acc">Short</span>` : "";
+  const st = {draft: "", approved: `<span class="chip bad">Not scheduled yet</span>`, scheduled: `<span class="chip ok">Scheduled</span>`,
+    published: `<span class="chip ok">Live</span>`, uploading: `<span class="chip">Uploading…</span>`, failed: `<span class="chip bad">Upload failed</span>`,
+    rejected: `<span class="chip">Rejected</span>`}[v.status] || "";
+  const cover = v.thumb === "set" ? `<span class="chip ok">Cover set</span>` : v.thumb_error ? `<span class="chip bad" title="${esc(v.thumb_error)}">No custom cover</span>` : "";
+  const thumb = v.video_id ? `style="background-image:url(https://i.ytimg.com/vi/${esc(v.video_id)}/mqdefault.jpg)"` : "";
+  const studio = v.studio_url ? `<a class="btn ghost sm" href="${esc(v.studio_url)}" target="_blank" rel="noopener">Open in YouTube Studio ↗</a>` : "";
+  let acts = "";
+  if (canEdit && ["draft", "approved"].includes(v.status))
+    acts = `<input type="datetime-local" data-at value="${v.publish_at ? localInput(new Date(v.publish_at)) : ""}" aria-label="Publish time">
+      <button class="btn sm" type="button" data-approve>Approve and schedule</button><button class="btn ghost sm" type="button" data-edit>Change</button>
+      <button class="btn ghost sm" type="button" data-reject>Reject</button>`;
+  else if (canEdit && v.status === "scheduled")
+    acts = `<button class="btn ghost sm" type="button" data-edit>Change</button><button class="btn ghost sm" type="button" data-reject>Stop (keep private)</button>`;
+  else if (canEdit && ["rejected", "failed", "uploading"].includes(v.status))
+    acts = `${v.status === "rejected" ? `<button class="btn ghost sm" type="button" data-review>Back to review</button>` : ""}
+      <button class="btn danger sm" type="button" data-del>${v.video_id && v.status !== "published" ? "Delete (also from YouTube)" : "Remove"}</button>`;
+  const edit = editing === v.id ? `<form class="edit" data-save>
+      <div><label class="lbl">Title</label><input name="title" type="text" maxlength="100" value="${esc(v.title)}"></div>
+      <div><label class="lbl">Description</label><textarea name="description" rows="8" maxlength="5000">${esc(v.description)}</textarea></div>
+      <div class="cols"><div><label class="lbl">Tags</label><input name="tags" type="text" value="${esc(v.tags.join(", "))}"></div>
+        <div><label class="lbl">Category</label><select name="category">${Object.entries(S.categories).map(([k, n]) => `<option value="${k}" ${k === v.category ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div></div>
+      ${v.status === "scheduled" ? `<div><label class="lbl">Publish on</label><input name="publish_at" type="datetime-local" value="${v.publish_at ? localInput(new Date(v.publish_at)) : ""}"></div>` : ""}
+      <div class="row"><button class="btn sm" type="submit">Save${v.status === "scheduled" ? " (updates YouTube)" : ""}</button><button class="btn ghost sm" type="button" data-cancel>Cancel</button></div>
+    </form>` : "";
+  return `<div class="vid" data-id="${esc(v.id)}"><div class="th" ${thumb}>${thumb ? "" : "▶"}</div><div>
+    <div class="chips">${st}${short}${cover}<span class="meta">${esc(when(v.publish_at))}</span></div>
+    <h3>${esc(v.title)}</h3>
+    ${v.error ? `<p class="small err" style="margin:0 0 6px">${esc(v.error)}</p>` : ""}
+    ${v.thumb_error ? `<p class="small muted" style="margin:0 0 6px">Cover: ${esc(v.thumb_error)}</p>` : ""}
+    <details><summary class="small"><b>Description and tags</b></summary><pre>${esc(v.description) || "(empty)"}</pre>
+      <p class="meta" style="margin:6px 0 0">${esc(v.tags.join(" · ")) || "No tags"} · ${esc(S.categories[v.category] || "")}</p></details>
+    ${edit || `<div class="acts">${acts}${studio}</div>`}
+    <div data-ask hidden class="row" style="gap:8px; margin-top:8px"><input type="text" style="flex:1; min-width:160px" maxlength="300" placeholder="Why? (optional)" aria-label="Reason">
+      <button class="btn danger sm" type="button" data-rejectgo>${v.status === "scheduled" ? "Stop it" : "Reject"}</button></div>
+  </div></div>`;
+}
+function drawList() {
+  const by = (g) => S.items.filter(v => GROUP[g].includes(v.status));
+  for (const [g, id] of [["review", "cReview"], ["scheduled", "cScheduled"], ["published", "cPublished"], ["other", "cOther"]]) $(id).textContent = by(g).length || "";
+  document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  const items = by(tab);
+  if (tab === "published" || tab === "other") items.reverse();
+  $("list").innerHTML = items.map(card).join("") || `<div class="empty" style="margin-top:12px">${
+    {review: "Nothing waiting. Add a video above.", scheduled: "Approved videos wait here until YouTube publishes them.",
+     published: "Videos show here once they're live.", other: "Nothing here."}[tab]}</div>`;
+}
+function draw() {
+  drawChannel();
+  const on = !!S.channel;
+  $("addCard").hidden = !on || !canEdit; $("queueCard").hidden = !on;
+  if (on) drawList();
+}
+async function act(id, path, body, msg) {
+  try { S = await api(`/api/youtube/videos/${id}${path}`, {method: path ? "POST" : "PUT", body: JSON.stringify(body)}); editing = null; draw(); if (msg) toast(msg); }
+  catch (e) { toast(e.message); try { S = await api("/api/youtube"); draw(); } catch (x) {} }
+}
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-tab]");
+  if (t) { tab = t.dataset.tab; editing = null; drawList(); return; }
+  const el = e.target.closest(".vid");
+  if (!el) return;
+  const id = el.dataset.id;
+  if (e.target.closest("[data-approve]")) return act(id, "/approve", {publish_at: toIso(el.querySelector("[data-at]").value)}, "Scheduled on YouTube ✓");
+  if (e.target.closest("[data-edit]")) { editing = id; drawList(); return; }
+  if (e.target.closest("[data-cancel]")) { editing = null; drawList(); return; }
+  if (e.target.closest("[data-reject]")) { const a = el.querySelector("[data-ask]"); a.hidden = false; a.querySelector("input").focus(); return; }
+  if (e.target.closest("[data-rejectgo]")) return act(id, "/reject", {note: el.querySelector("[data-ask] input").value}, "Done. It stays private on YouTube");
+  if (e.target.closest("[data-review]")) return act(id, "/review", {}, "Back in review");
+  const d = e.target.closest("[data-del]");
+  if (d) {
+    if (!d.dataset.sure) { d.dataset.sure = 1; d.textContent = "Sure?"; return; }
+    try { S = await api(`/api/youtube/videos/${id}`, {method: "DELETE", body: JSON.stringify({from_youtube: true})}); draw(); toast("Deleted"); } catch (err) { toast(err.message); }
+  }
+});
+document.addEventListener("submit", (e) => {
+  const f = e.target.closest("[data-save]");
+  if (!f) return;
+  e.preventDefault();
+  const F = f.elements, id = f.closest(".vid").dataset.id;
+  const body = {title: F.title.value, description: F.description.value, tags: F.tags.value, category: F.category.value};
+  if (F.publish_at) body.publish_at = toIso(F.publish_at.value);
+  act(id, "", body, "Saved ✓");
+});
+
+// ---------- add a video: file, details, cover ----------
+function counts() { $("tCount").textContent = `${$("title").value.length}/100`; $("dCount").textContent = `${$("desc").value.length}/5000`; }
+function coverWords(t) {
+  // The title's first few words without "(…)" or a trailing small word: "5 Free AI Tools for students" → "5 Free AI Tools"
+  const w = t.replace(/[([].*?[)\]]/g, "").replace(/[|:–—-].*$/, "").split(/\s+/).filter(Boolean).slice(0, 5);
+  while (w.length > 2 && /^(for|to|the|a|an|and|of|in|with|on|ke|ki|ka|se|me|mein|aur)$/i.test(w[w.length - 1])) w.pop();
+  return w.join(" ");
+}
+$("title").oninput = () => { counts(); if (!$("coverText").dataset.touched) { $("coverText").value = coverWords($("title").value); drawCover(); } };
+$("desc").oninput = counts;
+$("coverText").oninput = () => { $("coverText").dataset.touched = 1; drawCover(); };
+$("file").onchange = () => {
+  file = $("file").files[0] || null;
+  if (!file) return;
+  $("fileName").textContent = file.name;
+  $("fileMeta").textContent = mb(file.size) + " · reading…";
+  const v = $("probe");
+  v.src = URL.createObjectURL(file);
+  v.onloadedmetadata = () => {
+    dur = v.duration || 0; vertical = v.videoHeight > v.videoWidth;
+    const short = vertical && dur > 0 && dur <= 180;
+    $("fileMeta").textContent = `${mb(file.size)} · ${mmss(dur)} · ${vertical ? "vertical" : "horizontal"}${short ? " · will be a YouTube Short (#Shorts added)" : ""}`;
+    seekFrame();
+  };
+  v.onerror = () => { $("fileMeta").textContent = mb(file.size) + " · this browser can't preview it, but it still uploads"; };
+  if (!$("title").value) { $("title").value = file.name.replace(/\.[a-z0-9]{2,4}$/i, "").replace(/[-_]+/g, " ").slice(0, 100); counts(); }
+};
+function seekFrame() { const v = $("probe"); if (!dur) return; v.currentTime = Math.min(dur - .1, dur * $("frameAt").value / 100); $("frameT").textContent = mmss(v.currentTime); }
+$("probe").onseeked = () => drawCover();
+$("frameAt").oninput = seekFrame;
+document.querySelectorAll("[name=cmode]").forEach(r => r.onchange = () => {
+  const m = document.querySelector("[name=cmode]:checked").value;
+  $("frameOpts").hidden = m !== "frame"; $("coverFile").hidden = m !== "own"; if (m === "own") $("coverFile").click(); drawCover();
+});
+$("coverFile").onchange = () => {
+  const f = $("coverFile").files[0]; if (!f) return;
+  const img = new Image(); img.onload = () => { coverImg = img; drawCover(); }; img.src = URL.createObjectURL(f);
+};
+function fitCover(ctx, src, w, h) {
+  const sw = src.videoWidth || src.naturalWidth, sh = src.videoHeight || src.naturalHeight; if (!sw || !sh) return;
+  const s = Math.max(1280 / sw, 720 / sh); ctx.drawImage(src, (1280 - sw * s) / 2, (720 - sh * s) / 2, sw * s, sh * s);
+}
+function wrap(ctx, text, max) {
+  const words = text.toUpperCase().split(/\s+/).filter(Boolean), lines = [];
+  let line = "";
+  for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > max && line) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line);
+  return lines.slice(0, 3);
+}
+function drawCover() {
+  const c = $("canvas"), ctx = c.getContext("2d"), m = document.querySelector("[name=cmode]:checked").value;
+  ctx.fillStyle = "#14121B"; ctx.fillRect(0, 0, 1280, 720);
+  if (m === "none") { ctx.fillStyle = "#888"; ctx.font = "600 40px system-ui"; ctx.textAlign = "center"; ctx.fillText("YouTube picks the cover", 640, 370); return; }
+  if (m === "own") { if (coverImg) fitCover(ctx, coverImg); return; }
+  if ($("probe").readyState >= 2) fitCover(ctx, $("probe"));
+  const text = $("coverText").value.trim();
+  if (!text) return;
+  const g = ctx.createLinearGradient(0, 300, 0, 720); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.75)");
+  ctx.fillStyle = g; ctx.fillRect(0, 300, 1280, 420);
+  let size = 132; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; let lines;
+  do { ctx.font = `900 ${size}px Anton, Impact, "Arial Black", system-ui, sans-serif`; lines = wrap(ctx, text, 1160); size -= 6; }
+  while ((lines.length > 2 && size > 80) || lines.some(l => ctx.measureText(l).width > 1160));
+  const lh = size * 1.05; let y = 720 - 60 - (lines.length - 1) * lh;
+  lines.forEach((l, i) => {
+    ctx.lineWidth = 16; ctx.strokeStyle = "#000"; ctx.lineJoin = "round"; ctx.strokeText(l, 60, y);
+    ctx.fillStyle = i === lines.length - 1 ? "#FFD21F" : "#fff"; ctx.fillText(l, 60, y); y += lh;
+  });
+}
+function coverBlob() {
+  return new Promise((res) => {
+    const m = document.querySelector("[name=cmode]:checked").value;
+    if (m === "none" || (m === "own" && !coverImg)) return res(null);
+    let q = .9;
+    const go = () => $("canvas").toBlob(b => (b && b.size > 2e6 && q > .4) ? (q -= .15, go()) : res(b), "image/jpeg", q);
+    try { go(); } catch (e) { res(null); }  // a tainted canvas can't be exported
+  });
+}
+$("aiBtn").onclick = async () => {
+  const b = $("aiBtn"), msg = $("aiMsg");
+  b.disabled = true; msg.className = "hint"; msg.textContent = "Writing…";
+  try {
+    const r = await api("/api/youtube/details", {method: "POST", body: JSON.stringify({notes: $("notes").value, transcript: $("transcript").value,
+      file_name: file ? file.name : "", duration: dur, vertical})});
+    $("title").value = r.title; $("desc").value = r.description; $("tags").value = r.tags.join(", "); counts(); $("title").oninput();
+    msg.className = "hint ok"; msg.textContent = "Done. Edit anything you like.";
+  } catch (e) { msg.className = "hint err"; msg.textContent = e.message; }
+  b.disabled = false;
+};
+
+// ---------- the upload: straight from this browser to YouTube ----------
+let tok = null;
+async function token() {
+  if (!tok || tok.expires * 1000 - Date.now() < 300000) tok = await api("/api/youtube/token", {method: "POST", body: "{}"});
+  return tok.access_token;
+}
+function xhr(method, url, headers, body, onProgress) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest(); x.open(method, url);
+    for (const [k, v] of Object.entries(headers)) x.setRequestHeader(k, v);
+    if (onProgress) x.upload.onprogress = (e) => onProgress(e.loaded);
+    x.onload = () => res(x); x.onerror = () => rej(new Error("The connection dropped. Check your internet and try again."));
+    x.send(body);
+  });
+}
+function progress(pct, msg) { $("progress").hidden = false; $("barFill").style.width = pct + "%"; $("progMsg").textContent = msg; }
+async function sendFile(meta) {
+  let x = await xhr("POST", "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+    {"Authorization": "Bearer " + await token(), "Content-Type": "application/json; charset=UTF-8",
+     "X-Upload-Content-Length": String(file.size), "X-Upload-Content-Type": file.type || "video/*"}, JSON.stringify(meta));
+  if (x.status !== 200) throw new Error(ytError(x));
+  const url = x.getResponseHeader("Location");
+  if (!url) throw new Error("YouTube didn't start the upload. Try again.");
+  let start = 0, tries = 0;
+  while (start < file.size) {
+    const end = Math.min(start + CHUNK, file.size);
+    try {
+      x = await xhr("PUT", url, {"Authorization": "Bearer " + await token(), "Content-Range": `bytes ${start}-${end - 1}/${file.size}`},
+        file.slice(start, end), (n) => progress(Math.round(100 * (start + n) / file.size), `Uploading ${mb(start + n)} of ${mb(file.size)}… keep this tab open`));
+    } catch (e) {
+      if (++tries > 5) throw e;
+      await new Promise(r => setTimeout(r, 2000 * tries));
+      x = await xhr("PUT", url, {"Authorization": "Bearer " + await token(), "Content-Range": `bytes */${file.size}`}, null);  // where did we stop?
+    }
+    if (x.status === 200 || x.status === 201) return JSON.parse(x.responseText).id;
+    if (x.status === 308) { const r = x.getResponseHeader("Range"); start = r ? +r.split("-")[1] + 1 : 0; tries = 0; continue; }
+    if (x.status >= 500 && ++tries <= 5) { await new Promise(r => setTimeout(r, 2000 * tries)); continue; }
+    throw new Error(ytError(x));
+  }
+  throw new Error("The upload ended without a video id.");
+}
+window.addEventListener("beforeunload", (e) => { if (uploading) { e.preventDefault(); e.returnValue = ""; } });
+$("uploadBtn").onclick = async () => {
+  const msg = $("addMsg"), b = $("uploadBtn");
+  msg.className = "small err";
+  if (!file) { msg.textContent = "Choose a video file first."; return; }
+  if (!$("title").value.trim()) { msg.textContent = "Add a title (or let the AI write one)."; return; }
+  msg.textContent = ""; b.disabled = true; uploading = true;
+  let item = null;
+  try {
+    const r = await api("/api/youtube/videos", {method: "POST", body: JSON.stringify({file_name: file.name, size: file.size, duration: dur, vertical,
+      title: $("title").value, description: $("desc").value, tags: $("tags").value, category: $("category").value, notes: $("notes").value,
+      publish_at: toIso($("publish").value)})});
+    item = r.item;
+    if (S.demo) { progress(100, "Demo: nothing is uploaded."); S = r; draw(); return; }
+    progress(0, "Starting the upload…");
+    const videoId = await sendFile({snippet: {title: item.title, description: item.description, tags: item.tags, categoryId: item.category},
+                                    status: {privacyStatus: "private", selfDeclaredMadeForKids: false}});
+    S = await api(`/api/youtube/videos/${item.id}/uploaded`, {method: "POST", body: JSON.stringify({video_id: videoId})});
+    const blob = await coverBlob();
+    if (blob) {
+      progress(100, "Setting the cover…");
+      const x = await xhr("POST", `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}&uploadType=media`,
+        {"Authorization": "Bearer " + await token(), "Content-Type": "image/jpeg"}, blob).catch(() => ({status: 0, responseText: ""}));
+      S = await api(`/api/youtube/videos/${item.id}/thumb`, {method: "POST", body: JSON.stringify({ok: x.status === 200, error: x.status === 200 ? "" : ytError(x)})});
+    }
+    progress(100, "Uploaded ✓ It's private on YouTube and waiting for your approval below.");
+    msg.className = "small ok"; msg.textContent = "";
+    tab = "review"; draw();
+    file = null; $("file").value = ""; $("fileName").textContent = "Choose a video file"; $("fileMeta").textContent = "MP4 or MOV · any size";
+  } catch (e) {
+    msg.textContent = e.message; progress(0, "");
+    if (item) try { S = await api(`/api/youtube/videos/${item.id}/upload-failed`, {method: "POST", body: JSON.stringify({error: e.message})}); draw(); } catch (x) {}
+  } finally { uploading = false; b.disabled = false; }
+};
+
+(async () => {
+  loadBanners();
+  S = await api("/api/youtube");
+  $("category").innerHTML = Object.entries(S.categories || {}).map(([k, n]) => `<option value="${k}" ${k === "28" ? "selected" : ""}>${esc(n)}</option>`).join("");
+  const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(18, 0, 0, 0); $("publish").value = localInput(t);
+  counts(); drawCover(); draw();
+})();
+</script>
+{% endblock %}

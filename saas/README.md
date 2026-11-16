@@ -283,6 +283,18 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
 - **Claude (MCP)**: `list_drafts`, `draft_week`, `approve_draft` (approve / reject with note / posted / back_to_review), `edit_draft` (fields or `ai_feedback`), and the prompt "Plan my week".
 - An app on the Apps page (on by default), in the "Grow and sell" group.
 
+## YouTube scheduling (`/app/youtube`, `youtube.py`)
+- **Connect** a channel once with Google (offline access; the refresh token stays on the server at `s:t:<id>:youtube`, never sent to the browser). Disconnecting, or deleting the ReplyInbox account, revokes it at Google.
+- **Add a video**: the browser reads length and orientation, and the AI (1 credit) writes the title (max 100), an SEO description (links only from the creator's products; chapters only from real transcript timestamps) and tags. Vertical and up to 3 minutes = Short: `#Shorts` is added.
+- **Cover**: made in the browser from a chosen frame with big text, or the creator's own image, saved as 1280×720 JPG under 2 MB, or none.
+- **Upload**: straight from the browser to YouTube (resumable, 8 MB chunks, resumes after a dropped connection) with a short-lived access token from `POST /api/youtube/token`. Video bytes never pass through Vercel. Uploaded as **private**; the cover goes to `thumbnails.set` (refused on channels that aren't phone-verified: the queue says so).
+- **Approval queue**: To review / Scheduled / Published / Other. Approve and schedule → `videos.update` with the full snippet and `status.publishAt`; YouTube publishes it at that time (no cron). Change edits it (on YouTube too if scheduled). Reject / Stop keeps it private. A YouTube error (e.g. daily quota) keeps the item "approved" with the message, to retry. Scheduled items turn "Published" once YouTube makes them public.
+- **Claude (MCP)**: `list_youtube_videos`, `approve_youtube_video`, `edit_youtube_video` (only on accounts where YouTube is on).
+- **Who sees it**: Google must review the app before strangers can grant YouTube upload access, so it's on only for the Instagram usernames in `YT_ACCOUNTS` (comma separated). `YT_PUBLIC=1` opens it to everyone after Google's review.
+- **Env**: `YT_CLIENT_ID`, `YT_CLIENT_SECRET`, optional `YT_REDIRECT_URI` (default `https://<host>/youtube/callback`), `YT_ACCOUNTS`, `YT_PUBLIC`.
+- **Google Cloud setup**: project → enable YouTube Data API v3 → OAuth consent screen (External, Testing, your Google account as a test user, scopes `youtube.upload` and `youtube`) → Credentials → OAuth client ID (Web application) with the redirect URI above.
+- **Known Google limits**: uploads from API projects that haven't passed YouTube's API audit may be locked to private (check the first real upload; if so, apply for the YouTube API Services audit). There's a daily quota per project; uploads cost a lot of it.
+
 ## Contact tags
 Contacts have `tags` (lower-case, up to 20). An automation's "Tag these people" field (`rule["tags"]`, comma separated, up
 to 5) adds tags to everyone who goes through it (comments, keyword DMs, story replies and mentions). Creators edit tags

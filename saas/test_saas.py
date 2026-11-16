@@ -18,6 +18,7 @@ import app as saas  # noqa: E402
 import demo  # noqa: E402
 import engine  # noqa: E402
 import store  # noqa: E402
+import youtube  # noqa: E402
 
 
 class Resp:
@@ -25,6 +26,7 @@ class Resp:
         self.data, self.status_code = data, status
         self.ok = status < 400
         self.text = json.dumps(data)
+        self.content = self.text.encode()
 
     def json(self):
         return self.data
@@ -106,6 +108,36 @@ class FakeClaude:
         if answer == "refusal":
             return mock.Mock(stop_reason="refusal", content=[])
         return mock.Mock(stop_reason="end_turn", content=[mock.Mock(type="text", text=json.dumps(answer))])
+
+
+class FakeGoogle:
+    """Google OAuth + YouTube Data API, enough for the YouTube scheduler."""
+
+    def __init__(self):
+        self.calls, self.fail = [], {}
+        self.public = set()
+
+    def post(self, url, data=None, **kw):
+        self.calls.append(("POST", url, data))
+        if url.endswith("/token"):
+            if data.get("grant_type") == "authorization_code":
+                return Resp({"access_token": "ya29.A", "refresh_token": "1//R", "expires_in": 3599,
+                             "scope": youtube.SCOPES})
+            return Resp({"access_token": "ya29.B", "expires_in": 3599})
+        return Resp({})
+
+    def request(self, method, url, params=None, json=None, **kw):
+        self.calls.append((method, url, params, json))
+        if url in self.fail:
+            return Resp({"error": {"message": "nope", "errors": [{"reason": self.fail[url]}]}}, 403)
+        if url.endswith("/channels"):
+            return Resp({"items": [{"id": "UC1", "snippet": {"title": "Om Tech", "thumbnails": {"default": {"url": "p.jpg"}}}}]})
+        if url.endswith("/videos") and method == "GET":
+            return Resp({"items": [{"id": i, "status": {"privacyStatus": "public" if i in self.public else "private"}}
+                                   for i in params["id"].split(",")]})
+        if method == "DELETE":
+            return Resp({}, 204)
+        return Resp({"id": (json or {}).get("id", "")})
 
 
 def dm(text, sender="88", mid=""):
@@ -1375,6 +1407,97 @@ class SaasTest(unittest.TestCase):
         d = self.c.post("/api/drafts/fill", json={"days": 7}).get_json()
         self.assertEqual(d["added"], 7)
         self.assertTrue(all(x["hook"] and x["caption"] for x in d["drafts"]))
+
+    def test_youtube_scheduling(self):
+        self.login()
+        g = FakeGoogle()
+        # off unless configured and allowed for this username
+        self.assertNotIn("/app/youtube", self.c.get("/app/plan").get_data(as_text=True))
+        self.assertEqual(self.c.post("/api/youtube/videos", json={}).status_code, 403)
+        self.enterContext(mock.patch.dict(os.environ, YT_CLIENT_ID="cid", YT_CLIENT_SECRET="sec", YT_ACCOUNTS="@Creator, other"))
+        self.enterContext(mock.patch.object(youtube.requests, "post", g.post))
+        self.enterContext(mock.patch.object(youtube.requests, "request", g.request))
+        self.assertIn("/app/youtube", self.c.get("/app/plan").get_data(as_text=True))
+        self.assertIsNone(self.c.get("/api/youtube").get_json()["channel"])
+        # connect: state is checked, offline access asked, channel saved
+        r = self.c.get("/youtube/connect")
+        q = parse_qs(urlparse(r.location).query)
+        self.assertEqual((q["access_type"][0], q["prompt"][0]), ("offline", "consent"))
+        self.assertTrue(q["redirect_uri"][0].endswith("/youtube/callback"))
+        self.assertIn("error", self.c.get("/youtube/callback?code=x&state=wrong").location)
+        r = self.c.get("/youtube/connect")
+        state = parse_qs(urlparse(r.location).query)["state"][0]
+        self.assertIn("connected=1", self.c.get(f"/youtube/callback?code=x&state={state}").location)
+        st = self.c.get("/api/youtube").get_json()
+        self.assertEqual(st["channel"]["title"], "Om Tech")
+        self.assertNotIn("1//R", json.dumps(st))  # the refresh token never reaches the browser
+        self.assertEqual(self.c.post("/api/youtube/token", json={}).get_json()["access_token"], "ya29.A")
+        # add a short (vertical, 40 s): #Shorts is added; tags cleaned; then the browser reports the upload
+        item = self.c.post("/api/youtube/videos", json={"file_name": "tip.mp4", "duration": 40, "vertical": True, "title": "Tip <1>",
+                                                        "description": "One tip", "tags": "#ai, AI, chatgpt", "category": "28"}).get_json()["item"]
+        self.assertEqual((item["status"], item["title"], item["tags"], item["short"]), ("uploading", "Tip ‹1›", ["ai", "chatgpt"], True))
+        self.assertTrue(item["description"].endswith("#Shorts"))
+        self.assertEqual(self.c.post(f"/api/youtube/videos/{item['id']}/uploaded", json={"video_id": "bad id!"}).status_code, 400)
+        v = self.c.post(f"/api/youtube/videos/{item['id']}/uploaded", json={"video_id": "abc123XYZ_-"}).get_json()["item"]
+        self.assertEqual((v["status"], v["studio_url"]), ("draft", "https://studio.youtube.com/video/abc123XYZ_-/edit"))
+        v = self.c.post(f"/api/youtube/videos/{item['id']}/thumb", json={"ok": False, "error": "verify your phone"}).get_json()["item"]
+        self.assertEqual(v["thumb_error"], "verify your phone")
+        # approve: past time refused; future time → videos.update with the whole snippet and status.publishAt
+        r = self.c.post(f"/api/youtube/videos/{item['id']}/approve", json={"publish_at": "2020-01-01T10:00:00Z"})
+        self.assertIn("10 minutes", r.get_json()["error"])
+        g.fail[youtube.API + "/videos"] = "quotaExceeded"
+        r = self.c.post(f"/api/youtube/videos/{item['id']}/approve", json={"publish_at": "2099-05-01T12:30:00.000Z"})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("daily upload limit", r.get_json()["error"])
+        kept = next(x for x in r.get_json()["items"] if x["id"] == item["id"])
+        self.assertEqual(kept["status"], "approved")  # stays in the queue, with the error, to retry
+        del g.fail[youtube.API + "/videos"]
+        v = self.c.post(f"/api/youtube/videos/{item['id']}/approve", json={}).get_json()["item"]
+        self.assertEqual((v["status"], v["error"], v["publish_at"]), ("scheduled", "", "2099-05-01T12:30:00Z"))
+        put = [c for c in g.calls if c[0] == "PUT"][-1]
+        self.assertEqual(put[2], {"part": "snippet,status"})
+        self.assertEqual(put[3]["status"], {"privacyStatus": "private", "publishAt": "2099-05-01T12:30:00Z", "selfDeclaredMadeForKids": False,
+                                            "embeddable": True, "license": "youtube", "publicStatsViewable": True})
+        self.assertEqual((put[3]["snippet"]["categoryId"], put[3]["snippet"]["tags"]), ("28", ["ai", "chatgpt"]))
+        # editing a scheduled video updates YouTube too
+        n = len(g.calls)
+        self.c.put(f"/api/youtube/videos/{item['id']}", json={"title": "Better tip"})
+        self.assertEqual(g.calls[n][3]["snippet"]["title"], "Better tip")
+        # Claude sees it and can stop it
+        key = self.c.post("/api/mcp-key", json={}).get_json()["key"]
+        call = lambda name, args={}: self.c.post("/mcp", headers={"Authorization": f"Bearer {key}"}, json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": args}}).get_json()["result"]
+        self.assertEqual(call("list_youtube_videos", {"status": "scheduled"})["structuredContent"]["videos"][0]["title"], "Better tip")
+        self.assertEqual(call("approve_youtube_video", {"video_id": item["id"], "decision": "reject"})["structuredContent"]["video"]["status"], "rejected")
+        self.assertEqual([c for c in g.calls if c[0] == "PUT"][-1][3]["status"], {"privacyStatus": "private", "selfDeclaredMadeForKids": False})
+        self.c.post(f"/api/youtube/videos/{item['id']}/review", json={})
+        self.c.post(f"/api/youtube/videos/{item['id']}/approve", json={})
+        # once YouTube makes it public, the queue shows it as published
+        g.public.add("abc123XYZ_-")
+        with mock.patch.object(youtube.time, "strftime", lambda f, t=None: "2099-05-01T13:00:00Z"):
+            st = self.c.get("/api/youtube").get_json()
+        self.assertEqual(st["items"][0]["status"], "published")
+        # AI details: needs notes; uses a credit
+        claude = FakeClaude()
+        claude.answers.append({"title": "Best tip", "description": "Desc", "tags": ["a", "b"]})
+        self.enterContext(mock.patch.object(ai_agent, "client", lambda: claude))
+        self.assertEqual(self.c.post("/api/youtube/details", json={}).status_code, 400)
+        d = self.c.post("/api/youtube/details", json={"notes": "AI tools", "duration": 30, "vertical": True}).get_json()
+        self.assertEqual((d["title"], d["description"]), ("Best tip", "Desc\n\n#Shorts"))
+        self.assertIn("YouTube Short", claude.requests[0]["messages"][0]["content"])
+        # disconnect revokes at Google
+        self.c.post("/api/youtube/disconnect", json={})
+        self.assertTrue(any(c[1] == youtube.REVOKE_URL for c in g.calls))
+        self.assertIsNone(self.c.get("/api/youtube").get_json()["channel"])
+
+    def test_youtube_demo(self):
+        self.c.get("/demo")
+        st = self.c.get("/api/youtube").get_json()
+        self.assertEqual((st["channel"]["title"], len(st["items"])), ("Demo channel", 2))
+        self.assertEqual(self.c.post("/api/youtube/token", json={}).status_code, 403)
+        v = self.c.post("/api/youtube/videos/demo1/approve", json={}).get_json()["item"]
+        self.assertEqual(v["status"], "scheduled")
+        self.assertEqual(self.c.get("/app/youtube").status_code, 200)
 
     def test_sales_tracking_and_utm(self):
         self.login()

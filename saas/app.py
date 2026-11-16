@@ -24,6 +24,7 @@ from flask import Flask, abort, jsonify, make_response, redirect, render_templat
 
 import ai_agent
 import content_drafts
+import youtube
 import demo
 import push
 import engine
@@ -117,12 +118,12 @@ def public_account(acc):
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
-    ("sales", "/app/sales", "Sales", True), ("plan", "/app/plan", "Content plan", False),
+    ("sales", "/app/sales", "Sales", True), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"plan": True, "inbox": True, "report": True, "links": True, "contacts": True, "giveaway": True}
+DEFAULT_APPS = {"plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "contacts": True, "giveaway": True}
 
 
 def apps_of(acc):
@@ -134,7 +135,8 @@ def render_app(template, active, **extra):
     if not acc:
         return redirect(url_for("landing"))
     on = apps_of(acc)
-    nav = [(key, href, label) for key, href, label, core in SECTIONS if core or on.get(key)]
+    nav = [(key, href, label) for key, href, label, core in SECTIONS
+           if (core or on.get(key)) and (key != "youtube" or youtube.available(acc))]
     return render_template(template, acc=public_account(acc), active=active, nav=nav, apps=on, role=current_role(),
                            linked=[a for a in linked_accounts() if a["id"] != acc["id"]],
                            page_url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}", **extra)
@@ -452,6 +454,7 @@ def api_disconnect():
         requests.delete(f"{engine.GRAPH}/me/subscribed_apps", params={"access_token": acc["token"]}, timeout=10)
     except Exception:
         pass
+    youtube.disconnect(acc)  # revokes Google access too
     store.delete_account(acc["id"])
     others = [a for a in session.get("accounts", []) if a != acc["id"] and store.load_account(a)]
     session.clear()
@@ -1293,6 +1296,158 @@ def api_activity_csv():
                                  "Content-Disposition": f"attachment; filename={acc.get('username', 'account')}-activity.csv"}
 
 
+# ---------- YouTube scheduling (see youtube.py) ----------
+
+def yt_redirect_uri():
+    # The exact address registered in Google Cloud; the request's own host by default (not PUBLIC_URL, which may be a parked domain).
+    return youtube._env("YT_REDIRECT_URI") or request.host_url.rstrip("/") + "/youtube/callback"
+
+
+def yt_call(fn):
+    """Runs a YouTube action for the logged-in account; YTError becomes a 400 with its friendly message."""
+    acc = current_account()
+    if not youtube.available(acc):
+        return jsonify(error="YouTube scheduling isn't switched on for this account yet."), 403
+    try:
+        item = fn(acc)
+    except youtube.YTError as e:
+        return jsonify({**yt_state(acc), "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({**yt_state(acc), "error": f"Something went wrong talking to YouTube: {e}"}), 502
+    body = yt_state(acc)
+    if isinstance(item, dict) and item.get("id"):
+        body["item"] = youtube.view(acc, item)
+    return jsonify(body)
+
+
+def yt_state(acc):
+    youtube.ensure_demo(acc)
+    conn = youtube.connection(acc)
+    items = youtube.refresh_statuses(acc) if conn.get("refresh_token") or acc.get("demo") else youtube.load(acc["id"])
+    channel = ({"title": "Demo channel", "pic": "", "broken": False} if acc.get("demo") else
+               {"title": conn.get("channel_title", ""), "pic": conn.get("channel_pic", ""), "broken": bool(conn.get("broken"))}
+               if conn.get("refresh_token") else None)
+    return {"available": youtube.available(acc), "configured": youtube.configured(), "channel": channel, "demo": bool(acc.get("demo")),
+            "items": sorted([youtube.view(acc, v) for v in items], key=lambda v: (v.get("publish_at") or "9", v["created"])),
+            "categories": youtube.CATEGORIES, "credits_left": content_drafts.credits_left(acc)}
+
+
+@app.get("/app/youtube")
+def youtube_page():
+    acc = current_account()
+    if acc and not youtube.available(acc):
+        return redirect("/app/apps")
+    return render_app("youtube.html", "youtube", yt_error=request.args.get("error", ""), yt_connected=bool(request.args.get("connected")))
+
+
+@app.get("/youtube/connect")
+def youtube_connect():
+    acc = current_account()
+    if not acc:
+        return redirect(url_for("landing"))
+    if acc.get("demo") or not youtube.configured() or not youtube.available(acc) or current_role() == "viewer":
+        return redirect("/app/youtube?error=" + "YouTube connect isn't available for this account.")
+    session["yt_state"] = secrets.token_urlsafe(16)
+    return redirect(youtube.auth_url(yt_redirect_uri(), session["yt_state"]))
+
+
+@app.get("/youtube/callback")
+def youtube_callback():
+    acc = current_account()
+    if not acc:
+        return redirect(url_for("landing"))
+    state = session.pop("yt_state", None)
+    if request.args.get("error"):
+        return redirect("/app/youtube?" + urlencode({"error": "Google sign-in was cancelled."}))
+    if not state or not hmac.compare_digest(state, request.args.get("state", "")):
+        return redirect("/app/youtube?" + urlencode({"error": "That sign-in link expired. Try Connect again."}))
+    try:
+        youtube.finish_connect(acc, request.args.get("code", ""), yt_redirect_uri())
+    except youtube.YTError as e:
+        return redirect("/app/youtube?" + urlencode({"error": str(e)}))
+    store.log_activity(acc["id"], "", "", "", "youtube", "ok", "YouTube channel connected")
+    return redirect("/app/youtube?connected=1")
+
+
+@app.get("/api/youtube")
+def api_youtube():
+    acc = current_account()
+    if not youtube.available(acc):
+        return jsonify(available=False, configured=youtube.configured())
+    return jsonify(yt_state(acc))
+
+
+@app.post("/api/youtube/disconnect")
+def api_youtube_disconnect():
+    return yt_call(youtube.disconnect)
+
+
+@app.post("/api/youtube/token")
+def api_youtube_token():
+    """A short-lived access token so the browser uploads the file straight to YouTube (never through Vercel)."""
+    acc = current_account()
+    if not youtube.available(acc) or acc.get("demo"):
+        return jsonify(error="Uploads are switched off here."), 403
+    try:
+        token, expires = youtube.access_token(acc)
+    except youtube.YTError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(access_token=token, expires=expires)
+
+
+@app.post("/api/youtube/details")
+def api_youtube_details():
+    acc = current_account()
+    if not youtube.available(acc):
+        return jsonify(error="YouTube scheduling isn't switched on for this account yet."), 403
+    d = request.get_json(force=True)
+    try:
+        out = youtube.write_details(acc, d.get("notes", ""), d.get("transcript", ""), d.get("file_name", ""),
+                                    float(d.get("duration") or 0), bool(d.get("vertical")))
+    except youtube.YTError as e:
+        return jsonify(error=str(e)), 400
+    except Exception as e:
+        return jsonify(error=f"The AI couldn't write right now: {e}"), 502
+    return jsonify(out)
+
+
+@app.post("/api/youtube/videos")
+def api_youtube_add():
+    d = request.get_json(force=True)
+    return yt_call(lambda acc: youtube.create(acc, d))
+
+
+@app.post("/api/youtube/videos/<item_id>/<action>")
+def api_youtube_action(item_id, action):
+    d = request.get_json(force=True)
+    acts = {
+        "uploaded": lambda acc: youtube.uploaded(acc, item_id, d.get("video_id")),
+        "upload-failed": lambda acc: youtube.upload_failed(acc, item_id, d.get("error", "")),
+        "thumb": lambda acc: youtube.thumb_result(acc, item_id, bool(d.get("ok")), d.get("error", "")),
+        "approve": lambda acc: youtube.approve(acc, item_id, d.get("publish_at")),
+        "reject": lambda acc: youtube.reject(acc, item_id, d.get("note", "")),
+        "review": lambda acc: youtube.back_to_review(acc, item_id),
+    }
+    if action not in acts:
+        abort(404)
+    resp = yt_call(acts[action])
+    if action == "approve" and not isinstance(resp, tuple):
+        store.log_activity(current_account()["id"], "", "", "", "youtube", "ok", "YouTube video scheduled")
+    return resp
+
+
+@app.put("/api/youtube/videos/<item_id>")
+def api_youtube_update(item_id):
+    d = request.get_json(force=True)
+    return yt_call(lambda acc: youtube.update(acc, item_id, d))
+
+
+@app.delete("/api/youtube/videos/<item_id>")
+def api_youtube_delete(item_id):
+    d = request.get_json(force=True)
+    return yt_call(lambda acc: youtube.remove(acc, item_id, bool(d.get("from_youtube"))))
+
+
 @app.get("/app/activity")
 def activity_page():
     return render_app("activity.html", "activity")
@@ -1735,6 +1890,7 @@ def forget_user(user_id):
     for ig_id in store.account_ids():
         acc = store.load_account(ig_id)
         if acc and user_id in (acc.get("id"), acc.get("asid")):
+            youtube.disconnect(acc)
             store.delete_account(ig_id)
 
 
