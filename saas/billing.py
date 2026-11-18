@@ -16,6 +16,7 @@ import hmac
 import json
 import os
 import secrets
+import sys
 import time
 
 import requests
@@ -91,6 +92,11 @@ def create_order(user, plan, period):
         raise BillingError("Razorpay didn't answer. Try again in a minute.")
     data = r.json() if r.content else {}
     if not r.ok or not data.get("id"):
+        err = (data.get("error") or {}) if isinstance(data, dict) else {}
+        print(f"Razorpay order refused: HTTP {r.status_code} {err.get('code', '')} {err.get('description', '')} "
+              f"(key {key_id()[:9]}…)", file=sys.stderr)
+        if r.status_code == 401:
+            raise BillingError("Payments are misconfigured (Razorpay key). We're on it; please try again later.")
         raise BillingError("Razorpay couldn't start the payment. Try again.")
     order = {"id": data["id"], "user": user["id"], "plan": plan, "period": period, "amount": amount,
              "receipt": receipt, "status": "created", "created": int(time.time())}
