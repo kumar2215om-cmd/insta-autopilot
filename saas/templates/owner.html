@@ -23,7 +23,7 @@
   <div class="scroll"><table>
     <tr><th>Account</th><th>Followers</th><th>Joined</th><th>Rules</th><th>DMs this month</th><th>DMs total</th><th>Status</th><th>Plan</th><th>Invite</th></tr>
     {% for r in rows %}
-    <tr><td><a href="https://www.instagram.com/{{ r.username }}/" target="_blank" rel="noopener">@{{ r.username }}</a></td>
+    <tr><td><a href="https://www.instagram.com/{{ r.username }}/" target="_blank" rel="noopener">@{{ r.username }}</a>{% if r.owner_email %}<div class="muted small">{{ r.owner_email }}</div>{% endif %}</td>
       <td>{{ "{:,}".format(r.followers) if r.followers is not none else "–" }}</td>
       <td><span class="joined" data-t="{{ r.created or 0 }}"></span></td>
       <td>{{ r.rules }}</td><td>{{ r.dms_month }}</td><td>{{ r.dms }}</td>

@@ -288,7 +288,7 @@
   <div class="wrap">
     <a href="/" aria-label="{{ brand }} home" style="text-decoration:none">{{ logo.wordmark(28, "nav", dark=true) }}</a>
     <nav class="links" aria-label="Main"><a href="/features">Features</a><a href="/compare">Compare</a><a href="/guides">Learn</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
-    <div class="right">{% if signed_in %}<a class="btn primary" href="/app">Open dashboard</a>{% else %}<a class="login" href="/login">Log in</a><a class="btn primary" href="#start">Start free</a>{% endif %}</div>
+    <div class="right">{% if signed_in %}<a class="btn primary" href="/app">Open dashboard</a>{% else %}<a class="login" href="/signin">Log in</a><a class="btn primary" href="/signin">Start free</a>{% endif %}</div>
   </div>
 </header>
 
@@ -302,13 +302,8 @@
     <div class="cta rise d3" id="start">
       {% if signed_in %}
         <a class="btn primary" href="/app">Open your dashboard</a>
-      {% elif invite_only %}
-        <form class="invite" action="/login" method="get">
-          <input type="text" name="invite" placeholder="Invite code" required aria-label="Invite code">
-          <button class="btn primary">Continue with Instagram</button>
-        </form>
       {% else %}
-        <a class="btn primary" href="/login">Continue with Instagram</a>
+        <a class="btn primary" href="/signin">Start free</a>
       {% endif %}
       <a class="btn ghost" href="/demo">Explore the live demo</a>
     </div>
@@ -657,7 +652,7 @@
     <div class="eyebrow">Ready when you are</div>
     <h2 style="margin-top:16px">Your next reel can grow your list <span class="serif">while you sleep.</span></h2>
     <p class="lede" style="margin:18px auto 0">Free to start. Your first automation takes two minutes.</p>
-    <div class="cta"><a class="btn primary" href="{{ '#start' if invite_only else '/login' }}">Continue with Instagram</a><a class="btn ghost" href="/demo">Explore the live demo</a></div>
+    <div class="cta"><a class="btn primary" href="/signin">Start free</a><a class="btn ghost" href="/demo">Explore the live demo</a></div>
   </div>
 </div>
 

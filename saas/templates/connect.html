@@ -1,0 +1,82 @@
+{% import "_logo.html" as logo %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="{{ logo.favicon }}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Connect Instagram · {{ brand }}</title>
+{% include "_style.html" %}
+<style>
+  body { min-height:100vh; display:grid; place-items:center; padding:32px 16px;
+         background:radial-gradient(70% 50% at 50% 0%, rgba(123,92,255,.16), transparent 70%), var(--bg); }
+  main { width:100%; max-width:480px; }
+  .card { padding:30px 26px; }
+  .top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+  .who { font-size:13px; color:var(--mute); text-align:right; overflow-wrap:anywhere; }
+  .who button { background:none; border:0; padding:0; color:var(--blue); font:600 13px Geist, Inter, sans-serif; cursor:pointer; }
+  .steps { display:flex; flex-wrap:wrap; justify-content:center; gap:4px 8px; margin:0 0 18px; font-size:12.5px; color:var(--mute); }
+  .steps > * { white-space:nowrap; }
+  .steps b { color:var(--rose); } .steps s { color:var(--ok); text-decoration:none; }
+  .ig { width:64px; height:64px; border-radius:18px; margin:0 auto 14px; display:grid; place-items:center;
+        background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285AEB 90%); }
+  h1 { font-size:26px; text-align:center; margin:0 0 8px; }
+  .sub { text-align:center; margin:0 0 20px; }
+  ul.req { list-style:none; padding:0; margin:0 0 20px; display:grid; gap:8px; font-size:14px; }
+  ul.req li { display:flex; gap:10px; align-items:flex-start; }
+  ul.req li::before { content:"✓"; color:var(--ok); font-weight:900; }
+  .btn.wide { width:100%; }
+  .alert { background:#FEEFEC; color:var(--bad); border-radius:12px; padding:10px 14px; font-size:14px; margin:0 0 16px; }
+  .accs { display:grid; gap:8px; margin:22px 0 0; padding-top:18px; border-top:1px solid var(--line); }
+  .acc { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; text-decoration:none; color:var(--ink); }
+  .acc:hover { border-color:var(--rose); }
+  .acc img, .acc .av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #FFB199, #FF7A59); object-fit:cover; }
+  .acc span { margin-left:auto; color:var(--mute); font-size:13px; }
+  .small { font-size:13px; }
+  .fine { text-align:center; font-size:12.5px; margin:16px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <div class="top">{{ logo.wordmark(26, "connect") }}
+      <div class="who">{{ user.email }}<br><form action="/logout" method="post" style="display:inline"><button type="submit">Sign out</button></form></div></div>
+    <div class="steps"><s>1. Sign in ✓</s><span>→</span><b>2. Connect Instagram</b><span>→</span><span>3. Dashboard</span></div>
+    <div class="ig" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg></div>
+    <h1>{{ "Connect another Instagram account" if accounts else "Connect your Instagram" }}</h1>
+    <p class="sub muted">{{ brand }} replies to comments and DMs on this account. You log in on Instagram itself; we never see your password.</p>
+    {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+    <ul class="req">
+      <li>A Business or Creator account (free to switch in Instagram settings)</li>
+      <li>Official Meta login: you can remove access anytime</li>
+      {% if locks %}<li>{{ accounts|length }} of {{ limit }} account{{ "s" if limit != 1 }} on your plan connected</li>{% endif %}
+    </ul>
+    {% if not ready %}
+      <p class="muted" style="text-align:center">Instagram connect isn't set up yet. Please try again later.</p>
+    {% elif locks and accounts|length >= limit %}
+      <p class="muted" style="text-align:center">Your plan's accounts are all connected. Upgrade, or add an extra account for ₹149/month.</p>
+    {% else %}
+      <a class="btn wide" href="/login">Connect Instagram</a>
+    {% endif %}
+    {% if accounts %}
+    <div class="accs">
+      <div class="small muted">Your accounts</div>
+      {% for a in accounts %}
+        <a class="acc" href="/app" data-switch="{{ a.id }}">{% if a.pic %}<img src="{{ a.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}<b>@{{ a.username }}</b><span>Open →</span></a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <p class="fine muted"><a href="/guides/switch-to-instagram-professional-account">How to switch to a Business or Creator account</a></p>
+  </div>
+</main>
+<script>
+document.addEventListener("click", async (e) => {
+  const a = e.target.closest("[data-switch]");
+  if (!a) return;
+  e.preventDefault();
+  await fetch("/api/switch", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: a.dataset.switch})});
+  location.href = "/app";
+});
+</script>
+</body>
+</html>

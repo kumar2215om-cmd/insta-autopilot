@@ -24,6 +24,7 @@ from flask import Flask, abort, jsonify, make_response, redirect, render_templat
 
 import ai_agent
 import content_drafts
+import users
 import youtube
 import demo
 import push
@@ -67,13 +68,22 @@ def base_url():
     return PUBLIC_URL or request.host_url.rstrip("/")
 
 
+def current_user():
+    """The signed-in ReplyInbox user (Google or email login), or None."""
+    return users.get(session.get("user")) if session.get("user") else None
+
+
 def current_account():
     uid = session.get("uid")
     acc = store.load_account(uid)
     if not acc and uid == demo.DEMO_ID:  # demo data lives in memory without a database: recreate it
         acc = demo.seed()
-    if acc and session.get("member") and not team_member(acc, session["member"]):
-        return None  # removed from the team
+    if acc and session.get("member"):
+        return acc if team_member(acc, session["member"]) else None  # removed from the team
+    if acc and not demo.is_demo(acc):
+        user = current_user()
+        if not user or not users.owns(user, acc["id"]):
+            return None  # an Instagram account opens only for the user who connected it
     return acc
 
 
@@ -133,12 +143,19 @@ def apps_of(acc):
 def render_app(template, active, **extra):
     acc = current_account()
     if not acc:
-        return redirect(url_for("landing"))
+        user = current_user()
+        if user and not session.get("member"):
+            first = next(iter(users.accounts(user)), None)
+            if first:  # signed in but no account picked (new device, or the last one was removed)
+                session["uid"] = first["id"]
+                return redirect(request.path)
+            return redirect(url_for("connect_page"))
+        return redirect(url_for("signin_page"))
     on = apps_of(acc)
     nav = [(key, href, label) for key, href, label, core in SECTIONS
            if (core or on.get(key)) and (key != "youtube" or youtube.available(acc))]
     return render_template(template, acc=public_account(acc), active=active, nav=nav, apps=on, role=current_role(),
-                           linked=[a for a in linked_accounts() if a["id"] != acc["id"]],
+                           linked=[a for a in linked_accounts() if a["id"] != acc["id"]], user=current_user(),
                            page_url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}", **extra)
 
 
@@ -176,7 +193,7 @@ def no_index_private(resp):
 def guard():
     # Logged-in API calls that change data must be JSON: a cross-site form can't send that without CORS.
     if request.path.startswith("/api/"):
-        if not current_account():
+        if not current_account() and not (request.path == "/api/switch" and current_user()):
             return jsonify(error="Please log in again."), 401
         if request.method in ("POST", "PUT", "DELETE") and not request.is_json:
             return jsonify(error="JSON required"), 415
@@ -195,7 +212,7 @@ def landing():
         session["ref"] = ref
     referrer = store.account_by_username(session["ref"]) if session.get("ref") else None
     return render_template("landing.html", invite_only=SIGNUPS == "invite", error=request.args.get("error", ""),
-                           signed_in=bool(current_account()), schema=landing_schema(),
+                           signed_in=bool(current_user() or current_account()), schema=landing_schema(),
                            referrer=referrer.get("username") if referrer else "")
 
 
@@ -553,18 +570,124 @@ def deletion_status():
     return render_template("legal.html", page="deletion", code=code, done=done)
 
 
-# ---------- Login with Instagram ----------
+# ---------- ReplyInbox login: Google or a 6-digit email code (users.py) ----------
+
+def invite_ok(code):
+    return SIGNUPS != "invite" or str(code or "").strip().upper() in INVITE_CODES
+
+
+def start_session(user):
+    """Signs the user in and picks their first Instagram account; returns where to go next."""
+    keep = {k: session[k] for k in ("ref",) if k in session}
+    session.clear()
+    session.update(keep)
+    session.permanent = True
+    session["user"] = user["id"]
+    first = next(iter(users.accounts(user)), None)
+    if first:
+        session["uid"] = first["id"]
+        return url_for("dashboard")
+    return url_for("connect_page")
+
+
+def new_user_allowed(email):
+    """Invite-only mode: a new email needs the invite code entered on the sign-in page."""
+    return users.by_email(email) is not None or invite_ok(session.get("invite"))
+
+
+@app.get("/signin")
+def signin_page():
+    if current_user():
+        return redirect(url_for("dashboard"))
+    if request.args.get("invite"):
+        session["invite"] = request.args["invite"].strip().upper()
+    return render_template("signin.html", google=users.google_ready(), invite_only=SIGNUPS == "invite",
+                           error=request.args.get("error", ""))
+
+
+@app.post("/auth/email/start")
+def auth_email_start():
+    if not request.is_json:  # a cross-site form can't send JSON without CORS
+        return jsonify(error="JSON required"), 415
+    data = request.get_json(force=True)
+    if data.get("invite"):
+        session["invite"] = str(data["invite"]).strip().upper()
+    try:
+        email = users.clean_email(data.get("email"))
+        if not new_user_allowed(email):
+            return jsonify(error="Sign-ups are invite-only right now. Enter your invite code."), 403
+        users.start_email(email, request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip())
+    except users.LoginError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(ok=True, email=email)
+
+
+@app.post("/auth/email/verify")
+def auth_email_verify():
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    data = request.get_json(force=True)
+    try:
+        email = users.verify_email(data.get("email"), data.get("code"))
+        if not new_user_allowed(email):
+            return jsonify(error="Sign-ups are invite-only right now."), 403
+        user = users.login_email(email, invite=session.get("invite", ""))
+    except users.LoginError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(ok=True, next=start_session(user))
+
+
+def google_redirect_uri():
+    return base_url() + "/auth/google/callback"
+
+
+@app.get("/auth/google")
+def auth_google():
+    if not users.google_ready():
+        return redirect(url_for("signin_page", error="Google sign-in isn't switched on yet. Use your email."))
+    session["g_state"] = state = secrets.token_urlsafe(24)
+    return redirect(users.google_url(google_redirect_uri(), state))
+
+
+@app.get("/auth/google/callback")
+def auth_google_callback():
+    state = session.pop("g_state", None)
+    if request.args.get("error"):
+        return redirect(url_for("signin_page", error="Google sign-in was cancelled."))
+    if not state or not hmac.compare_digest(state, request.args.get("state", "")):
+        return redirect(url_for("signin_page", error="That sign-in link expired. Try again."))
+    try:
+        info = users.google_finish(request.args.get("code", ""), google_redirect_uri())
+        email = users.clean_email(info.get("email"))
+        if not new_user_allowed(email) and not store.redis("GET", f"s:ugoogle:{info.get('sub', '')}"):
+            return redirect(url_for("signin_page", error="Sign-ups are invite-only right now. Enter your invite code first."))
+        user = users.login_google(info, invite=session.get("invite", ""))
+    except users.LoginError as e:
+        return redirect(url_for("signin_page", error=str(e)))
+    return redirect(start_session(user))
+
+
+@app.get("/connect")
+def connect_page():
+    """Step 2 after signing up (and the place to add more): connect an Instagram account."""
+    user = current_user()
+    if not user:
+        return redirect(url_for("signin_page"))
+    accs = users.accounts(user)
+    return render_template("connect.html", user=user, accounts=accs, limit=users.limit(user), locks=plans.LOCKS_ON,
+                           error=request.args.get("error", ""), ready=bool(IG_APP_ID))
+
+
+# ---------- Connect an Instagram account (Instagram business login) ----------
 
 @app.get("/login")
 def login():
-    adding = bool(session.get("accounts")) and request.args.get("add") == "1"
-    if SIGNUPS == "invite" and not adding:
-        code = request.args.get("invite", "").strip().upper()
-        if code not in INVITE_CODES:
-            return redirect(url_for("landing", error="invite"))
-        session["invite"] = code
+    """Starts Instagram login to connect (or reconnect) an account to the signed-in user."""
+    user = current_user()
+    if not user:
+        return redirect(url_for("signin_page"))
     if not IG_APP_ID:
-        return redirect(url_for("landing", error="setup"))
+        return redirect(url_for("connect_page", error="Instagram connect isn't set up yet. Please try again later."))
     session["oauth_state"] = state = secrets.token_urlsafe(24)
     return redirect("https://www.instagram.com/oauth/authorize?" + urlencode({
         "enable_fb_login": 0, "force_reauth": "true", "client_id": IG_APP_ID,
@@ -587,10 +710,13 @@ def exchange_code(code):
 
 @app.get("/auth/callback")
 def auth_callback():
+    user = current_user()
+    if not user:
+        return redirect(url_for("signin_page"))
     if request.args.get("error") or not request.args.get("code"):
-        return redirect(url_for("landing", error="denied"))
+        return redirect(url_for("connect_page", error="Instagram login was cancelled. Try again whenever you're ready."))
     if request.args.get("state") != session.pop("oauth_state", None):
-        return redirect(url_for("landing", error="state"))
+        return redirect(url_for("connect_page", error="That Instagram login expired. Try again."))
     try:
         token = exchange_code(request.args["code"])
         r = requests.get(f"{engine.GRAPH}/me", timeout=20, params={
@@ -600,17 +726,21 @@ def auth_callback():
         me = r.json()
     except Exception as e:
         app.logger.warning("Instagram login failed: %s", e)
-        return redirect(url_for("landing", error="login"))
+        return redirect(url_for("connect_page", error="Instagram login didn't finish. Your account must be a Business or Creator account."))
 
     ig_id = str(me["user_id"])  # the ID Instagram puts in webhooks ("entry.id")
     existing = store.load_account(ig_id)
+    try:
+        users.check_can_add(user, existing, ig_id)
+    except users.LoginError as e:
+        return redirect(url_for("connect_page", error=str(e)))
     acc = existing or {"id": ig_id, "created": int(time.time()), "paused": False}
     acc.update(asid=str(me.get("id", "")), username=me.get("username", ""), name=me.get("name", ""),
                pic=me.get("profile_picture_url", ""), followers=me.get("followers_count"),
-               token=token, token_at=int(time.time()), invite=session.pop("invite", acc.get("invite", "")))
+               token=token, token_at=int(time.time()), invite=acc.get("invite") or user.get("invite", ""))
     if not existing:
         reward_referral(acc)
-    store.save_account(acc)
+    users.claim(user, acc)  # saves the account with its owner and the user's plan
     store.redis("DEL", store.account_key(ig_id, "token_dead"))
     try:  # without this subscription Instagram sends no comment/DM events for the account
         try:
@@ -620,35 +750,24 @@ def auth_callback():
     except Exception as e:
         store.log_activity(ig_id, "", "", "", "connect", "error",
                            f"Couldn't turn on comment and DM events: {e}")
-    session.permanent = True
-    linked = [a for a in session.get("accounts", []) if a != ig_id] if not session.get("member") else []
     session.pop("member", None)
-    session["accounts"] = ([ig_id] + linked)[:MAX_LINKED]
     session["uid"] = ig_id
     return redirect(url_for("dashboard"))
 
 
 # ---------- several Instagram accounts in one login ----------
 
-MAX_LINKED = 10
-
-
 def linked_accounts():
-    """The Instagram accounts this browser logged in to as the owner (for the account switcher)."""
-    out = []
-    for ig_id in session.get("accounts", []):
-        acc = store.load_account(ig_id)
-        if acc:
-            out.append({"id": ig_id, "username": acc.get("username", ""), "pic": acc.get("pic", "")})
-    return out
+    """The signed-in user's Instagram accounts (for the account switcher)."""
+    return [{"id": a["id"], "username": a.get("username", ""), "pic": a.get("pic", "")}
+            for a in users.accounts(current_user())] if current_user() else []
 
 
 @app.post("/api/switch")
 def api_switch():
     target = str(request.get_json(force=True).get("id", ""))
-    if target not in session.get("accounts", []) or not store.load_account(target):
-        return jsonify(error="Log in to that account first."), 403
-    session.pop("member", None)
+    if session.get("member") or not users.owns(current_user(), target):
+        return jsonify(error="That account isn't connected to your login."), 403
     session["uid"] = target
     return jsonify(ok=True)
 
@@ -717,6 +836,7 @@ def logout():
 
 @app.post("/api/disconnect")
 def api_disconnect():
+    """Removes the current Instagram account (and its data) from the user's login."""
     acc = current_account()
     if demo.is_demo(acc):
         session.clear()
@@ -726,13 +846,14 @@ def api_disconnect():
     except Exception:
         pass
     youtube.disconnect(acc)  # revokes Google access too
+    user = current_user()
+    users.remove(user, acc["id"])
     store.delete_account(acc["id"])
-    others = [a for a in session.get("accounts", []) if a != acc["id"] and store.load_account(a)]
-    session.clear()
-    if others:  # stay logged in to the other accounts
-        session.permanent = True
-        session.update(accounts=others, uid=others[0])
-    return jsonify(ok=True, switched=bool(others))
+    others = users.accounts(user)
+    session.pop("uid", None)
+    if others:
+        session["uid"] = others[0]["id"]
+    return jsonify(ok=True, switched=bool(others), next="/app" if others else "/connect")
 
 
 # ---------- dashboard API ----------
@@ -2162,6 +2283,7 @@ def forget_user(user_id):
         acc = store.load_account(ig_id)
         if acc and user_id in (acc.get("id"), acc.get("asid")):
             youtube.disconnect(acc)
+            users.remove(users.owner_of(acc), ig_id)
             store.delete_account(ig_id)
 
 
@@ -2239,8 +2361,13 @@ def owner_set_plan():
     acc = store.load_account(str(data.get("id", "")))
     if not acc or data.get("plan") not in plans.PLANS:
         return jsonify(error="Unknown account or plan."), 400
-    acc["plan"] = data["plan"]
-    store.save_account(acc)
+    owner = users.owner_of(acc)
+    if owner:  # the plan belongs to the login and covers all its Instagram accounts
+        users.set_plan(owner, data["plan"])
+        acc = store.load_account(acc["id"])
+    else:
+        acc["plan"] = data["plan"]
+        store.save_account(acc)
     return jsonify(id=acc["id"], plan=plans.plan_of(acc))
 
 
@@ -2258,14 +2385,20 @@ def owner():
         acc = store.load_account(ig_id)
         if acc:
             c = store.counts(ig_id)
+            owner = users.owner_of(acc)
             rows.append({**public_account(acc), "invite": acc.get("invite", ""), "blocked": engine.is_blocked(acc),
+                         "owner_email": owner.get("email", "") if owner else "",
                          "dms_month": c.get(f"dms:{engine.month()}", 0), "dms": c.get("dms", 0),
                          "rules": len(store.load_rules(ig_id).get("reels", {})), "plan_id": plans.plan_of(acc),
                          "plan_set": acc.get("plan") or "free", "referral_pro": acc.get("pro_until", 0) > time.time()})
     rows.sort(key=lambda r: -(r.get("created") or 0))
     by_plan = {k: sum(1 for r in rows if r["plan_id"] == k) for k in plans.PLANS}
     # MRR counts only plans set by hand (paying); free Pro months from referrals bring no money
-    mrr = sum(plans.PLANS[r["plan_set"]]["price"] for r in rows if r["plan_set"] in plans.PLANS)
+    # one plan per login: count each login once (accounts from before logins count on their own)
+    payer = {}
+    for r in rows:
+        payer.setdefault(r["owner_email"] or r["id"], r["plan_set"])
+    mrr = sum(plans.PLANS[p]["price"] for p in payer.values() if p in plans.PLANS)
     return render_template("owner.html", rows=rows, plans=plans.PLANS, by_plan=by_plan, mrr=mrr)
 
 

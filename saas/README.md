@@ -275,6 +275,24 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
   limited (6 h), 10+ refused comment DMs waiting (`REFUSED_ALERT`, daily), 80% and 100% of the monthly DM limit (once a
   month), and login renewal failing in the daily cron.
 
+## Logins: a ReplyInbox user owns the Instagram accounts (`users.py`, `/signin`, `/connect`)
+- **Flow (like ManyChat):** `/signin` (Continue with Google, or a 6-digit email code) → `/connect` (connect an Instagram
+  Business/Creator account, required) → `/app`. Signed-in users without an account always land on `/connect`.
+- **One login, many accounts:** the switcher lists the user's accounts on any device; "Add another Instagram account" goes to `/connect`.
+  An Instagram account belongs to one login (`acc.owner`); another login can't open or take it over.
+- **Plan per login:** `user.plan` is copied onto each account (so `plans.plan_of(acc)` is unchanged). The owner page sets the plan on the
+  login; revenue counts each login once. Accounts per plan (`plans.PLANS[...]["accounts"]` + `extra_accounts`) are enforced when
+  `PLAN_LOCKS=on`, else up to 10.
+- **Accounts from before logins** (no owner) are claimed when their owner signs in and connects them again; automations and data stay;
+  the login gets the better of the two plans.
+- **Email codes:** 10 minutes, 5 wrong tries, 5 codes per email and 20 per IP per hour; stored hashed. Sent with Resend
+  (`RESEND_API_KEY`, `MAIL_FROM`, e.g. `ReplyInbox <login@replyinbox.in>` on a domain verified in Resend). Without a key: printed
+  to the log locally, refused on Vercel.
+- **Google:** `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or the YouTube client `YT_CLIENT_ID` / `YT_CLIENT_SECRET`),
+  redirect URI `https://<host>/auth/google/callback`, scopes `openid email profile`.
+- **Invite-only** (`SIGNUPS=invite`): new logins need a code from `INVITE_CODES`; existing logins can always sign in.
+- Team members still join with an invite link and don't need a login. Storage: `s:u:<uid>`, `s:uemail:<email>`, `s:ugoogle:<sub>`.
+
 ## Content plan: AI drafts your week, you approve (`/app/plan`, `content_drafts.py`)
 - **Draft my week**: the AI (same model as the AI agent, `AI_MODEL`) drafts 3, 7 or 14 days of posts (mostly reels and carousels): date, format, hook, script beats or slide lines, a ready caption and, when it fits, a comment keyword for an Auto DM. It writes from the AI agent's About/FAQ, the link-in-bio products and existing keyword freebies, plus an optional brief for the week.
 - **Approval queue**: tabs To review / Approved / Posted / Rejected. Approve, Change (edit any field, or "Rewrite with AI" with feedback), Reject (optional reason). Approved and rejected drafts (with reasons) go into the next prompt, so drafts learn the creator's taste. Nothing is posted automatically.

@@ -37,11 +37,17 @@ class MemoryRedis:
                 k, v, opts = a[0], str(a[1]), [str(o).upper() for o in a[2:]]
                 if "NX" in opts and self._alive(k):
                     return None
+                keep = "KEEPTTL" in opts and self._alive(k)
                 self.data[k] = v
-                self.expiry.pop(k, None)
+                if not keep:
+                    self.expiry.pop(k, None)
                 if "EX" in opts:
                     self.expiry[k] = time.time() + int(a[2 + opts.index("EX") + 1])
                 return "OK"
+            if cmd == "INCR":
+                n = int(self.data[a[0]]) + 1 if self._alive(a[0]) else 1
+                self.data[a[0]] = str(n)
+                return n
             if cmd == "DEL":
                 return sum(self.data.pop(k, None) is not None for k in a)
             if cmd == "LPUSH":

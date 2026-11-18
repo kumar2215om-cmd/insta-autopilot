@@ -18,6 +18,7 @@ import app as saas  # noqa: E402
 import demo  # noqa: E402
 import engine  # noqa: E402
 import store  # noqa: E402
+import users  # noqa: E402
 import youtube  # noqa: E402
 
 
@@ -161,11 +162,32 @@ class SaasTest(unittest.TestCase):
             p.start()
             self.addCleanup(p.stop)
         self.c = saas.app.test_client()
+        self.codes = {}
+        p = mock.patch.object(users, "deliver", lambda email, code: self.codes.__setitem__(email, code))
+        p.start()
+        self.addCleanup(p.stop)
 
-    def login(self):
-        r = self.c.get("/login")
+    def signin(self, client=None, email="om@example.com"):
+        """Signs in to ReplyInbox with an email code; returns where it sends you next."""
+        c = client or self.c
+        self.assertEqual(c.post("/auth/email/start", json={"email": email}).status_code, 200)
+        r = c.post("/auth/email/verify", json={"email": email, "code": self.codes[email]})
+        self.assertEqual(r.status_code, 200)
+        return r.get_json()["next"]
+
+    def connect_ig(self, client=None):
+        c = client or self.c
+        r = c.get("/login")
         state = parse_qs(urlparse(r.location).query)["state"][0]
-        r = self.c.get(f"/auth/callback?code=abc&state={state}")
+        return c.get(f"/auth/callback?code=abc&state={state}")
+
+    def login(self, client=None, email="om@example.com"):
+        c = client or self.c
+        with c.session_transaction() as sess:
+            signed_in = bool(sess.get("user"))
+        if not signed_in:
+            self.signin(c, email)
+        r = self.connect_ig(c)
         self.assertEqual(r.status_code, 302)
         self.assertTrue(r.location.endswith("/app"))
 
@@ -179,6 +201,9 @@ class SaasTest(unittest.TestCase):
         return self.c.post("/webhook", data=raw, headers=headers)
 
     def test_login_saves_account_and_subscribes(self):
+        self.assertTrue(self.c.get("/login").location.endswith("/signin"))  # sign in to ReplyInbox first
+        self.assertTrue(self.signin().endswith("/connect"))  # then Instagram is required before the dashboard
+        self.assertTrue(self.c.get("/app").location.endswith("/connect"))
         r = self.c.get("/login")
         q = parse_qs(urlparse(r.location).query)
         self.assertIn("instagram_business_manage_messages", q["scope"][0])
@@ -191,15 +216,101 @@ class SaasTest(unittest.TestCase):
         self.assertNotIn("token", me["account"])
 
     def test_login_rejects_bad_state(self):
+        self.signin()
         self.c.get("/login")
         r = self.c.get("/auth/callback?code=abc&state=wrong")
-        self.assertIn("error=state", r.location)
+        self.assertIn("/connect?error=", r.location)
         self.assertIsNone(store.load_account("1789"))
 
     def test_invite_only(self):
         with mock.patch.object(saas, "SIGNUPS", "invite"), mock.patch.object(saas, "INVITE_CODES", {"BETA"}):
-            self.assertIn("error=invite", self.c.get("/login?invite=nope").location)
-            self.assertIn("instagram.com/oauth", self.c.get("/login?invite=beta").location)
+            self.assertEqual(self.c.post("/auth/email/start", json={"email": "a@b.co", "invite": "nope"}).status_code, 403)
+            self.assertEqual(self.c.post("/auth/email/start", json={"email": "a@b.co", "invite": "beta"}).status_code, 200)
+            self.c.post("/auth/email/verify", json={"email": "a@b.co", "code": self.codes["a@b.co"]})
+            self.assertIn("instagram.com/oauth", self.c.get("/login").location)
+
+    def test_user_login_email_code(self):
+        self.assertEqual(self.c.post("/auth/email/start", json={"email": "not-an-email"}).status_code, 400)
+        self.assertEqual(self.c.post("/auth/email/start", data="email=a@b.co").status_code, 415)  # JSON only (no cross-site forms)
+        self.c.post("/auth/email/start", json={"email": "Om@Example.com "})
+        code = self.codes["om@example.com"]
+        wrong = "000000" if code != "000000" else "111111"
+        for _ in range(4):
+            self.assertIn("isn't right", self.c.post("/auth/email/verify", json={"email": "om@example.com", "code": wrong}).get_json()["error"])
+        self.assertIn("Too many", self.c.post("/auth/email/verify", json={"email": "om@example.com", "code": wrong}).get_json()["error"])
+        self.assertIn("expired", self.c.post("/auth/email/verify", json={"email": "om@example.com", "code": code}).get_json()["error"])
+        for _ in range(4):
+            self.c.post("/auth/email/start", json={"email": "om@example.com"})
+        self.assertIn("Too many codes", self.c.post("/auth/email/start", json={"email": "om@example.com"}).get_json()["error"])
+        # a code works once; the same email always reaches the same user
+        self.assertTrue(self.signin(email="two@example.com").endswith("/connect"))
+        uid = users.by_email("two@example.com")["id"]
+        self.c.post("/logout")
+        self.signin(email="two@example.com")
+        with self.c.session_transaction() as sess:
+            self.assertEqual(sess["user"], uid)
+        self.assertNotIn("two@example.com", [k for k in self.codes if store.redis("GET", f"s:ecode:{k}")])
+
+    def test_user_login_google(self):
+        self.assertIn("isn", self.c.get("/auth/google", follow_redirects=True).get_data(as_text=True))  # not set up
+        self.signin(email="om@example.com")  # an email user first
+        uid = users.by_email("om@example.com")["id"]
+        self.c.post("/logout")
+        with mock.patch.dict(os.environ, GOOGLE_CLIENT_ID="gid", GOOGLE_CLIENT_SECRET="gs"), \
+             mock.patch.object(users, "google_finish", lambda code, uri: {"sub": "g1", "email": "Om@example.com",
+                                                                          "email_verified": True, "name": "Om", "picture": "p.jpg"}):
+            r = self.c.get("/auth/google")
+            q = parse_qs(urlparse(r.location).query)
+            self.assertEqual((q["scope"][0], q["redirect_uri"][0]), ("openid email profile", "http://localhost/auth/google/callback"))
+            self.assertIn("expired", self.c.get("/auth/google/callback?code=x&state=bad", follow_redirects=True).get_data(as_text=True))
+            r = self.c.get("/auth/google")
+            r = self.c.get(f"/auth/google/callback?code=x&state={parse_qs(urlparse(r.location).query)['state'][0]}")
+            self.assertTrue(r.location.endswith("/connect"))
+        user = users.get(uid)  # same email → same user, now linked to Google
+        self.assertEqual((user["google"], user["name"]), ("g1", "Om"))
+        self.assertIn("om@example.com", self.c.get("/connect").get_data(as_text=True))
+
+    def test_accounts_belong_to_their_user(self):
+        self.login()  # om@example.com connects @creator (1789)
+        other = saas.app.test_client()
+        self.signin(other, "mallory@example.com")
+        with other.session_transaction() as sess:
+            sess["uid"] = "1789"  # pretends to be on @creator
+        self.assertEqual(other.get("/api/me").status_code, 401)
+        self.assertTrue(other.get("/app").location.endswith("/connect"))
+        self.assertEqual(other.post("/api/switch", json={"id": "1789"}).status_code, 403)
+        r = self.connect_ig(other)  # can't take over an account another login owns
+        self.assertIn("another", urlparse(r.location).query.replace("+", " "))
+        self.assertEqual(store.load_account("1789")["owner"], users.by_email("om@example.com")["id"])
+
+    def test_plan_limits_and_plan_follows_the_user(self):
+        self.login()
+        user = users.by_email("om@example.com")
+        self.ig.me = {"id": "asid3", "user_id": "3003", "username": "second.page", "name": "S", "profile_picture_url": "", "followers_count": 5}
+        with mock.patch.object(users.plans, "LOCKS_ON", True):
+            r = self.connect_ig()  # Free plan: 1 account
+            self.assertIn("allows 1 Instagram account", urlparse(r.location).query.replace("+", " "))
+            self.assertIsNone(store.load_account("3003"))
+            self.assertIn("1 of 1 account", self.c.get("/connect").get_data(as_text=True))
+            users.set_plan(users.get(user["id"]), "pro")  # Pro: 3 accounts
+            self.assertTrue(self.connect_ig().location.endswith("/app"))
+        self.assertEqual([plans_of["plan"] for plans_of in users.accounts(users.get(user["id"]))], ["pro", "pro"])
+        # the owner page sets the plan on the login: every account follows
+        h = {"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}
+        self.c.post("/owner/plan", json={"id": "1789", "plan": "creator"}, headers=h)
+        self.assertEqual({store.load_account(i)["plan"] for i in ("1789", "3003")}, {"creator"})
+        self.assertIn("om@example.com", self.c.get("/owner", headers=h).get_data(as_text=True))
+        # removing the last account sends you to connect one again
+        self.assertEqual(self.c.post("/api/disconnect", json={}).get_json()["next"], "/app")
+        self.assertEqual(self.c.post("/api/disconnect", json={}).get_json()["next"], "/connect")
+        self.assertEqual(users.get(user["id"])["accounts"], [])
+        self.assertTrue(self.c.get("/app").location.endswith("/connect"))
+
+    def test_accounts_from_before_logins_are_claimed(self):
+        store.save_account({"id": "1789", "username": "creator", "token": "OLD", "plan": "pro", "created": 1})
+        self.login()  # signs in, logs in with Instagram as the same account
+        acc, user = store.load_account("1789"), users.by_email("om@example.com")
+        self.assertEqual((acc["owner"], acc["token"], user["plan"], acc["plan"]), (user["id"], "LONG", "pro", "pro"))
 
     def test_api_needs_login_and_json(self):
         self.assertEqual(self.c.get("/api/rules").status_code, 401)
@@ -1070,9 +1181,7 @@ class SaasTest(unittest.TestCase):
         new = saas.app.test_client()
         new.get("/r/creator")
         self.assertIn("@creator invited you", new.get("/").get_data(as_text=True))
-        r = new.get("/login")
-        state = parse_qs(urlparse(r.location).query)["state"][0]
-        new.get(f"/auth/callback?code=abc&state={state}")
+        self.login(new, "friend@example.com")
         friend_acc, me = store.load_account("2002"), store.load_account("1789")
         self.assertTrue(store.is_pro(friend_acc) and store.is_pro(me))
         self.assertEqual(engine.monthly_limit(me), 0)
@@ -1124,14 +1233,13 @@ class SaasTest(unittest.TestCase):
     def test_multiple_accounts(self):
         self.login()  # @creator (1789)
         self.ig.me = {"id": "asid3", "user_id": "3003", "username": "second.page", "name": "S", "profile_picture_url": "", "followers_count": 5}
-        r = self.c.get("/login?add=1")
-        self.c.get(f"/auth/callback?code=abc&state={parse_qs(urlparse(r.location).query)['state'][0]}")
+        self.connect_ig()
         self.assertEqual(self.c.get("/api/me").get_json()["account"]["username"], "second.page")
         html = self.c.get("/app").get_data(as_text=True)
         self.assertIn('data-switch="1789"', html)
         self.assertEqual(self.c.post("/api/switch", json={"id": "1789"}).status_code, 200)
         self.assertEqual(self.c.get("/api/me").get_json()["account"]["username"], "creator")
-        self.assertEqual(self.c.post("/api/switch", json={"id": "9999"}).status_code, 403)  # not logged in to it
+        self.assertEqual(self.c.post("/api/switch", json={"id": "9999"}).status_code, 403)  # not connected to this login
         # disconnecting one keeps you in the other
         self.assertTrue(self.c.post("/api/disconnect", json={}).get_json()["switched"])
         self.assertEqual(self.c.get("/api/me").get_json()["account"]["username"], "second.page")

@@ -191,7 +191,8 @@
         {% for a in linked %}
           <button type="button" data-switch="{{ a.id }}">{% if a.pic %}<img src="{{ a.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}@{{ a.username }}</button>
         {% endfor %}
-        <a href="/login?add=1">＋ Add another Instagram account</a>
+        <a href="/connect">＋ Add another Instagram account</a>
+        {% if user %}<span style="display:block; padding:8px 10px 2px; font-size:12px; color:#8F8A9C; overflow-wrap:anywhere">Signed in as {{ user.email }}</span>{% endif %}
       </div>
     </details>
     {% endif %}
