@@ -28,6 +28,7 @@
 {% elif role != "owner" %}
   <section class="card"><h2>Plan & billing</h2><p class="muted" style="margin:6px 0 0">Only the account owner can see and change the plan.</p></section>
 {% else %}
+{% if no_account %}<div class="banner info">You can pick a plan now. To start automating, <a href="/connect">connect your Instagram account</a>.</div>{% endif %}
 {% if test_mode %}<div class="banner info"><b>Test mode:</b> payments use Razorpay's test keys. Use a test card or the test UPI ID <code>success@razorpay</code>; no real money is charged.</div>{% endif %}
 <section class="card now" id="now"><div class="empty">Loading…</div></section>
 
@@ -120,7 +121,7 @@ document.addEventListener("click", async (e) => {
   } catch (err) { toast(err.message); }
   b.disabled = false;
 });
-(async () => { loadBanners(); S = await api("/api/billing"); draw(); })();
+(async () => { {% if not no_account %}loadBanners(); {% endif %}S = await api("/api/billing"); draw(); })();
 </script>
 {% endif %}
 {% endblock %}

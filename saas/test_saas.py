@@ -384,6 +384,24 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(ed.get("/api/billing").status_code, 403)
         self.assertEqual(ed.post("/api/billing/order", json={"plan": "pro", "period": "month"}).status_code, 403)
 
+    def test_reviewer_login_and_billing_without_instagram(self):
+        self.assertNotIn("Sign in with a password", self.c.get("/signin").get_data(as_text=True))
+        self.assertEqual(self.c.post("/auth/password", json={"email": "r@x.co", "password": "p"}).status_code, 400)
+        self.enterContext(mock.patch.dict(os.environ, REVIEW_EMAIL="Review@x.co", REVIEW_PASSWORD="s3cret-pass"))
+        self.assertIn("Sign in with a password", self.c.get("/signin").get_data(as_text=True))
+        self.assertIn("don't match", self.c.post("/auth/password", json={"email": "review@x.co", "password": "wrong"}).get_json()["error"])
+        r = self.c.post("/auth/password", json={"email": "review@x.co", "password": "s3cret-pass"}).get_json()
+        self.assertEqual(r["next"], "/app/billing")  # straight to the plans, even without Instagram
+        page = self.c.get("/app/billing")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("connect your Instagram account", page.get_data(as_text=True))
+        self.assertEqual(self.c.get("/api/billing").get_json()["plan"], "free")  # billing API works without an account
+        self.assertTrue(self.c.get("/app").location.endswith("/connect"))  # the rest still needs Instagram
+        self.assertEqual(self.c.get("/api/me").status_code, 401)
+        for _ in range(9):
+            self.c.post("/auth/password", json={"email": "x@x.co", "password": "x"})
+        self.assertIn("Too many", self.c.post("/auth/password", json={"email": "review@x.co", "password": "s3cret-pass"}).get_json()["error"])
+
     def test_api_needs_login_and_json(self):
         self.assertEqual(self.c.get("/api/rules").status_code, 401)
         self.login()

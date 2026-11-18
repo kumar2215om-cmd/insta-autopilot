@@ -72,6 +72,31 @@
     <p class="msg" id="msg" role="status" aria-live="polite"></p>
     {% endif %}
 
+    {% if review %}
+    <details style="margin-top:16px"><summary class="small muted" style="text-align:center; cursor:pointer">Sign in with a password</summary>
+      <form id="pwForm" novalidate style="margin-top:12px">
+        <label for="pwEmail">Email</label><input id="pwEmail" type="email" autocomplete="username" required style="margin-bottom:10px">
+        <label for="pwPass">Password</label><input id="pwPass" type="password" autocomplete="current-password" required
+          style="width:100%; border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; font:16px Geist, Inter, sans-serif">
+        <button class="btn" type="submit" id="pwBtn">Sign in</button>
+        <p class="msg" id="pwMsg" role="status" aria-live="polite"></p>
+      </form>
+    </details>
+    <script>
+    document.getElementById("pwForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const b = document.getElementById("pwBtn"), m = document.getElementById("pwMsg");
+      b.disabled = true; m.className = "msg muted"; m.textContent = "Checking…";
+      try {
+        const r = await fetch("/auth/password", {method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({email: document.getElementById("pwEmail").value, password: document.getElementById("pwPass").value})});
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || "Something went wrong.");
+        location.href = d.next;
+      } catch (err) { m.className = "msg err"; m.textContent = err.message; b.disabled = false; }
+    };
+    </script>
+    {% endif %}
     <p class="fine muted">By continuing you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy policy</a>.
       Want a look first? <a href="/demo">Try the live demo</a>.</p>
   </div>

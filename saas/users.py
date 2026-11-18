@@ -241,6 +241,25 @@ def email_ready():
     return bool(_env("RESEND_API_KEY")) or not os.environ.get("VERCEL")
 
 
+# ---------- reviewer password login (one account, for payment-gateway / app-store reviews) ----------
+
+def review_ready():
+    return bool(_env("REVIEW_EMAIL") and _env("REVIEW_PASSWORD"))
+
+
+def review_login(email, password, ip=""):
+    """The reviewer account for the right REVIEW_EMAIL + REVIEW_PASSWORD; LoginError otherwise (rate-limited per IP)."""
+    if not review_ready():
+        raise LoginError("Password sign-in isn't available.")
+    if ip and _bump(f"s:pwtry:{ip}", 900) > 10:
+        raise LoginError("Too many tries. Wait 15 minutes.")
+    ok_email = hmac.compare_digest(str(email or "").strip().lower(), _env("REVIEW_EMAIL").lower())
+    ok_pass = hmac.compare_digest(str(password or ""), _env("REVIEW_PASSWORD"))
+    if not (ok_email and ok_pass):
+        raise LoginError("That email and password don't match.")
+    return login_email(_env("REVIEW_EMAIL").lower())
+
+
 # ---------- Google ----------
 
 def google_client():

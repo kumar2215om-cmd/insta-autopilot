@@ -150,6 +150,11 @@ def render_app(template, active, **extra):
             if first:  # signed in but no account picked (new device, or the last one was removed)
                 session["uid"] = first["id"]
                 return redirect(request.path)
+            if active == "billing":  # plans can be bought before connecting Instagram
+                stub = {"id": "", "username": "", "pic": user.get("pic", ""), "pro": False, "demo": False,
+                        "plan_name": plans.PLANS[users.current_plan(user)]["name"]}
+                return render_template(template, acc=stub, active=active, role="owner", user=user, no_account=True,
+                                       nav=[("billing", "/app/billing", "Plan & billing")], apps={}, linked=[], page_url="", **extra)
             return redirect(url_for("connect_page"))
         return redirect(url_for("signin_page"))
     on = apps_of(acc)
@@ -199,7 +204,7 @@ def no_index_private(resp):
 def guard():
     # Logged-in API calls that change data must be JSON: a cross-site form can't send that without CORS.
     if request.path.startswith("/api/"):
-        if not current_account() and not (request.path == "/api/switch" and current_user()):
+        if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
             return jsonify(error="Please log in again."), 401
         if request.method in ("POST", "PUT", "DELETE") and not request.is_json:
             return jsonify(error="JSON required"), 415
@@ -598,6 +603,8 @@ def start_session(user):
     if first:
         session["uid"] = first["id"]
         return session.pop("next", None) or url_for("dashboard")
+    if session.get("next") == "/app/billing":  # buying a plan works before Instagram is connected
+        return session.pop("next")
     return url_for("connect_page")
 
 
@@ -616,7 +623,8 @@ def signin_page():
         session["invite"] = request.args["invite"].strip().upper()
     if nxt:
         session["next"] = nxt
-    return render_template("signin.html", google=users.google_ready(), email=users.email_ready(), invite_only=SIGNUPS == "invite",
+    return render_template("signin.html", google=users.google_ready(), email=users.email_ready(), review=users.review_ready(),
+                           invite_only=SIGNUPS == "invite",
                            error=request.args.get("error", ""))
 
 
@@ -649,6 +657,21 @@ def auth_email_verify():
         user = users.login_email(email, invite=session.get("invite", ""))
     except users.LoginError as e:
         return jsonify(error=str(e)), 400
+    return jsonify(ok=True, next=start_session(user))
+
+
+@app.post("/auth/password")
+def auth_password():
+    """Password sign-in for the one reviewer account (REVIEW_EMAIL / REVIEW_PASSWORD)."""
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    d = request.get_json(force=True)
+    try:
+        user = users.review_login(d.get("email"), d.get("password"),
+                                  request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip())
+    except users.LoginError as e:
+        return jsonify(error=str(e)), 400
+    session["next"] = "/app/billing"  # reviewers come to see the checkout
     return jsonify(ok=True, next=start_session(user))
 
 
@@ -943,8 +966,9 @@ def api_billing_verify():
         order = billing.verify_checkout(user, d.get("order_id"), d.get("payment_id"), d.get("signature"))
     except billing.BillingError as e:
         return jsonify(error=str(e)), 400
-    store.log_activity(current_account()["id"], "", "", "", "billing", "ok",
-                       f"{plans.PLANS[order['plan']]['name']} plan paid (₹{order['amount']})")
+    if current_account():
+        store.log_activity(current_account()["id"], "", "", "", "billing", "ok",
+                           f"{plans.PLANS[order['plan']]['name']} plan paid (₹{order['amount']})")
     return jsonify(ok=True, order=order["id"], **billing.status(users.get(user["id"])))
 
 
