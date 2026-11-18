@@ -605,7 +605,7 @@ def signin_page():
         return redirect(url_for("dashboard"))
     if request.args.get("invite"):
         session["invite"] = request.args["invite"].strip().upper()
-    return render_template("signin.html", google=users.google_ready(), invite_only=SIGNUPS == "invite",
+    return render_template("signin.html", google=users.google_ready(), email=users.email_ready(), invite_only=SIGNUPS == "invite",
                            error=request.args.get("error", ""))
 
 

@@ -229,6 +229,11 @@ def deliver(email, code):
         raise LoginError("We couldn't send the email. Try again, or use Google.")
 
 
+def email_ready():
+    """Email codes can be sent (Resend key set), or this is a local run where codes go to the log."""
+    return bool(_env("RESEND_API_KEY")) or not os.environ.get("VERCEL")
+
+
 # ---------- Google ----------
 
 def google_client():
