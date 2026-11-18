@@ -2244,6 +2244,11 @@ def owner_set_plan():
     return jsonify(id=acc["id"], plan=plans.plan_of(acc))
 
 
+@app.get("/admin")
+def admin_alias():
+    return redirect("/owner")
+
+
 @app.get("/owner")
 def owner():
     if not owner_ok():
