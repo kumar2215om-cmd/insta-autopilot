@@ -1,0 +1,6 @@
+# Not needed by the live app (keeps the server bundle small): carousel generator, its images, design sources, tests.
+content/
+tools/
+brand/
+test_saas.py
+LAUNCH.md

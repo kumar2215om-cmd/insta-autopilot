@@ -5,7 +5,9 @@ The SEO pages (features, comparisons, guides, sitemap, robots.txt, llms.txt, str
 
 1. Point replyinbox.in at the likhodm Vercel project (Domains), and check https://replyinbox.in opens the site.
 2. In Vercel → likhodm → Environment Variables, add `SITE_URL=https://replyinbox.in` (Production).
-3. Redirect likhodm.vercel.app to replyinbox.in (Vercel → Domains → redirect), so search engines see one address.
+3. Don't redirect likhodm.vercel.app yet: Meta's webhook and the Instagram/Google sign-in callbacks point at it, and
+   Meta doesn't follow redirects. Canonical tags (SITE_URL) already tell search engines replyinbox.in is the main address.
+   Redirect only after moving the Meta webhook + login redirect URIs and the Google redirect URI to replyinbox.in.
 4. Put the SEO work on `main`. `main` has a commit (e429fc2, "Hold the SEO pages until launch") that removed the first
    version, so a plain merge conflicts. Ask Claude to do it, or run:
    `git checkout main && git pull && git revert --no-edit e429fc2 && git merge seo-launch && git push origin main`
