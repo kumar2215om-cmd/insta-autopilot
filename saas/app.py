@@ -259,11 +259,15 @@ _LANDING_FAQ = None
 def landing_faq():
     """The landing page's FAQ, read from the template so the page and its structured data never disagree."""
     global _LANDING_FAQ
-    if _LANDING_FAQ is None:
+    live = billing.ready()
+    if _LANDING_FAQ is None or _LANDING_FAQ[0] != live:
         src = open(os.path.join(app.root_path, "templates", "landing.html"), encoding="utf-8").read()
+        # keep only the branch the page actually shows (e.g. the "how do I pay" answer once billing is on)
+        src = re.sub(r"\{% if billing_live %\}(.*?)\{% else %\}(.*?)\{% endif %\}",
+                     lambda m: m.group(1) if live else m.group(2), src, flags=re.S)
         strip = lambda h: re.sub(r"\s+", " ", re.sub(r"<[^>]+>|\{%.*?%\}", "", h)).replace("{{ brand }}", BRAND).strip()
-        _LANDING_FAQ = [(strip(q), strip(a)) for q, a in re.findall(r"<details><summary>(.*?)</summary><p>(.*?)</p></details>", src)]
-    return _LANDING_FAQ
+        _LANDING_FAQ = (live, [(strip(q), strip(a)) for q, a in re.findall(r"<details><summary>(.*?)</summary><p>(.*?)</p></details>", src)])
+    return _LANDING_FAQ[1]
 
 
 def landing_schema():
