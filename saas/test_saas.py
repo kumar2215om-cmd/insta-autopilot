@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import os
+import time
 import unittest
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
@@ -19,6 +20,7 @@ import demo  # noqa: E402
 import engine  # noqa: E402
 import store  # noqa: E402
 import users  # noqa: E402
+import billing  # noqa: E402
 import youtube  # noqa: E402
 
 
@@ -311,6 +313,76 @@ class SaasTest(unittest.TestCase):
         self.login()  # signs in, logs in with Instagram as the same account
         acc, user = store.load_account("1789"), users.by_email("om@example.com")
         self.assertEqual((acc["owner"], acc["token"], user["plan"], acc["plan"]), (user["id"], "LONG", "pro", "pro"))
+
+    def test_billing_with_razorpay(self):
+        self.login()
+        uid = users.by_email("om@example.com")["id"]
+        self.assertFalse(self.c.get("/api/billing").get_json()["ready"])
+        self.assertIn("launching soon", self.c.get("/").get_data(as_text=True))
+        self.assertEqual(self.c.post("/api/billing/order", json={"plan": "creator", "period": "month"}).status_code, 400)
+        orders = []
+
+        def rzp(url, auth=None, json=None, timeout=None, **kw):
+            orders.append((url, auth, json))
+            return Resp({"id": f"order_{len(orders)}", "amount": json["amount"]})
+        self.enterContext(mock.patch.dict(os.environ, RAZORPAY_KEY_ID="rzp_test_k", RAZORPAY_KEY_SECRET="sek", RAZORPAY_WEBHOOK_SECRET="wh"))
+        self.enterContext(mock.patch.object(billing.requests, "post", rzp))
+        self.assertIn("Get Creator", self.c.get("/").get_data(as_text=True))
+        self.assertIn("/app/billing", self.c.get("/signin?next=/app/billing").location)  # already signed in → straight to billing
+        st = self.c.get("/api/billing").get_json()
+        self.assertEqual((st["plan"], st["ready"], st["test"], st["quotes"]["creator"]["year"]["amount"]), ("free", True, True, 1999))
+        # the price comes from the server, whatever the browser sends
+        o = self.c.post("/api/billing/order", json={"plan": "creator", "period": "month", "amount": 1}).get_json()
+        self.assertEqual((o["amount"], o["key"], orders[0][2]["amount"], orders[0][2]["notes"]["user"]), (19900, "rzp_test_k", 19900, uid))
+        self.assertEqual(self.c.post("/api/billing/order", json={"plan": "free", "period": "month"}).status_code, 400)
+        sign = lambda oid, pid: hmac.new(b"sek", f"{oid}|{pid}".encode(), hashlib.sha256).hexdigest()
+        bad = self.c.post("/api/billing/verify", json={"order_id": o["order_id"], "payment_id": "pay_1", "signature": "nope"})
+        self.assertEqual(bad.status_code, 400)
+        r = self.c.post("/api/billing/verify", json={"order_id": o["order_id"], "payment_id": "pay_1", "signature": sign(o["order_id"], "pay_1")}).get_json()
+        self.assertEqual(r["plan"], "creator")
+        self.assertAlmostEqual(r["until"], time.time() + 30 * 86400, delta=60)
+        self.assertEqual(store.load_account("1789")["plan"], "creator")  # every account under the login follows
+        self.assertEqual(self.c.get("/api/me").get_json()["account"]["pro"], True)
+        # paying twice for the same order changes nothing
+        again = self.c.post("/api/billing/verify", json={"order_id": o["order_id"], "payment_id": "pay_1", "signature": sign(o["order_id"], "pay_1")}).get_json()
+        self.assertEqual(again["until"], r["until"])
+        self.assertEqual(len(users.get(uid)["payments"]), 1)
+        # upgrading to Pro turns ~30 Creator days (₹199) into ~12 Pro days (₹499), on top of the new month
+        q = self.c.get("/api/billing").get_json()["quotes"]["pro"]["month"]
+        self.assertAlmostEqual(q["credit_days"], 30 * 199 / 499, delta=0.2)
+        # the webhook activates too (when the browser closed early); bad signatures are refused
+        o2 = self.c.post("/api/billing/order", json={"plan": "pro", "period": "year"}).get_json()
+        body = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {
+            "id": "pay_2", "order_id": o2["order_id"], "status": "captured", "amount": 499900}}}}).encode()
+        self.assertEqual(self.c.post("/billing/webhook", data=body, headers={"X-Razorpay-Signature": "x"}).status_code, 400)
+        wsig = hmac.new(b"wh", body, hashlib.sha256).hexdigest()
+        self.assertEqual(self.c.post("/billing/webhook", data=body, headers={"X-Razorpay-Signature": wsig}).status_code, 200)
+        u = users.get(uid)
+        self.assertEqual(u["plan"], "pro")
+        self.assertGreater(u["plan_until"], time.time() + 365 * 86400)  # a year plus the Creator credit
+        rid = u["payments"][0]["id"]
+        self.assertIn("₹4,999", self.c.get(f"/app/billing/receipt/{rid}").get_data(as_text=True))
+        self.assertEqual(self.c.get("/app/billing/receipt/order_999").status_code, 404)
+        h = {"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}
+        self.assertIn("pay_2", self.c.get("/owner", headers=h).get_data(as_text=True))
+        # a period that ran out falls back to Free, with a banner
+        u["plan_until"] = int(time.time()) - 10
+        users.save(u)
+        users.sync_plan(u)
+        self.assertEqual(billing.plans.plan_of(store.load_account("1789")), "free")
+        self.assertEqual(self.c.get("/api/me").get_json()["billing"]["kind"], "expired")
+        u["plan_until"] = int(time.time()) + 2 * 86400
+        users.save(u)
+        self.assertEqual(self.c.get("/api/me").get_json()["billing"]["kind"], "soon")
+        # team members can't see or pay
+        acc = store.load_account("1789")
+        acc["team"] = [{"id": "m1", "name": "Ed", "role": "manager", "invited": 1, "joined": 1}]
+        store.save_account(acc)
+        ed = saas.app.test_client()
+        with ed.session_transaction() as sess:
+            sess.update(uid="1789", member="m1")
+        self.assertEqual(ed.get("/api/billing").status_code, 403)
+        self.assertEqual(ed.post("/api/billing/order", json={"plan": "pro", "period": "month"}).status_code, 403)
 
     def test_api_needs_login_and_json(self):
         self.assertEqual(self.c.get("/api/rules").status_code, 401)

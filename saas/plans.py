@@ -50,6 +50,8 @@ def plan_of(acc):
     plan = acc.get("plan") or "free"
     if plan not in PLANS:
         plan = "free"
+    if plan != "free" and acc.get("plan_until") and acc["plan_until"] < time.time():
+        plan = "free"  # a paid period ran out (plans set by hand on /owner have no end date)
     if plan in ("free", "starter", "creator") and acc.get("pro_until", 0) > time.time():
         return "pro"
     return plan

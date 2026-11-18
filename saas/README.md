@@ -275,6 +275,25 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
   limited (6 h), 10+ refused comment DMs waiting (`REFUSED_ALERT`, daily), 80% and 100% of the monthly DM limit (once a
   month), and login renewal failing in the daily cron.
 
+## Plan billing with Razorpay (`billing.py`, `/app/billing`)
+- **Prepaid** monthly or yearly plans (Starter, Creator, Pro, Agency), paid in ₹ with Razorpay Checkout (UPI, cards, netbanking,
+  wallets). No auto-renew yet: a banner (and the plan page) reminds the owner 3 days before the end; when the period ends the
+  login falls back to Free (`plans.plan_of` checks `plan_until`). Plans set by hand on `/owner` have no end date.
+- The **plan belongs to the login** and is copied, with its end date, onto every Instagram account under it.
+- **Paying again** for the same plan adds time; **switching** plans turns the unused days into the same money's worth of days on
+  the new plan (shown on each plan card before paying).
+- **Flow:** `POST /api/billing/order` (amount always from `plans.PLANS`) → Razorpay Checkout → `POST /api/billing/verify`
+  (HMAC of `order_id|payment_id` with the key secret) and the webhook `POST /billing/webhook` (HMAC of the body with the
+  webhook secret; events `payment.captured`, `order.paid`). Both activate the order once.
+- **Receipts** at `/app/billing/receipt/<order>` (printable; "taxes included", no GSTIN until you have one). `/owner` lists
+  payments and this month's takings. Only the owner (not team members) can see or pay.
+- **Landing page:** while Razorpay keys are missing it says "paid plans launching soon" and every button is "Start free"; with keys
+  it shows "Get Creator" etc. (sign in → straight to `/app/billing`) and a "How do I pay" FAQ.
+- **Env:** `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` (test keys start `rzp_test_`: the page shows a test-mode banner),
+  `RAZORPAY_WEBHOOK_SECRET`, optional `BILLING_NAME`. Turn `PLAN_LOCKS=on` when you want plan limits enforced (follow gate,
+  accounts per plan).
+- Not yet: auto-renew (Razorpay Subscriptions), USD checkout, the ₹149 extra-account and ₹99 AI top-up add-ons, GST invoices.
+
 ## Logins: a ReplyInbox user owns the Instagram accounts (`users.py`, `/signin`, `/connect`)
 - **Flow (like ManyChat):** `/signin` (Continue with Google, or a 6-digit email code) → `/connect` (connect an Instagram
   Business/Creator account, required) → `/app`. Signed-in users without an account always land on `/connect`.

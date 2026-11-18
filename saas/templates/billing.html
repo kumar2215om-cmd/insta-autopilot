@@ -1,0 +1,126 @@
+{% extends "_base.html" %}
+{% block title %}Plan & billing{% endblock %}
+{% block heading %}Plan & billing{% endblock %}
+{% block head %}
+<style>
+  .now { display:flex; flex-wrap:wrap; gap:16px; align-items:center; }
+  .now .big { font:600 28px var(--display); letter-spacing:-.03em; }
+  .seg { display:inline-flex; gap:4px; padding:4px; border:1px solid var(--line); border-radius:99px; background:var(--card); }
+  .seg button { border:0; background:none; border-radius:99px; padding:8px 16px; font:600 14px var(--text); color:var(--mute); cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:var(--ink); color:#fff; }
+  .seg small { font:500 11px var(--mono); color:var(--accent-ink); margin-left:4px; }
+  .seg button[aria-pressed="true"] small { color:var(--lav); }
+  .plans { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px; }
+  .plan { display:flex; flex-direction:column; gap:10px; }
+  .plan.cur { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  .plan .name { font:600 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
+  .plan .p { font:600 30px var(--display); letter-spacing:-.04em; }
+  .plan .p span { font:500 14px var(--text); color:var(--mute); letter-spacing:0; }
+  .plan ul { margin:0; padding-left:18px; font-size:14px; color:var(--body); display:grid; gap:4px; flex:1; }
+  .plan .note { font-size:12.5px; color:var(--mute); min-height:18px; }
+  .plan .btn { width:100%; }
+  .tbl td.n { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+</style>
+{% endblock %}
+{% block content %}
+{% if acc.demo %}
+  <section class="card"><h2>Plan & billing</h2><p class="muted" style="margin:6px 0 0">This is where creators pick a plan and pay with UPI or card. Billing isn't available in the demo.</p></section>
+{% elif role != "owner" %}
+  <section class="card"><h2>Plan & billing</h2><p class="muted" style="margin:6px 0 0">Only the account owner can see and change the plan.</p></section>
+{% else %}
+{% if test_mode %}<div class="banner info"><b>Test mode:</b> payments use Razorpay's test keys. Use a test card or the test UPI ID <code>success@razorpay</code>; no real money is charged.</div>{% endif %}
+<section class="card now" id="now"><div class="empty">Loading…</div></section>
+
+<section class="card" style="display:grid; gap:16px">
+  <div class="row"><h2 style="margin-right:auto">Choose a plan</h2>
+    <div class="seg" role="group" aria-label="Billing period"><button type="button" data-period="month" aria-pressed="true">Monthly</button><button type="button" data-period="year" aria-pressed="false">Yearly <small>2 months free</small></button></div></div>
+  <div class="plans" id="plans"></div>
+  <p class="muted small" style="margin:0">Prices in ₹, taxes included. Pay with UPI, cards, netbanking or wallets through Razorpay. Plans don't renew by themselves:
+    we remind you before yours ends. Paying for the same plan again adds time; switching plans turns your unused days into extra days on the new plan.
+    The plan covers all Instagram accounts on your login.</p>
+</section>
+
+<section class="card">
+  <h2>Payments</h2>
+  <div class="scroll"><table class="tbl" id="hist"></table></div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if role == "owner" and not acc.demo %}
+<script>
+let S = null, period = "month";
+const day = (t) => new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"});
+const PERKS = {
+  starter: ["3,000 DMs a month", "Follow to unlock", "25 AI replies to try", "1 Instagram account"],
+  creator: ["No monthly DM limit", "300 AI replies a month", "Sales by reel, follow-ups, broadcasts", "1 Instagram account"],
+  pro: ["Everything in Creator", "2,000 AI replies a month", "3 Instagram accounts", "Claude, Sheets, A/B tests, team"],
+  agency: ["Everything in Pro", "10,000 AI replies a month", "10 Instagram accounts", "Priority support"],
+};
+function drawNow() {
+  const n = $("now");
+  let line;
+  if (S.expired) line = `<span class="badge bad">Ended</span> Your paid plan ended, so you're on Free now.`;
+  else if (S.manual) line = `<span class="badge on">Active</span> Set by the ${esc("{{ brand }}")} team, no end date.`;
+  else if (S.until) line = `<span class="badge on">Active</span> Paid until <b>${esc(day(S.until))}</b> (${S.days_left} day${S.days_left === 1 ? "" : "s"} left).`;
+  else line = `Free forever: 1,000 DMs a month and 25 AI replies to try.`;
+  n.innerHTML = `<div style="flex:1; min-width:220px"><div class="muted small">Your plan</div><div class="big">${esc(S.plan_name)}</div>
+    <p class="small" style="margin:6px 0 0">${line}</p></div>`;
+}
+function drawPlans() {
+  document.querySelectorAll("[data-period]").forEach(b => b.setAttribute("aria-pressed", b.dataset.period === period));
+  $("plans").innerHTML = ["starter", "creator", "pro", "agency"].filter(k => S.plans[k]).map(k => [k, S.plans[k]]).map(([k, p]) => {
+    const q = S.quotes[k][period], cur = S.plan === k && !S.expired;
+    const verb = !S.ready ? "Coming soon" : cur ? (period === "year" ? "Renew for a year" : "Renew for a month") : `Get ${p.name}`;
+    const note = q.credit_days >= 1 ? `+${Math.floor(q.credit_days)} day${Math.floor(q.credit_days) === 1 ? "" : "s"} from your current plan · until ${esc(day(q.until))}` : `Active until ${esc(day(q.until))}`;
+    return `<div class="card plan ${cur ? "cur" : ""}"><div class="name">${esc(p.name)}${cur ? " · current" : ""}</div>
+      <div class="p">₹${fmt(p[period])} <span>/ ${period}</span></div>
+      <ul>${PERKS[k].map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      <div class="note">${S.ready ? note : ""}</div>
+      <button class="btn ${cur ? "" : "ghost"}" type="button" data-buy="${k}" ${S.ready ? "" : "disabled"}>${esc(verb)} · ₹${fmt(p[period])}</button></div>`;
+  }).join("");
+}
+function drawHist() {
+  $("hist").innerHTML = S.payments.length
+    ? `<thead><tr><th>Date</th><th>Plan</th><th class="n">Amount</th><th>Covers until</th><th></th></tr></thead><tbody>${S.payments.map(p =>
+      `<tr><td>${esc(day(p.paid_at))}</td><td>${esc(S.plans[p.plan] ? S.plans[p.plan].name : p.plan)} · ${p.period === "year" ? "yearly" : "monthly"}</td>
+       <td class="n">₹${fmt(p.amount)}</td><td>${esc(day(p.until))}</td><td><a href="/app/billing/receipt/${encodeURIComponent(p.id)}" target="_blank" rel="noopener">Receipt</a></td></tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="muted">No payments yet.</td></tr></tbody>`;
+}
+function draw() { drawNow(); drawPlans(); drawHist(); }
+function loadCheckout() {
+  return new Promise((ok, bad) => {
+    if (window.Razorpay) return ok();
+    const s = document.createElement("script"); s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = ok; s.onerror = () => bad(new Error("Couldn't load Razorpay. Check your connection.")); document.head.appendChild(s);
+  });
+}
+document.addEventListener("click", async (e) => {
+  const p = e.target.closest("[data-period]");
+  if (p) { period = p.dataset.period; drawPlans(); return; }
+  const b = e.target.closest("[data-buy]");
+  if (!b) return;
+  b.disabled = true;
+  try {
+    await loadCheckout();
+    const o = await api("/api/billing/order", {method: "POST", body: JSON.stringify({plan: b.dataset.buy, period})});
+    const rzp = new Razorpay({
+      key: o.key, order_id: o.order_id, amount: o.amount, currency: o.currency, name: "{{ brand }}",
+      description: `${o.name} plan · ${o.period === "year" ? "1 year" : "1 month"}`, prefill: {email: o.email}, theme: {color: "#6A4CFF"},
+      handler: async (r) => {
+        try {
+          S = {...S, ...(await api("/api/billing/verify", {method: "POST", body: JSON.stringify({order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature})}))};
+          S = await api("/api/billing"); draw(); toast("Payment received. Your plan is active ✓");
+        } catch (err) { toast(err.message); }
+      },
+      modal: {ondismiss: () => { b.disabled = false; }},
+    });
+    rzp.on("payment.failed", (r) => toast((r.error && r.error.description) || "Payment failed. Try again."));
+    rzp.open();
+  } catch (err) { toast(err.message); }
+  b.disabled = false;
+});
+(async () => { loadBanners(); S = await api("/api/billing"); draw(); })();
+</script>
+{% endif %}
+{% endblock %}

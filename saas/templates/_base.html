@@ -174,6 +174,7 @@
         "giveaway": '<rect x="3" y="8" width="18" height="13" rx="2"></rect><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1.5S9 8 12 8zM12 8c2-4 6-4 6-1.5S15 8 12 8z"></path>',
         "contacts": '<circle cx="9" cy="8" r="4"></circle><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"></path><path d="M16 4a4 4 0 0 1 0 8M22 21c0-3-1.8-5.6-4.5-6.6"></path>',
         "apps": '<rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect>',
+        "billing": '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20M6 15h4"></path>',
         "settings": '<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"></path>'} %}
       {% set groups = {"home": "Workspace", "sales": "Grow and sell", "apps": "Account"} %}
       {% for key, href, label in nav %}
@@ -198,7 +199,7 @@
     {% endif %}
     <div class="who">
       {% if acc.pic %}<img class="av" src="{{ acc.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}
-      <div class="meta"><b>@{{ acc.username }}</b><span class="muted small">{{ "Demo account" if acc.demo else (("Pro plan" if acc.pro else "Free plan") if role == "owner" else ("Manager access" if role == "manager" else "View-only access")) }}</span></div>
+      <div class="meta"><b>@{{ acc.username }}</b><span class="muted small">{{ "Demo account" if acc.demo else ((acc.plan_name ~ " plan") if role == "owner" else ("Manager access" if role == "manager" else "View-only access")) }}</span></div>
       <form action="/logout" method="post"><button class="btn ghost sm icon" type="submit" aria-label="Log out" title="Log out"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5M21 12H9"></path></svg></button></form>
     </div>
   </aside>
@@ -240,6 +241,8 @@ async function loadBanners() {
     if (me.blocked === "logged_out") b.push(`<div class="banner bad">Instagram logged this account out (for example after a password change). <a href="/login">Log in again</a> to restart the automation.</div>`);
     if (me.blocked === "rate_limited") b.push(`<div class="banner info">Instagram's hourly limit was reached. The automation waits 15 minutes, then continues.</div>`);
     if (me.account.paused) b.push(`<div class="banner info">Automation is paused: comments and DMs aren't answered. Resume it in Settings.</div>`);
+    if (me.billing && me.billing.kind === "soon") b.push(`<div class="banner info">Your ${esc(me.billing.plan)} plan ends in ${me.billing.days} day${me.billing.days === 1 ? "" : "s"}. <a href="/app/billing">Renew now</a> to keep everything running.</div>`);
+    if (me.billing && me.billing.kind === "expired") b.push(`<div class="banner bad">Your ${esc(me.billing.plan)} plan has ended, so you're on Free. <a href="/app/billing">Renew</a> to get your limits back.</div>`);
     if (me.dm_limit && me.dms_this_month >= me.dm_limit) b.push(`<div class="banner bad">You've used this month's ${fmt(me.dm_limit)} free DMs. New comments still get the public reply.</div>`);
     $("banners").innerHTML = b.join("");
     const w = $("navWaiting");

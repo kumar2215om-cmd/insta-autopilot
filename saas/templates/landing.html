@@ -541,7 +541,7 @@
     <div class="head center">
       <div class="eyebrow">Pricing</div>
       <h2 style="margin-top:14px">Start free. <span class="serif">Upgrade when you grow.</span></h2>
-      <p class="lede">Simple pricing in ₹ or $, taxes included. Paid plans are launching soon: <b>during the beta every feature is free</b>, and everything you set up stays when you upgrade.</p>
+      <p class="lede">Simple pricing in ₹ or $, taxes included. {% if billing_live %}Pay monthly or yearly with UPI or card, upgrade anytime, and everything you set up stays.{% else %}Paid plans are launching soon: <b>during the beta every feature is free</b>, and everything you set up stays when you upgrade.{% endif %}</p>
       <div class="billing" role="group" aria-label="Billing period">
         <button type="button" data-bill="month" aria-pressed="true">Monthly</button>
         <button type="button" data-bill="year" aria-pressed="false">Yearly <span>2+ months free</span></button>
@@ -570,7 +570,7 @@
         <div class="yr" hidden>Billed <span data-inr="₹1,499" data-usd="$48">₹1,499</span> a year</div>
         <p class="sub">A little more room to grow.</p>
         <ul><li class="big">3,000 DMs every month</li><li class="big">Follow to unlock</li><li>Everything in Free</li><li>Email support</li></ul>
-        <a class="btn line" href="/signin">Start free</a>
+        <a class="btn line" href="{{ '/signin?next=/app/billing' if billing_live else '/signin' }}">{{ 'Get Starter' if billing_live else 'Start free' }}</a>
       </div>
       <div class="plan pro">
         <div class="name">Creator <em>MOST POPULAR</em></div>
@@ -581,7 +581,7 @@
         <ul><li class="big">No monthly DM limit*</li><li class="big">See which reel makes money</li><li>Everything in Free</li>
           <li>Choice menus, follow-ups, welcome message</li><li>Message today's chats (broadcast)</li><li>Insights, UTM tags, alerts on your phone</li>
 <li>No "Powered by {{ brand }}" on your link page</li></ul>
-        <a class="btn primary" href="/signin">Start free</a>
+        <a class="btn primary" href="{{ '/signin?next=/app/billing' if billing_live else '/signin' }}">{{ 'Get Creator' if billing_live else 'Start free' }}</a>
       </div>
       <div class="plan">
         <div class="name">Pro</div>
@@ -591,7 +591,7 @@
         <p class="ai">🤖 2,000 AI replies included every month</p>
         <ul><li class="big">3 Instagram accounts</li><li>Everything in Creator</li>
           <li>Run it from Claude</li><li>Google Sheets and webhooks</li><li>A/B test your DMs, team of 5</li><li>Priority support on WhatsApp</li></ul>
-        <a class="btn line" href="/signin">Start free</a>
+        <a class="btn line" href="{{ '/signin?next=/app/billing' if billing_live else '/signin' }}">{{ 'Get Pro' if billing_live else 'Start free' }}</a>
       </div>
     </div>
     <p class="agency">Need one more Instagram account? Add it to Creator or Pro for <b><span data-inr="₹149" data-usd="$5">₹149</span> / month</b>.<br>
@@ -637,7 +637,7 @@
       <details><summary>How does the AI DM agent work?</summary><p>It answers DMs that aren't one of your keywords, using only your FAQ, products and links, in the language the fan writes in. It never makes up prices or links. Refunds, brand deals and anything it's unsure about are handed to you with a suggested reply.</p></details>
       <details><summary>Why do people tap a button before getting the link?</summary><p>Instagram only lets apps check whether someone follows you after they reply to your DM. The button tap is that reply.</p></details>
       <details><summary>What are Instagram's limits?</summary><p>An app can DM someone who commented once per comment, within 7 days. Follow-ups must go within 24 hours of the person's last message. Very busy reels can hit Instagram's hourly limit; {{ brand }} then waits and continues.</p></details>
-      <details><summary>When can I buy a paid plan?</summary><p>Creator, Pro and Agency are launching soon. During the beta every feature is free. Start today: everything you set up stays when you upgrade, and yearly plans give you more than 2 months free.</p></details>
+      {% if billing_live %}<details><summary>How do I pay, and does it renew?</summary><p>Pay in ₹ with UPI, cards, netbanking or wallets through Razorpay, monthly or yearly (yearly gives you 2 months free). Plans don't renew by themselves: we remind you before yours ends. Switching plans turns your unused days into extra days on the new plan.</p></details>{% else %}<details><summary>When can I buy a paid plan?</summary><p>Creator, Pro and Agency are launching soon. During the beta every feature is free. Start today: everything you set up stays when you upgrade, and yearly plans give you more than 2 months free.</p></details>{% endif %}
       <details><summary>Can I manage more than one Instagram account?</summary><p>Yes. Connect all your Instagram accounts to one {{ brand }} login and switch between them from the sidebar, on any device. Each account has its own automations, inbox and contacts.</p></details>
       <details><summary>Is there a phone app?</summary><p>Yes. Open {{ brand }} on your phone and install it from Settings (Android: Install app; iPhone: Share → Add to Home Screen). Turn on notifications to hear about new leads right away.</p></details>
       <details><summary>Can I message all my followers at once?</summary><p>Instagram only allows messages to people who DMed you in the last 24 hours, so Broadcast sends to them. That's still everyone who reacted to your latest reel or story.</p></details>

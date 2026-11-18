@@ -25,6 +25,7 @@ from flask import Flask, abort, jsonify, make_response, redirect, render_templat
 import ai_agent
 import content_drafts
 import users
+import billing
 import youtube
 import demo
 import push
@@ -90,7 +91,7 @@ def current_account():
 # ---------- team: managers and viewers who log in with an invite link ----------
 
 ROLES = {"manager": "Manager", "viewer": "Viewer"}
-OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations")
+OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing")
 MAX_TEAM = 5
 
 
@@ -120,7 +121,7 @@ def role_blocks(path, method):
 def public_account(acc):
     """What the dashboard may see: never the token."""
     return {**{k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused", "demo", "plan",
-                                        "pro_until")}, "pro": store.is_pro(acc),
+                                        "pro_until")}, "pro": store.is_pro(acc), "plan_name": plans.PLANS[plans.plan_of(acc)]["name"],
             "follow_gate": plans.has(acc, "follow_gate"), "locks_on": plans.LOCKS_ON}
 
 
@@ -131,7 +132,7 @@ SECTIONS = [
     ("sales", "/app/sales", "Sales", True), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
-    ("settings", "/app/settings", "Settings", True),
+    ("billing", "/app/billing", "Plan & billing", True), ("settings", "/app/settings", "Settings", True),
 ]
 DEFAULT_APPS = {"plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "contacts": True, "giveaway": True}
 
@@ -177,7 +178,8 @@ def brand():
             "site_url": site_url() if request else "", "google_site_verification": GOOGLE_SITE_VERIFICATION}
 
 
-PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report")
+PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report",
+                    "/billing", "/signin", "/connect", "/admin")
 
 
 def is_private_path(path):
@@ -216,7 +218,7 @@ def landing():
         session["ref"] = ref
     referrer = store.account_by_username(session["ref"]) if session.get("ref") else None
     return render_template("landing.html", invite_only=SIGNUPS == "invite", error=request.args.get("error", ""),
-                           signed_in=bool(current_user() or current_account()), schema=landing_schema(),
+                           signed_in=bool(current_user() or current_account()), schema=landing_schema(), billing_live=billing.ready(),
                            referrer=referrer.get("username") if referrer else "")
 
 
@@ -582,7 +584,7 @@ def invite_ok(code):
 
 def start_session(user):
     """Signs the user in and picks their first Instagram account; returns where to go next."""
-    keep = {k: session[k] for k in ("ref",) if k in session}
+    keep = {k: session[k] for k in ("ref", "next") if k in session}
     session.clear()
     session.update(keep)
     session.permanent = True
@@ -590,7 +592,7 @@ def start_session(user):
     first = next(iter(users.accounts(user)), None)
     if first:
         session["uid"] = first["id"]
-        return url_for("dashboard")
+        return session.pop("next", None) or url_for("dashboard")
     return url_for("connect_page")
 
 
@@ -601,10 +603,14 @@ def new_user_allowed(email):
 
 @app.get("/signin")
 def signin_page():
+    nxt = request.args.get("next", "")
+    nxt = nxt if nxt.startswith("/app/") and "//" not in nxt and "\\" not in nxt else ""  # only our own dashboard pages
     if current_user():
-        return redirect(url_for("dashboard"))
+        return redirect(nxt or url_for("dashboard"))
     if request.args.get("invite"):
         session["invite"] = request.args["invite"].strip().upper()
+    if nxt:
+        session["next"] = nxt
     return render_template("signin.html", google=users.google_ready(), email=users.email_ready(), invite_only=SIGNUPS == "invite",
                            error=request.args.get("error", ""))
 
@@ -756,7 +762,7 @@ def auth_callback():
                            f"Couldn't turn on comment and DM events: {e}")
     session.pop("member", None)
     session["uid"] = ig_id
-    return redirect(url_for("dashboard"))
+    return redirect(session.pop("next", None) or url_for("dashboard"))
 
 
 # ---------- several Instagram accounts in one login ----------
@@ -869,7 +875,88 @@ def api_me():
     return jsonify(account=public_account(acc), blocked=engine.is_blocked(acc),
                    dms_this_month=c.get(f"dms:{engine.month()}", 0), dm_limit=engine.monthly_limit(acc),
                    totals={k: c.get(k, 0) for k in ("dms", "links_sent", "comment_replies", "gate_follows", "ai_replies")},
-                   inbox_waiting=sum(t.get("status") == "needs_you" for t in ai_agent.threads(acc["id"])))
+                   inbox_waiting=sum(t.get("status") == "needs_you" for t in ai_agent.threads(acc["id"])),
+                   billing=billing_banner())
+
+
+def billing_banner():
+    """Plan ending soon / ended, for the owner's banner."""
+    user = current_user()
+    if not user or session.get("member"):
+        return None
+    st = billing.status(user)
+    if st["expired"]:
+        return {"kind": "expired", "plan": plans.PLANS[st["set_plan"]]["name"]}
+    if billing.renewal_due(user):
+        return {"kind": "soon", "plan": st["plan_name"], "days": st["days_left"]}
+    return None
+
+
+# ---------- plan billing (Razorpay, see billing.py) ----------
+
+@app.get("/app/billing")
+def billing_page():
+    return render_app("billing.html", "billing", test_mode=billing.test_mode())
+
+
+def billing_user():
+    user = current_user()
+    if not user or session.get("member"):
+        return None
+    return user
+
+
+@app.get("/api/billing")
+def api_billing():
+    user = billing_user()
+    if not user:
+        return jsonify(error="Only the account owner can see billing."), 403
+    st = billing.status(user)
+    st["quotes"] = {p: {per: billing.quote(user, p, per) for per in billing.DAYS} for p in plans.PAID}
+    return jsonify(st)
+
+
+@app.post("/api/billing/order")
+def api_billing_order():
+    user = billing_user()
+    if not user:
+        return jsonify(error="Only the account owner can pay."), 403
+    d = request.get_json(force=True)
+    try:
+        return jsonify(billing.create_order(user, d.get("plan"), d.get("period")))
+    except billing.BillingError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.post("/api/billing/verify")
+def api_billing_verify():
+    user = billing_user()
+    if not user:
+        return jsonify(error="Only the account owner can pay."), 403
+    d = request.get_json(force=True)
+    try:
+        order = billing.verify_checkout(user, d.get("order_id"), d.get("payment_id"), d.get("signature"))
+    except billing.BillingError as e:
+        return jsonify(error=str(e)), 400
+    store.log_activity(current_account()["id"], "", "", "", "billing", "ok",
+                       f"{plans.PLANS[order['plan']]['name']} plan paid (₹{order['amount']})")
+    return jsonify(ok=True, order=order["id"], **billing.status(users.get(user["id"])))
+
+
+@app.post("/billing/webhook")
+def billing_webhook():
+    """Razorpay → us (set this URL and RAZORPAY_WEBHOOK_SECRET in Razorpay → Webhooks; events payment.captured, order.paid)."""
+    ok = billing.handle_webhook(request.get_data(), request.headers.get("X-Razorpay-Signature", ""))
+    return ("", 200) if ok else ("bad signature", 400)
+
+
+@app.get("/app/billing/receipt/<order_id>")
+def billing_receipt(order_id):
+    user = billing_user()
+    r = billing.receipt(user, order_id) if user else None
+    if not r:
+        abort(404)
+    return render_template("receipt.html", r=r)
 
 
 @app.get("/api/reels")
@@ -2403,7 +2490,11 @@ def owner():
     for r in rows:
         payer.setdefault(r["owner_email"] or r["id"], r["plan_set"])
     mrr = sum(plans.PLANS[p]["price"] for p in payer.values() if p in plans.PLANS)
-    return render_template("owner.html", rows=rows, plans=plans.PLANS, by_plan=by_plan, mrr=mrr)
+    payments = [json.loads(x) for x in store.redis("LRANGE", "s:payments", 0, 49) or []]
+    month_start = time.mktime(time.strptime(time.strftime("%Y-%m-01"), "%Y-%m-%d"))
+    paid_month = sum(p["amount"] for p in payments if p.get("paid_at", 0) >= month_start)
+    return render_template("owner.html", rows=rows, plans=plans.PLANS, by_plan=by_plan, mrr=mrr,
+                           payments=payments, paid_month=paid_month, billing_ready=billing.ready(), billing_test=billing.test_mode())
 
 
 # ---------- public link-in-bio page: replyinbox.in/<username> ----------

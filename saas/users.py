@@ -106,7 +106,7 @@ def accounts(user):
 def limit(user):
     if not plans.LOCKS_ON:
         return MAX_ACCOUNTS
-    return plans.PLANS.get(user.get("plan") or "free", plans.PLANS["free"])["accounts"] + int(user.get("extra_accounts") or 0)
+    return plans.PLANS[current_plan(user)]["accounts"] + int(user.get("extra_accounts") or 0)
 
 
 def owns(user, ig_id):
@@ -130,7 +130,7 @@ def claim(user, acc):
     if PLAN_ORDER.index(plans.plan_of({"plan": acc.get("plan")})) > PLAN_ORDER.index(user.get("plan") or "free"):
         user["plan"] = acc["plan"]
     acc["owner"] = user["id"]
-    acc["plan"] = user.get("plan") or "free"
+    acc["plan"], acc["plan_until"] = user.get("plan") or "free", user.get("plan_until")
     if acc["id"] not in user["accounts"]:
         user["accounts"].append(acc["id"])
     save(user)
@@ -144,16 +144,23 @@ def remove(user, ig_id):
         save(user)
 
 
-def set_plan(user, plan):
+def set_plan(user, plan, until=None):
+    """until: when a paid period ends (epoch seconds); None = no end date (set by hand on /owner)."""
     user["plan"] = plan
+    user["plan_until"] = int(until) if until else None
     save(user)
     sync_plan(user)
 
 
+def current_plan(user):
+    """The plan in force now: a paid plan whose period ran out counts as Free."""
+    return plans.plan_of({"plan": (user or {}).get("plan"), "plan_until": (user or {}).get("plan_until")})
+
+
 def sync_plan(user):
     for acc in accounts(user):
-        if acc.get("plan") != user["plan"]:
-            acc["plan"] = user["plan"]
+        if acc.get("plan") != user["plan"] or acc.get("plan_until") != user.get("plan_until"):
+            acc["plan"], acc["plan_until"] = user["plan"], user.get("plan_until")
             store.save_account(acc)
 
 

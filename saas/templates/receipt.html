@@ -1,0 +1,41 @@
+{% import "_logo.html" as logo %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Receipt {{ r.receipt }} · {{ brand }}</title>
+{% include "_style.html" %}
+<style>
+  main { max-width:620px; margin:0 auto; padding:40px 16px; }
+  .card { padding:30px; }
+  .top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:24px; }
+  h1 { font-size:24px; }
+  table { width:100%; border-collapse:collapse; margin:18px 0; font-size:15px; }
+  td { padding:10px 0; border-bottom:1px solid var(--line); }
+  td:last-child { text-align:right; }
+  .total td { font-weight:800; font-size:17px; border-bottom:0; }
+  .small { font-size:13px; }
+  @media print { body { background:#fff; } .card { box-shadow:none; border:0; } .noprint { display:none; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <div class="top">{{ logo.wordmark(26, "rc") }}<div style="text-align:right"><h1>Payment receipt</h1><div class="muted small">{{ r.receipt }}</div></div></div>
+    <p class="small muted" style="margin:0">From <b>{{ r.from }}</b> · {% if contact_email %}{{ contact_email }}{% endif %}<br>
+      To <b>{{ r.email }}</b></p>
+    <table>
+      <tr><td>{{ r.plan_name }} plan · {{ "1 year" if r.period == "year" else "1 month" }}</td><td>₹{{ "{:,}".format(r.amount) }}</td></tr>
+      {% if r.credit_days and r.credit_days >= 1 %}<tr><td class="muted">Extra days carried over from your previous plan</td><td class="muted">+{{ r.credit_days|int }} days</td></tr>{% endif %}
+      <tr class="total"><td>Total paid (taxes included)</td><td>₹{{ "{:,}".format(r.amount) }}</td></tr>
+    </table>
+    <p class="small muted" style="margin:0">Paid on <span data-ts="{{ r.paid_at }}"></span> · Razorpay payment {{ r.payment_id }} · Plan active until <span data-ts="{{ r.until }}"></span></p>
+    <p class="noprint" style="margin:22px 0 0"><button class="btn small" onclick="print()">Print or save as PDF</button> <a class="small" href="/app/billing" style="margin-left:10px">Back to billing</a></p>
+  </div>
+</main>
+<script>
+document.querySelectorAll("[data-ts]").forEach(e => e.textContent = new Date(+e.dataset.ts * 1000).toLocaleDateString(undefined, {day: "numeric", month: "long", year: "numeric"}));
+</script>
+</body>
+</html>
