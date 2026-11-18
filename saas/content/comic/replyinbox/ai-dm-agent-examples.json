@@ -1,0 +1,143 @@
+{
+  "page": "replyinbox",
+  "slug": "ai-dm-agent-examples",
+  "keyword": "EXAMPLES",
+  "source": "seo_content.GUIDES['ai-dm-agent-examples'] (every fact below is from that guide)",
+  "hashtags": [
+    "#aitools",
+    "#chatbot",
+    "#instagramautomation",
+    "#instagramtips",
+    "#creatortips",
+    "#dmautomation"
+  ],
+  "cta_caption": "Comment EXAMPLES and I'll DM you the full guide with all the example chats 📩",
+  "slides": [
+    {
+      "headline": "ITNE DMs… [REPLY] KAUN KAREGA?",
+      "lines": [
+        "Dekho ek **AI DM agent** actually kya bolta hai 👇"
+      ],
+      "bubble": "INBOX PHAT GAYA 😵",
+      "mood": [
+        "stressed",
+        "hook"
+      ],
+      "bg": "sunburst",
+      "role": "hook"
+    },
+    {
+      "headline": "AI KA [KAAM] KYA HAI?",
+      "label": "SHORT ANSWER",
+      "lines": [
+        "Price, access, payment jaise **routine sawaal** AI tumhare **FAQ** se answer karta hai."
+      ],
+      "bubble": "MERA FAQ, MERI BAAT",
+      "mood": [
+        "explain",
+        "answer"
+      ],
+      "bg": "grid",
+      "role": "explain"
+    },
+    {
+      "headline": "PRICE PUCHA? [DONE.]",
+      "label": "FAN ASKS",
+      "chat": [
+        [
+          "Fan",
+          "bhai full pack kitne ka hai?"
+        ],
+        [
+          "AI",
+          "Sirf **₹149** 🙌 39 prompts + guide"
+        ]
+      ],
+      "bubble": "SALE HO GAYI",
+      "mood": [
+        "result",
+        "phone"
+      ],
+      "bg": "dots",
+      "role": "tool"
+    },
+    {
+      "headline": "PAID HAI, [LINK] KAHAN?",
+      "label": "ACCESS",
+      "chat": [
+        [
+          "Fan",
+          "I paid, how do I get it?"
+        ],
+        [
+          "AI",
+          "Link **2 minute** mein email hota hai"
+        ]
+      ],
+      "bubble": "SORTED 😎",
+      "mood": [
+        "relax",
+        "cool"
+      ],
+      "bg": "grid",
+      "role": "easy"
+    },
+    {
+      "headline": "REFUND? AI [RUK] JAATA HAI",
+      "label": "HANDED TO YOU",
+      "lines": [
+        "Refund ya payment issue → chat **tumhare paas**, ek **suggested reply** ke saath."
+      ],
+      "bubble": "YE MAIN DEKHUNGA",
+      "mood": [
+        "think",
+        "question"
+      ],
+      "bg": "sunburst",
+      "role": "mistake"
+    },
+    {
+      "headline": "BRAND DEAL? [TUMHARA] CALL",
+      "label": "COLLABS",
+      "lines": [
+        "Brand deals bhi **tumhe** milte hain. Fan ko tab tak **holding message** jaata hai."
+      ],
+      "bubble": "YE TOH MERA HAI",
+      "mood": [
+        "boss",
+        "phone"
+      ],
+      "bg": "dots",
+      "role": "tip"
+    },
+    {
+      "headline": "GALAT BOLA? [EDIT] KARO",
+      "label": "FULL CONTROL",
+      "steps": [
+        "**FAQ** improve karo",
+        "Reply bhejne se pehle **edit** karo"
+      ],
+      "bubble": "CONTROL MERA 💪",
+      "mood": [
+        "control",
+        "tip"
+      ],
+      "bg": "grid",
+      "role": "tip"
+    },
+    {
+      "headline": "COMMENT [EXAMPLES]",
+      "label": "FREE GUIDE",
+      "lines": [
+        "Full guide + saari **example chats** DM mein bhej dunga 📩"
+      ],
+      "bubble": "JALDI KARO!",
+      "mood": [
+        "cta",
+        "win"
+      ],
+      "bg": "solid",
+      "role": "cta"
+    }
+  ]
+}

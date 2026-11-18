@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "why-instagram-dm-not-sent",
+ "keyword": "FIX",
+ "source": "seo_content.GUIDES['why-instagram-dm-not-sent']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#instagramhelp",
+  "#dmautomation",
+  "#contentcreator"
+ ],
+ "cta_caption": "Comment FIX aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "AUTO DM [GAYA] HI NAHI?",
+   "lines": [
+    "Reasons + **fixes**, ek list mein 👇"
+   ],
+   "bubble": "YE KYA HUA 😰",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "CHECK 1: [ON] HAI?",
+   "label": "IN ORDER",
+   "lines": [
+    "Automation **paused** toh nahi? **Start/end time** ke andar hai?"
+   ],
+   "bubble": "SWITCH DEKHO",
+   "bg": "grid"
+  },
+  {
+   "role": "explain",
+   "headline": "CHECK 2: [KEYWORD]",
+   "label": "IN ORDER",
+   "lines": [
+    "Keyword **match** hua? **Excluded words** aur sahi **post** check karo."
+   ],
+   "bubble": "HMM",
+   "bg": "dots"
+  },
+  {
+   "role": "mistake",
+   "headline": "CHECK 3: [7 DIN]",
+   "label": "IN ORDER",
+   "lines": [
+    "Comment **7 din** se purana? Instagram us pe DM **allow nahi** karta."
+   ],
+   "bubble": "OHH",
+   "bg": "grid"
+  },
+  {
+   "role": "easy",
+   "headline": "CHECK 4: [REFUSED]?",
+   "label": "IN ORDER",
+   "lines": [
+    "Instagram ne chat **refuse** ki? ReplyInbox **kai din** daily **retry** karta hai."
+   ],
+   "bubble": "AUTO RETRY",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tip",
+   "headline": "CHECK 5: [LIMIT]",
+   "label": "IN ORDER",
+   "lines": [
+    "Viral reel pe **hourly limit**: sending **pause** hoke khud **resume** hoti hai."
+   ],
+   "bubble": "PATIENCE",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "[ACTIVITY] PAGE DEKHO",
+   "label": "WHERE TO LOOK",
+   "lines": [
+    "Har event ki **error** simple words mein. **Logged out**? Phir se login, **alert** milega."
+   ],
+   "bubble": "MIL GAYA",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [FIX]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

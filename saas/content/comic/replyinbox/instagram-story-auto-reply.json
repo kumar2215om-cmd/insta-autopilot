@@ -1,0 +1,100 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-story-auto-reply",
+ "keyword": "STORY",
+ "source": "seo_content.GUIDES['instagram-story-auto-reply']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#reelstips",
+  "#instagramgrowth",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment STORY aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "STORY REPLIES [MISS] HO RAHE?",
+   "lines": [
+    "Story pe **auto-reply** set karo 👇"
+   ],
+   "bubble": "ITNE REPLIES 😵",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[HAR] REPLY PE DM",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Har story reply pe, ya sirf **keyword** (jaise **LINK**) pe, **auto DM**."
+   ],
+   "bubble": "AUTO MODE",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "SETUP [KARO]",
+   "label": "STEPS",
+   "steps": [
+    "Auto DM → **Create**",
+    "\"Replies to your **story**\"",
+    "Any reply ya **keyword**",
+    "DM + **link button**"
+   ],
+   "bubble": "DONE",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "MENTIONS PE [THANKS]",
+   "label": "BONUS",
+   "lines": [
+    "Story **mentions** ke liye alag automation: auto **thank-you**."
+   ],
+   "bubble": "LOVE YOU ALL",
+   "bg": "grid"
+  },
+  {
+   "role": "tip",
+   "headline": "IDEA: [LINK]",
+   "label": "IDEAS",
+   "lines": [
+    "\"Reply **LINK** for today's offer\"."
+   ],
+   "bubble": "COPY KARO",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tip",
+   "headline": "IDEA: [POLL]",
+   "label": "IDEAS",
+   "lines": [
+    "Poll follow-up: \"reply **YES** for the guide\". Mentions pe **discount**."
+   ],
+   "bubble": "SMART",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "[FREE] HAI?",
+   "label": "FAQ",
+   "lines": [
+    "Haan, story auto-reply **har ReplyInbox plan** pe."
+   ],
+   "bubble": "BADHIYA 🙌",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [STORY]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

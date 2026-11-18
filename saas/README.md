@@ -299,6 +299,15 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
 - **Pages** (`seo_content.py` → `templates/content.html`): `/features` + 6 feature pages, `/compare` + 6 `/vs/<tool>` pages,
   `/guides` + 4 guides. Each starts with a direct answer, has short sections, a FAQ, an "Updated" date, related links and a CTA.
   Competitor facts are dated (`CHECKED`) with a "not affiliated" note; refresh them when competitors change prices.
+- **Pillar-cluster (hub-and-spoke) architecture** (`seo_content.PILLARS`): 6 topic hubs at the top level
+  (`/instagram-dm-automation`, `/instagram-lead-generation`, `/sell-on-instagram`, `/ai-instagram-dm-replies`,
+  `/instagram-dm-automation-tools`, `/instagram-automation-by-industry`). Every feature, comparison and guide belongs to
+  exactly one hub (`pillar_of()`): its breadcrumb runs Home → hub → page, it shows "Part of …", and "More in …" links to its
+  siblings; the hub links down to every page in its topic and across to the other hubs. `/guides` lists all hubs with
+  their pages. Adding a page: write it in FEATURES / COMPARE / GUIDES and add it to one hub's `clusters` (a test enforces this).
+- **Entity-first coverage**: `ENTITIES` (Instagram, Meta, WhatsApp, chatbots, lead generation… with Wikipedia `sameAs`)
+  are each hub's `about`; `GLOSSARY` defines 25 domain terms on `/glossary` (DefinedTermSet, one anchor per term) that hubs
+  link to and every page `mentions` in its Article schema, with `isPartOf` pointing at its hub (CollectionPage + `hasPart`).
 - **Structured data (JSON-LD)**: landing page has Organization, WebSite, SoftwareApplication (₹ and $ offers from `plans.py`)
   and FAQPage (read from the landing FAQ itself); content pages have BreadcrumbList, Article and FAQPage.
 - **`/robots.txt`** allows everything public (including AI crawlers) and blocks private paths; **`/sitemap.xml`** lists every
@@ -364,6 +373,17 @@ All plan numbers live in `plans.py`; `store.is_pro`, `engine.monthly_limit` and 
   months (`pro_until`) count as Pro but not in MRR. `"dm_limit"` / `"ai_limit"` on an account override the plan; the env
   vars `FREE_MONTHLY_DMS`, `FREE_AI_TRIAL_REPLIES`, `PRO_MONTHLY_DMS`, `PAID_MONTHLY_AI_REPLIES` override too when set.
 - The landing page shows the four plans (monthly/yearly switch, "launching soon", beta = every feature free) but not the sale fee; keep it in sync with `plans.py`.
+
+## Instagram carousels (`tools/carousels.py`, seo-launch)
+Turns every guide, comparison and feature page in `seo_content.py` into a ready-to-post carousel for @replyinbox:
+6–8 slides at 1080×1350 (hook → one idea per slide → "Comment KEYWORD" CTA), `caption.txt` and `automation.json`
+(a `kw:KEYWORD` rule with the same fields `save_rule` accepts; the DM links to `{SITE_URL}/guides/<slug>`, `/vs/` or `/features/`).
+- Run from `saas/`: `python3 tools/carousels.py` (all, ~5 min), `python3 tools/carousels.py SLUG …`, `--list` (text only),
+  `--no-png` (captions + automations), `--voice hinglish` (light-Hinglish CTA for @aiwith.om, writes `<slug>-hinglish/`).
+- Output: `content/carousels/<slug>/`. Only three samples' PNGs are in git (`content/.gitignore`); rebuild the rest locally.
+- Text is only shortened from the page (never reworded); competitor slides keep the "as checked" date. Max 25 words and
+  min 40px text per slide; keywords are set in `KEYWORDS` (must stay unique). Tests: `CarouselTest` in `test_saas.py`.
+- Rendering uses the pre-installed Playwright Chromium through Node; fonts load from Google Fonts (Inter if offline).
 
 ## Limits and notes
 - One DM per comment, within 7 days of the comment (Instagram rule). The follow check only works after the

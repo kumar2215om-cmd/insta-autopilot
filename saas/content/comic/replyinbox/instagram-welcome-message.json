@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-welcome-message",
+ "keyword": "WELCOME",
+ "source": "seo_content.GUIDES['instagram-welcome-message']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment WELCOME aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "NAYA DM, [JAWAB] LATE?",
+   "lines": [
+    "Auto **welcome message** set karo 👇"
+   ],
+   "bubble": "SORRY LATE 😅",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[PEHLA] DM = WELCOME",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Koi **pehli baar** DM kare (keyword match na ho) toh **instant welcome**."
+   ],
+   "bubble": "INSTANT",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "KYA [LIKHU]?",
+   "label": "TEMPLATE",
+   "lines": [
+    "\"Hey {username}! 👋 **What are you looking for?**\""
+   ],
+   "bubble": "FRIENDLY",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "[3] BUTTONS",
+   "label": "BUTTONS",
+   "lines": [
+    "\"**Free guide**\", \"**Courses**\", \"**Work with me**\"."
+   ],
+   "bubble": "EASY",
+   "bg": "grid"
+  },
+  {
+   "role": "explain",
+   "headline": "WELCOME VS [MENU]",
+   "label": "DIFFERENCE",
+   "lines": [
+    "Welcome: **ek baar**, naye chats. Chat menu: type karne se pehle **4 sawaal** tak."
+   ],
+   "bubble": "DONO USE KARO",
+   "bg": "sunburst"
+  },
+  {
+   "role": "easy",
+   "headline": "[REGULARS] KO DOBARA?",
+   "label": "FAQ",
+   "lines": [
+    "Nahi, **har bande ko ek baar**."
+   ],
+   "bubble": "NO SPAM",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "[INSTANT] ANSWER",
+   "label": "RESULT",
+   "lines": [
+    "Naye chats ko **wait** nahi karna padta."
+   ],
+   "bubble": "HAPPY FANS",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [WELCOME]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

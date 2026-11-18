@@ -1,0 +1,99 @@
+{
+ "page": "replyinbox",
+ "slug": "ai-handoff-rules",
+ "keyword": "HANDOFF",
+ "source": "seo_content.GUIDES['ai-handoff-rules']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#aitools",
+  "#chatbot",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment HANDOFF aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "AI KO [SAB] DE DOON?",
+   "lines": [
+    "Kaunse DMs **tumhe** milne chahiye 👇"
+   ],
+   "bubble": "RUKO ZARA ✋",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "ROUTINE = [AI]",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Routine sawaal **FAQ** se AI. **Baaki sab tumhe**, reason aur **suggested reply** ke saath."
+   ],
+   "bubble": "TEAMWORK",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "YE [TUMHARE] PAAS",
+   "label": "DEFAULT HAND-OFFS",
+   "steps": [
+    "**Refunds** / payment issues",
+    "**Brand deals**, collabs",
+    "Jo AI ko **pakka** na pata ho"
+   ],
+   "bubble": "MERA KAAM",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "[APNE] RULES ADD",
+   "label": "CUSTOM",
+   "lines": [
+    "Ek line mein ek: \"**injuries**\", \"**bulk orders**\", \"exam results\"."
+   ],
+   "bubble": "CUSTOM FIT",
+   "bg": "grid"
+  },
+  {
+   "role": "easy",
+   "headline": "FAN KO [HOLDING] MESSAGE",
+   "label": "FAN SEES",
+   "lines": [
+    "\"I'll get back to you **personally** soon 🙏\": fan **silence** mein nahi rehta."
+   ],
+   "bubble": "POLITE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "[NEEDS YOU] INBOX",
+   "label": "YOU SEE",
+   "lines": [
+    "AI Inbox mein **needs you**: reason + **editable reply**. Phone **notification** bhi."
+   ],
+   "bubble": "ALERT 🔔",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "AI [CHUP] REHTA HAI?",
+   "label": "FAQ",
+   "lines": [
+    "Haan, jab tak tum **hand back** na karo, AI us chat se **bahar**."
+   ],
+   "bubble": "RESPECT",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [HANDOFF]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

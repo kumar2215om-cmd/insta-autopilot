@@ -1,0 +1,99 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-live-comment-automation",
+ "keyword": "LIVE",
+ "source": "seo_content.GUIDES['instagram-live-comment-automation']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#reelstips",
+  "#instagramgrowth",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment LIVE aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "LIVE PE [LINK] KAISE DOON?",
+   "lines": [
+    "Live comments pe **auto DM** 👇"
+   ],
+   "bubble": "BOLU YA TYPE KARU",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "COMMENT [LINK], DM JAAYE",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Live mein **LINK** comment karne wale har bande ko **DM**."
+   ],
+   "bubble": "BOLTE RAHO",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "[SETUP]",
+   "label": "STEPS",
+   "steps": [
+    "Auto DM → **Create**",
+    "**Comments on your Live**",
+    "Keyword + DM + **button**"
+   ],
+   "bubble": "READY",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "BAAR BAAR [BOLO]",
+   "label": "LIVE TIP",
+   "lines": [
+    "Live mein \"**comment LINK**\" **kai baar** bolo."
+   ],
+   "bubble": "LOUD",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "PUBLIC [REPLY] NAHI",
+   "label": "GOOD TO KNOW",
+   "lines": [
+    "Live comments ko **sirf DM** milta hai, public reply nahi."
+   ],
+   "bubble": "NOTED",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "ABHI [BETA] HAI",
+   "label": "GOOD TO KNOW",
+   "lines": [
+    "Feature **beta** mein hai, app ke liye **Live comment events** on chahiye."
+   ],
+   "bubble": "NEW 🆕",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "LIVE [KHATAM] KE BAAD?",
+   "label": "FAQ",
+   "lines": [
+    "Live ke **dauraan** wale comments handle hote hain, **private-reply window** ke andar."
+   ],
+   "bubble": "CLEAR",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [LIVE]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

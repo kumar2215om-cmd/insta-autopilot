@@ -1,0 +1,99 @@
+{
+ "page": "replyinbox",
+ "slug": "collect-whatsapp-numbers-from-instagram",
+ "keyword": "WHATSAPP",
+ "source": "seo_content.GUIDES['collect-whatsapp-numbers-from-instagram']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#leadgeneration",
+  "#emailmarketing",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment WHATSAPP aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "INSTA SE [WHATSAPP] TAK",
+   "lines": [
+    "DM mein **WhatsApp numbers** collect karo 👇"
+   ],
+   "bubble": "LEADS CHAHIYE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "FREEBIE SE [PEHLE] NUMBER",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "DM freebie bhejne se pehle **WhatsApp number** maangta hai."
+   ],
+   "bubble": "SMART",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "[SETUP]",
+   "label": "STEPS",
+   "steps": [
+    "Comment ya DM **keyword** automation",
+    "**Ask for WhatsApp** on",
+    "**Required** ya Skip button"
+   ],
+   "bubble": "DONE",
+   "bg": "dots"
+  },
+  {
+   "role": "tip",
+   "headline": "[KYUN] BATAO",
+   "label": "TIP",
+   "lines": [
+    "Likho number **kyun** chahiye: \"to send updates and the **class link**\"."
+   ],
+   "bubble": "TRUST",
+   "bg": "grid"
+  },
+  {
+   "role": "easy",
+   "headline": "FORMAT [CHECK] HOTA",
+   "label": "FAQ",
+   "lines": [
+    "Number **check** hota hai. Galat ho toh **politely** dobara maangta hai."
+   ],
+   "bubble": "AUTO",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "[SHEETS] YA CRM",
+   "label": "SAVE",
+   "lines": [
+    "Number **contacts** mein save, **Google Sheets** ya **CRM** mein bhi."
+   ],
+   "bubble": "TEAM READY",
+   "bg": "dots"
+  },
+  {
+   "role": "mistake",
+   "headline": "[CONSENT] RESPECT KARO",
+   "label": "RESPECT",
+   "lines": [
+    "Sirf usi kaam ke liye message, **opt out** easy rakho."
+   ],
+   "bubble": "IZZAT SE 🙏",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [WHATSAPP]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+Collect emails and WhatsApp numbers in Instagram DMs
+
+→ ReplyInbox can ask for an email address or WhatsApp number inside the Instagram DM before it sends your link.
+→ Contacts with tags (for example prompts-lead).
+→ CSV export.
+→ Google Sheets, Zapier, Make or your own webhook (Pro).
+→ Yes, when the person types it themselves in reply to your message, as here.
+
+Comment LEADS and I'll DM you the full guide 📩
+
+#instagramtips #instagramautomation #creatortips #leadgeneration #emailmarketing #dmautomation

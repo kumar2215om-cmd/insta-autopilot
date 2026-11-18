@@ -1,0 +1,98 @@
+{
+ "page": "replyinbox",
+ "kind": "feature",
+ "slug": "follow-to-unlock",
+ "keyword": "UNLOCK",
+ "source": "seo_content.FEATURES['follow-to-unlock']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#dmautomation",
+  "#contentcreator",
+  "#socialmediamarketing"
+ ],
+ "cta_caption": "Comment UNLOCK aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "LINK CHAHIYE? [FOLLOW] KARO",
+   "lines": [
+    "**Follow to unlock** kya hai 👇"
+   ],
+   "bubble": "PEHLE FOLLOW 😎",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[FOLLOW] KE BAAD LINK",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "DM ka link **tabhi** jab woh **follow** karein. Isse **follow gate** bhi kehte hain."
+   ],
+   "bubble": "SIMPLE",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "[BUTTON] WALA DM",
+   "label": "HOW",
+   "lines": [
+    "Pehle DM: **Visit profile** + **I'm following** buttons."
+   ],
+   "bubble": "TAP TAP",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "TAP PE [CHECK]",
+   "label": "THE CHECK",
+   "lines": [
+    "Instagram follow check tabhi allow karta hai jab woh DM mein **reply/tap** karein."
+   ],
+   "bubble": "RULE HAI",
+   "bg": "grid"
+  },
+  {
+   "role": "easy",
+   "headline": "NAHI KIYA? [RETRY]",
+   "label": "IF NOT",
+   "lines": [
+    "Followers ko link. Baaki ko **friendly** \"follow first\" + **try again** button."
+   ],
+   "bubble": "POLITE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "result",
+   "headline": "[FOLLOWERS] KA JUMP",
+   "label": "RESULTS",
+   "lines": [
+    "Keyword + follow gate: creators ko usually **followers mein bada jump**. Follows **per reel** count."
+   ],
+   "bubble": "GROWTH 📈",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "KAUNSA [PLAN]?",
+   "label": "FAQ",
+   "lines": [
+    "**Starter** aur upar. **Beta** mein **har feature free**. Official API, rules ke andar."
+   ],
+   "bubble": "FREE ABHI",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [UNLOCK]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

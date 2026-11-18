@@ -1,0 +1,100 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-ai-chatbot",
+ "keyword": "CHATBOT",
+ "source": "seo_content.GUIDES['instagram-ai-chatbot']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#aitools",
+  "#chatbot",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment CHATBOT aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "DMS KA JAWAB [AI] DE?",
+   "lines": [
+    "Instagram **AI chatbot** setup 👇"
+   ],
+   "bubble": "MAIN THAK GAYA",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "ABOUT + [FAQ] LIKHO",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Short **About** + FAQ: **products, prices, links**. Phir test karke **on**."
+   ],
+   "bubble": "BAS ITNA?",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "FAQ MEIN [KYA]?",
+   "label": "FAQ CHECKLIST",
+   "steps": [
+    "Product: **price, link**",
+    "**Delivery** aur access",
+    "**Payment** + refund policy",
+    "Real **DMs** ke sawaal"
+   ],
+   "bubble": "LIST READY",
+   "bg": "dots"
+  },
+  {
+   "role": "mistake",
+   "headline": "REFUND? [TUMHARE] PAAS",
+   "label": "HAND-OFFS",
+   "lines": [
+    "Refunds, payment issues, **collabs**: **suggested reply** ke saath tumhe."
+   ],
+   "bubble": "SAFE MODE",
+   "bg": "grid"
+  },
+  {
+   "role": "explain",
+   "headline": "AI [JHOOTH] NAHI BOLTA",
+   "label": "NO INVENTING",
+   "lines": [
+    "AI kabhi **prices ya links** invent nahi karta."
+   ],
+   "bubble": "TRUST ✅",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tip",
+   "headline": "PEHLE [TEST] KARO",
+   "label": "BEFORE LIVE",
+   "lines": [
+    "Test box mein **real sawaal**, alag languages mein. Pehla hafta **AI Inbox** daily dekho."
+   ],
+   "bubble": "CAREFUL",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "[HINDI] MEIN BHI?",
+   "label": "FAQ",
+   "lines": [
+    "Haan, jis **language** mein fan likhe, usi mein reply."
+   ],
+   "bubble": "DESI AI 😎",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [CHATBOT]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

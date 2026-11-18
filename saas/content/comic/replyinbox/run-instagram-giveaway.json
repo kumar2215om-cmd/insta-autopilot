@@ -1,0 +1,99 @@
+{
+ "page": "replyinbox",
+ "slug": "run-instagram-giveaway",
+ "keyword": "GIVEAWAY",
+ "source": "seo_content.GUIDES['run-instagram-giveaway']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#reelstips",
+  "#instagramgrowth",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment GIVEAWAY aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "GIVEAWAY [FAIR] KAISE?",
+   "lines": [
+    "Giveaway chalao aur **winner** chuno 👇"
+   ],
+   "bubble": "SAB CHEATING BOLENGE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "[RULES] SAAF LIKHO",
+   "label": "RULES TO POST",
+   "steps": [
+    "**Kaise enter**: comment, follow, tag",
+    "**End date** aur time",
+    "**Prize** + kaun enter kare"
+   ],
+   "bubble": "CLEAR",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "YE LINE [ZAROORI]",
+   "label": "DISCLAIMER",
+   "lines": [
+    "\"**Not sponsored or endorsed by Instagram.**\""
+   ],
+   "bubble": "LIKH DO",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "[PICKER] USE KARO",
+   "label": "FAIR WINNER",
+   "lines": [
+    "Picker **ek entry per person** rakhta hai, **tumhara account skip**, **random** pick."
+   ],
+   "bubble": "FAIR PLAY",
+   "bg": "grid"
+  },
+  {
+   "role": "tip",
+   "headline": "DRAW [RECORD] KARO",
+   "label": "TRANSPARENCY",
+   "lines": [
+    "Draw ka **screen-record**. Picker winner ke comment pe **reply** + **DM** bhi kare."
+   ],
+   "bubble": "PROOF HAI",
+   "bg": "sunburst"
+  },
+  {
+   "role": "result",
+   "headline": "[SABKO] KUCH MILE",
+   "label": "GROW",
+   "lines": [
+    "Comment-to-DM: har entrant ko **thank-you** + **small freebie**, tumhe **leads**."
+   ],
+   "bubble": "WIN-WIN 🎉",
+   "bg": "dots"
+  },
+  {
+   "role": "easy",
+   "headline": "PICKER [FREE]?",
+   "label": "FAQ",
+   "lines": [
+    "Haan, **har ReplyInbox plan** mein included."
+   ],
+   "bubble": "BADHIYA",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [GIVEAWAY]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

@@ -1,0 +1,98 @@
+{
+ "page": "replyinbox",
+ "kind": "feature",
+ "slug": "ai-dm-agent",
+ "keyword": "AGENT",
+ "source": "seo_content.FEATURES['ai-dm-agent']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#aitools",
+  "#chatbot",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment AGENT aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "DMS KA JAWAB [AI] DEGA",
+   "lines": [
+    "ReplyInbox ka **AI DM agent** 👇"
+   ],
+   "bubble": "FINALLY 😮‍💨",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "SIRF [TUMHARA] FAQ",
+   "label": "WHAT IT DOES",
+   "lines": [
+    "Non-keyword DMs ka jawab **sirf tumhare FAQ**, products aur links se."
+   ],
+   "bubble": "TRUSTED",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "[HAR] LANGUAGE",
+   "label": "LANGUAGES",
+   "lines": [
+    "Jis language mein fan likhe: **English, Hindi, Spanish, Hinglish** aur more."
+   ],
+   "bubble": "DESI AI 🇮🇳",
+   "bg": "dots"
+  },
+  {
+   "role": "mistake",
+   "headline": "[INVENT] NAHI KARTA",
+   "label": "SAFE",
+   "lines": [
+    "**Prices ya links** kabhi invent nahi. **Refunds, collabs**: tumhe, **suggested reply** ke saath."
+   ],
+   "bubble": "SAFE MODE",
+   "bg": "grid"
+  },
+  {
+   "role": "result",
+   "headline": "[300] REPLIES INCLUDED",
+   "label": "PLANS",
+   "lines": [
+    "Creator **300**/month, Pro **2,000**, Free pe **25** try. Extra packs of **1,000**."
+   ],
+   "bubble": "NO WALLET 🙌",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "[CLAUDE] SE CHALTA",
+   "label": "FAQ",
+   "lines": [
+    "Anthropic ka **Claude**, API se. Chats **training** mein use nahi hote."
+   ],
+   "bubble": "PRIVATE 🔒",
+   "bg": "dots"
+  },
+  {
+   "role": "easy",
+   "headline": "[EDIT] KAR SAKTE?",
+   "label": "FAQ",
+   "lines": [
+    "Haan, **AI Inbox** mein har chat. Tum reply karo, AI **chup** rehta hai."
+   ],
+   "bubble": "CONTROL MERA",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [AGENT]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

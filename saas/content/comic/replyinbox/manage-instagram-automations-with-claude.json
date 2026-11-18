@@ -1,0 +1,100 @@
+{
+ "page": "replyinbox",
+ "slug": "manage-instagram-automations-with-claude",
+ "keyword": "CLAUDE",
+ "source": "seo_content.GUIDES['manage-instagram-automations-with-claude']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#aitools",
+  "#chatbot",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment CLAUDE aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "CHAT SE [AUTOMATION]?",
+   "lines": [
+    "Claude se Instagram automations chalao 👇"
+   ],
+   "bubble": "SACH MEIN? 🤯",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "CLAUDE + [MCP]",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "ReplyInbox **MCP** se Claude se connect: claude.ai, **Claude Desktop** ya **Claude Code**."
+   ],
+   "bubble": "CONNECTED",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "[POOCHO] KUCH BHI",
+   "label": "ASK",
+   "lines": [
+    "\"How did **this week** compare to last week?\""
+   ],
+   "bubble": "REPORT",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "REEL [SETUP] BHI",
+   "label": "ASK",
+   "lines": [
+    "\"Set up my next reel: keyword **PROMPTS**, ask for **WhatsApp**.\""
+   ],
+   "bubble": "HO GAYA",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "READY [PROMPTS]",
+   "label": "PROMPTS",
+   "steps": [
+    "**Weekly review**",
+    "**Plan a launch**",
+    "**Health check**",
+    "**Catch up on DMs**"
+   ],
+   "bubble": "ONE CLICK",
+   "bg": "sunburst"
+  },
+  {
+   "role": "mistake",
+   "headline": "PEHLE [POOCHHTA] HAI",
+   "label": "STAY IN CONTROL",
+   "lines": [
+    "Claude **send ya delete** se pehle poochta hai. Har change **Activity** mein log."
+   ],
+   "bubble": "SAFE",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "KAUNSA [PLAN]?",
+   "label": "FAQ",
+   "lines": [
+    "**Pro** (beta mein **har plan**). **Password** nahi, alag key jo kabhi bhi band."
+   ],
+   "bubble": "SECURE 🔑",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [CLAUDE]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

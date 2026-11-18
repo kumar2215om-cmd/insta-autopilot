@@ -1,0 +1,11 @@
+AI that answers Instagram DMs in any language
+
+→ Answers prices, links, how-to questions from your own FAQ.
+→ Never invents prices or links.
+→ Anthropic's Claude, through the API. Conversations are not used to train the model.
+→ Yes.
+→ Anything it isn't sure about, like refunds or brand deals, is handed to you with a suggested reply.
+
+Comment AGENT and I'll DM you the full guide 📩
+
+#instagramtips #instagramautomation #creatortips #aitools #chatbot #dmautomation

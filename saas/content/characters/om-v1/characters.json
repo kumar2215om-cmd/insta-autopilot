@@ -1,0 +1,331 @@
+{
+ "standing-hands-in-pockets": {
+  "file": "sheet1-r1c1.png",
+  "emotion": "neutral",
+  "tags": [
+   "intro",
+   "calm",
+   "neutral",
+   "hook"
+  ]
+ },
+ "arms-crossed": {
+  "file": "sheet1-r1c2.png",
+  "emotion": "confident",
+  "tags": [
+   "confident",
+   "smug",
+   "control",
+   "choose"
+  ]
+ },
+ "pointing-at-you": {
+  "file": "sheet1-r1c3.png",
+  "emotion": "confident",
+  "tags": [
+   "you",
+   "cta",
+   "hook",
+   "point",
+   "show"
+  ]
+ },
+ "thumbs-up": {
+  "file": "sheet1-r1c4.png",
+  "emotion": "happy",
+  "tags": [
+   "done",
+   "good",
+   "result",
+   "easy",
+   "yes"
+  ]
+ },
+ "peace-sign": {
+  "file": "sheet1-r1c5.png",
+  "emotion": "happy",
+  "tags": [
+   "cool",
+   "win",
+   "done",
+   "fun"
+  ]
+ },
+ "shrug-open-arms": {
+  "file": "sheet1-r1c6.png",
+  "emotion": "unsure",
+  "tags": [
+   "question",
+   "why",
+   "confused",
+   "problem"
+  ]
+ },
+ "sitting-hands-clasped": {
+  "file": "sheet1-r2c1.png",
+  "emotion": "calm",
+  "tags": [
+   "explain",
+   "answer",
+   "listen",
+   "calm"
+  ]
+ },
+ "sitting-chin-on-hand": {
+  "file": "sheet1-r2c2.png",
+  "emotion": "thinking",
+  "tags": [
+   "think",
+   "question",
+   "doubt"
+  ]
+ },
+ "sitting-crouch-smile": {
+  "file": "sheet1-r2c3.png",
+  "emotion": "relaxed",
+  "tags": [
+   "relax",
+   "chill",
+   "easy"
+  ]
+ },
+ "hands-behind-head": {
+  "file": "sheet1-r2c4.png",
+  "emotion": "relaxed",
+  "tags": [
+   "relax",
+   "automatic",
+   "chill",
+   "cool",
+   "result"
+  ]
+ },
+ "hand-on-chin": {
+  "file": "sheet1-r2c5.png",
+  "emotion": "thinking",
+  "tags": [
+   "think",
+   "question",
+   "why",
+   "choose"
+  ]
+ },
+ "hands-in-pockets-cool": {
+  "file": "sheet1-r2c6.png",
+  "emotion": "confident",
+  "tags": [
+   "calm",
+   "confident",
+   "smug"
+  ]
+ },
+ "laptop-typing": {
+  "file": "sheet1-r3c1.png",
+  "emotion": "focused",
+  "tags": [
+   "tool",
+   "laptop",
+   "how",
+   "steps",
+   "setup"
+  ]
+ },
+ "phone-texting": {
+  "file": "sheet1-r3c2.png",
+  "emotion": "focused",
+  "tags": [
+   "phone",
+   "dm",
+   "chat",
+   "message",
+   "inbox"
+  ]
+ },
+ "presenting-palm-up": {
+  "file": "sheet1-r3c3.png",
+  "emotion": "explaining",
+  "tags": [
+   "explain",
+   "show",
+   "tip",
+   "answer",
+   "this"
+  ]
+ },
+ "standing-relaxed": {
+  "file": "sheet1-r3c4.png",
+  "emotion": "calm",
+  "tags": [
+   "calm",
+   "intro",
+   "neutral"
+  ]
+ },
+ "fist-pump-shout": {
+  "file": "sheet1-r3c5.png",
+  "emotion": "excited",
+  "tags": [
+   "win",
+   "excited",
+   "result",
+   "cta",
+   "happy"
+  ]
+ },
+ "flexing": {
+  "file": "sheet1-r3c6.png",
+  "emotion": "strong",
+  "tags": [
+   "strong",
+   "control",
+   "power",
+   "win"
+  ]
+ },
+ "sunglasses-adjust": {
+  "file": "sheet1-r4c1.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "smug",
+   "flex",
+   "result"
+  ]
+ },
+ "sunglasses-arms-crossed": {
+  "file": "sheet1-r4c2.png",
+  "emotion": "cool",
+  "tags": [
+   "cool",
+   "confident",
+   "control",
+   "smug"
+  ]
+ },
+ "stop-hand": {
+  "file": "sheet1-r4c3.png",
+  "emotion": "firm",
+  "tags": [
+   "stop",
+   "no",
+   "warning",
+   "mistake",
+   "handoff"
+  ]
+ },
+ "come-here": {
+  "file": "sheet1-r4c4.png",
+  "emotion": "inviting",
+  "tags": [
+   "cta",
+   "comment",
+   "come",
+   "invite"
+  ]
+ },
+ "hand-on-head-oops": {
+  "file": "sheet1-r4c5.png",
+  "emotion": "worried",
+  "tags": [
+   "oops",
+   "stressed",
+   "problem",
+   "mistake",
+   "worried",
+   "hook"
+  ]
+ },
+ "looking-up-proud": {
+  "file": "sheet1-r4c6.png",
+  "emotion": "proud",
+  "tags": [
+   "proud",
+   "dream",
+   "think",
+   "confident"
+  ]
+ },
+ "sitting-laptop": {
+  "file": "sheet1-r5c4.png",
+  "emotion": "focused",
+  "tags": [
+   "tool",
+   "laptop",
+   "work",
+   "setup",
+   "steps"
+  ]
+ },
+ "sitting-thumbs-up": {
+  "file": "sheet1-r5c5.png",
+  "emotion": "happy",
+  "tags": [
+   "done",
+   "good",
+   "easy",
+   "yes"
+  ]
+ },
+ "sitting-shrug": {
+  "file": "sheet1-r5c6.png",
+  "emotion": "unsure",
+  "tags": [
+   "question",
+   "why",
+   "confused"
+  ]
+ },
+ "laptop-sitting-smile": {
+  "file": "sheet3-r2c2.png",
+  "emotion": "happy",
+  "tags": [
+   "tool",
+   "laptop",
+   "automatic",
+   "easy",
+   "result"
+  ]
+ },
+ "phone-smirk": {
+  "file": "sheet3-r3c1.png",
+  "emotion": "smug",
+  "tags": [
+   "phone",
+   "dm",
+   "sale",
+   "inbox",
+   "smug"
+  ]
+ },
+ "cheering-laugh": {
+  "file": "sheet3-r3c5.png",
+  "emotion": "excited",
+  "tags": [
+   "win",
+   "excited",
+   "cta",
+   "happy",
+   "celebrate"
+  ]
+ },
+ "sitting-thinking-smile": {
+  "file": "sheet3-r5c4.png",
+  "emotion": "thinking",
+  "tags": [
+   "think",
+   "idea",
+   "question"
+  ]
+ },
+ "sitting-pointing": {
+  "file": "sheet3-r5c5.png",
+  "emotion": "explaining",
+  "tags": [
+   "show",
+   "this",
+   "point",
+   "tip",
+   "explain"
+  ]
+ }
+}

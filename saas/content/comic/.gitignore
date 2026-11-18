@@ -1,0 +1,5 @@
+# Comic slides are rebuilt with `python3 tools/comic.py <spec>.json`; only a few samples' PNGs are kept in git.
+*/*/*.png
+!replyinbox/ai-dm-agent-examples/*.png
+!replyinbox/how-to-auto-dm-instagram-comments/*.png
+!replyinbox/instagram-dm-automation-for-fitness-coaches/*.png

@@ -1,0 +1,98 @@
+{
+ "page": "replyinbox",
+ "kind": "compare",
+ "slug": "repli",
+ "keyword": "REPLI",
+ "source": "seo_content.COMPARE['repli']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#repli",
+  "#dmautomation",
+  "#contentcreator"
+ ],
+ "cta_caption": "Comment REPLI aur main full comparison DM kar dunga 📩 (Competitor details as checked November 2026; prices change.)",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "REPLI YA [REPLYINBOX]?",
+   "lines": [
+    "Plans compared, checked **November 2026** 👇"
+   ],
+   "bubble": "PLAN KAUNSA?",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "REPLI: INSTA + [WHATSAPP]",
+   "label": "THEM",
+   "lines": [
+    "Instagram + **WhatsApp** automation, **CRM** aur Shopify plans."
+   ],
+   "bubble": "BIG SUITE",
+   "bg": "grid"
+  },
+  {
+   "role": "mistake",
+   "headline": "CREATOR [₹249]: SIRF DM",
+   "label": "THEM · NOV 2026",
+   "lines": [
+    "Creator **₹249**: comment-to-DM only. Pro **₹499**, **AI credits alag**."
+   ],
+   "bubble": "EXTRA KHARCHA",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "REPLYINBOX [₹199]",
+   "label": "US",
+   "lines": [
+    "Creator **₹199**: story replies, **follow-ups**, broadcast + **300 AI replies**."
+   ],
+   "bubble": "SAB INCLUDED",
+   "bg": "grid"
+  },
+  {
+   "role": "result",
+   "headline": "PRO: [3] ACCOUNTS",
+   "label": "US",
+   "lines": [
+    "Pro **₹499**: 3 accounts, **2,000 AI replies**. Extra account **₹149**/month (Repli: **₹249**)."
+   ],
+   "bubble": "SASTA 💸",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "REPLI [CHUNO] AGAR",
+   "label": "PICK THEM IF",
+   "lines": [
+    "**WhatsApp campaigns** aur **CRM** Instagram ke saath chahiye."
+   ],
+   "bubble": "FAIR",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "REPLYINBOX [CHUNO] AGAR",
+   "label": "PICK US IF",
+   "lines": [
+    "**Instagram** main channel hai aur **kam** mein **zyada** chahiye."
+   ],
+   "bubble": "DEAL 🙌",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [REPLI]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full comparison **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

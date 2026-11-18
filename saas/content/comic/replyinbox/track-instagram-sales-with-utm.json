@@ -1,0 +1,99 @@
+{
+ "page": "replyinbox",
+ "slug": "track-instagram-sales-with-utm",
+ "keyword": "UTM",
+ "source": "seo_content.GUIDES['track-instagram-sales-with-utm']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#digitalproducts",
+  "#onlinebusiness",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment UTM aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "KAUNSI REEL NE [BECHA]?",
+   "lines": [
+    "**UTM** se Instagram sales track karo 👇"
+   ],
+   "bubble": "PATA HI NAHI 🤷",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "UTM [KYA] HAI?",
+   "label": "UTM BASICS",
+   "steps": [
+    "**source**=instagram",
+    "**medium**=dm",
+    "**campaign**=reel-name"
+   ],
+   "bubble": "LINK KA TAG",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "ANALYTICS [PADHTA] HAI",
+   "label": "WHO READS IT",
+   "lines": [
+    "**Google Analytics**, **Shopify** aur zyada website tools ye **automatic** padhte hain."
+   ],
+   "bubble": "MAGIC",
+   "bg": "dots"
+  },
+  {
+   "role": "easy",
+   "headline": "TAGS [AUTO] LAGTE",
+   "label": "IN REPLYINBOX",
+   "lines": [
+    "ReplyInbox **UTM tags automatically** add karta hai."
+   ],
+   "bubble": "NO TYPING",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "VISIT SE [SALE] TAK",
+   "label": "SALES",
+   "lines": [
+    "Payment page ka **redirect after payment** = ReplyInbox **sales link**."
+   ],
+   "bubble": "SETUP DONE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "result",
+   "headline": "SALE [CREDIT]",
+   "label": "HOW",
+   "lines": [
+    "Har sale us **last DM link** ko credit jo buyer ne tap kiya."
+   ],
+   "bubble": "DATA 💰",
+   "bg": "dots"
+  },
+  {
+   "role": "mistake",
+   "headline": "AFFILIATE? [DHYAAN]",
+   "label": "FAQ",
+   "lines": [
+    "Pehle se UTM wale links **skip** hote hain. Affiliate pe **click tracking off**."
+   ],
+   "bubble": "SAFE",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [UTM]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

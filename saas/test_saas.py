@@ -568,6 +568,30 @@ class SaasTest(unittest.TestCase):
         with mock.patch.object(saas, "SITE_URL", "https://replyinbox.in"):
             self.assertIn('<link rel="canonical" href="https://replyinbox.in/">', self.c.get("/").get_data(as_text=True))
 
+    def test_pillar_cluster_architecture(self):
+        import re as _re
+        import seo_content as seo
+        owner = seo.pillar_of()
+        every = [("feature", k) for k in seo.FEATURES] + [("compare", k) for k in seo.COMPARE] + [("guide", k) for k in seo.GUIDES]
+        self.assertEqual(sorted(owner), sorted(every))  # every page belongs to exactly one pillar
+        url = {"feature": "/features/", "compare": "/vs/", "guide": "/guides/"}
+        for slug, pillar in seo.PILLARS.items():
+            hub = self.c.get(f"/{slug}").get_data(as_text=True)
+            for kind, s_ in pillar["clusters"]:  # the hub links down to every spoke
+                self.assertIn(f'href="{url[kind]}{s_}"', hub, (slug, s_))
+            self.assertIn('"CollectionPage"', hub.replace('": "', '":"'))
+        for (kind, s_), pillar in owner.items():  # every spoke links up to its hub, with matching schema
+            page = self.c.get(f"{url[kind]}{s_}").get_data(as_text=True)
+            self.assertIn(f'<a href="/{pillar}">', page, s_)
+            self.assertIn(f'/{pillar}", "@type": "CollectionPage"'.replace('", "', '","'), page.replace('", "', '","'), s_)
+        glossary = self.c.get("/glossary").get_data(as_text=True)
+        anchors = set(_re.findall(r'<div id="([a-z0-9-]+)">', glossary))
+        self.assertEqual(anchors, set(seo.GLOSSARY))
+        for slug in seo.PILLARS:  # term links from hubs resolve
+            for term in _re.findall(r'/glossary#([a-z0-9-]+)', self.c.get(f"/{slug}").get_data(as_text=True)):
+                self.assertIn(term, anchors)
+        self.assertIn("### [Instagram lead generation with DMs]", self.c.get("/llms.txt").get_data(as_text=True))
+
     def test_demo_mode(self):
         r = self.c.get("/demo")
         self.assertTrue(r.location.endswith("/app"))
@@ -1616,6 +1640,104 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(home.status_code, 200)
         self.assertIn('href="/app">Open dashboard', home.get_data(as_text=True))
         self.assertIn("@creator", self.c.get("/app").get_data(as_text=True))
+
+
+
+class CarouselTest(unittest.TestCase):
+    """tools/carousels.py: every guide, comparison and feature becomes a postable carousel (no rendering here)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+        import carousels
+        cls.m = carousels
+        cls.all = [(kind, slug, page, carousels.build(kind, slug, page)) for kind, slug, page in carousels.pages()]
+
+    def test_every_page_gets_a_readable_carousel(self):
+        import re
+        import seo_content
+        self.assertEqual(len(self.all), len(seo_content.GUIDES) + len(seo_content.COMPARE) + len(seo_content.FEATURES))
+        for kind, slug, page, c in self.all:
+            slides = c["slides"]
+            self.assertTrue(6 <= len(slides) <= 8, (slug, len(slides)))
+            self.assertEqual((slides[0]["kind"], slides[-1]["kind"]), ("hook", "cta"), slug)
+            self.assertEqual(slides[-1]["keyword"], c["keyword"])
+            source = json.dumps(page, ensure_ascii=False) + seo_content.CHECKED
+            for i, s in enumerate(slides, 1):
+                self.assertLessEqual(self.m.slide_words(s), 25, (slug, i))
+                text = json.dumps(s, ensure_ascii=False)
+                self.assertNotIn("{brand}", text)
+                for num in re.findall(r"\d[\d,.]*\d|\d", " ".join(str(s.get(k, "")) for k in ("title", "accent", "sub", "body", "note", "cta"))):
+                    self.assertIn(num, source, f"{slug} slide {i}: {num} is not in the page text")
+                self.assertIn(f"{i}/{len(slides)}", self.m.slide_html(s, i, len(slides), ""))
+
+    def test_keywords_and_automations_fit_the_rule_form(self):
+        kws = [c["keyword"] for *_, c in self.all]
+        self.assertEqual(len(kws), len(set(kws)), "comment keywords must be unique")
+        for kind, slug, page, c in self.all:
+            url = self.m.page_url(kind, slug, "https://replyinbox.in")
+            a = self.m.automation(c, url)
+            self.assertTrue(saas.valid_rule_key(a["key"]), a["key"])
+            saved = saas.save_rule({"id": "carousel-test"}, a["key"], a["rule"])
+            rule = saved["reels"][a["key"]]
+            self.assertEqual({k: rule[k] for k in a["rule"]}, a["rule"], "save_rule must keep every field as written")
+            self.assertEqual(rule["dm_button_url"], url)
+            self.assertIn(url, rule["dm"])
+            self.assertTrue(2 <= len(rule["comment_reply"].splitlines()) <= 3)
+            self.assertEqual(rule["keywords"], [c["keyword"]])
+
+    def test_caption(self):
+        for kind, slug, page, c in self.all:
+            text = self.m.caption_text(c, page)
+            self.assertIn(f"Comment {c['keyword']}", text)
+            tags = text.strip().splitlines()[-1].split()
+            self.assertTrue(5 <= len(tags) <= 8 and all(t.startswith("#") for t in tags), (slug, tags))
+            if kind == "compare":
+                self.assertIn("checked", text)
+
+
+class ComicTest(unittest.TestCase):
+    """tools/comic.py: comic carousel specs and pose picking (no rendering here)."""
+
+    def setUp(self):
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
+        import comic
+        self.m = comic
+
+    def test_sample_spec_is_valid(self):
+        root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "content", "comic")
+        specs = [os.path.join(d, f) for d, _, fs in os.walk(root) for f in fs if f.endswith(".json") and f != "poses.json"]
+        self.assertTrue(specs)
+        for p in specs:
+            spec = json.load(open(p))
+            self.assertEqual(self.m.validate(spec), [], p)
+            self.assertIn(f"Comment {spec['keyword']}", self.m.caption(spec))
+
+    def test_comic_facts_come_from_the_guides(self):
+        """Every number on a @replyinbox comic slide (except single-digit step numbers) is in the page it came from."""
+        import glob
+        import re
+        import seo_content
+        for p in glob.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), "content", "comic", "replyinbox", "*.json")):
+            spec = json.load(open(p))
+            pages = {"guide": seo_content.GUIDES, "compare": seo_content.COMPARE, "feature": seo_content.FEATURES}
+            src = json.dumps(pages[spec.get("kind", "guide")][spec["slug"]], ensure_ascii=False) + seo_content.CHECKED
+            for k, s in enumerate(spec["slides"], 1):
+                text = self.m.plain(" ".join([s.get("headline", ""), s.get("bubble", "")] + s.get("lines", []) + s.get("steps", [])
+                                             + [" ".join(c) for c in s.get("chat", [])]))
+                for n in re.findall(r"\d[\d,.]*\d|\d", text):
+                    if len(n) > 1:
+                        self.assertIn(n, src, f"{spec['slug']} slide {k}: {n}")
+
+    def test_pose_picking_avoids_repeats_and_honours_override(self):
+        index = {f"p{k}": {"src": "x", "emotion": "", "tags": [t]} for k, t in enumerate(["sad", "happy", "think"])}
+        slides = [{"mood": ["happy"]}, {"mood": ["happy"]}, {"mood": ["think"]}, {"pose": "p1"}]
+        poses = self.m.pick_poses(slides, index)
+        self.assertEqual(poses[0], "p1")
+        self.assertEqual(len(set(poses[:3])), 3)
+        self.assertEqual(poses[3], "p1")
 
 
 if __name__ == "__main__":

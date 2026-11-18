@@ -1,0 +1,100 @@
+{
+ "page": "replyinbox",
+ "kind": "feature",
+ "slug": "lead-capture",
+ "keyword": "LEADS",
+ "source": "seo_content.FEATURES['lead-capture']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#leadgeneration",
+  "#emailmarketing",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment LEADS aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "DM MEIN [EMAIL] LO",
+   "lines": [
+    "Instagram DM se **leads collect** karo 👇"
+   ],
+   "bubble": "LIST BANAO 📋",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "LINK SE [PEHLE] EMAIL",
+   "label": "SHORT ANSWER",
+   "lines": [
+    "Link bhejne se pehle DM **email ya WhatsApp number** maangta hai."
+   ],
+   "bubble": "SMART",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "[ON] KARO",
+   "label": "HOW IT WORKS",
+   "lines": [
+    "Automation mein \"**ask for email**\" ya \"**ask for WhatsApp**\" on karo."
+   ],
+   "bubble": "EK SWITCH",
+   "bg": "dots"
+  },
+  {
+   "role": "easy",
+   "headline": "[FORMAT] CHECK",
+   "label": "AUTO CHECK",
+   "lines": [
+    "Format **check**, galat ho toh **dobara** poochta hai. **Required** ya **Skip** button."
+   ],
+   "bubble": "NO JUNK",
+   "bg": "grid"
+  },
+  {
+   "role": "tool",
+   "headline": "LEADS [KAHAN] JAATE?",
+   "label": "WHERE LEADS GO",
+   "steps": [
+    "**Contacts** with tags",
+    "**CSV** export",
+    "**Sheets**, Zapier, webhook (Pro)"
+   ],
+   "bubble": "ORGANISED",
+   "bg": "sunburst"
+  },
+  {
+   "role": "result",
+   "headline": "HAR LEAD PE [PING]",
+   "label": "ALERTS",
+   "lines": [
+    "Har naye lead pe **phone notification**."
+   ],
+   "bubble": "TING 🔔",
+   "bg": "dots"
+  },
+  {
+   "role": "explain",
+   "headline": "[ALLOWED] HAI?",
+   "label": "FAQ",
+   "lines": [
+    "Haan, jab person **khud type** kare tumhare message ke reply mein."
+   ],
+   "bubble": "LEGIT ✅",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [LEADS]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

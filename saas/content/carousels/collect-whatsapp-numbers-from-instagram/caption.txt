@@ -1,0 +1,11 @@
+How to collect WhatsApp numbers from Instagram
+
+→ Create a comment or DM keyword automation.
+→ Turn on Ask for WhatsApp number.
+→ Write why you need it ("to send updates and the class link").
+→ Connect Google Sheets or a webhook if your team follows up.
+→ Only message numbers people gave you for that purpose, say what you'll send, and make it easy to opt out.
+
+Comment WHATSAPP and I'll DM you the full guide 📩
+
+#instagramtips #instagramautomation #creatortips #leadgeneration #emailmarketing #dmautomation

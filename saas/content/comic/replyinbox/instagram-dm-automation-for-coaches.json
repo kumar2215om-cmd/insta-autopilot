@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-automation-for-coaches",
+ "keyword": "COACHES",
+ "source": "seo_content.GUIDES['instagram-dm-automation-for-coaches']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#coachingbusiness",
+  "#dmautomation",
+  "#contentcreator"
+ ],
+ "cta_caption": "Comment COACHES aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "COACH HO? [LEADS] KAHAN?",
+   "lines": [
+    "Reel comments ko **leads** banao 👇"
+   ],
+   "bubble": "CALLS KAB AAYENGE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "steps",
+   "headline": "REEL + [KEYWORD]",
+   "label": "STEP 1",
+   "lines": [
+    "Clear **promise** wali reel aur ek **keyword**."
+   ],
+   "bubble": "START",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "DM + [MENU]",
+   "label": "STEP 2",
+   "lines": [
+    "DM mein **free resource** + 3-option menu: beginner / stuck / **ready**."
+   ],
+   "bubble": "SORTED BY GOAL",
+   "bg": "dots"
+  },
+  {
+   "role": "steps",
+   "headline": "READY? [WHATSAPP]",
+   "label": "STEP 3",
+   "lines": [
+    "\"Ready\" option se **WhatsApp number** maango."
+   ],
+   "bubble": "LEAD MILA",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "[3 GHANTE] BAAD",
+   "label": "STEP 4",
+   "lines": [
+    "**3 ghante** baad **call ya program** link ka follow-up."
+   ],
+   "bubble": "TIMING",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "AI SAMBHALE [SAWAAL]",
+   "label": "STEP 5",
+   "lines": [
+    "AI **price aur schedule** answer kare. Sensitive cheezein **tumhare paas**."
+   ],
+   "bubble": "RELAX",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "KAUNSI REEL [BECHI]?",
+   "label": "MEASURE",
+   "lines": [
+    "**Sales tracking**: har program sale uski **reel** ko credit hoti hai."
+   ],
+   "bubble": "DATA = PAISA",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [COACHES]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

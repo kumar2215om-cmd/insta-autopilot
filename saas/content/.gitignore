@@ -1,0 +1,6 @@
+# Carousel slides are rebuilt with `python3 tools/carousels.py`; only three samples are kept in git.
+carousels/*/*.png
+!carousels/manychat/*.png
+!carousels/how-to-auto-dm-instagram-comments/*.png
+!carousels/ai-dm-agent-examples/*.png
+carousels/*-hinglish/

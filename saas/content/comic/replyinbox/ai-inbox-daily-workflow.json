@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "ai-inbox-daily-workflow",
+ "keyword": "ROUTINE",
+ "source": "seo_content.GUIDES['ai-inbox-daily-workflow']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#aitools",
+  "#chatbot",
+  "#dmautomation"
+ ],
+ "cta_caption": "Comment ROUTINE aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "DMS MEIN [GHANTE] GAYE?",
+   "lines": [
+    "**10-minute** daily DM routine 👇"
+   ],
+   "bubble": "DIN KHATAM 😩",
+   "bg": "sunburst"
+  },
+  {
+   "role": "steps",
+   "headline": "[NEEDS YOU] KHOLO",
+   "label": "STEP 1",
+   "lines": [
+    "AI Inbox ko **needs you** pe filter karo."
+   ],
+   "bubble": "START",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "REPLY [SEND] KARO",
+   "label": "STEP 2",
+   "lines": [
+    "Suggested reply **send ya edit**, last message ke **24 ghante** ke andar."
+   ],
+   "bubble": "QUICK",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "[SAVED] REPLIES",
+   "label": "STEP 3",
+   "lines": [
+    "Payment steps jaise common answers ke liye **saved replies**."
+   ],
+   "bubble": "ONE TAP",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "WAPAS [AI] KO",
+   "label": "STEP 4",
+   "lines": [
+    "Resolved chats **AI ko hand back**."
+   ],
+   "bubble": "DONE",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tip",
+   "headline": "FAQ [UPDATE]",
+   "label": "STEP 5",
+   "lines": [
+    "Naya sawaal answer kiya? **FAQ** mein daalo, agli baar **AI** sambhalega."
+   ],
+   "bubble": "SMART",
+   "bg": "dots"
+  },
+  {
+   "role": "easy",
+   "headline": "SIRF [ZAROORI] ALERTS",
+   "label": "NOTIFICATIONS",
+   "lines": [
+    "Phone notifications sirf **hand-offs** ke liye. Team **Manager** bhi handle kare (Pro)."
+   ],
+   "bubble": "FOCUS 🧘",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [ROUTINE]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}

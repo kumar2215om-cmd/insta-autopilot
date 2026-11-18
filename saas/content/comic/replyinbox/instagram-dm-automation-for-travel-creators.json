@@ -1,0 +1,97 @@
+{
+ "page": "replyinbox",
+ "slug": "instagram-dm-automation-for-travel-creators",
+ "keyword": "TRAVEL",
+ "source": "seo_content.GUIDES['instagram-dm-automation-for-travel-creators']",
+ "hashtags": [
+  "#instagramtips",
+  "#instagramautomation",
+  "#creatortips",
+  "#travelcreator",
+  "#dmautomation",
+  "#contentcreator"
+ ],
+ "cta_caption": "Comment TRAVEL aur main full guide DM kar dunga 📩",
+ "slides": [
+  {
+   "role": "hook",
+   "headline": "\"ITINERARY BHEJO\" [SABKO]?",
+   "lines": [
+    "Travel creators ke liye **DM automation** 👇"
+   ],
+   "bubble": "PACKING KAB KARU",
+   "bg": "sunburst"
+  },
+  {
+   "role": "tool",
+   "headline": "COMMENT [TRIP]",
+   "label": "FOR CREATORS",
+   "lines": [
+    "\"Comment **TRIP** for the full itinerary\" → **day-by-day plan** + **map link**."
+   ],
+   "bubble": "BON VOYAGE",
+   "bg": "grid"
+  },
+  {
+   "role": "result",
+   "headline": "[PAID] GUIDE BHI",
+   "label": "FOLLOW-UP",
+   "lines": [
+    "Follow-up: paid guide, **preset pack** ya **group-trip waitlist**."
+   ],
+   "bubble": "KAMAI ✈️",
+   "bg": "dots"
+  },
+  {
+   "role": "tool",
+   "headline": "AGENCY? [PACKAGE]",
+   "label": "FOR AGENCIES",
+   "lines": [
+    "Comment **PACKAGE** → **brochure** + menu: **Honeymoon / Family / Group**."
+   ],
+   "bubble": "ENQUIRIES",
+   "bg": "grid"
+  },
+  {
+   "role": "steps",
+   "headline": "[QUOTE] KE LIYE WHATSAPP",
+   "label": "FOR AGENCIES",
+   "lines": [
+    "Custom quote ke liye **WhatsApp** lo. Seasonal offers **broadcast**."
+   ],
+   "bubble": "BOOKED",
+   "bg": "sunburst"
+  },
+  {
+   "role": "explain",
+   "headline": "AI: [SEASON] + PRICE",
+   "label": "AI AGENT",
+   "lines": [
+    "Included kya, **starting prices**, best season. **Cancellations** aur payments **tumhe**."
+   ],
+   "bubble": "SMART",
+   "bg": "dots"
+  },
+  {
+   "role": "result",
+   "headline": "KAUNSI REEL [BOOKING] LAAYI?",
+   "label": "FAQ",
+   "lines": [
+    "**Sales tracking** aur **lead counts** har reel ke results dikhate hain."
+   ],
+   "bubble": "DATA 📊",
+   "bg": "grid"
+  },
+  {
+   "role": "cta",
+   "headline": "COMMENT [TRAVEL]",
+   "label": "FREE GUIDE",
+   "lines": [
+    "Full guide **DM** mein bhej dunga 📩",
+    "Follow **@replyinbox** for more"
+   ],
+   "bubble": "JALDI KARO!",
+   "bg": "solid"
+  }
+ ]
+}
