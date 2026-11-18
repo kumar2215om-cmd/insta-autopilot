@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <link rel="icon" href="{{ logo.favicon }}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ brand }} · {{ {"privacy": "Privacy policy", "terms": "Terms", "data-deletion": "Data deletion", "deletion": "Deletion status"}[page] }}</title>
-<meta name="description" content="{{ brand }} {{ {"privacy": "privacy policy: what data the Instagram DM automation stores and why.", "terms": "terms of use.", "data-deletion": "data deletion: how to remove your data.", "deletion": "data deletion status."}[page] }}">
+<title>{{ brand }} · {{ {"privacy": "Privacy policy", "terms": "Terms", "data-deletion": "Data deletion", "deletion": "Deletion status", "refund": "Refund and cancellation policy", "contact": "Contact us", "shipping": "Delivery policy"}[page] }}</title>
+<meta name="description" content="{{ brand }} {{ {"privacy": "privacy policy: what data the Instagram DM automation stores and why.", "terms": "terms of use.", "data-deletion": "data deletion: how to remove your data.", "deletion": "data deletion status.", "refund": "refund and cancellation policy for paid plans.", "contact": "contact details and support.", "shipping": "delivery policy: plans are activated online instantly."}[page] }}">
 <link rel="canonical" href="{{ site_url }}/{{ page }}">
 {% include "_style.html" %}
 <style>
@@ -18,7 +18,7 @@
 </head>
 <body>
 <main>
-  <nav><a href="/" style="text-decoration:none" aria-label="{{ brand }} home">{{ logo.wordmark(24, "legal") }}</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/data-deletion">Data deletion</a></nav>
+  <nav><a href="/" style="text-decoration:none" aria-label="{{ brand }} home">{{ logo.wordmark(24, "legal") }}</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refund">Refunds</a><a href="/contact">Contact</a><a href="/data-deletion">Data deletion</a></nav>
 
   {% if page == "privacy" %}
   <div class="label">Last updated 11 Nov 2026</div>
@@ -52,6 +52,7 @@
     <li>You're responsible for what your rules send. Don't send spam, misleading content or anything that breaks Instagram's Terms of Use and Community Guidelines.</li>
     <li>Instagram sets limits (for example one DM per comment, within 7 days, and hourly request limits). Messages can be delayed or refused by Instagram, and we can't guarantee delivery.</li>
     <li>The free plan includes a monthly number of DMs shown in your dashboard. We may change plans and limits with notice.</li>
+    <li>Paid plans are prepaid for one month or one year, in Indian rupees with taxes included, and paid through Razorpay. They don't renew automatically: a plan ends on its end date unless you pay again. Refunds follow our <a href="/refund">refund and cancellation policy</a>.</li>
     <li>AI replies are written by an AI model from what you give it. They can be wrong: check your AI Inbox, keep your FAQ up to date, and turn AI replies off any time.</li>
     <li>We may pause accounts that abuse the service or put it at risk.</li>
     <li>The service is provided as is. You can stop using it and delete your data at any time.</li>
@@ -67,6 +68,44 @@
     {% if contact_email %}<li>Email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a> from the address linked to your account, with your Instagram username.</li>{% endif %}
   </ol>
   <p>Deletion covers your account details, access token, rules, activity, counts, contacts and AI Inbox conversations.</p>
+
+  {% elif page == "refund" %}
+  <div class="label">Last updated {{ updated }}</div>
+  <h1>Refund and cancellation policy</h1>
+  <h2>Cancellation</h2>
+  <p>Paid plans are prepaid for one month or one year and <b>don't renew automatically</b>, so there's no subscription to cancel:
+    your plan simply ends on its end date, shown on the Plan &amp; billing page, and your account moves to the Free plan. You can stop using {{ brand }}
+    or delete your account at any time.</p>
+  <h2>Refunds</h2>
+  <ul>
+    <li><b>First payment:</b> if {{ brand }} isn't right for you, ask for a full refund within <b>7 days</b> of your first paid plan purchase.</li>
+    <li><b>Charged twice, or money taken for a failed payment:</b> refunded in full.</li>
+    <li><b>Other payments</b> (renewals, and any payment after its first 7 days) aren't refundable. Unused time isn't refunded,
+      but switching plans turns it into extra days on the new plan.</li>
+  </ul>
+  <h2>How to ask</h2>
+  <p>{% if contact_email %}Email <a href="mailto:{{ contact_email }}?subject=Refund%20request">{{ contact_email }}</a>{% else %}Contact us{% endif %}
+    from the email you sign in with, with the receipt number from your Plan &amp; billing page. Approved refunds are sent to the original
+    payment method through Razorpay within <b>5–7 business days</b>.</p>
+
+  {% elif page == "shipping" %}
+  <div class="label">Last updated {{ updated }}</div>
+  <h1>Delivery policy</h1>
+  <p>{{ brand }} is online software. Nothing is shipped: your plan is <b>activated instantly</b> in your account as soon as the payment
+    succeeds, and you can see it on the Plan &amp; billing page together with your receipt.</p>
+  <p>If a paid plan isn't active within 30 minutes of a successful payment, {% if contact_email %}email <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}contact us{% endif %}
+    with your receipt and we'll fix it or refund you.</p>
+
+  {% elif page == "contact" %}
+  <h1>Contact us</h1>
+  <p>We usually reply within 1–2 business days.</p>
+  <ul>
+    {% if contact_email %}<li>Email: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a></li>{% endif %}
+    {% if business.phone %}<li>Phone / WhatsApp: <a href="tel:{{ business.phone }}">{{ business.phone }}</a></li>{% endif %}
+    {% if business.name %}<li>Business: {{ business.name }}</li>{% endif %}
+    {% if business.address %}<li>Address: {{ business.address }}</li>{% endif %}
+  </ul>
+  <p>For refunds see our <a href="/refund">refund and cancellation policy</a>. To delete your data see <a href="/data-deletion">data deletion</a>.</p>
 
   {% else %}
   <h1>Deletion status</h1>

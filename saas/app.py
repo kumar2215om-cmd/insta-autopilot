@@ -565,8 +565,13 @@ def demo_login():
 @app.get("/privacy")
 @app.get("/terms")
 @app.get("/data-deletion")
+@app.get("/refund")
+@app.get("/contact")
+@app.get("/shipping")
 def legal():
-    return render_template("legal.html", page=request.path.strip("/"))
+    # BUSINESS_NAME / BUSINESS_ADDRESS / CONTACT_PHONE: shown on the contact page (Razorpay's website review asks for them)
+    business = {"name": env("BUSINESS_NAME"), "address": env("BUSINESS_ADDRESS"), "phone": env("CONTACT_PHONE")}
+    return render_template("legal.html", page=request.path.strip("/"), business=business, updated="18 Nov 2026")
 
 
 @app.get("/deletion")

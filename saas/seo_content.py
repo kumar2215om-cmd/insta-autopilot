@@ -1263,5 +1263,5 @@ def pillar_of():
 
 
 def all_paths():
-    return (["/", "/features", "/compare", "/guides", "/glossary", "/privacy", "/terms"] + [f"/{k}" for k in PILLARS]
+    return (["/", "/features", "/compare", "/guides", "/glossary", "/privacy", "/terms", "/refund", "/shipping", "/contact"] + [f"/{k}" for k in PILLARS]
             + [f"/features/{k}" for k in FEATURES] + [f"/vs/{k}" for k in COMPARE] + [f"/guides/{k}" for k in GUIDES])
