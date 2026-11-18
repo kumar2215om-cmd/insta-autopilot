@@ -167,10 +167,14 @@ def site_url():
     return SITE_URL or request.host_url.rstrip("/")
 
 
+# Google Search Console HTML-tag verification for replyinbox.in (public by design; override with the env var)
+GOOGLE_SITE_VERIFICATION = env("GOOGLE_SITE_VERIFICATION", "SVdI_dSxjwmjhHFP0wxRZa-GRUsDbV_GRLqhqWvm2-s")
+
+
 @app.context_processor
 def brand():
     return {"brand": BRAND, "contact_email": CONTACT_EMAIL, "public_url": base_url() if request else "",
-            "site_url": site_url() if request else ""}
+            "site_url": site_url() if request else "", "google_site_verification": GOOGLE_SITE_VERIFICATION}
 
 
 PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report")
