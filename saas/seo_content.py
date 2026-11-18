@@ -214,7 +214,7 @@ GUIDES = {
         "sections": [
             ("What you need", "<ul><li>An Instagram <b>Business or Creator</b> account (free to switch in Settings).</li>"
              "<li>A tool on Meta's official API. Avoid tools that ask for your password.</li><li>A freebie or link worth commenting for.</li></ul>"),
-            ("Steps", "<ol><li>Log in to {brand} with Instagram.</li><li>Auto DM → Create automation → Comments on your post or reel.</li>"
+            ("Steps", "<ol><li>Sign up free on {brand} with Google, then connect your Instagram account.</li><li>Auto DM → Create automation → Comments on your post or reel.</li>"
              "<li>Pick the reel (or <i>next post</i> if it's not live yet).</li><li>Add the keyword and 2–3 public replies.</li>"
              "<li>Write the DM, add a button with your link, and optionally ask them to follow first.</li><li>Review and launch.</li></ol>"),
             ("Tips that raise results", "<ul><li>Say the keyword in the first 3 seconds of the reel and in the caption.</li>"
@@ -534,7 +534,7 @@ GUIDES.update({
         "sections": [
             ("Business or Creator?", "<ul><li><b>Creator</b>: for influencers, artists, coaches and personal brands.</li>"
              "<li><b>Business</b>: for shops, brands and service businesses.</li><li>Both work for comment-to-DM and the AI agent; you can switch back any time.</li></ul>"),
-            ("Then connect", "<p>Open {brand}, tap Continue with Instagram, and approve the permissions on Instagram's own screen. You never share your password.</p>"),
+            ("Then connect", "<p>Sign up free on {brand} with Google, tap Connect Instagram, and approve the permissions on Instagram's own screen. You never share your password.</p>"),
         ],
         "faq": [("Will switching change my followers or reach?", "No, your followers stay the same, and you get insights and contact options."),
                 ("Do I need a Facebook page?", "No, {brand} uses Instagram Login, so a Facebook page isn't required.")],
