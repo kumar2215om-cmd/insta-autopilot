@@ -53,6 +53,15 @@
       <td>₹{{ "{:,}".format(p.amount) }}</td><td data-ts="{{ p.until }}"></td><td style="font-size:12px">{{ p.payment_id }}</td></tr>
     {% else %}<tr><td colspan="6" class="muted">No payments yet.</td></tr>{% endfor %}
   </table></div>
+  <h2 style="margin:28px 0 8px">Referral payouts</h2>
+  <p class="muted small" style="margin:0 0 10px">Send the amount to the UPI ID, then mark it paid. The creator sees it as paid on their Refer &amp; earn page.</p>
+  <div style="overflow-x:auto"><table>
+    <tr><th>Requested</th><th>Login</th><th>UPI ID</th><th>Amount</th><th>Status</th></tr>
+    {% for p in payouts %}
+    <tr><td data-ts="{{ p.at }}"></td><td>{{ p.email }}</td><td>{{ p.upi }}</td><td>₹{{ "{:,}".format(p.amount) }}</td>
+      <td>{% if p.status == "paid" %}Paid <span data-ts="{{ p.paid_at }}"></span>{% else %}<button type="button" class="rm" style="color:#067647; border-color:#a6e3c4" data-paid="{{ p.id }}" data-user="{{ p.user }}">Mark paid</button>{% endif %}</td></tr>
+    {% else %}<tr><td colspan="5" class="muted">No payout requests yet.</td></tr>{% endfor %}
+  </table></div>
   <script>document.querySelectorAll("[data-ts]").forEach(e => e.textContent = new Date(+e.dataset.ts * 1000).toLocaleDateString());</script>
 </main>
 <script>
@@ -65,6 +74,11 @@ document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
   b.disabled = true;
   const r = await fetch("/owner/remove", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: b.dataset.rm})});
   if (r.ok) location.reload(); else { alert((await r.json().catch(() => ({}))).error || "Couldn't remove it"); b.disabled = false; }
+});
+document.querySelectorAll("[data-paid]").forEach(b => b.onclick = async () => {
+  if (!confirm("Mark this payout as paid? Only after you've sent the money.")) return;
+  const r = await fetch("/owner/payout", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({user: b.dataset.user, id: b.dataset.paid})});
+  if (r.ok) location.reload(); else alert((await r.json().catch(() => ({}))).error || "Couldn't update it");
 });
 document.querySelectorAll(".joined").forEach(el => { el.textContent = new Date(el.dataset.t * 1000).toLocaleDateString(); });
 </script>

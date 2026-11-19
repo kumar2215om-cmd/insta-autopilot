@@ -175,6 +175,7 @@
         "giveaway": '<rect x="3" y="8" width="18" height="13" rx="2"></rect><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1.5S9 8 12 8zM12 8c2-4 6-4 6-1.5S15 8 12 8z"></path>',
         "contacts": '<circle cx="9" cy="8" r="4"></circle><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"></path><path d="M16 4a4 4 0 0 1 0 8M22 21c0-3-1.8-5.6-4.5-6.6"></path>',
         "apps": '<rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect>',
+        "refer": '<rect x="3" y="8" width="18" height="13" rx="2"></rect><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1.5S9 8 12 8zM12 8c2-4 6-4 6-1.5S15 8 12 8z"></path>',
         "billing": '<rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20M6 15h4"></path>',
         "settings": '<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"></path>'} %}
       {% set groups = {"home": "Workspace", "sales": "Grow and sell", "apps": "Account"} %}
@@ -184,7 +185,7 @@
       {% endfor %}
     </nav>
     {% if role == "owner" and not acc.pro and not acc.demo %}
-    <a class="promo" href="/app/settings#invite"><b>Get Pro free</b><span>Invite a creator, you both get a month of Pro.</span></a>
+    <a class="promo" href="/app/refer"><b>Refer &amp; earn</b><span>10 sign-ups = 1 free month. Plus 20% of what they pay.</span></a>
     {% endif %}
     {% if role == "owner" and not acc.demo %}
     <details class="switcher">

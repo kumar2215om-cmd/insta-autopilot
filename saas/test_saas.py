@@ -1277,29 +1277,76 @@ class SaasTest(unittest.TestCase):
             self.assertIn(text, html)
 
     def test_referrals(self):
-        self.login()  # @creator
-        self.assertTrue(self.c.get("/api/referrals").get_json()["link"].endswith("/r/creator"))
+        import referrals
+        import users
+        self.login()  # @creator, om@example.com
+        r = self.c.get("/api/refer").get_json()
+        self.assertTrue(r["link"].endswith("/r/creator"))
+        self.assertEqual((r["signups"], r["to_next"], r["pct"]), (0, 10, 20))
+        self.assertEqual(self.c.get("/app/refer").status_code, 200)
+        me_id = users.by_email("om@example.com")["id"]
+        creator_me = self.ig.me
         self.c.post("/logout")
-        # a new creator follows the invite link and signs up
+        # a new creator follows the invite link, signs in and connects Instagram: one sign-up, no free Pro any more
         self.ig.calls.clear()
-        friend = {"id": "asid2", "user_id": "2002", "username": "friend.creates", "name": "F", "profile_picture_url": "", "followers_count": 10}
-        self.ig.me = friend
+        self.ig.me = {"id": "asid2", "user_id": "2002", "username": "friend.creates", "name": "F", "profile_picture_url": "", "followers_count": 10}
         new = saas.app.test_client()
         new.get("/r/creator")
         self.assertIn("@creator invited you", new.get("/").get_data(as_text=True))
         self.login(new, "friend@example.com")
-        friend_acc, me = store.load_account("2002"), store.load_account("1789")
-        self.assertTrue(store.is_pro(friend_acc) and store.is_pro(me))
-        self.assertEqual(engine.monthly_limit(me), 0)
-        self.assertEqual(friend_acc["referred_by"], "1789")
-        self.assertEqual(me["referrals"][0]["username"], "friend.creates")
-        # logging in again doesn't reward twice
-        until = me["pro_until"]
+        friend = users.by_email("friend@example.com")
+        self.assertEqual(friend["referred_by"], me_id)
+        self.assertFalse(store.is_pro(store.load_account("2002")))
+        me = users.get(me_id)
+        self.assertEqual([x["username"] for x in me["ref_signups"]], ["friend.creates"])
+        # connecting again (or another account) doesn't count twice; nor does inviting yourself
         new.get("/r/creator")
-        r = new.get("/login")
-        new.get(f"/auth/callback?code=abc&state={parse_qs(urlparse(r.location).query)['state'][0]}")
-        self.assertEqual(store.load_account("1789")["pro_until"], until)
-        self.assertIn("Pro plan", new.get("/app").get_data(as_text=True))
+        self.connect_ig(new)
+        self.assertEqual(len(users.get(me_id)["ref_signups"]), 1)
+        self.assertIsNone(referrals.record_signup(users.get(me_id), "creator"))
+        # 10 sign-ups: one free month of Starter for every Instagram account of the referrer
+        for i in range(9):
+            u = users.create(f"f{i}@example.com")
+            self.assertIsNotNone(referrals.record_signup(u, "creator", f"f{i}"))
+        me = users.get(me_id)
+        self.assertEqual(me["ref_months"], 1)
+        self.assertEqual(users.current_plan(me), "starter")
+        self.assertEqual(billing.plans.plan_of(store.load_account("1789")), "starter")
+        # a referrer on a paid plan gets the Starter price as earnings instead
+        users.set_plan(users.get(me_id), "pro")
+        for i in range(10):
+            referrals.record_signup(users.create(f"g{i}@example.com"), "creator")
+        me = users.get(me_id)
+        self.assertEqual((me["ref_months"], me["earnings"][0]["kind"], me["earnings"][0]["commission"]), (2, "bonus", 149))
+        # the friend pays: 20% to the referrer, once
+        store.set_json("s:order:order_F", {"id": "order_F", "user": friend["id"], "plan": "pro", "period": "month", "amount": 499,
+                                           "receipt": "r", "status": "created", "created": int(time.time())})
+        billing.activate("order_F", "pay_F")
+        billing.activate("order_F", "pay_F")
+        me = users.get(me_id)
+        comm = [e for e in me["earnings"] if e["kind"] == "commission"]
+        self.assertEqual([(e["amount"], e["commission"], e["from"]) for e in comm], [(499, 100, "fr•••@example.com")])
+        self.assertEqual(referrals.balance(me)["available"], 249)
+        # withdraw: needs a UPI ID and ₹500
+        self.ig.me = creator_me
+        self.login()
+        self.assertEqual(self.c.post("/api/refer/payout", json={}).status_code, 400)
+        self.assertEqual(self.c.put("/api/refer/upi", json={"upi": "not a upi"}).status_code, 400)
+        self.assertEqual(self.c.put("/api/refer/upi", json={"upi": "om@okaxis"}).get_json()["upi"], "om@okaxis")
+        self.assertIn("from ₹500", self.c.post("/api/refer/payout", json={}).get_json()["error"])
+        me = users.get(me_id)
+        me["earnings"].insert(0, {"id": "x", "kind": "commission", "amount": 2000, "commission": 400, "plan": "pro", "at": 1, "from": "x"})
+        users.save(me)
+        p = self.c.post("/api/refer/payout", json={}).get_json()["payout"]
+        self.assertEqual((p["amount"], p["upi"], p["status"]), (649, "om@okaxis", "requested"))
+        self.assertEqual(self.c.get("/api/refer").get_json()["available"], 0)
+        # the team marks it paid on /owner
+        h = {"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}
+        self.assertIn("om@okaxis", self.c.get("/owner", headers=h).get_data(as_text=True))
+        self.assertEqual(self.c.post("/owner/payout", json={"user": me_id, "id": p["id"]}).status_code, 401)
+        self.assertEqual(self.c.post("/owner/payout", headers=h, json={"user": me_id, "id": p["id"]}).get_json()["payout"]["status"], "paid")
+        r = self.c.get("/api/refer").get_json()
+        self.assertEqual((r["paid"], r["requested"], r["payouts"][0]["status"]), (649, 0, "paid"))
 
     def test_bio_signup_form(self):
         self.login()

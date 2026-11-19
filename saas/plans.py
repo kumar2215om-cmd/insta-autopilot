@@ -44,7 +44,7 @@ EXTRA_ACCOUNT = {"price": 149, "plans": ("creator", "pro")}
 
 
 def plan_of(acc):
-    """The account's plan id. Referral months count as Pro; an unknown value counts as Free."""
+    """The account's plan id. Old referral months count as Pro, earned Starter months as Starter; an unknown value counts as Free."""
     if not acc:
         return "free"
     plan = acc.get("plan") or "free"
@@ -54,6 +54,8 @@ def plan_of(acc):
         plan = "free"  # a paid period ran out (plans set by hand on /owner have no end date)
     if plan in ("free", "starter", "creator") and acc.get("pro_until", 0) > time.time():
         return "pro"
+    if plan == "free" and (acc.get("starter_until") or 0) > time.time():
+        return "starter"  # a free Starter month earned by referring creators
     return plan
 
 

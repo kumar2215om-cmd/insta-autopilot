@@ -131,6 +131,7 @@ def claim(user, acc):
         user["plan"] = acc["plan"]
     acc["owner"] = user["id"]
     acc["plan"], acc["plan_until"] = user.get("plan") or "free", user.get("plan_until")
+    acc["starter_until"] = user.get("bonus_until")
     if acc["id"] not in user["accounts"]:
         user["accounts"].append(acc["id"])
     save(user)
@@ -154,13 +155,16 @@ def set_plan(user, plan, until=None):
 
 def current_plan(user):
     """The plan in force now: a paid plan whose period ran out counts as Free."""
-    return plans.plan_of({"plan": (user or {}).get("plan"), "plan_until": (user or {}).get("plan_until")})
+    return plans.plan_of({"plan": (user or {}).get("plan"), "plan_until": (user or {}).get("plan_until"),
+                          "starter_until": (user or {}).get("bonus_until")})
 
 
 def sync_plan(user):
+    """Copies the login's plan (and any free Starter months from referrals) to each of its Instagram accounts."""
     for acc in accounts(user):
-        if acc.get("plan") != user["plan"] or acc.get("plan_until") != user.get("plan_until"):
-            acc["plan"], acc["plan_until"] = user["plan"], user.get("plan_until")
+        want = (user["plan"], user.get("plan_until"), user.get("bonus_until"))
+        if (acc.get("plan"), acc.get("plan_until"), acc.get("starter_until")) != want:
+            acc["plan"], acc["plan_until"], acc["starter_until"] = want
             store.save_account(acc)
 
 
