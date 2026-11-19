@@ -5,7 +5,7 @@ Upload from this folder. All images are 1080×1080 and safe for Instagram's circ
 | Field | Value |
 |---|---|
 | Profile photo | `profile-photo.png` |
-| Name (searchable, 36/64 chars) | `ReplyInbox | Instagram DM Automation` |
+| Name (searchable, 26/64 chars; Instagram rejects names containing "Instagram") | `ReplyInbox | DM Automation` |
 | Category | Software |
 | Website / link | `https://replyinbox.in` |
 | Email (contact button) | `support@replyinbox.in` |
