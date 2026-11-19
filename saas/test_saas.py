@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import hmac
+import io
 import json
 import os
 import time
@@ -1752,6 +1753,58 @@ class SaasTest(unittest.TestCase):
         self.c.post("/api/youtube/disconnect", json={})
         self.assertTrue(any(c[1] == youtube.REVOKE_URL for c in g.calls))
         self.assertIsNone(self.c.get("/api/youtube").get_json()["channel"])
+
+    def test_private_files(self):
+        import files
+        self.login()
+        # off unless the username is in FILES_ACCOUNTS
+        self.assertNotIn("/app/files", self.c.get("/app/plan").get_data(as_text=True))
+        self.assertEqual(self.c.get("/api/files").status_code, 403)
+        self.assertEqual(self.c.get("/app/files").status_code, 302)
+        self.enterContext(mock.patch.dict(os.environ, FILES_ACCOUNTS="@Creator", BLOB_READ_WRITE_TOKEN="vercel_blob_rw_store9_secret"))
+        blobs = {}
+
+        def put(url, params=None, data=None, headers=None, timeout=None):
+            path = params["pathname"]
+            self.assertEqual(headers["x-vercel-blob-store-id"], "store9")
+            if headers["x-vercel-blob-access"] != "private":
+                return Resp({}, 400)
+            blobs[path] = data
+            return Resp({"url": f"https://store9.private.blob.vercel-storage.com/{path}", "pathname": path})
+
+        def get(url, headers=None, timeout=None):
+            path = url.split(".com/", 1)[1]
+            r = Resp({}, 200 if path in blobs and headers["authorization"].endswith("secret") else 404)
+            r.content, r.headers = blobs.get(path, b""), {"content-type": "application/pdf"}
+            return r
+
+        def post(url, json=None, headers=None, timeout=None):
+            for u in json["urls"]:
+                blobs.pop(u.split(".com/", 1)[1], None)
+            return Resp({})
+        self.enterContext(mock.patch.object(files.requests, "put", put))
+        self.enterContext(mock.patch.object(files.requests, "get", get))
+        self.enterContext(mock.patch.object(files.requests, "post", post))
+        self.assertIn("/app/files", self.c.get("/app/plan").get_data(as_text=True))
+        self.assertEqual(self.c.get("/app/files").status_code, 200)
+        up = lambda name, body, hdr=True: self.c.post("/api/files", data={"file": (io.BytesIO(body), name)},
+                                                      headers={"X-Upload": "1"} if hdr else {}, content_type="multipart/form-data")
+        self.assertEqual(up("guide.pdf", b"%PDF", hdr=False).status_code, 415)  # cross-site forms can't upload
+        self.assertIn("isn't allowed", up("run.exe", b"MZ").get_json()["error"])
+        self.assertIn("over 4 MB", up("big.pdf", b"x" * (4 * 1024 * 1024 + 1)).get_json()["error"])
+        f = up("My Guide!.pdf", b"%PDF-1").get_json()["file"]
+        self.assertEqual(f["name"], "My-Guide-.pdf")
+        self.assertEqual(f["url"], f"/f/{f['id']}/My-Guide-.pdf")
+        # anyone with the link can open it (no login), a wrong name can't
+        r = saas.app.test_client().get(f["url"])
+        self.assertEqual((r.status_code, r.data, r.mimetype), (200, b"%PDF-1", "application/pdf"))
+        self.assertEqual(saas.app.test_client().get(f"/f/{f['id']}/other.pdf").status_code, 404)
+        self.assertEqual([x["id"] for x in self.c.get("/api/files").get_json()["files"]], [f["id"]])
+        # delete: gone from the list, the store and the link
+        self.assertTrue(self.c.delete(f"/api/files/{f['id']}", json={}).get_json()["ok"])
+        self.assertEqual(self.c.get("/api/files").get_json()["files"], [])
+        self.assertEqual(blobs, {})
+        self.assertEqual(saas.app.test_client().get(f["url"]).status_code, 404)
 
     def test_youtube_demo(self):
         self.c.get("/demo")

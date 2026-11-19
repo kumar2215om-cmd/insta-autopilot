@@ -1,0 +1,86 @@
+{% extends "_base.html" %}
+{% block title %}Files{% endblock %}
+{% block heading %}Files{% endblock %}
+{% block head %}
+<style>
+  .drop { position:relative; display:block; border:2px dashed var(--line); border-radius:16px; padding:28px 18px; text-align:center; cursor:pointer; background:var(--bg); }
+  .drop:hover, .drop:focus-within, .drop.over { border-color:var(--accent); }
+  .drop input { position:absolute; left:0; top:0; opacity:0; width:1px; height:1px; }
+  .drop b { display:block; font:600 17px var(--display); color:var(--ink); margin-bottom:4px; }
+  .list { display:grid; gap:10px; }
+  .file { display:grid; grid-template-columns:44px minmax(0, 1fr) auto; gap:12px; align-items:center; padding:12px 14px; border:1px solid var(--line); border-radius:14px; background:var(--card); }
+  .file .ic { width:44px; height:44px; border-radius:12px; background:var(--accent-soft); color:var(--accent-ink); display:grid; place-items:center; font:700 11px var(--mono); text-transform:uppercase; }
+  .file .nm { font-weight:600; color:var(--ink); overflow-wrap:anywhere; }
+  .file .meta { font:500 12px var(--mono); color:var(--mute); }
+  .file .acts { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .file .acts .btn { padding:7px 12px; font-size:13px; }
+  @media (max-width: 600px) { .file { grid-template-columns:44px minmax(0, 1fr); } .file .acts { grid-column:1 / -1; justify-content:flex-start; } }
+</style>
+{% endblock %}
+{% block content %}
+{% if not files_ready %}<div class="banner info">File storage isn't connected yet. In Vercel, open this project → <b>Storage</b> → your Blob store → <b>Connect</b>, then redeploy.</div>{% endif %}
+<section class="card" style="display:grid; gap:14px">
+  <div><h2 style="margin:0 0 4px">Upload a freebie</h2>
+    <p class="muted small" style="margin:0">PDF, zip, image, video and more, up to {{ max_mb }} MB each. You get a link to paste in an Auto DM or on your link page.
+      Only people with the link can open it.</p></div>
+  <label class="drop" id="drop"><input type="file" id="pick" multiple accept=".{{ types|join(',.') }}">
+    <b>Choose files or drop them here</b><span class="muted small">{{ types|join(", ") }}</span></label>
+  <p class="small muted" id="msg" role="status" aria-live="polite" style="margin:0"></p>
+</section>
+<section class="card">
+  <h2>Your files</h2>
+  <div class="list" id="list"><div class="empty">Loading…</div></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let FILES = [];
+const size = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+const day = (t) => new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short"});
+const full = (u) => location.origin + u;
+function draw() {
+  $("list").innerHTML = FILES.length ? FILES.map(f => `<div class="file"><div class="ic">${esc((f.name.split(".").pop() || "").slice(0, 4))}</div>
+    <div><div class="nm">${esc(f.name)}</div><div class="meta">${size(f.size)} · ${esc(day(f.created))}</div></div>
+    <div class="acts"><button class="btn" type="button" data-copy="${esc(f.url)}">Copy link</button>
+      <a class="btn ghost" href="${esc(f.url)}" target="_blank" rel="noopener">Open</a>
+      <button class="btn ghost" type="button" data-del="${esc(f.id)}" data-name="${esc(f.name)}">Delete</button></div></div>`).join("")
+    : `<div class="empty">No files yet. Upload one above 👆</div>`;
+}
+async function load() { FILES = (await api("/api/files")).files; draw(); }
+async function upload(list) {
+  const m = $("msg");
+  for (const file of list) {
+    if (file.size > {{ max_mb }} * 1048576) { m.textContent = `${file.name} is over {{ max_mb }} MB. Use a Google Drive link for big files.`; continue; }
+    m.textContent = `Uploading ${file.name}…`;
+    const form = new FormData(); form.append("file", file);
+    try {
+      const r = await fetch("/api/files", {method: "POST", headers: {"X-Upload": "1"}, body: form});
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || `Upload failed (${r.status})`);
+      FILES.unshift(d.file); draw();
+      m.textContent = `${file.name} uploaded ✓ Copy its link below.`;
+    } catch (err) { m.textContent = err.message; }
+  }
+  $("pick").value = "";
+}
+$("pick").onchange = () => upload([...$("pick").files]);
+const drop = $("drop");
+["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", (e) => upload([...e.dataTransfer.files]));
+document.addEventListener("click", async (e) => {
+  const c = e.target.closest("[data-copy]");
+  if (c) {
+    try { await navigator.clipboard.writeText(full(c.dataset.copy)); toast("Link copied ✓"); }
+    catch { prompt("Copy this link:", full(c.dataset.copy)); }
+    return;
+  }
+  const d = e.target.closest("[data-del]");
+  if (d && confirm(`Delete ${d.dataset.name}? Its link stops working, including in DMs already sent.`)) {
+    try { await api("/api/files/" + encodeURIComponent(d.dataset.del), {method: "DELETE", body: "{}"}); FILES = FILES.filter(f => f.id !== d.dataset.del); draw(); toast("Deleted"); }
+    catch (err) { toast(err.message); }
+  }
+});
+load(); loadBanners();
+</script>
+{% endblock %}

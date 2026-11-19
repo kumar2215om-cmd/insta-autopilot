@@ -20,13 +20,14 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import requests
-from flask import Flask, abort, jsonify, make_response, redirect, render_template, request, session, url_for
+from flask import Flask, abort, jsonify, make_response, Response, redirect, render_template, request, session, url_for
 
 import ai_agent
 import content_drafts
 import users
 import billing
 import youtube
+import files
 import demo
 import push
 import engine
@@ -135,11 +136,11 @@ SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
     ("sales", "/app/sales", "Sales", True), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
-    ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False),
+    ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False), ("files", "/app/files", "Files", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("billing", "/app/billing", "Plan & billing", True), ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "contacts": True, "giveaway": True}
+DEFAULT_APPS = {"plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
 
 
 def apps_of(acc):
@@ -164,7 +165,7 @@ def render_app(template, active, **extra):
         return redirect(url_for("signin_page"))
     on = apps_of(acc)
     nav = [(key, href, label) for key, href, label, core in SECTIONS
-           if (core or on.get(key)) and (key != "youtube" or youtube.available(acc))]
+           if (core or on.get(key)) and (key != "youtube" or youtube.available(acc)) and (key != "files" or files.available(acc))]
     return render_template(template, acc=public_account(acc), active=active, nav=nav, apps=on, role=current_role(),
                            linked=[a for a in linked_accounts() if a["id"] != acc["id"]], user=current_user(),
                            page_url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}", **extra)
@@ -189,7 +190,7 @@ def brand():
 
 
 PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report",
-                    "/billing", "/signin", "/connect", "/admin")
+                    "/billing", "/signin", "/connect", "/admin", "/f")
 
 
 def is_private_path(path):
@@ -211,7 +212,9 @@ def guard():
     if request.path.startswith("/api/"):
         if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
             return jsonify(error="Please log in again."), 401
-        if request.method in ("POST", "PUT", "DELETE") and not request.is_json:
+        # file uploads are multipart; a custom header still can't be sent cross-site without CORS
+        upload = request.path == "/api/files" and request.headers.get("X-Upload") == "1"
+        if request.method in ("POST", "PUT", "DELETE") and not request.is_json and not upload:
             return jsonify(error="JSON required"), 415
         blocked = role_blocks(request.path, request.method)
         if blocked:
@@ -889,6 +892,10 @@ def remove_account(acc):
         pass
     try:
         youtube.disconnect(acc)  # revokes Google access too
+    except Exception:
+        pass
+    try:
+        files.delete_all(acc)
     except Exception:
         pass
     users.remove(users.owner_of(acc), acc["id"])
@@ -1823,6 +1830,57 @@ def api_activity_csv():
                     a.get("media_id", ""), a.get("detail", "")])
     return out.getvalue(), 200, {"Content-Type": "text/csv; charset=utf-8",
                                  "Content-Disposition": f"attachment; filename={acc.get('username', 'account')}-activity.csv"}
+
+
+# ---------- private file uploads (see files.py) ----------
+
+@app.get("/app/files")
+def files_page():
+    acc = current_account()
+    if acc and not files.available(acc):
+        return redirect("/app")
+    return render_app("files.html", "files", files_ready=files.configured(), max_mb=files.MAX_MB, types=sorted(files.TYPES))
+
+
+@app.get("/api/files")
+def api_files():
+    acc = current_account()
+    if not files.available(acc):
+        return jsonify(error="Not available."), 403
+    return jsonify(files=[files.view(f) for f in files.load(acc["id"])], ready=files.configured())
+
+
+@app.post("/api/files")
+def api_files_upload():
+    acc = current_account()
+    if not files.available(acc):
+        return jsonify(error="Not available."), 403
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify(error="No file chosen."), 400
+    try:
+        item = files.upload(acc, f.filename, f.read(), f.mimetype)
+    except files.FileError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(file=files.view(item))
+
+
+@app.delete("/api/files/<fid>")
+def api_files_delete(fid):
+    acc = current_account()
+    if not files.available(acc):
+        return jsonify(error="Not available."), 403
+    return jsonify(ok=files.delete(acc, fid))
+
+
+@app.get("/f/<fid>/<name>")
+def file_download(fid, name):
+    got = files.fetch(fid, name)
+    if not got:
+        abort(404)
+    data, ctype = got
+    return Response(data, mimetype=ctype, headers={"Cache-Control": "public, max-age=3600",
+                                                   "Content-Disposition": f'inline; filename="{name}"'})
 
 
 # ---------- YouTube scheduling (see youtube.py) ----------
