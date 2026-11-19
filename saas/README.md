@@ -305,7 +305,7 @@ email, WhatsApp, primary DM with an optional link button, follow-up, more option
 - **Accounts from before logins** (no owner) are claimed when their owner signs in and connects them again; automations and data stay;
   the login gets the better of the two plans.
 - **Email codes:** 10 minutes, 5 wrong tries, 5 codes per email and 20 per IP per hour; stored hashed. Sent with Resend
-  (`RESEND_API_KEY`, `MAIL_FROM`, e.g. `ReplyInbox <login@replyinbox.in>` on a domain verified in Resend). Without a key: printed
+  (`RESEND_API_KEY`, `MAIL_FROM`, default `ReplyInbox <no-reply@replyinbox.in>` on a domain verified in Resend; replies go to `SUPPORT_EMAIL` or `CONTACT_EMAIL`). Without a key: printed
   to the log locally, refused on Vercel.
 - **Google:** `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (or the YouTube client `YT_CLIENT_ID` / `YT_CLIENT_SECRET`),
   redirect URI `https://<host>/auth/google/callback`, scopes `openid email profile`.

@@ -219,7 +219,8 @@ def deliver(email, code):
             raise LoginError("Email login isn't switched on yet. Use Google for now.")
         print(f"[dev] login code for {email}: {code}", file=sys.stderr)
         return
-    sender = _env("MAIL_FROM", f"{brand} <login@replyinbox.in>")
+    sender = _env("MAIL_FROM", f"{brand} <no-reply@replyinbox.in>")
+    reply_to = _env("SUPPORT_EMAIL") or _env("CONTACT_EMAIL")  # replies to a login email reach a real inbox
     html = (f"<div style=\"font-family:system-ui,sans-serif;max-width:420px;margin:auto;padding:24px\">"
             f"<h2 style=\"margin:0 0 8px\">Your {brand} code</h2>"
             f"<p style=\"color:#555\">Enter this code to sign in. It works for 10 minutes.</p>"
@@ -228,6 +229,7 @@ def deliver(email, code):
     try:
         r = requests.post("https://api.resend.com/emails", timeout=15, headers={"Authorization": f"Bearer {key}"},
                           json={"from": sender, "to": [email], "subject": f"{code} is your {brand} code",
+                                **({"reply_to": reply_to} if reply_to else {}),
                                 "html": html, "text": f"Your {brand} code: {code} (valid 10 minutes)"})
     except requests.RequestException:
         raise LoginError("We couldn't send the email. Try again, or use Google.")
