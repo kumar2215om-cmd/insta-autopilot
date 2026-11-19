@@ -22,6 +22,7 @@ import time
 import requests
 
 import plans
+import referrals
 import store
 import users
 
@@ -165,6 +166,7 @@ def activate(order_id, payment_id, paid_amount=None):
     users.save(user)
     store.redis("LPUSH", "s:payments", json.dumps({"user": user["id"], "email": user.get("email", ""), **hist[0]}))
     store.redis("LTRIM", "s:payments", 0, 999)
+    referrals.on_payment(user, order)  # 20% to whoever invited this login
     return order
 
 

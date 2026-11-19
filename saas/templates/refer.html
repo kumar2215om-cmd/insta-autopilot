@@ -1,0 +1,120 @@
+{% extends "_base.html" %}
+{% block title %}Refer & earn{% endblock %}
+{% block heading %}Refer & earn{% endblock %}
+{% block head %}
+<style>
+  .hero { display:grid; gap:14px; background:linear-gradient(135deg, var(--accent-soft), #FFF1EC); border-color:transparent; }
+  .hero h2 { font:600 26px/1.15 var(--display); letter-spacing:-.03em; margin:0; }
+  .rules { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
+  .rule { background:var(--card); border-radius:16px; padding:14px 16px; display:flex; gap:12px; align-items:flex-start; }
+  .rule .n { font:600 24px var(--display); color:var(--accent-ink); min-width:56px; }
+  .copy { display:flex; gap:8px; flex-wrap:wrap; }
+  .copy input { flex:1; min-width:200px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; }
+  .stat .v { font:600 28px var(--display); letter-spacing:-.03em; }
+  .stat .l { font-size:13px; color:var(--mute); }
+  .bar { height:10px; border-radius:99px; background:var(--line2); overflow:hidden; margin:10px 0 6px; }
+  .bar i { display:block; height:100%; background:var(--grad); border-radius:99px; }
+  .tbl td.n { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .pay { display:grid; gap:10px; }
+  .pay .row input { flex:1; min-width:180px; }
+</style>
+{% endblock %}
+{% block content %}
+{% if acc.demo %}
+<section class="card"><h2>Refer & earn</h2><p class="muted" style="margin:6px 0 0">Creators invite creators here and earn free months and 20% commission. Not available in the demo.</p></section>
+{% elif role != "owner" %}
+<section class="card"><h2>Refer & earn</h2><p class="muted" style="margin:6px 0 0">Only the account owner can see referrals and earnings.</p></section>
+{% else %}
+<section class="card hero">
+  <h2>Invite creators. Earn free months and 20% of what they pay.</h2>
+  <div class="rules">
+    <div class="rule"><span class="n">10</span><div><b>sign-ups = 1 month of Starter free</b><div class="muted small">Every 10 creators who join and connect Instagram. Already on a paid plan? You get ₹{{ starter_price }} in earnings instead.</div></div></div>
+    <div class="rule"><span class="n">20%</span><div><b>of every payment they make</b><div class="muted small">For their first 12 months on any paid plan. Withdraw to UPI from ₹500.</div></div></div>
+  </div>
+  <div class="copy"><input id="link" type="text" readonly aria-label="Your invite link">
+    <button class="btn" type="button" id="copy">Copy link</button>
+    <a class="btn ghost" id="wa" target="_blank" rel="noopener">Share on WhatsApp</a></div>
+</section>
+
+<section class="stats" id="stats"></section>
+
+<section class="card">
+  <h2>Next free month</h2>
+  <div class="bar"><i id="barFill" style="width:0"></i></div>
+  <p class="small muted" id="barText" style="margin:0"></p>
+</section>
+
+<section class="card pay">
+  <div class="row"><h2 style="margin-right:auto">Withdraw</h2><span class="badge" id="avail"></span></div>
+  <form class="row" id="upiForm" style="gap:8px"><input id="upi" type="text" placeholder="yourname@okaxis" aria-label="Your UPI ID" autocomplete="off">
+    <button class="btn ghost" type="submit">Save UPI ID</button></form>
+  <div class="row" style="gap:10px"><button class="btn" type="button" id="withdraw">Withdraw to UPI</button><span class="small muted" id="payMsg"></span></div>
+  <p class="small muted" style="margin:0">We send payouts to your UPI ID within 7 working days of your request.</p>
+</section>
+
+<section class="card">
+  <h2>Earnings</h2>
+  <div class="scroll"><table class="tbl" id="earn"></table></div>
+</section>
+
+<section class="card">
+  <h2>Creators you invited</h2>
+  <div class="scroll"><table class="tbl" id="joined"></table></div>
+</section>
+
+<section class="card">
+  <h2>Payouts</h2>
+  <div class="scroll"><table class="tbl" id="payouts"></table></div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if role == "owner" and not acc.demo %}
+<script>
+let R = null;
+const day = (t) => new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"});
+function draw() {
+  $("link").value = R.link;
+  $("wa").href = "https://wa.me/?text=" + encodeURIComponent(`I use {{ brand }} to auto-DM everyone who comments on my reels. Try it free with my link: ${R.link}`);
+  $("stats").innerHTML = [
+    [fmt(R.signups), "creators joined"], [fmt(R.months), "free months earned"], [fmt(R.paying), "on a paid plan"],
+    ["₹" + fmt(R.earned), "earned in total"], ["₹" + fmt(R.available), "ready to withdraw"]]
+    .map(([v, l]) => `<div class="card stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  const done = R.per_month - R.to_next;
+  $("barFill").style.width = (done / R.per_month * 100) + "%";
+  $("barText").innerHTML = `<b>${done} of ${R.per_month}</b> sign-ups · ${R.to_next} more for your next free month of Starter` +
+    (R.bonus_until ? ` · Free Starter active until <b>${esc(day(R.bonus_until))}</b>` : "");
+  $("upi").value = R.upi || "";
+  $("avail").className = `badge ${R.available >= R.payout_min ? "on" : ""}`; $("avail").textContent = `₹${fmt(R.available)} available`;
+  $("withdraw").disabled = R.available < R.payout_min || !R.upi;
+  $("payMsg").textContent = R.requested ? `₹${fmt(R.requested)} on its way` : R.available < R.payout_min ? `Withdraw from ₹${R.payout_min}` : "";
+  $("earn").innerHTML = R.earnings.length
+    ? `<thead><tr><th>Date</th><th>From</th><th>What</th><th class="n">Paid</th><th class="n">You earn</th></tr></thead><tbody>${R.earnings.map(e =>
+      `<tr><td>${esc(day(e.at))}</td><td>${esc(e.from)}</td><td>${e.kind === "bonus" ? "Free month (already on a paid plan)" : `${esc(e.plan.charAt(0).toUpperCase() + e.plan.slice(1))} · ${e.period === "year" ? "yearly" : "monthly"}`}</td>
+       <td class="n">${e.amount ? "₹" + fmt(e.amount) : "–"}</td><td class="n"><b>₹${fmt(e.commission)}</b></td></tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="muted">No earnings yet. You earn ${R.pct}% when a creator you invited buys a plan.</td></tr></tbody>`;
+  $("joined").innerHTML = R.recent.length
+    ? `<thead><tr><th>Creator</th><th>Joined</th></tr></thead><tbody>${R.recent.map(j => `<tr><td>${j.username ? "@" + esc(j.username) : "a creator"}</td><td>${esc(day(j.at))}</td></tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="muted">Nobody has joined with your link yet. Share it in your bio, stories or DMs.</td></tr></tbody>`;
+  $("payouts").innerHTML = R.payouts.length
+    ? `<thead><tr><th>Requested</th><th>UPI ID</th><th class="n">Amount</th><th>Status</th></tr></thead><tbody>${R.payouts.map(p =>
+      `<tr><td>${esc(day(p.at))}</td><td>${esc(p.upi)}</td><td class="n">₹${fmt(p.amount)}</td><td><span class="badge ${p.status === "paid" ? "on" : ""}">${p.status === "paid" ? "Paid " + esc(day(p.paid_at)) : "Requested"}</span></td></tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="muted">No payouts yet.</td></tr></tbody>`;
+}
+async function load() { R = await api("/api/refer"); draw(); }
+$("copy").onclick = () => navigator.clipboard.writeText($("link").value).then(() => toast("Link copied ✓"));
+$("upiForm").onsubmit = async (e) => {
+  e.preventDefault();
+  try { await api("/api/refer/upi", {method: "PUT", body: JSON.stringify({upi: $("upi").value})}); toast("UPI ID saved ✓"); load(); }
+  catch (err) { toast(err.message); }
+};
+$("withdraw").onclick = async () => {
+  if (!confirm(`Withdraw ₹${fmt(R.available)} to ${R.upi}?`)) return;
+  try { await api("/api/refer/payout", {method: "POST", body: "{}"}); toast("Payout requested ✓"); load(); }
+  catch (err) { toast(err.message); }
+};
+load(); loadBanners();
+</script>
+{% endif %}
+{% endblock %}

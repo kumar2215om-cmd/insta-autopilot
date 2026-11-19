@@ -26,6 +26,7 @@ import ai_agent
 import content_drafts
 import users
 import billing
+import referrals
 import youtube
 import files
 import demo
@@ -97,7 +98,7 @@ def current_account():
 # ---------- team: managers and viewers who log in with an invite link ----------
 
 ROLES = {"manager": "Manager", "viewer": "Viewer"}
-OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing")
+OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing", "/api/refer")
 MAX_TEAM = 5
 
 
@@ -138,7 +139,8 @@ SECTIONS = [
     ("sales", "/app/sales", "Sales", True), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False), ("files", "/app/files", "Files", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
-    ("billing", "/app/billing", "Plan & billing", True), ("settings", "/app/settings", "Settings", True),
+    ("billing", "/app/billing", "Plan & billing", True), ("refer", "/app/refer", "Refer & earn", True),
+    ("settings", "/app/settings", "Settings", True),
 ]
 DEFAULT_APPS = {"plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
 
@@ -485,11 +487,7 @@ def llms_txt():
     return "\n".join(out) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 
-# ---------- referrals: invite a creator, both get a free month of Pro ----------
-
-REFERRAL_DAYS = 30
-MAX_REFERRAL_REWARDS = 12  # free months one creator can earn by inviting
-
+# ---------- refer & earn (see referrals.py) ----------
 
 def clean_ref(value):
     value = str(value or "").strip().lstrip("@").lower()
@@ -505,29 +503,40 @@ def referral_link(code):
     return redirect(url_for("landing"))
 
 
-def reward_referral(new_acc):
-    """Called once, when a new account is created after following an invite link."""
-    referrer = store.account_by_username(session.pop("ref", "") or "")
-    if not referrer or referrer["id"] == new_acc["id"] or referrer.get("demo"):
-        return
-    new_acc["referred_by"] = referrer["id"]
-    store.grant_pro_days(new_acc, REFERRAL_DAYS)
-    joined = referrer.setdefault("referrals", [])
-    joined.append({"username": new_acc.get("username", ""), "at": int(time.time())})
-    if sum(1 for r in joined if r.get("rewarded", True)) <= MAX_REFERRAL_REWARDS:
-        store.grant_pro_days(referrer, REFERRAL_DAYS)
-    else:
-        joined[-1]["rewarded"] = False
-    store.save_account(referrer)
+@app.get("/app/refer")
+def refer_page():
+    return render_app("refer.html", "refer", starter_price=plans.PLANS["starter"]["price"])
 
 
-@app.get("/api/referrals")
-def api_referrals():
+def refer_user():
+    user = current_user()
+    if not user:
+        abort(403)
+    return user
+
+
+@app.get("/api/refer")
+def api_refer():
     acc = current_account()
-    joined = acc.get("referrals") or []
-    return jsonify(link=f"{base_url()}/r/{acc.get('username', '')}", joined=joined[::-1],
-                   months_earned=sum(1 for r in joined if r.get("rewarded", True)), max_months=MAX_REFERRAL_REWARDS,
-                   pro=store.is_pro(acc), pro_until=acc.get("pro_until", 0), plan=acc.get("plan", ""))
+    if acc.get("demo"):
+        return jsonify(error="Refer & earn isn't available in the demo."), 403
+    return jsonify(referrals.summary(refer_user(), f"{base_url()}/r/{acc.get('username', '')}"))
+
+
+@app.put("/api/refer/upi")
+def api_refer_upi():
+    try:
+        return jsonify(upi=referrals.set_upi(refer_user(), (request.get_json(force=True) or {}).get("upi")))
+    except referrals.ReferralError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.post("/api/refer/payout")
+def api_refer_payout():
+    try:
+        return jsonify(payout=referrals.request_payout(refer_user()))
+    except referrals.ReferralError as e:
+        return jsonify(error=str(e)), 400
 
 
 @app.get("/app")
@@ -788,8 +797,8 @@ def auth_callback():
     acc.update(asid=str(me.get("id", "")), username=me.get("username", ""), name=me.get("name", ""),
                pic=me.get("profile_picture_url", ""), followers=me.get("followers_count"),
                token=token, token_at=int(time.time()), invite=acc.get("invite") or user.get("invite", ""))
-    if not existing:
-        reward_referral(acc)
+    if not existing:  # a login's first Instagram account counts as a referral sign-up
+        referrals.record_signup(user, session.pop("ref", ""), acc.get("username", ""))
     users.claim(user, acc)  # saves the account with its owner and the user's plan
     store.redis("DEL", store.account_key(ig_id, "token_dead"))
     try:  # without this subscription Instagram sends no comment/DM events for the account
@@ -2614,6 +2623,20 @@ def owner_remove():
     return jsonify(ok=True)
 
 
+@app.post("/owner/payout")
+def owner_payout():
+    """Marks a referral payout as sent (after paying it by UPI). JSON only."""
+    if not owner_ok():
+        return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="owner"'})
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    d = request.get_json(force=True) or {}
+    try:
+        return jsonify(payout=referrals.mark_paid(str(d.get("user", "")), str(d.get("id", ""))))
+    except referrals.ReferralError as e:
+        return jsonify(error=str(e)), 400
+
+
 @app.get("/admin")
 def admin_alias():
     return redirect("/owner")
@@ -2652,7 +2675,7 @@ def owner():
     month_start = time.mktime(time.strptime(time.strftime("%Y-%m-01"), "%Y-%m-%d"))
     paid_month = sum(p["amount"] for p in payments if p.get("paid_at", 0) >= month_start)
     return render_template("owner.html", rows=rows, groups=groups, plans=plans.PLANS, by_plan=by_plan, mrr=mrr, locks=plans.LOCKS_ON,
-                           payments=payments, paid_month=paid_month, billing_ready=billing.ready(), billing_test=billing.test_mode())
+                           payments=payments, paid_month=paid_month, payouts=referrals.payout_requests(), billing_ready=billing.ready(), billing_test=billing.test_mode())
 
 
 # ---------- public link-in-bio page: replyinbox.in/<username> ----------
