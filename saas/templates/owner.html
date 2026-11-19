@@ -6,6 +6,7 @@
 <title>{{ brand }} · Accounts</title>
 {% include "_style.html" %}
 <style>
+  .rm { border:1px solid #e5b4ad; background:#fff; color:#b42318; border-radius:8px; padding:4px 10px; font:600 12px inherit; cursor:pointer; }
   main { padding:24px 16px 64px; }
   .scroll { overflow-x:auto; }
   table { border-collapse:collapse; width:100%; background:#fff; border-radius:16px; overflow:hidden; }
@@ -21,7 +22,7 @@
     {% for k, p in plans.items() %}{{ p.name }} {{ by_plan[k] }}{{ " · " if not loop.last }}{% endfor %}
     <span class="muted small">(plans are set by hand below until billing is live; referral months show as Pro but add nothing to MRR)</span></p>
   <div class="scroll"><table>
-    <tr><th>Account</th><th>Followers</th><th>Joined</th><th>Rules</th><th>DMs this month</th><th>DMs total</th><th>Status</th><th>Plan</th><th>Invite</th></tr>
+    <tr><th>Account</th><th>Followers</th><th>Joined</th><th>Rules</th><th>DMs this month</th><th>DMs total</th><th>Status</th><th>Plan</th><th>Invite</th><th></th></tr>
     {% for r in rows %}
     <tr><td><a href="https://www.instagram.com/{{ r.username }}/" target="_blank" rel="noopener">@{{ r.username }}</a>{% if r.owner_email %}<div class="muted small">{{ r.owner_email }}</div>{% endif %}</td>
       <td>{{ "{:,}".format(r.followers) if r.followers is not none else "–" }}</td>
@@ -30,9 +31,10 @@
       <td>{{ "paused" if r.paused else (r.blocked or "active") }}</td>
       <td><select data-acc="{{ r.id }}" aria-label="Plan for @{{ r.username }}">{% for k, p in plans.items() %}<option value="{{ k }}" {{ "selected" if k == r.plan_set }}>{{ p.name }}{{ " ₹" ~ p.price if p.price }}</option>{% endfor %}</select>
         {% if r.referral_pro %}<span class="muted small">Pro via referral</span>{% endif %}</td>
-      <td>{{ r.invite }}</td></tr>
+      <td>{{ r.invite }}</td>
+      <td><button type="button" class="rm" data-rm="{{ r.id }}" data-name="{{ r.username }}">Remove</button></td></tr>
     {% else %}
-    <tr><td colspan="9" class="muted">No accounts yet.</td></tr>
+    <tr><td colspan="10" class="muted">No accounts yet.</td></tr>
     {% endfor %}
   </table></div>
   <h2 style="margin:28px 0 8px">Payments {% if not billing_ready %}<span class="muted small">(Razorpay keys not set)</span>{% elif billing_test %}<span class="muted small">(test mode)</span>{% endif %}</h2>
@@ -50,6 +52,12 @@
 document.querySelectorAll("[data-acc]").forEach(sel => sel.onchange = async () => {
   const r = await fetch("/owner/plan", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: sel.dataset.acc, plan: sel.value})});
   if (r.ok) location.reload(); else alert((await r.json()).error || "Couldn't change the plan");
+});
+document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+  if (!confirm(`Remove @${b.dataset.name}? Its automations, contacts and stats are deleted and it stops replying. This can't be undone.`)) return;
+  b.disabled = true;
+  const r = await fetch("/owner/remove", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: b.dataset.rm})});
+  if (r.ok) location.reload(); else { alert((await r.json().catch(() => ({}))).error || "Couldn't remove it"); b.disabled = false; }
 });
 document.querySelectorAll(".joined").forEach(el => { el.textContent = new Date(el.dataset.t * 1000).toLocaleDateString(); });
 </script>
