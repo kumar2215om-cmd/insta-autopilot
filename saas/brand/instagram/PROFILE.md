@@ -15,7 +15,7 @@ Upload from this folder. All images are 1080×1080 and safe for Instagram's circ
 ```
 Auto-reply to every comment & DM, 24/7 💬
 AI replies in Hindi, Hinglish & English 🇮🇳
-Free plan · Official Meta login ✅
+Free plan · Official Meta login 🔒
 👇 Start free in 2 minutes
 ```
 
