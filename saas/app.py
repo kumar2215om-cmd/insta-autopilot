@@ -2630,22 +2630,28 @@ def owner():
             c = store.counts(ig_id)
             owner = users.owner_of(acc)
             rows.append({**public_account(acc), "invite": acc.get("invite", ""), "blocked": engine.is_blocked(acc),
-                         "owner_email": owner.get("email", "") if owner else "",
+                         "owner_email": owner.get("email", "") if owner else "", "owner_id": owner["id"] if owner else "",
+                         "limit": users.limit(owner) if owner else 1,
                          "dms_month": c.get(f"dms:{engine.month()}", 0), "dms": c.get("dms", 0),
                          "rules": len(store.load_rules(ig_id).get("reels", {})), "plan_id": plans.plan_of(acc),
                          "plan_set": acc.get("plan") or "free", "referral_pro": acc.get("pro_until", 0) > time.time()})
     rows.sort(key=lambda r: -(r.get("created") or 0))
-    by_plan = {k: sum(1 for r in rows if r["plan_id"] == k) for k in plans.PLANS}
-    # MRR counts only plans set by hand (paying); free Pro months from referrals bring no money
-    # one plan per login: count each login once (accounts from before logins count on their own)
-    payer = {}
+    # one plan per login: group its Instagram accounts under it (accounts from before logins stand alone)
+    logins = {}
     for r in rows:
-        payer.setdefault(r["owner_email"] or r["id"], r["plan_set"])
-    mrr = sum(plans.PLANS[p]["price"] for p in payer.values() if p in plans.PLANS)
+        acc_owner = r["owner_id"] or "acc:" + r["id"]
+        g = logins.setdefault(acc_owner, {"key": acc_owner, "email": r["owner_email"], "plan_set": r["plan_set"],
+                                          "plan_id": r["plan_id"], "referral_pro": r["referral_pro"], "accounts": [],
+                                          "limit": r["limit"], "created": r.get("created") or 0})
+        g["accounts"].append(r)
+    groups = sorted(logins.values(), key=lambda g: -g["created"])
+    by_plan = {k: sum(1 for g in groups if g["plan_id"] == k) for k in plans.PLANS}
+    # MRR counts only plans set by hand (paying); free Pro months from referrals bring no money
+    mrr = sum(plans.PLANS[g["plan_set"]]["price"] for g in groups if g["plan_set"] in plans.PLANS)
     payments = [json.loads(x) for x in store.redis("LRANGE", "s:payments", 0, 49) or []]
     month_start = time.mktime(time.strptime(time.strftime("%Y-%m-01"), "%Y-%m-%d"))
     paid_month = sum(p["amount"] for p in payments if p.get("paid_at", 0) >= month_start)
-    return render_template("owner.html", rows=rows, plans=plans.PLANS, by_plan=by_plan, mrr=mrr,
+    return render_template("owner.html", rows=rows, groups=groups, plans=plans.PLANS, by_plan=by_plan, mrr=mrr, locks=plans.LOCKS_ON,
                            payments=payments, paid_month=paid_month, billing_ready=billing.ready(), billing_test=billing.test_mode())
 
 

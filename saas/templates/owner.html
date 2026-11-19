@@ -11,30 +11,37 @@
   .scroll { overflow-x:auto; }
   table { border-collapse:collapse; width:100%; background:#fff; border-radius:16px; overflow:hidden; }
   th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; font-size:14px; }
+  td.login { vertical-align:top; background:#fffdf8; border-right:1px solid var(--line); }
+  tr.first td { border-top:2px solid var(--line); }
   th { background:#fffaf2; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--blue); }
 </style>
 </head>
 <body>
 <main class="wrap">
-  <h1>Connected accounts <span class="hl">{{ rows|length }}</span></h1>
-  <p class="muted">Newest first. DMs are counted when the automation sends them.</p>
+  <h1>Logins <span class="hl">{{ groups|length }}</span> <span class="muted" style="font-size:.5em">· {{ rows|length }} Instagram account{{ "s" if rows|length != 1 }}</span></h1>
+  <p class="muted">One plan per login: it covers every Instagram account connected under that login. Newest first. DMs are counted when the automation sends them.</p>
   <p><b>MRR ₹{{ "{:,}".format(mrr) }}</b> ·
     {% for k, p in plans.items() %}{{ p.name }} {{ by_plan[k] }}{{ " · " if not loop.last }}{% endfor %}
-    <span class="muted small">(plans are set by hand below until billing is live; referral months show as Pro but add nothing to MRR)</span></p>
+    <span class="muted small">(logins per plan; plans are set by hand below until billing is live; referral months show as Pro but add nothing to MRR)</span></p>
   <div class="scroll"><table>
-    <tr><th>Account</th><th>Followers</th><th>Joined</th><th>Rules</th><th>DMs this month</th><th>DMs total</th><th>Status</th><th>Plan</th><th>Invite</th><th></th></tr>
-    {% for r in rows %}
-    <tr><td><a href="https://www.instagram.com/{{ r.username }}/" target="_blank" rel="noopener">@{{ r.username }}</a>{% if r.owner_email %}<div class="muted small">{{ r.owner_email }}</div>{% endif %}</td>
+    <tr><th>Login</th><th>Plan</th><th>Instagram account</th><th>Followers</th><th>Joined</th><th>Rules</th><th>DMs this month</th><th>DMs total</th><th>Status</th><th>Invite</th><th></th></tr>
+    {% for g in groups %}
+    {% for r in g.accounts %}
+    <tr class="{{ 'first' if loop.first }}">
+      {% if loop.first %}<td rowspan="{{ g.accounts|length }}" class="login"><b>{{ g.email or "(no login)" }}</b>
+        <div class="muted small">{{ g.accounts|length }}{% if locks %} of {{ g.limit }}{% endif %} account{{ "s" if g.accounts|length != 1 }}</div></td>
+      <td rowspan="{{ g.accounts|length }}" class="login"><select data-acc="{{ r.id }}" aria-label="Plan for {{ g.email or r.username }}">{% for k, p in plans.items() %}<option value="{{ k }}" {{ "selected" if k == g.plan_set }}>{{ p.name }}{{ " ₹" ~ p.price if p.price }}</option>{% endfor %}</select>
+        {% if g.referral_pro %}<div class="muted small">Pro via referral</div>{% endif %}</td>{% endif %}
+      <td><a href="https://www.instagram.com/{{ r.username }}/" target="_blank" rel="noopener">@{{ r.username }}</a></td>
       <td>{{ "{:,}".format(r.followers) if r.followers is not none else "–" }}</td>
       <td><span class="joined" data-t="{{ r.created or 0 }}"></span></td>
       <td>{{ r.rules }}</td><td>{{ r.dms_month }}</td><td>{{ r.dms }}</td>
       <td>{{ "paused" if r.paused else (r.blocked or "active") }}</td>
-      <td><select data-acc="{{ r.id }}" aria-label="Plan for @{{ r.username }}">{% for k, p in plans.items() %}<option value="{{ k }}" {{ "selected" if k == r.plan_set }}>{{ p.name }}{{ " ₹" ~ p.price if p.price }}</option>{% endfor %}</select>
-        {% if r.referral_pro %}<span class="muted small">Pro via referral</span>{% endif %}</td>
       <td>{{ r.invite }}</td>
       <td><button type="button" class="rm" data-rm="{{ r.id }}" data-name="{{ r.username }}">Remove</button></td></tr>
+    {% endfor %}
     {% else %}
-    <tr><td colspan="10" class="muted">No accounts yet.</td></tr>
+    <tr><td colspan="11" class="muted">No accounts yet.</td></tr>
     {% endfor %}
   </table></div>
   <h2 style="margin:28px 0 8px">Payments {% if not billing_ready %}<span class="muted small">(Razorpay keys not set)</span>{% elif billing_test %}<span class="muted small">(test mode)</span>{% endif %}</h2>

@@ -302,7 +302,15 @@ class SaasTest(unittest.TestCase):
         h = {"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}
         self.c.post("/owner/plan", json={"id": "1789", "plan": "creator"}, headers=h)
         self.assertEqual({store.load_account(i)["plan"] for i in ("1789", "3003")}, {"creator"})
-        self.assertIn("om@example.com", self.c.get("/owner", headers=h).get_data(as_text=True))
+        page = self.c.get("/owner", headers=h).get_data(as_text=True)
+        self.assertIn("om@example.com", page)
+        # one login with two Instagram accounts: one row group, one plan picker, counted once
+        self.assertEqual(page.count("<select data-acc"), 1)
+        self.assertEqual(page.count("<b>om@example.com</b>"), 1)
+        self.assertIn("Logins <span class=\"hl\">1</span>", page)
+        self.assertIn("2 Instagram accounts", page)
+        self.assertIn("Creator 1", page)
+        self.assertIn(f"MRR ₹{saas.plans.PLANS['creator']['price']}", page)
         # the owner can remove an account: it leaves the login and its data is gone; the demo never shows up
         self.c.application.test_client().get("/demo")
         self.assertNotIn("demo.creator", self.c.get("/owner", headers=h).get_data(as_text=True))
