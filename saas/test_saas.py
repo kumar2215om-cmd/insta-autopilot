@@ -1754,6 +1754,11 @@ class SaasTest(unittest.TestCase):
         self.assertTrue(any(c[1] == youtube.REVOKE_URL for c in g.calls))
         self.assertIsNone(self.c.get("/api/youtube").get_json()["channel"])
 
+    def test_unsaved_link_page_previews_for_owner_only(self):
+        self.login()
+        self.assertEqual(self.c.get("/creator").status_code, 200)
+        self.assertEqual(saas.app.test_client().get("/creator").status_code, 404)
+
     def test_private_files(self):
         import files
         self.login()

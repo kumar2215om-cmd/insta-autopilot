@@ -2630,6 +2630,10 @@ def public_page(username):
     if not acc and username.lower() == demo.USERNAME:  # demo data lives in memory without a database
         acc = demo.seed()
     page = store.load_page(acc["id"]) if acc else None
+    if acc and not page:
+        mine = current_account()
+        if mine and mine["id"] == acc["id"]:  # the owner sees a preview before the first save; others get 404
+            page = default_page(acc)
     if not acc or not page:
         abort(404)
     return acc, page
