@@ -1759,6 +1759,20 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.c.get("/creator").status_code, 200)
         self.assertEqual(saas.app.test_client().get("/creator").status_code, 404)
 
+    def test_studio_link_page_theme(self):
+        import store
+        self.login()
+        acc = store.load_account("1789")
+        acc["followers"] = 28709
+        store.save_account(acc)
+        self.c.put("/api/page", json={"name": "Om AI Tips", "theme": "studio", "socials": {"instagram": "aiwith.om"},
+                                      "items": [{"title": "Freebies", "url": "https://x.com/free", "featured": True},
+                                                {"type": "product", "title": "Course", "url": "https://x.com/c", "price": "₹499"}]})
+        h = self.c.get("/creator").get_data(as_text=True)
+        for part in ("Om <em>AI Tips</em>", "28K followers", "Follow @aiwith.om", "Free for you", "Links &amp; products", "₹499"):
+            self.assertIn(part, h)
+        self.assertEqual([saas.compact_number(n) for n in (950, 1250, 28709, 1_250_000)], ["950", "1.2K", "28K", "1.2M"])
+
     def test_private_files(self):
         import files
         self.login()

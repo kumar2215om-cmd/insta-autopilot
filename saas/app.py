@@ -2260,7 +2260,7 @@ def api_thread_status(igsid):
     return jsonify(thread=thread)
 
 
-THEMES = ["violet", "sunset", "midnight", "mint", "mono"]
+THEMES = ["violet", "sunset", "midnight", "mint", "mono", "studio"]
 SOCIALS = ["instagram", "youtube", "whatsapp", "email", "website"]
 
 
@@ -2637,6 +2637,19 @@ def public_page(username):
     if not acc or not page:
         abort(404)
     return acc, page
+
+
+@app.template_filter("compact")
+def compact_number(n):
+    """28709 → 28K, 1250000 → 1.2M (follower badges)."""
+    n = int(n or 0)
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}".rstrip("0").rstrip(".") + "M"
+    if n >= 10_000:
+        return f"{n // 1000}K"
+    if n >= 1000:
+        return f"{n / 1000:.1f}".rstrip("0").rstrip(".") + "K"
+    return str(n)
 
 
 @app.get("/<username>")
