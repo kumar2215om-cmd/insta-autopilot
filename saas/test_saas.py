@@ -823,7 +823,7 @@ class SaasTest(unittest.TestCase):
         self.assertEqual([i["title"] for i in page["items"]], ["Pack"])  # unsafe link dropped
         html = self.c.get("/creator").get_data(as_text=True)
         self.assertIn("Pack", html)
-        self.assertIn("mint", html)
+        self.assertIn('class="t-ocean"', html)  # old "mint" pages open as ocean
         go = self.c.get(f"/creator/go/{page['items'][0]['id']}")
         self.assertEqual(go.location, "https://shop.com/p")
         self.assertEqual(list(self.c.get("/api/page").get_json()["clicks"].values()), [1])
@@ -1769,9 +1769,23 @@ class SaasTest(unittest.TestCase):
                                       "items": [{"title": "Freebies", "url": "https://x.com/free", "featured": True},
                                                 {"type": "product", "title": "Course", "url": "https://x.com/c", "price": "₹499"}]})
         h = self.c.get("/creator").get_data(as_text=True)
-        for part in ("Om <em>AI Tips</em>", "28K followers", "Follow @aiwith.om", "Free for you", "Links &amp; products", "₹499"):
+        for part in ('class="t-studio"', "Om <span>AI Tips</span>", "28K followers", "Follow @aiwith.om", "FREE FOR YOU", "Links &amp; products", "₹499"):
             self.assertIn(part, h)
         self.assertEqual([saas.compact_number(n) for n in (950, 1250, 28709, 1_250_000)], ["950", "1.2K", "28K", "1.2M"])
+
+    def test_link_page_themes_and_socials(self):
+        self.login()
+        # pages saved with the old theme names still open in the new look
+        self.c.put("/api/page", json={"name": "C", "theme": "violet", "socials": {"youtube": "@chan", "whatsapp": "+91 98765 43210",
+                                                                                  "email": "a@b.co", "x": "@me", "website": "me.in"}})
+        h = self.c.get("/creator").get_data(as_text=True)
+        for part in ('class="t-studio"', "https://www.youtube.com/@chan", "https://wa.me/919876543210", "mailto:a@b.co",
+                     "https://x.com/me", "https://me.in", "https://www.instagram.com/creator/"):
+            self.assertIn(part, h)
+        self.c.put("/api/page", json={"name": "C", "theme": "ocean", "photo": "javascript:alert(1)"})
+        page = self.c.get("/api/page").get_json()["page"]
+        self.assertEqual((page["theme"], page["photo"]), ("ocean", ""))
+        self.assertIn('class="t-ocean"', self.c.get("/creator").get_data(as_text=True))
 
     def test_private_files(self):
         import files

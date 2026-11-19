@@ -7,9 +7,10 @@
   .cols { display:grid; grid-template-columns:minmax(0, 1.4fr) 340px; gap:20px; align-items:start; }
   .fields { display:grid; gap:12px; }
   .two { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; }
-  .themes { display:flex; flex-wrap:wrap; gap:8px; }
-  .themes button { border:2px solid var(--line); border-radius:12px; padding:8px 12px; background:var(--card); font:600 13px var(--text); cursor:pointer; display:flex; gap:8px; align-items:center; }
-  .themes button[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); color:var(--accent-ink); }
+  .themes { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:10px; }
+  .themes button { height:74px; border:2px solid var(--line); border-radius:16px; padding:8px; cursor:pointer; display:flex; align-items:flex-end; justify-content:center;
+                   font:700 13px var(--text); text-transform:capitalize; box-shadow:0 4px 12px rgba(20,18,40,.06); }
+  .themes button[aria-pressed="true"] { border-color:#E0287A; box-shadow:0 0 0 3px rgba(224,40,122,.25); }
   .sw { width:18px; height:18px; border-radius:50%; }
   .it { border:1px solid var(--line); border-radius:14px; padding:12px; display:grid; gap:10px; background:#FAFAF8; }
   .it .head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
@@ -27,15 +28,22 @@
       <div class="row"><input id="pageUrl" type="text" value="{{ page_url }}" readonly aria-label="Your page address" style="flex:1; min-width:0">
         <button class="btn ghost sm" type="button" id="copy">Copy link</button></div>
       <div class="two">
-        <div><label class="f" for="name">Name</label><input id="name" type="text" maxlength="60"></div>
-        <div><label class="f">Theme</label><div class="themes" id="themes" role="group" aria-label="Theme"></div></div>
+        <div><label class="f" for="name">Name <span class="hint">use | to colour the second part: Om | AI Tips</span></label><input id="name" type="text" maxlength="60"></div>
+        <div><label class="f" for="photo">Photo link <span class="hint">empty = your Instagram photo</span></label><input id="photo" type="url" placeholder="https://"></div>
       </div>
       <div><label class="f" for="bio">Bio</label><textarea id="bio" rows="2" maxlength="300"></textarea></div>
+      <div><label class="f">Theme</label><div class="themes" id="themes" role="group" aria-label="Theme"></div></div>
+    </section>
+    <section class="card fields">
+      <h2>Social links</h2>
+      <p class="muted small" style="margin:-6px 0 0">Shown as chips under your name. Leave empty to hide.</p>
       <div class="two">
-        <div><label class="f" for="s_instagram">Instagram username</label><input id="s_instagram" type="text"></div>
-        <div><label class="f" for="s_youtube">YouTube link</label><input id="s_youtube" type="url" placeholder="https://youtube.com/@you"></div>
-        <div><label class="f" for="s_whatsapp">WhatsApp link</label><input id="s_whatsapp" type="url" placeholder="https://wa.me/91…"></div>
-        <div><label class="f" for="s_website">Website</label><input id="s_website" type="url" placeholder="https://"></div>
+        <div><label class="f" for="s_instagram">Instagram (username)</label><input id="s_instagram" type="text"></div>
+        <div><label class="f" for="s_youtube">YouTube (handle or link)</label><input id="s_youtube" type="text" placeholder="@you"></div>
+        <div><label class="f" for="s_whatsapp">WhatsApp (number with country code)</label><input id="s_whatsapp" type="text" inputmode="tel" placeholder="919876543210"></div>
+        <div><label class="f" for="s_email">Email</label><input id="s_email" type="email" placeholder="you@example.com"></div>
+        <div><label class="f" for="s_x">X / Twitter (username)</label><input id="s_x" type="text"></div>
+        <div><label class="f" for="s_website">Website</label><input id="s_website" type="text" placeholder="https://"></div>
       </div>
     </section>
     <section class="card fields">
@@ -62,11 +70,17 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const THEMES = [["violet", "#5B3DF5"], ["sunset", "#E1306C"], ["midnight", "#1E1B3A"], ["mint", "#0F8A5F"], ["mono", "#15151A"], ["studio", "#E0287A"]];
+const THEMES = [
+  ["studio", "linear-gradient(135deg,#FCE4EF,#F1EADC 60%,#FBE9C9)", "#1C1A17"], ["sunset", "linear-gradient(135deg,#4f5bd5,#d62976 60%,#fa7e1e)", "#fff"],
+  ["midnight", "radial-gradient(circle at 20% 0%,#3b1d6e,#120f1a 70%)", "#fff"], ["ocean", "linear-gradient(170deg,#0ea5e9,#0d9488 60%,#065f46)", "#fff"],
+  ["candy", "linear-gradient(170deg,#fde2f3,#e9d5ff 55%,#c7d2fe)", "#3b1f4a"], ["mono", "#fafafa", "#111"]];
+const OLD_THEMES = {violet: "studio", mint: "ocean"};
 let page = null, clicks = {};
+const SOC = ["instagram", "youtube", "whatsapp", "email", "x", "website"];
 
 function drawThemes() {
-  $("themes").innerHTML = THEMES.map(([t, c]) => `<button type="button" data-theme="${t}" aria-pressed="${page.theme === t}"><span class="sw" style="background:${c}"></span>${t}</button>`).join("");
+  page.theme = OLD_THEMES[page.theme] || page.theme || "studio";
+  $("themes").innerHTML = THEMES.map(([t, bg, ink]) => `<button type="button" data-theme="${t}" aria-pressed="${page.theme === t}" style="background:${bg}; color:${ink}">${t}</button>`).join("");
 }
 function itemCard(it, i) {
   return `<div class="it" data-i="${i}">
@@ -84,8 +98,8 @@ function itemCard(it, i) {
   </div>`;
 }
 function draw() {
-  $("name").value = page.name || ""; $("bio").value = page.bio || "";
-  for (const k of ["instagram", "youtube", "whatsapp", "website"]) $("s_" + k).value = (page.socials || {})[k] || "";
+  $("name").value = page.name || ""; $("bio").value = page.bio || ""; $("photo").value = page.photo || "";
+  for (const k of SOC) $("s_" + k).value = (page.socials || {})[k] || "";
   const sg = page.signup || {};
   $("sg_on").checked = !!sg.enabled; $("sg_title").value = sg.title || ""; $("sg_ask").value = sg.ask || "email";
   $("sg_btn").value = sg.button || ""; $("sg_thanks").value = sg.thanks || ""; $("sg_link").value = sg.link || "";
@@ -93,8 +107,8 @@ function draw() {
   $("items").innerHTML = page.items.map(itemCard).join("") || `<div class="empty">No links yet. Add your first link or product.</div>`;
 }
 function collect() {
-  page.name = $("name").value; page.bio = $("bio").value;
-  page.socials = Object.fromEntries(["instagram", "youtube", "whatsapp", "website"].map(k => [k, $("s_" + k).value]));
+  page.name = $("name").value; page.bio = $("bio").value; page.photo = $("photo").value.trim();
+  page.socials = Object.fromEntries(SOC.map(k => [k, $("s_" + k).value]));
   page.signup = {enabled: $("sg_on").checked, title: $("sg_title").value, ask: $("sg_ask").value, button: $("sg_btn").value,
                  thanks: $("sg_thanks").value, link: $("sg_link").value};
 }

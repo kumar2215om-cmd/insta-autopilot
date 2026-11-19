@@ -2260,8 +2260,9 @@ def api_thread_status(igsid):
     return jsonify(thread=thread)
 
 
-THEMES = ["violet", "sunset", "midnight", "mint", "mono", "studio"]
-SOCIALS = ["instagram", "youtube", "whatsapp", "email", "website"]
+THEMES = ["studio", "sunset", "midnight", "ocean", "candy", "mono"]
+OLD_THEMES = {"violet": "studio", "mint": "ocean"}  # pages saved before the redesign
+SOCIALS = ["instagram", "youtube", "whatsapp", "email", "x", "website"]
 
 
 def safe_url(url):
@@ -2290,12 +2291,42 @@ def clean_page(data, acc):
               "link": safe_url(sign.get("link"))}
     return {"signup": signup, "name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
             "bio": str(data.get("bio", "")).strip()[:300],
-            "theme": data.get("theme") if data.get("theme") in THEMES else "violet",
+            "theme": theme_of(data),
+            "photo": safe_url(data.get("photo")) if str(data.get("photo", "")).startswith("https://") else "",
             "socials": {k: str(socials.get(k, "")).strip()[:200] for k in SOCIALS}, "items": items}
 
 
+def theme_of(page):
+    t = OLD_THEMES.get(page.get("theme"), page.get("theme"))
+    return t if t in THEMES else "studio"
+
+
+def social_url(key, value):
+    """What a social field links to: handles and numbers become full links."""
+    v = str(value or "").strip()
+    if not v:
+        return ""
+    if key == "email":
+        return "mailto:" + v.removeprefix("mailto:") if "@" in v else ""
+    if v.startswith(("https://", "http://")):
+        return v
+    handle = v.lstrip("@").strip("/")
+    if key == "instagram":
+        return f"https://www.instagram.com/{handle}/"
+    if key == "youtube":
+        return f"https://www.youtube.com/@{handle}"
+    if key == "x":
+        return f"https://x.com/{handle}"
+    if key == "whatsapp":
+        digits = re.sub(r"\D", "", v)
+        return f"https://wa.me/{digits}" if len(digits) >= 8 else ""
+    if key == "website" and "." in v and " " not in v:
+        return "https://" + v
+    return ""
+
+
 def default_page(acc):
-    return {"name": acc.get("name") or acc.get("username", ""), "bio": "", "theme": "violet",
+    return {"name": acc.get("name") or acc.get("username", ""), "bio": "", "theme": "studio",
             "socials": {"instagram": acc.get("username", "")}, "items": []}
 
 
@@ -2657,8 +2688,12 @@ def bio_page(username):
     acc, page = public_page(username)
     items = [it for it in page.get("items", []) if it.get("enabled", True)]
     items.sort(key=lambda it: not it.get("featured"))
-    socials = [(k, v) for k, v in (page.get("socials") or {}).items() if v]
-    return render_template("bio.html", acc=public_account(acc), page=page, items=items, socials=socials,
+    socials_map = page.get("socials") or {}
+    social_links = [(k, u) for k in SOCIALS for u in [social_url(k, socials_map.get(k))] if u]
+    if not any(k == "instagram" for k, _ in social_links):
+        social_links.insert(0, ("instagram", f"https://www.instagram.com/{acc.get('username', '')}/"))
+    page = {**page, "theme": theme_of(page)}
+    return render_template("bio.html", acc=public_account(acc), page=page, items=items, socials_map=socials_map, social_links=social_links,
                            joined=request.args.get("joined") == "1", error=request.args.get("error", ""))
 
 
