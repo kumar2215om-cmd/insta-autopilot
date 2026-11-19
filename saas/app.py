@@ -79,6 +79,11 @@ def current_account():
     acc = store.load_account(uid)
     if not acc and uid == demo.DEMO_ID:  # demo data lives in memory without a database: recreate it
         acc = demo.seed()
+    if not acc and not session.get("member") and current_user():  # this account was removed: open another one
+        others = users.accounts(current_user())
+        if others:
+            acc = others[0]
+            session["uid"] = acc["id"]
     if acc and session.get("member"):
         return acc if team_member(acc, session["member"]) else None  # removed from the team
     if acc and not demo.is_demo(acc):
@@ -876,6 +881,20 @@ def logout():
     return redirect(url_for("landing"))
 
 
+def remove_account(acc):
+    """Disconnects an Instagram account: stops its webhooks, revokes YouTube, unlinks it from its login, deletes its data."""
+    try:  # stop Instagram sending this account's events; best effort
+        requests.delete(f"{engine.GRAPH}/me/subscribed_apps", params={"access_token": acc.get("token", "")}, timeout=10)
+    except Exception:
+        pass
+    try:
+        youtube.disconnect(acc)  # revokes Google access too
+    except Exception:
+        pass
+    users.remove(users.owner_of(acc), acc["id"])
+    store.delete_account(acc["id"])
+
+
 @app.post("/api/disconnect")
 def api_disconnect():
     """Removes the current Instagram account (and its data) from the user's login."""
@@ -883,14 +902,8 @@ def api_disconnect():
     if demo.is_demo(acc):
         session.clear()
         return jsonify(ok=True)
-    try:  # stop Instagram sending this account's events; best effort
-        requests.delete(f"{engine.GRAPH}/me/subscribed_apps", params={"access_token": acc["token"]}, timeout=10)
-    except Exception:
-        pass
-    youtube.disconnect(acc)  # revokes Google access too
+    remove_account(acc)
     user = current_user()
-    users.remove(user, acc["id"])
-    store.delete_account(acc["id"])
     others = users.accounts(user)
     session.pop("uid", None)
     if others:
@@ -2495,6 +2508,23 @@ def owner_set_plan():
     return jsonify(id=acc["id"], plan=plans.plan_of(acc))
 
 
+@app.post("/owner/remove")
+def owner_remove():
+    """Removes a connected account and its data (same as the person pressing Disconnect). JSON only."""
+    if not owner_ok():
+        return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="owner"'})
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    acc = store.load_account(str((request.get_json(force=True) or {}).get("id", "")))
+    if not acc:
+        return jsonify(error="Unknown account."), 400
+    if demo.is_demo(acc):
+        store.redis("SREM", "s:accounts", acc["id"])  # the demo is recreated in memory when /demo is opened
+    else:
+        remove_account(acc)
+    return jsonify(ok=True)
+
+
 @app.get("/admin")
 def admin_alias():
     return redirect("/owner")
@@ -2507,7 +2537,7 @@ def owner():
     rows = []
     for ig_id in store.account_ids():
         acc = store.load_account(ig_id)
-        if acc:
+        if acc and not demo.is_demo(acc):  # the /demo account isn't a customer
             c = store.counts(ig_id)
             owner = users.owner_of(acc)
             rows.append({**public_account(acc), "invite": acc.get("invite", ""), "blocked": engine.is_blocked(acc),

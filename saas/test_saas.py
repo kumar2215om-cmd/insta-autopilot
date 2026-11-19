@@ -302,8 +302,15 @@ class SaasTest(unittest.TestCase):
         self.c.post("/owner/plan", json={"id": "1789", "plan": "creator"}, headers=h)
         self.assertEqual({store.load_account(i)["plan"] for i in ("1789", "3003")}, {"creator"})
         self.assertIn("om@example.com", self.c.get("/owner", headers=h).get_data(as_text=True))
+        # the owner can remove an account: it leaves the login and its data is gone; the demo never shows up
+        self.c.application.test_client().get("/demo")
+        self.assertNotIn("demo.creator", self.c.get("/owner", headers=h).get_data(as_text=True))
+        self.assertEqual(self.c.post("/owner/remove", json={"id": "3003"}).status_code, 401)
+        self.assertEqual(self.c.post("/owner/remove", headers=h, json={"id": "nope"}).status_code, 400)
+        self.assertTrue(self.c.post("/owner/remove", headers=h, json={"id": "3003"}).get_json()["ok"])
+        self.assertIsNone(store.load_account("3003"))
+        self.assertEqual(users.get(user["id"])["accounts"], ["1789"])
         # removing the last account sends you to connect one again
-        self.assertEqual(self.c.post("/api/disconnect", json={}).get_json()["next"], "/app")
         self.assertEqual(self.c.post("/api/disconnect", json={}).get_json()["next"], "/connect")
         self.assertEqual(users.get(user["id"])["accounts"], [])
         self.assertTrue(self.c.get("/app").location.endswith("/connect"))
