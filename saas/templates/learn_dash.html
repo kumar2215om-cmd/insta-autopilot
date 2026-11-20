@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+{% set icons = {"video": "🎬", "text": "📝", "audio": "🎙", "quiz": "🏅", "assignment": "✍️"} %}
+<title>{{ c.title }} · My course</title>
+{% include "_course_style.html" %}
+<style>
+  .hd { position:sticky; top:0; z-index:4; background:var(--card); border-bottom:2.5px solid var(--line); }
+  .hd .in { max-width:1000px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+  .hd a.back { text-decoration:none; color:var(--ink); font-weight:800; font-size:14px; white-space:nowrap; }
+  .hd b { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:800 17px var(--head); }
+  .main { max-width:1000px; margin:0 auto; padding:22px 16px; display:grid; grid-template-columns:minmax(0, 1fr); gap:20px; }
+  .main > * { min-width:0; }
+  .pv { padding:10px 14px; border-radius:12px; background:var(--volt); color:#111318; font-weight:800; border:2px solid #111318; }
+  .hero { display:grid; grid-template-columns:220px minmax(0, 1fr); gap:20px; padding:18px; align-items:center; }
+  .hero .cv { aspect-ratio:16/9; border-radius:14px; background:var(--soft) center/cover; border:2px solid var(--line); display:grid; place-items:center; font-size:42px; }
+  .hero h1 { font-size:26px; font-weight:800; margin:0 0 4px; }
+  .prog { display:grid; gap:8px; margin-top:12px; }
+  .prog .row { display:flex; justify-content:space-between; gap:10px; font:700 13px var(--mono); color:var(--mute); }
+  .hero .btn { margin-top:14px; }
+  h2.t { font-size:22px; font-weight:800; }
+  .sess { display:flex; gap:12px; overflow-x:auto; padding:4px 4px 10px; scrollbar-width:thin; }
+  .sc { flex:none; width:240px; padding:16px; display:grid; gap:8px; box-shadow:3px 3px 0 var(--line); border-width:2px; }
+  .sc .k { font:700 11.5px var(--mono); text-transform:uppercase; letter-spacing:.08em; color:var(--mute); }
+  .sc b { font-size:15px; }
+  .sc.done { opacity:.6; }
+  .sc .btn { padding:9px 14px; font-size:14px; box-shadow:2px 2px 0 var(--line); border-width:2px; }
+  .mod { border:2.5px solid var(--line); border-radius:16px; overflow:hidden; background:var(--card); box-shadow:4px 4px 0 var(--line); }
+  .mod + .mod { margin-top:14px; }
+  .mod summary { display:flex; gap:12px; align-items:center; padding:16px 18px; }
+  .mod summary .num { width:34px; height:34px; border-radius:10px; background:var(--soft); display:grid; place-items:center; font:800 15px var(--head); flex:none; }
+  .mod summary .tt { flex:1; min-width:0; } .mod summary .tt b { display:block; font-size:16px; }
+  .mod summary .tt span { font:700 12px var(--mono); color:var(--mute); }
+  .mod summary::after { content:"▾"; transition:transform .15s; } .mod[open] summary::after { transform:rotate(180deg); }
+  .les { display:flex; gap:12px; align-items:center; padding:13px 18px; border-top:1px solid var(--hair); color:var(--ink); text-decoration:none; font-weight:700; font-size:15px; }
+  .les:hover { background:var(--soft); }
+  .les .ck { width:24px; height:24px; border-radius:50%; border:2px solid var(--hair); flex:none; display:grid; place-items:center; font-size:12px; color:#fff; }
+  .les .ck.on { background:var(--win); border-color:var(--win); }
+  .les .tt { flex:1; min-width:0; } .les .ty { font:700 11.5px var(--mono); color:var(--mute); text-transform:uppercase; }
+  .locked { padding:13px 18px; border-top:1px solid var(--hair); font-weight:700; color:var(--mute); font-size:14px; }
+  .cert { display:flex; gap:16px; align-items:center; padding:18px; background:var(--volt); color:#111318; border-color:#111318; box-shadow:5px 5px 0 #111318; }
+  .cert .btn { margin-left:auto; }
+  @media (max-width:700px) { .hero { grid-template-columns:1fr; } .cert { flex-wrap:wrap; } .cert .btn { margin-left:0; } }
+</style>
+</head>
+<body class="{{ 'dark' if c.theme == 'dark' }}">
+<header class="hd"><div class="in"><a class="back" href="{{ '/app/courses/' ~ c.id if preview else '/learn' }}">← {{ "Editor" if preview else "My courses" }}</a><b>{{ c.title }}</b>
+  {% if acc.username %}<a href="/{{ acc.username }}" style="font-size:13px; font-weight:700">@{{ acc.username }}</a>{% endif %}</div></header>
+<main class="main">
+  {% if preview %}<p class="pv" style="margin:0">Preview: this is what enrolled students see. Progress isn't saved.</p>{% endif %}
+
+  <section class="box hero">
+    <div class="cv" style="{% if c.cover %}background-image:url('{{ c.cover }}'){% endif %}">{% if not c.cover %}🎓{% endif %}</div>
+    <div>
+      <h1>{{ "Welcome back" if started else "Welcome" }}{% if e.name and not preview %}, {{ e.name.split(" ")[0] }}{% endif %} 👋</h1>
+      <p class="muted" style="margin:0; font-weight:700">{{ c.title }}</p>
+      <div class="prog"><div class="bar" role="progressbar" aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Course progress"><i style="width:{{ pct }}%"></i></div>
+        <div class="row"><span>{{ pct }}% complete</span><span>{{ e.progress|length if not preview else 0 }}/{{ n_les }} lessons</span></div></div>
+      {% if nxt %}<a class="btn" href="/learn/{{ c.id }}/{{ nxt.id }}">{{ "Continue learning" if started else "Start course" }} →</a>{% endif %}
+      {% if e.until and not preview %}<p class="muted" style="margin:10px 0 0; font-size:13px; font-weight:700">Access until {{ when(e.until).split(",")[0] }}</p>{% endif %}
+    </div>
+  </section>
+
+  {% if cert %}<section class="box cert"><div style="font-size:40px" aria-hidden="true">🏅</div><div><b style="font-size:18px">You finished the course!</b>
+    <div style="font-weight:600">Your certificate is ready to download and share.</div></div><a class="btn" href="/cert/{{ cert.id }}">View certificate</a></section>
+  {% elif c.cert and c.cert.enabled %}<p class="muted" style="margin:-6px 0 0; font-weight:700; font-size:14px">🏅 Finish every lesson to get your certificate.</p>{% endif %}
+
+  {% if sessions %}
+  <section><h2 class="t" style="margin-bottom:12px">🔴 {{ c.live.title or "Live classes" }}</h2>
+    <div class="sess">{% for s in sessions %}{% set on = now >= s.start - 900 and now <= s.end %}
+      <div class="box sc {{ 'done' if s.done }}"><span class="k">Class {{ s.n }}{% if on %} · live now{% endif %}</span><b>{{ when(s.start) }}</b>
+        {% if s.done %}<span class="chip win">✓ Completed</span>
+        {% elif c.live.link and (on or preview) %}<a class="btn" href="{{ c.live.link }}" target="_blank" rel="noopener">Join on {{ c.live.provider or "Zoom" }}</a>
+        {% else %}<span class="chip" style="justify-self:start">Upcoming</span><span class="muted" style="font-size:12.5px; font-weight:700">Join link opens 15 min before.</span>{% endif %}</div>{% endfor %}</div>
+  </section>
+  {% endif %}
+
+  <section><h2 class="t" style="margin-bottom:12px">Course content</h2>
+    {% for x in mods %}
+    <details class="mod" {{ "open" if x.open and (loop.first or x.done < x.lessons|length) }}>
+      <summary><span class="num">{{ loop.index }}</span><span class="tt"><b>{{ x.m.title }}</b><span>{{ x.done }}/{{ x.lessons|length }} done{% if not x.open %} · 🔒 locked{% endif %}</span></span></summary>
+      {% if x.open %}
+        {% for l in x.lessons %}<a class="les" href="/learn/{{ c.id }}/{{ l.id }}"><span class="ck {{ 'on' if l.id in e.progress }}" aria-label="{{ 'Done' if l.id in e.progress else 'Not done' }}">{{ "✓" if l.id in e.progress }}</span>
+          <span class="tt">{{ l.title }}</span><span class="ty">{{ icons.get(l.type) }} {{ l.type }}</span></a>
+        {% else %}<div class="locked">No lessons yet.</div>{% endfor %}
+      {% else %}
+        <div class="locked">🔒 {% if x.m.unlock == "delay" %}Unlocks on {{ when(e.at + (x.m.delay or 0) * 86400).split(",")[0] }}{% else %}Finish the previous module to unlock this one.{% endif %}</div>
+      {% endif %}
+    </details>
+    {% else %}<p class="muted">Lessons are coming soon.</p>{% endfor %}
+  </section>
+</main>
+<p class="made">Made with <a href="/">{{ brand }}</a></p>
+</body>
+</html>

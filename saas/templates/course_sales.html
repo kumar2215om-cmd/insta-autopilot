@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+{% set pwyw = c.price_mode == "pwyw" %}
+{% set icons = {"video": "🎬", "text": "📝", "audio": "🎙", "quiz": "🏅", "assignment": "✍️"} %}
+<title>{{ c.title }}{% if acc.username %} · @{{ acc.username }}{% endif %}</title>
+<meta name="description" content="{{ (c.desc or c.title)|replace('*', '')|striptags|truncate(155) }}">
+<meta property="og:title" content="{{ c.title }}">
+<meta property="og:description" content="{{ (c.desc or '')|replace('*', '')|striptags|truncate(155) }}">
+{% if c.cover %}<meta property="og:image" content="{{ c.cover }}">{% endif %}
+<link rel="icon" href="{{ acc.pic or 'data:,' }}">
+{% include "_course_style.html" %}
+<style>
+  .top { max-width:1120px; margin:0 auto; padding:16px; display:flex; align-items:center; gap:10px; }
+  .top .av { width:40px; height:40px; border-radius:50%; border:2px solid var(--line); overflow:hidden; background:var(--soft); display:grid; place-items:center; font-weight:800; flex:none; }
+  .top .av img { width:100%; height:100%; object-fit:cover; }
+  .top b { font-size:15px; } .top a { color:inherit; text-decoration:none; }
+  .top .mine { margin-left:auto; }
+  .page { max-width:1120px; margin:0 auto; padding:0 16px 40px; display:grid; grid-template-columns:minmax(0, 1fr) 360px; gap:28px; align-items:start; }
+  .media { overflow:hidden; aspect-ratio:16/9; background:var(--soft); display:grid; place-items:center; font-size:72px; }
+  .media img, .media iframe { width:100%; height:100%; object-fit:cover; display:block; border:0; }
+  h1 { font-size:clamp(30px, 4.4vw, 46px); font-weight:800; margin:22px 0 12px; }
+  .meta { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 20px; }
+  .sec { margin-top:22px; padding:22px; }
+  .sec h2 { font-size:24px; margin:0 0 14px; }
+  .mod { border:2px solid var(--line); border-radius:14px; overflow:hidden; background:var(--card); }
+  .mod + .mod { margin-top:10px; }
+  .mod summary { display:flex; align-items:center; gap:10px; padding:14px 16px; font-weight:800; }
+  .mod summary .n { font:700 12px var(--mono); color:var(--mute); margin-left:auto; white-space:nowrap; }
+  .mod summary::after { content:"▾"; font-size:14px; transition:transform .15s; }
+  .mod[open] summary::after { transform:rotate(180deg); }
+  .les { display:flex; gap:10px; align-items:center; padding:11px 16px; border-top:1px solid var(--hair); font-size:15px; }
+  .les span.t { flex:1; min-width:0; }
+  .les a { font-weight:800; font-size:13px; white-space:nowrap; }
+  .lock { opacity:.55; font-size:13px; }
+  .ben { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:10px; margin:0; padding:0; list-style:none; }
+  .ben li { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border:2px solid var(--line); border-radius:14px; background:var(--card); font-weight:700; }
+  .ben li::before { content:"✓"; flex:none; width:22px; height:22px; border-radius:50%; background:var(--volt); color:#111318; border:1.5px solid #111318; display:grid; place-items:center; font-size:13px; font-weight:900; }
+  .about { display:flex; gap:16px; align-items:flex-start; }
+  .about .av { width:72px; height:72px; border-radius:50%; border:2.5px solid var(--line); overflow:hidden; flex:none; background:var(--soft); display:grid; place-items:center; font:800 26px var(--head); }
+  .about .av img { width:100%; height:100%; object-fit:cover; }
+  .faq { border-top:1.5px solid var(--hair); } .faq:first-of-type { border-top:0; }
+  .faq summary { padding:14px 0; font-weight:800; display:flex; gap:10px; }
+  .faq summary::after { content:"+"; margin-left:auto; font-size:20px; line-height:1; }
+  .faq[open] summary::after { content:"−"; }
+  .faq div { padding:0 0 14px; color:var(--mute); white-space:pre-line; }
+  .live { display:grid; gap:8px; }
+  .live .s { display:flex; justify-content:space-between; gap:10px; padding:10px 14px; border:1.5px solid var(--hair); border-radius:12px; font-weight:700; font-size:14.5px; }
+  .buy { position:sticky; top:16px; padding:22px; display:grid; gap:12px; }
+  .price { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .price b { font:800 38px var(--head); letter-spacing:-.03em; }
+  .price s { color:var(--mute); font-weight:700; font-size:18px; }
+  .off { background:var(--win); color:#fff; border-radius:999px; padding:3px 10px; font:800 13px Manrope, sans-serif; }
+  .incl { list-style:none; margin:0; padding:0; display:grid; gap:7px; font-size:14.5px; font-weight:700; }
+  .incl li { display:flex; gap:9px; }
+  #form { display:grid; gap:10px; }
+  #form[hidden] { display:none; }
+  .cpn { display:flex; gap:8px; } .cpn .field { flex:1; text-transform:uppercase; }
+  .cpn button { border:2px solid var(--line); background:var(--card); color:var(--ink); border-radius:12px; padding:0 14px; font:800 14px Manrope, sans-serif; cursor:pointer; }
+  .trust { display:flex; gap:10px 14px; flex-wrap:wrap; font-size:12.5px; color:var(--mute); font-weight:700; }
+  .mbar { display:none; }
+  .legal { text-align:center; font-size:13px; margin-top:22px; } .legal a { color:var(--mute); margin:0 6px; }
+  @media (max-width:900px) {
+    .page { grid-template-columns:1fr; }
+    .buy { position:static; }
+    .mbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:5; gap:12px; align-items:center; padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+            background:var(--card); border-top:2.5px solid var(--line); }
+    .mbar b { font:800 22px var(--head); } .mbar s { color:var(--mute); font-size:14px; margin-left:6px; }
+    .mbar .btn { margin-left:auto; padding:11px 20px; }
+    body { padding-bottom:84px; }
+  }
+</style>
+{% if c.pixel %}
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '{{ c.pixel }}'); fbq('track', 'PageView'); fbq('track', 'ViewContent', {content_name: {{ c.title|tojson }}, value: {{ price }}, currency: 'INR'});
+</script>
+{% endif %}
+</head>
+<body class="{{ 'dark' if c.theme == 'dark' }}">
+<header class="top">
+  {% if acc.username %}<a class="av" href="/{{ acc.username }}" aria-label="@{{ acc.username }}">{% if acc.pic %}<img src="{{ acc.pic }}" alt="">{% else %}{{ acc.username[0]|upper }}{% endif %}</a>
+  <a href="/{{ acc.username }}"><b>@{{ acc.username }}</b></a>{% endif %}
+  {% if mine %}<a class="btn ghost sm mine" href="/app/courses/{{ c.id }}">✏️ Edit course</a>{% else %}<a class="btn ghost sm mine" href="/learn">My courses</a>{% endif %}
+</header>
+{% if mine and c.status != "published" %}<p style="max-width:1088px; margin:0 auto 14px; padding:10px 14px; border-radius:12px; background:var(--volt); color:#111318; font-weight:800; border:2px solid #111318">
+  This course is a {{ c.status }}: only you can see this page. Publish it in the editor to start selling.</p>{% endif %}
+<main class="page">
+  <div>
+    <div class="box media">{% if c.cover_video and embed %}<iframe src="{{ embed }}" title="Course video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      {% elif c.cover %}<img src="{{ c.cover }}" alt="">{% else %}🎓{% endif %}</div>
+    <h1>{{ c.title }}</h1>
+    <div class="meta">
+      <span class="chip">📚 {{ n_mod }} module{{ "s" if n_mod != 1 }}</span><span class="chip">▶ {{ n_les }} lesson{{ "s" if n_les != 1 }}</span>
+      {% if c.show_enrolled and enrolled %}<span class="chip volt">🔥 {{ "{:,}".format(enrolled) }} enrolled</span>{% endif %}
+      {% if sessions %}<span class="chip">🔴 {{ sessions|length }} live classes</span>{% endif %}
+      {% if c.cert and c.cert.enabled %}<span class="chip">🏅 Certificate</span>{% endif %}
+      <span class="chip">⏳ {{ "Lifetime access" if (c.validity or {}).get("kind") != "limited" else (c.validity.months ~ "-month access") }}</span>
+    </div>
+    {% if desc_html %}<div class="prose">{{ desc_html|safe }}</div>{% endif %}
+
+    {% if c.benefits %}<section class="box sec"><h2>What you'll get</h2><ul class="ben">{% for b in c.benefits %}<li>{{ b }}</li>{% endfor %}</ul></section>{% endif %}
+
+    <section class="box sec"><h2>Course content</h2>
+      <p class="muted" style="margin:-6px 0 14px; font-weight:700; font-size:14px">{{ n_mod }} modules · {{ n_les }} lessons</p>
+      {% set ns = namespace(i=0) %}
+      {% for m in c.modules if m.get("live", True) %}{% set live_l = m.lessons|selectattr("live")|list %}
+      <details class="mod" {{ "open" if loop.first }}><summary>{{ m.title }}<span class="n">{{ live_l|length }} lesson{{ "s" if live_l|length != 1 }}</span></summary>
+        {% for l in live_l %}<div class="les"><span aria-hidden="true">{{ icons.get(l.type, "▶") }}</span><span class="t">{{ l.title }}</span>
+          {% if l.free %}<a href="/{{ acc.username }}/c/{{ c.slug or c.id }}/preview/{{ l.id }}">Free preview ▸</a>{% else %}<span class="lock" aria-label="Locked">🔒</span>{% endif %}</div>{% endfor %}
+      </details>{% else %}<p class="muted">Lessons are coming soon.</p>{% endfor %}
+    </section>
+
+    {% if sessions %}<section class="box sec"><h2>🔴 Live classes</h2>
+      <p class="muted" style="margin:-6px 0 12px; font-weight:700; font-size:14px">{{ (c.live.title or "Live class") }} on {{ c.live.provider or "Zoom" }} · the join link is shared with enrolled students.</p>
+      {% set up = sessions|rejectattr("done")|list %}<div class="live">{% for s in up[:6] %}<div class="s"><span>Class {{ s.n }}</span><span class="muted">{{ when(s.start) }}</span></div>{% endfor %}
+        {% if up|length > 6 %}<p class="muted" style="margin:0; font-size:14px">+ {{ up|length - 6 }} more classes</p>{% endif %}
+        {% if not up %}<p class="muted" style="margin:0; font-size:14px">All {{ sessions|length }} classes are done; recordings may be shared in the lessons.</p>{% endif %}</div></section>{% endif %}
+
+    {% if c.show_about != false and (about_html or acc.username) %}<section class="box sec"><h2>About me</h2><div class="about">
+      <div class="av">{% if acc.pic %}<img src="{{ acc.pic }}" alt="">{% else %}{{ (acc.username or "?")[0]|upper }}{% endif %}</div>
+      <div><b style="font-size:17px">{{ acc.name or ("@" ~ acc.username) }}</b>{% if acc.username %}<div class="muted" style="font-size:14px">@{{ acc.username }}</div>{% endif %}
+        {% if about_html %}<div class="prose" style="margin-top:8px">{{ about_html|safe }}</div>{% endif %}</div></div></section>{% endif %}
+
+    {% if c.faqs %}<section class="box sec"><h2>FAQs</h2>{% for f in c.faqs %}<details class="faq"><summary>{{ f.q }}</summary><div>{{ f.a }}</div></details>{% endfor %}</section>{% endif %}
+    {% if c.terms != false %}<p class="legal"><a href="/terms">Terms</a>·<a href="/refund">Refund policy</a>·<a href="/privacy">Privacy</a></p>{% endif %}
+  </div>
+
+  <aside class="box buy" id="buy">
+    <div class="price">{% if pwyw %}<b>{{ "Free" if not c.min_price else "₹" ~ "{:,}".format(c.min_price) ~ "+" }}</b><span class="muted" style="font-weight:700">Pay what you want</span>
+      {% elif price == 0 %}<b>Free</b>
+      {% else %}<b>₹{{ "{:,}".format(price) }}</b>{% if c.sale_price and c.sale_price < c.price %}<s>₹{{ "{:,}".format(c.price) }}</s><span class="off">{{ ((1 - c.sale_price / c.price) * 100)|round|int }}% off</span>{% endif %}{% endif %}</div>
+    <ul class="incl">
+      <li>📚 {{ n_les }} lessons in {{ n_mod }} modules</li>
+      {% if sessions %}<li>🔴 {{ sessions|length }} live classes</li>{% endif %}
+      {% if c.cert and c.cert.enabled %}<li>🏅 Certificate of completion</li>{% endif %}
+      <li>⏳ {{ "Lifetime access" if (c.validity or {}).get("kind") != "limited" else ("Access for " ~ c.validity.months ~ " months") }}</li>
+      <li>📱 Learn on phone or laptop</li>
+    </ul>
+    {% if c.status == "published" and (pay_ok or price == 0 or free_ok) %}
+    <button class="btn" type="button" id="enroll">{{ c.button or "Enroll now" }}</button>
+    <form id="form" hidden novalidate>
+      <input class="field" id="name" type="text" placeholder="Your name" autocomplete="name" aria-label="Your name" required>
+      <input class="field" id="email" type="email" placeholder="Email (your course access is sent here)" autocomplete="email" aria-label="Email" required>
+      {% if c.ask_phone %}<input class="field" id="phone" type="tel" inputmode="numeric" placeholder="Mobile number" autocomplete="tel" aria-label="Mobile number" required>{% endif %}
+      {% if pwyw %}<input class="field" id="amount" type="number" min="{{ c.min_price or 0 }}" placeholder="Your price in ₹ (min ₹{{ c.min_price or 0 }})" aria-label="Your price" value="{{ c.min_price or '' }}">{% endif %}
+      {% if c.coupons and price > 0 or (c.coupons and pwyw) %}<div class="cpn"><input class="field" id="coupon" type="text" placeholder="Coupon code" aria-label="Coupon code"></div>{% endif %}
+      <button class="btn" type="submit" id="go">{{ c.button or "Enroll now" }}</button>
+    </form>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+    <div class="trust"><span>⚡ Instant access</span>{% if price or pwyw %}<span>🔒 UPI, cards, netbanking via Razorpay</span>{% endif %}<span>✉️ Login link emailed</span></div>
+    {% else %}
+    <p class="msg">{{ "Enrolment opens soon." if c.status == "published" else "This course isn't published yet." }}</p>
+    {% endif %}
+    <p style="margin:0; font-size:13.5px; text-align:center" class="muted">Already enrolled? <a href="/learn">Sign in</a></p>
+  </aside>
+</main>
+<div class="mbar">{% if pwyw %}<b>Pay what you want</b>{% elif price == 0 %}<b>Free</b>{% else %}<b>₹{{ "{:,}".format(price) }}</b>{% if c.sale_price and c.sale_price < c.price %}<s>₹{{ "{:,}".format(c.price) }}</s>{% endif %}{% endif %}
+  <a class="btn" href="#buy" id="mgo">{{ c.button or "Enroll now" }}</a></div>
+<p class="made">Made with <a href="/">{{ brand }}</a></p>
+{% if c.status == "published" %}
+<script>
+const $ = (id) => document.getElementById(id), base = "/{{ acc.username }}/c/{{ c.slug or c.id }}", px = (...a) => { if (window.fbq) fbq(...a); };
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Something went wrong. Try again."); return d;
+}
+function say(t, bad) { $("msg").textContent = t; $("msg").className = "msg" + (bad ? " err" : ""); }
+function openForm() { if (!$("form")) return; $("enroll").hidden = true; $("form").hidden = false; $("name").focus(); px("track", "InitiateCheckout"); }
+if ($("enroll")) $("enroll").onclick = openForm;
+$("mgo").onclick = (e) => { e.preventDefault(); $("buy").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}); openForm(); };
+function loadCheckout() {
+  return new Promise((ok, bad) => { if (window.Razorpay) return ok(); const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js"; s.onload = ok; s.onerror = () => bad(new Error("Couldn't load the payment window. Check your connection.")); document.head.appendChild(s); });
+}
+if ($("form")) $("form").onsubmit = async (e) => {
+  e.preventDefault();
+  const b = $("go"), body = {name: $("name").value, email: $("email").value, phone: $("phone") ? $("phone").value : "",
+    amount: $("amount") ? $("amount").value : undefined, coupon: $("coupon") ? $("coupon").value : ""};
+  b.disabled = true; say("One moment…");
+  try {
+    const o = await post(base + "/order", body);
+    if (o.free) { px("track", "CompleteRegistration"); say("You're in! Opening your course…"); location.href = o.next; return; }
+    await loadCheckout();
+    const rzp = new Razorpay({key: o.key, order_id: o.order_id, amount: o.amount, currency: o.currency, name: {{ ("@" ~ acc.username)|tojson }},
+      description: o.name, prefill: {email: o.email, name: body.name, contact: o.phone || ""}, theme: {color: "#2E3BFF"},
+      handler: async (r) => {
+        say("Payment received. Opening your course…");
+        try { const d = await post(base + "/paid", {order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature});
+          px("track", "Purchase", {value: o.amount / 100, currency: "INR"}); location.href = d.next; }
+        catch (err) { say(err.message, true); }
+      },
+      modal: {ondismiss: () => { b.disabled = false; say(""); }}});
+    rzp.on("payment.failed", (r) => { say((r.error && r.error.description) || "Payment failed. Try again.", true); b.disabled = false; });
+    rzp.open(); say("");
+  } catch (err) { say(err.message, true); b.disabled = false; }
+};
+</script>
+{% endif %}
+</body>
+</html>

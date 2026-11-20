@@ -1,0 +1,75 @@
+{% extends "_base.html" %}
+{% block title %}Courses{% endblock %}
+{% block heading %}Courses{% endblock %}
+{% block actions %}<button class="btn" type="button" id="newCourse">＋ Create course</button>{% endblock %}
+{% block head %}
+<style>
+  .kpis { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; }
+  .kpi .k { font:700 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
+  .kpi .n { font:800 32px var(--display); letter-spacing:-.03em; margin-top:6px; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .tabs button { border:1.5px solid #CFCEC6; background:var(--card); border-radius:999px; padding:8px 16px; font:700 14px var(--text); cursor:pointer; color:var(--ink); }
+  .tabs button[aria-pressed="true"] { background:#111318; color:#fff; border-color:#111318; }
+  .bar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .bar input { flex:1; min-width:200px; }
+  .crow { display:grid; grid-template-columns:72px minmax(0, 1fr) 90px 70px 100px auto; gap:14px; align-items:center; padding:14px 0; border-top:1px solid var(--line2); }
+  .crow:first-child { border-top:0; }
+  .crow .cv { width:72px; height:48px; border-radius:10px; background:var(--accent-soft) center/cover; display:grid; place-items:center; font-size:22px; }
+  .crow .t { font-weight:800; color:var(--ink); text-decoration:none; }
+  .crow .meta { font:500 12.5px var(--mono); color:var(--mute); }
+  .crow .n { font-variant-numeric:tabular-nums; font-weight:700; }
+  .crow .acts { display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap; }
+  .head { font:700 11.5px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); border-top:0 !important; padding-bottom:4px !important; }
+  @media (max-width:760px) { .kpis { grid-template-columns:1fr; } .crow { grid-template-columns:56px minmax(0, 1fr); } .crow .hide-m { display:none; } .crow .acts { grid-column:1 / -1; justify-content:flex-start; } }
+</style>
+{% endblock %}
+{% block content %}
+{% if acc.demo %}<div class="banner info">Demo: creators build and sell courses here. Not available in the demo.</div>{% endif %}
+<div class="banner info" id="payBanner" hidden>To sell paid courses, add your bank account once in <a href="/app/products">Store → Get paid to your bank</a>. Free courses work right away.</div>
+<section class="kpis">
+  <div class="card kpi tile"><div class="k">Total sales</div><div class="n" id="kSales">–</div></div>
+  <div class="card kpi tile"><div class="k">Total revenue</div><div class="n" id="kRev">–</div></div>
+  <div class="card kpi tile"><div class="k">Conversion</div><div class="n" id="kConv">–</div></div>
+</section>
+<section class="card" style="display:grid; gap:14px">
+  <div class="tabs" role="group" aria-label="Status"><button type="button" data-st="published" aria-pressed="true">Published</button>
+    <button type="button" data-st="unpublished" aria-pressed="false">Unpublished</button><button type="button" data-st="draft" aria-pressed="false">Draft</button></div>
+  <div class="bar"><input id="q" type="search" placeholder="Search courses" aria-label="Search courses"></div>
+  <div id="list"><div class="empty">Loading…</div></div>
+</section>
+{% endblock %}
+{% block scripts %}
+{% if not acc.demo %}
+<script>
+let D = null, st = "published";
+function draw() {
+  const q = $("q").value.trim().toLowerCase();
+  document.querySelectorAll("[data-st]").forEach(b => b.setAttribute("aria-pressed", b.dataset.st === st));
+  document.querySelectorAll("[data-st]").forEach(b => { const n = D.courses.filter(c => c.status === b.dataset.st).length; b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${n})`; });
+  const rows = D.courses.filter(c => c.status === st && (!q || c.title.toLowerCase().includes(q)));
+  $("list").innerHTML = rows.length ? `<div class="crow head"><span></span><span>Course</span><span class="hide-m">Price</span><span class="hide-m">Sales</span><span class="hide-m">Revenue</span><span></span></div>` + rows.map(c => `<div class="crow">
+      <div class="cv" style="${c.cover ? `background-image:url('${esc(c.cover)}')` : ""}">${c.cover ? "" : "🎓"}</div>
+      <div><a class="t" href="/app/courses/${c.id}">${esc(c.title)}</a><div class="meta">${c.modules} modules · ${c.lessons} lessons · ${fmt(c.views)} page views</div></div>
+      <div class="n hide-m">₹${fmt(c.price)}</div><div class="n hide-m">${fmt(c.sales)}</div><div class="n hide-m">₹${fmt(c.revenue)}</div>
+      <div class="acts"><a class="btn sm" href="/app/courses/${c.id}">Edit</a><button class="btn ghost sm" type="button" data-copy="${esc(c.url)}">Copy link</button>
+        <a class="btn ghost sm" href="/api/courses/${c.id}/students.csv">Export</a></div></div>`).join("")
+    : `<div class="empty">${st === "published" ? "No published courses yet. Click <b>＋ Create course</b> to start one." : "Nothing here."}</div>`;
+}
+async function load() {
+  D = await api("/api/courses");
+  $("kSales").textContent = fmt(D.sales); $("kRev").textContent = "₹" + fmt(D.revenue); $("kConv").textContent = D.conversion + "%";
+  $("payBanner").hidden = D.payouts; draw();
+}
+$("q").oninput = () => draw();
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-st]"); if (b) { st = b.dataset.st; draw(); return; }
+  const c = e.target.closest("[data-copy]"); if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); toast("Link copied ✓"); } catch { prompt("Copy:", c.dataset.copy); } }
+});
+$("newCourse").onclick = async () => {
+  const title = prompt("Course title", "My course"); if (!title) return;
+  try { const r = await api("/api/courses", {method: "POST", body: JSON.stringify({title})}); location.href = "/app/courses/" + r.id; } catch (err) { toast(err.message); }
+};
+load(); loadBanners();
+</script>
+{% endif %}
+{% endblock %}

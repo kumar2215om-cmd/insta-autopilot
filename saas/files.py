@@ -15,7 +15,7 @@ import store
 
 MAX_MB = 4  # Vercel functions reject request bodies over 4.5 MB
 MAX_FILES = 200
-TYPES = {"pdf", "zip", "png", "jpg", "jpeg", "webp", "gif", "mp4", "txt", "md", "csv", "json", "epub", "docx", "xlsx", "pptx"}
+TYPES = {"pdf", "zip", "png", "jpg", "jpeg", "webp", "gif", "mp4", "mp3", "m4a", "wav", "ogg", "txt", "md", "csv", "json", "epub", "docx", "xlsx", "pptx"}
 API = "https://vercel.com/api/blob"
 
 

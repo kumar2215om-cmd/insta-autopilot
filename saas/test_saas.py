@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import io
 import json
+import re
 import os
 import time
 import unittest
@@ -2244,6 +2245,183 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(home.status_code, 200)
         self.assertIn('href="/app">Open dashboard', home.get_data(as_text=True))
         self.assertIn("@creator", self.c.get("/app").get_data(as_text=True))
+
+    def course_setup(self):
+        import shop
+        import users
+        self.login()
+        self.enterContext(mock.patch.dict(os.environ, RAZORPAY_KEY_ID="rzp_test_k", RAZORPAY_KEY_SECRET="sek", RAZORPAY_WEBHOOK_SECRET="whs"))
+        u = users.by_email("om@example.com")
+        u["payout"] = {"account_id": "acc_L1", "product_id": "p", "status": "activated"}
+        users.save(u)
+        self.rzp_calls, self.mails = [], []
+
+        def rzp(method, url, json=None, timeout=None, auth=None):
+            self.rzp_calls.append((method, url.replace(shop.API, ""), json))
+            return Resp({"id": f"order_C{len(self.rzp_calls)}"})
+        self.enterContext(mock.patch.object(shop.requests, "request", rzp))
+        self.enterContext(mock.patch.object(shop, "_mail", lambda to, subject, html, reply_to=None: self.mails.append((to, subject, html)) or True))
+        cid = self.c.post("/api/courses", json={"title": "Reels Mastery"}).get_json()["id"]
+        return cid
+
+    def course_body(self, cid, **over):
+        c = self.c.get(f"/api/courses/{cid}").get_json()["course"]
+        c.update(status="published", price=999, slug="reels", desc="Learn **reels**.", benefits=["Hook formulas"],
+                 faqs=[{"q": "Refunds?", "a": "7 days."}], show_enrolled=True,
+                 modules=[{"id": "m1", "title": "Basics", "live": True, "unlock": "now", "lessons": [
+                              {"id": "l1", "type": "video", "title": "Intro", "live": True, "free": True, "video": "https://youtu.be/abcdefgh123"},
+                              {"id": "l2", "type": "quiz", "title": "Check", "live": True, "pass_pct": 50,
+                               "questions": [{"q": "2+2?", "options": ["3", "4"], "answer": 1}, {"q": "Sky?", "options": ["blue", "green"], "answer": 0}]}]},
+                          {"id": "m2", "title": "Advanced", "live": True, "unlock": "after_prev", "lessons": [
+                              {"id": "l3", "type": "assignment", "title": "Make a reel", "live": True, "body": "Post one reel."},
+                              {"id": "l4", "type": "text", "title": "Draft lesson", "live": False}]},
+                          {"id": "m3", "title": "Bonus", "live": True, "unlock": "delay", "delay": 7, "lessons": [
+                              {"id": "l5", "type": "text", "title": "Bonus tips", "live": True, "body": "Tips"}]}],
+                 cert={"enabled": True, "signer": "Om"}, coupons=[{"code": "om10", "kind": "pct", "value": 10, "max": 5}])
+        c.update(over)
+        r = self.c.put(f"/api/courses/{cid}", json=c)
+        self.assertEqual(r.status_code, 200, r.get_json())
+        return r.get_json()["course"]
+
+    def test_course_editor_and_sales_page(self):
+        cid = self.course_setup()
+        self.assertEqual(self.c.get("/app/courses").status_code, 200)
+        self.assertIn("Edit course", self.c.get(f"/app/courses/{cid}").get_data(as_text=True))
+        anon = saas.app.test_client()
+        c = self.c.get(f"/api/courses/{cid}").get_json()["course"]
+        self.assertEqual(c["status"], "draft")
+        self.assertEqual(anon.get(f"/creator/c/{c['slug']}").status_code, 404)  # drafts are private
+        self.assertEqual(self.c.get(f"/creator/c/{c['slug']}").status_code, 200)  # but the owner sees them
+        # validation
+        bad = self.c.put(f"/api/courses/{cid}", json={**c, "discount": True, "price": 500, "sale_price": 600}).get_json()
+        self.assertIn("lower", bad["error"])
+        c = self.course_body(cid, discount=True, sale_price=499)
+        self.assertEqual((c["slug"], c["price"], c["sale_price"]), ("reels", 999, 499))
+        page = anon.get("/creator/c/reels").get_data(as_text=True)
+        for s in ("Reels Mastery", "₹499", "₹999", "50% off", "Hook formulas", "Refunds?", "Free preview", "Certificate", "<b>reels</b>"):
+            self.assertIn(s, page)
+        self.assertNotIn("Draft lesson", page)
+        # free preview lesson is public, paid ones are not
+        self.assertIn("youtube-nocookie.com/embed/abcdefgh123", anon.get("/creator/c/reels/preview/l1").get_data(as_text=True))
+        self.assertEqual(anon.get("/creator/c/reels/preview/l2").status_code, 404)
+        self.assertEqual(anon.get(f"/learn/{cid}/l2").status_code, 302)
+        # owner preview of the student views
+        self.assertIn("Preview", self.c.get(f"/learn/{cid}").get_data(as_text=True))
+        self.assertIn("Lesson 2/2", self.c.get(f"/learn/{cid}/l2").get_data(as_text=True))
+        rows = self.c.get("/api/courses").get_json()
+        self.assertEqual(rows["courses"][0]["lessons"], 4)
+        self.assertGreaterEqual(rows["courses"][0]["views"], 1)  # visitors count, the owner doesn't
+        # signed-out visitors can't use the editor API
+        self.assertIn(anon.get(f"/api/courses/{cid}").status_code, (302, 401, 403, 404))
+
+    def test_course_paid_enrol_and_learning(self):
+        import courses
+        cid = self.course_setup()
+        self.course_body(cid)
+        anon = saas.app.test_client()
+        self.assertIn("coupon", anon.post("/creator/c/reels/order", json={"name": "Fan", "email": "fan@x.co", "coupon": "NOPE"}).get_json()["error"])
+        o = anon.post("/creator/c/reels/order", json={"name": "Fan", "email": "Fan@X.co", "coupon": "om10"}).get_json()
+        self.assertEqual(o["amount"], 89900)  # 10% off ₹999
+        body = [x for x in self.rzp_calls if x[1] == "/v1/orders"][-1][2]
+        self.assertEqual(body["transfers"][0]["account"], "acc_L1")
+        self.assertLess(body["transfers"][0]["amount"], 89900)
+        sig = hmac.new(b"sek", f"{o['order_id']}|pay_c1".encode(), hashlib.sha256).hexdigest()
+        self.assertEqual(anon.post("/creator/c/reels/paid", json={"order_id": o["order_id"], "payment_id": "pay_c1", "signature": "x"}).status_code, 400)
+        nxt = anon.post("/creator/c/reels/paid", json={"order_id": o["order_id"], "payment_id": "pay_c1", "signature": sig}).get_json()["next"]
+        self.assertEqual(nxt, f"/learn/{cid}")
+        # the webhook for the same payment doesn't enrol twice
+        wb = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {"id": "pay_c1", "order_id": o["order_id"], "status": "captured", "amount": 89900}}}}).encode()
+        anon.post("/billing/webhook", data=wb, headers={"X-Razorpay-Signature": hmac.new(b"whs", wb, hashlib.sha256).hexdigest()})
+        c = courses.get(cid)
+        self.assertEqual((c["sales"], c["revenue"], c["coupons"][0]["used"]), (1, 899, 1))
+        self.assertTrue(any("You're in" in m[1] and "/learn/in/" in m[2] for m in self.mails))
+        dash = anon.get(nxt).get_data(as_text=True)
+        self.assertIn("Start course", dash)
+        self.assertIn("Finish the previous module", dash)  # after_prev drip
+        self.assertIn("Unlocks on", dash)  # delay drip
+        self.assertEqual(anon.get(f"/learn/{cid}/l3").status_code, 302)  # locked
+        self.assertEqual(anon.get(f"/learn/{cid}/l4").status_code, 404)  # draft
+        self.assertIn("Mark as complete", anon.get(f"/learn/{cid}/l1").get_data(as_text=True))
+        self.assertEqual(anon.post(f"/learn/{cid}/l1/done", json={}).get_json()["pct"], 25)
+        # quiz: fail, then pass (passing completes it)
+        self.assertFalse(anon.post(f"/learn/{cid}/l2/quiz", json={"answers": [0, 1]}).get_json()["result"]["passed"])
+        r = anon.post(f"/learn/{cid}/l2/quiz", json={"answers": [1, 1]}).get_json()["result"]
+        self.assertEqual((r["passed"], r["score"]), (True, 50))
+        self.assertEqual(anon.post(f"/learn/{cid}/l3/work", json={"text": ""}).status_code, 400)
+        self.assertEqual(anon.get(f"/learn/{cid}/l3").status_code, 200)  # module 2 unlocked now
+        anon.post(f"/learn/{cid}/l3/work", json={"text": "My reel", "link": "https://instagram.com/reel/x"})
+        # creator reviews the assignment
+        st = self.c.get(f"/api/courses/{cid}/students").get_json()["students"]
+        self.assertEqual((st[0]["email"], st[0]["work"][0]["text"]), ("fan@x.co", "My reel"))
+        self.assertEqual(self.c.put(f"/api/courses/{cid}/review", json={"email": "fan@x.co", "lesson": "l3", "grade": "A", "feedback": "Great"}).status_code, 200)
+        self.assertIn("Great", anon.get(f"/learn/{cid}/l3").get_data(as_text=True))
+        self.assertIn("fan@x.co", self.c.get(f"/api/courses/{cid}/students.csv").get_data(as_text=True))
+        # bonus module unlocks after 7 days; then 100% gives the certificate
+        e = courses.enrollment(cid, "fan@x.co")
+        e["at"] -= 8 * 86400
+        store.set_json(f"s:enr:{cid}:fan@x.co", e)
+        self.assertEqual(anon.post(f"/learn/{cid}/l5/done", json={}).get_json()["pct"], 100)
+        dash = anon.get(f"/learn/{cid}").get_data(as_text=True)
+        cert = re.search(r'/cert/([0-9a-f]{12})', dash).group(1)
+        page = saas.app.test_client().get(f"/cert/{cert}").get_data(as_text=True)
+        self.assertIn("Fan", page)
+        self.assertIn("Reels Mastery", page)
+        self.assertEqual(saas.app.test_client().get("/cert/000000000000").status_code, 404)
+        # my courses list
+        self.assertIn("100% complete", anon.get("/learn").get_data(as_text=True))
+
+    def test_course_free_signin_and_validity(self):
+        import courses
+        cid = self.course_setup()
+        self.course_body(cid, price_mode="pwyw", min_price=0, validity={"kind": "limited", "months": 1}, ask_phone=True)
+        anon = saas.app.test_client()
+        self.assertIn("mobile", anon.post("/creator/c/reels/order", json={"name": "A", "email": "a@x.co"}).get_json()["error"])
+        r = anon.post("/creator/c/reels/order", json={"name": "A", "email": "a@x.co", "phone": "9876543210", "amount": 0}).get_json()
+        self.assertEqual((r["free"], r["next"]), (True, f"/learn/{cid}"))
+        self.assertEqual(anon.get(f"/learn/{cid}").status_code, 200)
+        self.assertEqual(courses.enrollment(cid, "a@x.co")["phone"], "9876543210")
+        # pay-what-you-want with an amount goes to Razorpay
+        self.assertEqual(anon.post("/creator/c/reels/order", json={"name": "B", "email": "b@x.co", "phone": "9876543210", "amount": 200}).get_json()["amount"], 20000)
+        # sign in on another device with an email code, and with the magic link
+        other = saas.app.test_client()
+        self.assertIn("Send code", other.get("/learn").get_data(as_text=True))
+        other.post("/learn/start", json={"email": "a@x.co"})
+        self.assertEqual(other.post("/learn/verify", json={"email": "a@x.co", "code": self.codes["a@x.co"]}).get_json()["next"], "/learn")
+        self.assertIn("Reels Mastery", other.get("/learn").get_data(as_text=True))
+        third = saas.app.test_client()
+        tok = courses.magic_link("a@x.co", cid).rsplit("/", 1)[1]
+        self.assertTrue(third.get(f"/learn/in/{tok}").location.endswith(f"/learn/{cid}"))
+        self.assertEqual(third.get("/learn/in/bad-token-bad-token-bad").location, "/learn")
+        # access ends after the validity period
+        e = courses.enrollment(cid, "a@x.co")
+        e["until"] = int(time.time()) - 10
+        store.set_json(f"s:enr:{cid}:a@x.co", e)
+        self.assertIn("has ended", anon.get(f"/learn/{cid}").get_data(as_text=True))
+        self.assertEqual(anon.get(f"/learn/{cid}/l1").status_code, 302)
+        self.assertEqual(anon.post(f"/learn/{cid}/l1/done", json={}).status_code, 403)
+        # unpublishing stops new sales; deleting keeps students' access
+        self.course_body(cid, status="unpublished")
+        self.assertEqual(saas.app.test_client().get("/creator/c/reels").status_code, 404)
+        self.assertEqual(self.c.delete(f"/api/courses/{cid}", json={}).status_code, 200)
+        self.assertEqual(self.c.get("/api/courses").get_json()["courses"], [])
+
+    def test_course_live_sessions_and_embeds(self):
+        import courses
+        self.assertEqual(courses.embed("https://www.youtube.com/watch?v=dQw4w9WgXcQ"), "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1")
+        self.assertEqual(courses.embed("https://vimeo.com/123456"), "https://player.vimeo.com/video/123456")
+        self.assertEqual(courses.embed("https://www.loom.com/share/abc123"), "https://www.loom.com/embed/abc123")
+        self.assertEqual(courses.embed("https://evil.com/x"), "")
+        cid = self.course_setup()
+        today = time.strftime("%Y-%m-%d", time.gmtime(time.time() + saas.shop.IST))
+        later = time.strftime("%Y-%m-%d", time.gmtime(time.time() + 20 * 86400 + saas.shop.IST))
+        self.assertIn("days", self.c.put(f"/api/courses/{cid}", json={**self.c.get(f"/api/courses/{cid}").get_json()["course"],
+                                                                     "live": {"enabled": True}}).get_json().get("error", "days"))
+        c = self.course_body(cid, live={"enabled": True, "link": "https://zoom.us/j/1", "days": [0, 1, 2, 3, 4, 5, 6], "start": "20:00", "end": "21:00",
+                                        "from": today, "to": later, "title": "Weekly Q&A"})
+        s = courses.sessions(c)
+        self.assertEqual(len(s), 21)
+        self.assertIn("Weekly Q&amp;A", self.c.get(f"/learn/{cid}").get_data(as_text=True))
+        self.assertIn("21 live classes", saas.app.test_client().get("/creator/c/reels").get_data(as_text=True))
 
 
 
