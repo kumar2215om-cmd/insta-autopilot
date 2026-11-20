@@ -44,8 +44,10 @@ PAGES = {
                      tint="#EAF8C8", tint2="#D8F3E2", outfit="black"),
     "decodingwithom": dict(handle="@DECODINGWITHOM", accent="#FFD21F", key="#1F6BFF", hl="#FFD21F", hl_ink="#111", sticker="#1F6BFF",
                            tint="#FFF1B8", tint2="#DCE8FF", outfit="blue"),
-    "replyinbox": dict(handle="@REPLYINBOX", accent="#7B5CFF", key="#6A4CFF", hl="#FF7A59", hl_ink="#111", sticker="#7B5CFF",
-                       tint="#E7E0FF", tint2="#FFE3D8", outfit="black"),
+    # ReplyInbox brand (Nov 2026): paper/ink, cobalt accent, volt highlighter, Bricolage / Manrope / JetBrains Mono
+    "replyinbox": dict(handle="@REPLYINBOX.IN", brand=True, accent="#2E3BFF", on_accent="#fff", key="#2E3BFF", hl="#D4FF3A",
+                       hl_ink="#111318", sticker="#2E3BFF", tag="#D4FF3A", on_tag="#111318", dot="#D4FF3A", swipe_arrow="#D4FF3A",
+                       solid_ink="#fff", msg_out="#DFE2FF", tint="#E6E5DE", tint2="#E6E5DE", outfit="black"),
 }
 BGS = ("grid", "sunburst", "dots", "solid")
 
@@ -313,43 +315,63 @@ FONTS = ('<link href="https://fonts.googleapis.com/css2?family=Anton&family=Popp
          '&display=block" rel="stylesheet">')
 
 
+COMIC_LOOK = dict(ink="#111", paper="#F6F2E7", card="#fff", msg_in="#F2F0EA", border=6, head="Anton,'Bebas Neue',Impact,sans-serif",
+                  head_w=400, head_size=128, head_ls=".005em", body="Poppins,Montserrat,sans-serif", label="Anton,sans-serif",
+                  label_w=400, label_ls=".05em", bubble_style="italic", sun2="#FFFDF6", grid_dots=False,
+                  fonts='<link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@500;600;700;800&display=block" rel="stylesheet">')
+BRAND_LOOK = dict(ink="#111318", paper="#F5F4EF", card="#fff", msg_in="#E6E5DE", border=4, head="'Bricolage Grotesque',Manrope,sans-serif",
+                  head_w=800, head_size=118, head_ls="-.045em", body="Manrope,sans-serif", label="'JetBrains Mono',monospace",
+                  label_w=700, label_ls=".06em", bubble_style="normal", sun2="#F5F4EF", grid_dots=True,
+                  fonts=('<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800'
+                         '&family=JetBrains+Mono:wght@600;700&family=Manrope:wght@500;600;700;800&display=block" rel="stylesheet">'))
+
+
+def look(t):
+    return {**COMIC_LOOK, **(BRAND_LOOK if t.get("brand") else {}), **t}
+
+
 def css(t):
+    t = look(t)
+    ink, b = t["ink"], t["border"]
+    on_acc = t.get("on_accent", "#111")
+    grid = (f"radial-gradient(rgba(17,19,24,.16) 3px,transparent 3.6px) 0 0/48px 48px" if t["grid_dots"] else
+            "linear-gradient(rgba(17,17,17,.07) 2px,transparent 2px) 0 0/54px 54px,linear-gradient(90deg,rgba(17,17,17,.07) 2px,transparent 2px) 0 0/54px 54px")
     return f"""
 *{{box-sizing:border-box;margin:0;padding:0}}
 html,body{{width:1080px;height:1350px;overflow:hidden}}
-body{{font-family:Poppins,Montserrat,sans-serif;color:#111;-webkit-font-smoothing:antialiased}}
+body{{font-family:{t['body']};color:{ink};-webkit-font-smoothing:antialiased}}
 .s{{position:relative;width:1080px;height:1350px;overflow:hidden}}
-.bg-grid{{background:#F6F2E7;background-image:linear-gradient(rgba(17,17,17,.07) 2px,transparent 2px),linear-gradient(90deg,rgba(17,17,17,.07) 2px,transparent 2px);background-size:54px 54px}}
-.bg-sunburst{{background:repeating-conic-gradient(from 0deg at 50% 78%,{t['tint']} 0 7.5deg,#FFFDF6 7.5deg 15deg)}}
+.bg-grid{{background:{grid};background-color:{t['paper']}}}
+.bg-sunburst{{background:repeating-conic-gradient(from 0deg at 50% 78%,{t['tint']} 0 7.5deg,{t['sun2']} 7.5deg 15deg)}}
 .bg-dots{{background:{t['tint2']};background-image:radial-gradient(rgba(17,17,17,.16) 4px,transparent 4.5px);background-size:44px 44px}}
 .bg-solid{{background:{t['accent']}}}
-.pill{{position:absolute;top:52px;left:52px;display:flex;align-items:center;gap:14px;background:#111;color:#fff;border-radius:99px;padding:14px 28px 14px 22px;font:800 36px Poppins;letter-spacing:.04em}}
-.pill i{{width:24px;height:24px;border-radius:50%;background:{t['accent']};border:3px solid #fff}}
-.count{{position:absolute;top:44px;right:52px;background:{t['accent']};color:{'#fff' if t['accent'] in ('#7B5CFF',) else '#111'};border:6px solid #111;border-radius:22px;box-shadow:8px 8px 0 #111;padding:6px 22px;font:400 48px Anton}}
-.swipe{{position:absolute;right:48px;bottom:48px;z-index:5;background:#111;color:#fff;border-radius:99px;padding:14px 30px;font:400 40px Anton;letter-spacing:.06em}}
-.swipe b{{color:{t['accent']};font-weight:400}}
-h1{{position:absolute;left:52px;right:52px;top:150px;font:400 128px/1.0 Anton,'Bebas Neue',Impact,sans-serif;text-transform:uppercase;letter-spacing:.005em}}
-.bg-solid h1{{color:#111}}
-mark{{background:{t['hl']};color:{t['hl_ink']};padding:0 14px;border:6px solid #111;border-radius:14px;box-shadow:7px 7px 0 #111;display:inline-block;line-height:1.02;transform:rotate(-1.5deg)}}
-.card{{position:absolute;left:52px;right:52px;background:#fff;border:6px solid #111;border-radius:32px;box-shadow:14px 14px 0 #111;padding:40px 44px 36px;font:600 46px/1.3 Poppins}}
-.tag{{position:absolute;top:-30px;left:36px;background:{t['accent']};color:{'#fff' if t['accent'] in ('#7B5CFF',) else '#111'};border:5px solid #111;border-radius:12px;padding:2px 18px;font:400 38px Anton;letter-spacing:.05em;text-transform:uppercase}}
+.pill{{position:absolute;top:52px;left:52px;display:flex;align-items:center;gap:14px;background:{ink};color:#fff;border-radius:99px;padding:14px 28px 14px 22px;font:{t['label_w']} 34px {t['label']};letter-spacing:.04em}}
+.pill i{{width:24px;height:24px;border-radius:50%;background:{t.get('dot', t['accent'])};border:3px solid #fff}}
+.count{{position:absolute;top:44px;right:52px;background:{t['accent']};color:{on_acc};border:{b + 2}px solid {ink};border-radius:22px;box-shadow:8px 8px 0 {ink};padding:6px 22px;font:{t['label_w']} 44px {t['label']}}}
+.swipe{{position:absolute;right:48px;bottom:48px;z-index:5;background:{ink};color:#fff;border-radius:99px;padding:14px 30px;font:{t['label_w']} 38px {t['label']};letter-spacing:.06em}}
+.swipe b{{color:{t.get('swipe_arrow', t['accent'])};font-weight:inherit}}
+h1{{position:absolute;left:52px;right:52px;top:150px;font:{t['head_w']} {t['head_size']}px/1.0 {t['head']};text-transform:uppercase;letter-spacing:{t['head_ls']}}}
+.bg-solid h1{{color:{t.get('solid_ink', ink)}}}
+mark{{background:{t['hl']};color:{t['hl_ink']};padding:0 14px;border:{b + 2}px solid {ink};border-radius:14px;box-shadow:7px 7px 0 {ink};display:inline-block;line-height:1.02;transform:rotate(-1.5deg)}}
+.card{{position:absolute;left:52px;right:52px;background:{t['card']};border:{b + 2}px solid {ink};border-radius:32px;box-shadow:14px 14px 0 {ink};padding:40px 44px 36px;font:600 46px/1.3 {t['body']}}}
+.tag{{position:absolute;top:-30px;left:36px;background:{t.get('tag', t['accent'])};color:{t.get('on_tag', on_acc)};border:{b + 1}px solid {ink};border-radius:{'99px' if t.get('brand') else '12px'};padding:2px 18px;font:{t['label_w']} 34px {t['label']};letter-spacing:{t['label_ls']};text-transform:uppercase}}
 .card p+p{{margin-top:14px}}
 .steps{{list-style:none;display:flex;flex-direction:column;gap:20px}}
 .steps li{{display:flex;gap:22px;align-items:flex-start}}
-.steps .n{{flex:none;width:68px;height:68px;border-radius:50%;background:{t['accent']};color:{'#fff' if t['accent'] in ('#7B5CFF',) else '#111'};border:5px solid #111;display:flex;align-items:center;justify-content:center;font:400 40px Anton}}
+.steps .n{{flex:none;width:68px;height:68px;border-radius:50%;background:{t.get('tag', t['accent'])};color:{t.get('on_tag', on_acc)};border:{b + 1}px solid {ink};display:flex;align-items:center;justify-content:center;font:{t['label_w']} 38px {t['label']}}}
 .chat{{display:flex;flex-direction:column;gap:16px}}
-.msg{{max-width:92%;border:5px solid #111;border-radius:26px;padding:14px 24px;font:600 42px/1.28 Poppins}}
-.msg small{{display:block;font:400 30px Anton;letter-spacing:.06em;text-transform:uppercase;opacity:.7}}
-.msg.in{{align-self:flex-start;background:#F2F0EA;border-bottom-left-radius:8px}}
-.msg.out{{align-self:flex-end;background:{t['tint']};border-bottom-right-radius:8px}}
+.msg{{max-width:92%;border:{b + 1}px solid {ink};border-radius:26px;padding:14px 24px;font:600 42px/1.28 {t['body']}}}
+.msg small{{display:block;font:{t['label_w']} 28px {t['label']};letter-spacing:.06em;text-transform:uppercase;opacity:.7}}
+.msg.in{{align-self:flex-start;background:{t['msg_in']};border-bottom-left-radius:8px}}
+.msg.out{{align-self:flex-end;background:{t.get('msg_out', t['tint'])};border-bottom-right-radius:8px}}
 .char{{position:absolute;bottom:-6px;width:560px;height:690px;z-index:2}}
 .char svg{{width:100%;height:100%}}
 .left .char{{left:-10px}}.right .char{{right:-10px}}
-.bubble{{position:absolute;z-index:3;bottom:330px;width:440px;background:#fff;border:6px solid #111;border-radius:30px;box-shadow:10px 10px 0 #111;padding:22px 28px;font:italic 400 54px/1.04 Anton,'Bebas Neue',Impact,sans-serif;text-transform:uppercase;transform:skew(-4deg)}}
+.bubble{{position:absolute;z-index:3;bottom:330px;width:440px;background:#fff;border:{b + 2}px solid {ink};border-radius:30px;box-shadow:10px 10px 0 {ink};padding:22px 28px;font:{t['bubble_style']} {t['head_w']} {50 if t.get('brand') else 54}px/1.04 {t['head']};text-transform:uppercase;letter-spacing:{'-.03em' if t.get('brand') else '0'};transform:skew(-4deg)}}
 .left .bubble{{left:560px}}.right .bubble{{right:560px}}
 .bubble:after{{content:"";position:absolute;bottom:22px;width:0;height:0;border-top:22px solid transparent;border-bottom:22px solid transparent}}
-.left .bubble:after{{left:-40px;border-right:36px solid #111}}
-.right .bubble:after{{right:-40px;border-left:36px solid #111}}
+.left .bubble:after{{left:-40px;border-right:36px solid {ink}}}
+.right .bubble:after{{right:-40px;border-left:36px solid {ink}}}
 """
 
 
@@ -369,7 +391,7 @@ def slide_html(s, i, n, t, char):
     card = f'<div class="card">{tag}{body}</div>' if body else ""
     bubble = f'<div class="bubble">{html.escape(s["bubble"])}</div>' if s.get("bubble") else ""
     swipe = '<div class="swipe">SWIPE <b>→</b></div>' if i < n else ""
-    return (f'<!doctype html><html><head><meta charset="utf-8">{FONTS}<style>{css(t)}</style></head><body>'
+    return (f'<!doctype html><html><head><meta charset="utf-8">{look(t)["fonts"]}<style>{css(t)}</style></head><body>'
             f'<div class="s bg-{bg} {side}"><div class="pill"><i></i>{t["handle"]}</div><div class="count">{i}/{n}</div>'
             f'<h1>{headline_html(s["headline"])}</h1>{card}<div class="char">{char}</div>{bubble}{swipe}</div></body></html>')
 

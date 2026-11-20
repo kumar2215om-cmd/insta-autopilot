@@ -352,7 +352,7 @@ def answer_slides(answer, title="The short answer", reserve=0):
             for k, b in enumerate(picked)]
 
 
-def build(kind, slug, page, voice="english", handle="@replyinbox"):
+def build(kind, slug, page, voice="english", handle="@replyinbox.in"):
     """The carousel for one page: {'slug', 'kind', 'keyword', 'slides', 'caption', 'url'} (url without site)."""
     kw = keyword_for(slug)
     if kind == "compare":
@@ -684,7 +684,7 @@ def main(argv=None):
     ap.add_argument("slugs", nargs="*")
     ap.add_argument("--out", default=os.path.join(SAAS, "content", "carousels"))
     ap.add_argument("--site-url", default=os.environ.get("SITE_URL") or "https://replyinbox.in")
-    ap.add_argument("--handle", default="@replyinbox")
+    ap.add_argument("--handle", default="@replyinbox.in")
     ap.add_argument("--voice", choices=("english", "hinglish"), default="english")
     ap.add_argument("--list", action="store_true", help="print slugs, keywords and slide text only")
     ap.add_argument("--no-png", action="store_true", help="write caption.txt and automation.json only")
