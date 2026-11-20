@@ -1,0 +1,167 @@
+{% extends "_base.html" %}
+{% block title %}Digital products{% endblock %}
+{% block heading %}Digital products{% endblock %}
+{% block actions %}<button class="btn" type="button" id="addProd">＋ New product</button>{% endblock %}
+{% block head %}
+<style>
+  .grid2 { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+  .grid2 .full { grid-column:1 / -1; }
+  .f { display:block; font-weight:700; font-size:13px; margin:0 0 5px; }
+  .fields input, .fields textarea { width:100%; }
+  .status { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .prod { display:grid; grid-template-columns:72px minmax(0, 1fr) auto; gap:14px; align-items:center; padding:14px 0; border-top:1px solid var(--line2); }
+  .prod:first-child { border-top:0; }
+  .prod .cv { width:72px; height:72px; border-radius:14px; background:var(--accent-soft) center/cover; display:grid; place-items:center; font-size:28px; }
+  .prod .meta { font:500 12.5px var(--mono); color:var(--mute); }
+  .prod .acts { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .edit { display:grid; gap:12px; }
+  .drop { border:2px dashed var(--line); border-radius:14px; padding:16px; text-align:center; cursor:pointer; background:var(--bg); }
+  .drop:hover { border-color:var(--accent); }
+  .tbl td.n { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  @media (max-width:700px) { .grid2 { grid-template-columns:1fr; } .prod { grid-template-columns:56px minmax(0, 1fr); } .prod .cv { width:56px; height:56px; } .prod .acts { grid-column:1 / -1; justify-content:flex-start; } }
+</style>
+{% endblock %}
+{% block content %}
+{% if acc.demo %}<div class="banner info">Demo: this is where creators sell PDFs and packs and get paid to their bank. Not available in the demo.</div>{% endif %}
+{% if role != "owner" and not acc.demo %}
+<section class="card"><p class="muted" style="margin:0">Only the account owner can manage products and payouts.</p></section>
+{% else %}
+<section class="card" id="payoutCard">
+  <div class="row"><h2 style="margin-right:auto">Get paid to your bank</h2><span class="badge" id="pStatus">…</span></div>
+  <p class="muted small" id="pText" style="margin:6px 0 0"></p>
+  <form class="fields" id="pForm" hidden style="margin-top:14px; display:grid; gap:12px">
+    <div class="grid2">
+      <div><label class="f" for="pName">Account holder name</label><input id="pName" name="name" autocomplete="name" placeholder="As on your bank account"></div>
+      <div><label class="f" for="pPan">PAN</label><input id="pPan" name="pan" maxlength="10" placeholder="ABCDE1234F" style="text-transform:uppercase"></div>
+      <div><label class="f" for="pAcct">Bank account number</label><input id="pAcct" name="account_number" inputmode="numeric" autocomplete="off"></div>
+      <div><label class="f" for="pIfsc">IFSC code</label><input id="pIfsc" name="ifsc" maxlength="11" placeholder="HDFC0001234" style="text-transform:uppercase"></div>
+      <div><label class="f" for="pEmail">Email</label><input id="pEmail" name="email" type="email" autocomplete="email"></div>
+      <div><label class="f" for="pPhone">Mobile</label><input id="pPhone" name="phone" inputmode="tel" placeholder="98765 43210"></div>
+      <div class="full"><label class="f" for="pStreet">Address</label><input id="pStreet" name="street" autocomplete="street-address" placeholder="House, street, area"></div>
+      <div><label class="f" for="pCity">City</label><input id="pCity" name="city" autocomplete="address-level2"></div>
+      <div><label class="f" for="pState">State</label><input id="pState" name="state" autocomplete="address-level1"></div>
+      <div><label class="f" for="pPin">PIN code</label><input id="pPin" name="pincode" inputmode="numeric" maxlength="6"></div>
+    </div>
+    <p class="muted small" style="margin:0">Razorpay checks these details (KYC), usually within a day. We keep only the last 4 digits of your account number.</p>
+    <div class="row" style="gap:10px"><button class="btn" type="submit" id="pSave">Save bank details</button><span class="small" id="pMsg"></span></div>
+  </form>
+</section>
+
+<section class="card" id="editCard" hidden>
+  <h2 id="eTitle">New product</h2>
+  <form class="edit fields" id="eForm">
+    <div class="grid2">
+      <div class="full"><label class="f" for="eName">Title</label><input id="eName" maxlength="100" placeholder="e.g. 39 AI video prompts pack"></div>
+      <div><label class="f" for="ePrice">Price (₹)</label><input id="ePrice" inputmode="numeric" placeholder="149"></div>
+      <div><label class="f" for="eCover">Cover image link <span class="muted">(optional, https://)</span></label><input id="eCover" type="url"></div>
+      <div class="full"><label class="f" for="eDesc">What they get</label><textarea id="eDesc" rows="4" maxlength="2000" placeholder="What's inside, who it's for, how they use it."></textarea></div>
+      <div class="full"><label class="f">File buyers get <span class="muted">(PDF, zip, video… up to 4 MB)</span></label>
+        <label class="drop"><input type="file" id="eFile" hidden><span id="eFileName">Choose a file</span></label></div>
+      <label class="small full"><input type="checkbox" id="eOn" checked> For sale</label>
+    </div>
+    <p class="muted small" id="eSplit" style="margin:0"></p>
+    <div class="row" style="gap:10px"><button class="btn" type="submit">Save product</button><button class="btn ghost" type="button" id="eCancel">Cancel</button><span class="small" id="eMsg"></span></div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Your products</h2>
+  <div id="prods"><div class="empty">Loading…</div></div>
+</section>
+
+<section class="card">
+  <h2>Sales</h2>
+  <div class="scroll"><table class="tbl" id="sales"></table></div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if role == "owner" or acc.demo %}
+<script>
+let S = null, editing = null, upFile = null;
+const day = (t) => new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"});
+const STATUS = {activated: ["on", "Payouts active"], under_review: ["", "Under review by Razorpay"], needs_clarification: ["bad", "Razorpay needs more details"],
+                suspended: ["bad", "Payouts paused"], requested: ["", "Under review by Razorpay"]};
+function drawPayout() {
+  const p = S.payout || {}, st = STATUS[p.status] || ["", p.status ? p.status.replace(/_/g, " ") : "Not set up"];
+  $("pStatus").className = `badge ${st[0]}`; $("pStatus").textContent = st[1];
+  if (!S.ready && !S.demo) { $("pText").textContent = "Payments aren't switched on yet."; $("pForm").hidden = true; return; }
+  if (p.status === "activated") {
+    $("pText").innerHTML = `Money from every sale goes to <b>${esc(p.name)}</b> · ${esc(p.bank)} (${esc(p.ifsc)}), usually the next working day.`;
+    $("pForm").hidden = true;
+  } else {
+    $("pText").innerHTML = p.status ? `Bank ${esc(p.bank)} · ${esc(p.ifsc)}. ${(p.requirements || []).length ? "Razorpay asks for: " + esc(p.requirements.join(", ")) + "." : "Razorpay is checking your details."}`
+      : "Add your bank account once. Buyers pay with UPI or card and your share reaches your bank automatically.";
+    $("pForm").hidden = !!S.demo;
+  }
+}
+function drawProds() {
+  const fee = S.plan_fee;
+  $("prods").innerHTML = S.products.length ? S.products.map(p => `<div class="prod">
+      <div class="cv" style="${p.cover ? `background-image:url('${esc(p.cover)}')` : ""}">${p.cover ? "" : "📦"}</div>
+      <div><b>${esc(p.title)}</b> ${p.enabled ? "" : `<span class="badge">hidden</span>`}<div class="meta">₹${fmt(p.price)} · ${fmt(p.sales || 0)} sold · ₹${fmt(p.revenue || 0)} · ${esc(p.file_name || "")}</div></div>
+      <div class="acts"><button class="btn sm" type="button" data-copy="${esc(p.url)}">Copy link</button><a class="btn ghost sm" href="${esc(p.url)}" target="_blank" rel="noopener">Open</a>
+        <button class="btn ghost sm" type="button" data-edit="${esc(p.id)}">Edit</button><button class="btn danger sm" type="button" data-del="${esc(p.id)}">Delete</button></div></div>`).join("")
+    : `<div class="empty">No products yet. Click <b>＋ New product</b> to sell your first PDF or pack.</div>`;
+  $("sales").innerHTML = S.sales.length ? `<thead><tr><th>Date</th><th>Product</th><th>Buyer</th><th class="n">Price</th><th class="n">You get</th></tr></thead><tbody>${S.sales.map(x =>
+      `<tr><td>${esc(day(x.paid_at))}</td><td>${esc(x.title)}</td><td>${esc(x.email)}</td><td class="n">₹${fmt(x.price)}</td><td class="n"><b>₹${fmt(x.creator_gets)}</b></td></tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="muted">No sales yet.</td></tr></tbody>`;
+}
+function splitText() {
+  const price = +$("ePrice").value || 0, f = S.plan_fee, pct = f.fee_pct;
+  if (!price) { $("eSplit").textContent = `${pct}% platform fee + GST on your plan${f.gateway ? " + payment gateway charges" : ""}; the rest goes to your bank.`; return; }
+  const fee = Math.round(price * pct) / 100, gst = Math.round(fee * 18) / 100, gw = f.gateway ? Math.round(price * 2.36) / 100 : 0;
+  $("eSplit").innerHTML = `On ₹${fmt(price)} you get about <b>₹${fmt(Math.round((price - fee - gst - gw) * 100) / 100)}</b> (${pct}% fee + GST${gw ? " + gateway" : ""}).`;
+}
+function openEdit(p) {
+  editing = p || null; upFile = p ? {file_id: p.file_id, file_name: p.file_name} : null;
+  $("editCard").hidden = false; $("eTitle").textContent = p ? "Edit product" : "New product";
+  $("eName").value = p ? p.title : ""; $("ePrice").value = p ? p.price : ""; $("eCover").value = p ? p.cover : ""; $("eDesc").value = p ? p.desc : "";
+  $("eOn").checked = p ? p.enabled !== false : true; $("eFileName").textContent = p ? `📎 ${p.file_name} · choose to replace` : "Choose a file"; $("eMsg").textContent = "";
+  splitText(); $("editCard").scrollIntoView({behavior: "smooth", block: "start"});
+}
+async function load() { S = await api("/api/shop"); drawPayout(); drawProds(); }
+$("addProd").onclick = () => S && !S.demo ? openEdit(null) : toast("Not available in the demo");
+$("eCancel").onclick = () => { $("editCard").hidden = true; };
+$("ePrice").oninput = splitText;
+$("eFile").onchange = async () => {
+  const f = $("eFile").files[0]; if (!f) return;
+  if (f.size > 4 * 1048576) { $("eMsg").textContent = "Over 4 MB. Zip it smaller or split it."; return; }
+  $("eFileName").textContent = "Uploading " + f.name + "…";
+  const form = new FormData(); form.append("file", f);
+  try {
+    const r = await fetch("/api/shop/upload", {method: "POST", headers: {"X-Upload": "1"}, body: form});
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Upload failed");
+    upFile = d; $("eFileName").textContent = `📎 ${d.file_name} ✓`;
+  } catch (err) { $("eFileName").textContent = "Choose a file"; $("eMsg").textContent = err.message; }
+};
+$("eForm").onsubmit = async (e) => {
+  e.preventDefault();
+  try {
+    await api("/api/shop/products", {method: "PUT", body: JSON.stringify({id: editing ? editing.id : "", title: $("eName").value, price: $("ePrice").value,
+      cover: $("eCover").value, desc: $("eDesc").value, enabled: $("eOn").checked, ...(upFile || {})})});
+    $("editCard").hidden = true; toast("Product saved ✓"); load();
+  } catch (err) { $("eMsg").textContent = err.message; }
+};
+$("pForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData($("pForm")).entries());
+  $("pSave").disabled = true; $("pMsg").textContent = "Sending to Razorpay…";
+  try { await api("/api/shop/payout", {method: "PUT", body: JSON.stringify(body)}); $("pMsg").textContent = ""; toast("Bank details sent ✓"); load(); }
+  catch (err) { $("pMsg").textContent = err.message; }
+  $("pSave").disabled = false;
+};
+document.addEventListener("click", async (e) => {
+  const c = e.target.closest("[data-copy]");
+  if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); toast("Link copied ✓"); } catch { prompt("Copy this link:", c.dataset.copy); } return; }
+  const ed = e.target.closest("[data-edit]");
+  if (ed) { openEdit(S.products.find(p => p.id === ed.dataset.edit)); return; }
+  const d = e.target.closest("[data-del]");
+  if (d && confirm("Delete this product? Its link stops working; past buyers keep their downloads.")) {
+    try { await api("/api/shop/products/" + d.dataset.del, {method: "DELETE", body: "{}"}); load(); } catch (err) { toast(err.message); }
+  }
+});
+load(); loadBanners();
+</script>
+{% endif %}
+{% endblock %}

@@ -23,6 +23,7 @@ import requests
 
 import plans
 import referrals
+import shop
 import store
 import users
 
@@ -131,6 +132,12 @@ def handle_webhook(raw_body, signature):
     if event.get("event") not in ("payment.captured", "order.paid"):
         return True
     pay = ((event.get("payload") or {}).get("payment") or {}).get("entity") or {}
+    if pay.get("order_id") and pay.get("status") == "captured" and shop.is_shop_order(pay["order_id"]):
+        try:  # a digital product bought from a creator (see shop.py)
+            shop.fulfil(pay["order_id"], pay.get("id", ""), paid_amount=pay.get("amount"))
+        except shop.ShopError:
+            pass
+        return True
     if pay.get("order_id") and pay.get("status") == "captured":
         try:
             activate(pay["order_id"], pay.get("id", ""), paid_amount=pay.get("amount"))

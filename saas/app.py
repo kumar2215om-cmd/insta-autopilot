@@ -27,6 +27,7 @@ import content_drafts
 import users
 import billing
 import referrals
+import shop
 import youtube
 import files
 import guides
@@ -99,7 +100,7 @@ def current_account():
 # ---------- team: managers and viewers who log in with an invite link ----------
 
 ROLES = {"manager": "Manager", "viewer": "Viewer"}
-OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing", "/api/refer")
+OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing", "/api/refer", "/api/shop")
 MAX_TEAM = 5
 
 
@@ -142,13 +143,13 @@ def public_account(acc):
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
-    ("sales", "/app/sales", "Sales", True), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
+    ("sales", "/app/sales", "Sales", True), ("shop", "/app/products", "Digital products", False), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False), ("files", "/app/files", "Files", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("billing", "/app/billing", "Plan & billing", True), ("refer", "/app/refer", "Refer & earn", True),
     ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
+DEFAULT_APPS = {"shop": True, "plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
 
 
 def apps_of(acc):
@@ -198,7 +199,7 @@ def brand():
 
 
 PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report",
-                    "/billing", "/signin", "/connect", "/admin", "/f")
+                    "/billing", "/signin", "/connect", "/admin", "/f", "/d")
 
 
 def is_private_path(path):
@@ -221,7 +222,7 @@ def guard():
         if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
             return jsonify(error="Please log in again."), 401
         # file uploads are multipart; a custom header still can't be sent cross-site without CORS
-        upload = request.path == "/api/files" and request.headers.get("X-Upload") == "1"
+        upload = request.path in ("/api/files", "/api/shop/upload") and request.headers.get("X-Upload") == "1"
         if request.method in ("POST", "PUT", "DELETE") and not request.is_json and not upload:
             return jsonify(error="JSON required"), 415
         blocked = role_blocks(request.path, request.method)
@@ -1934,6 +1935,134 @@ def file_download(fid, name):
                         mimetype="text/html", headers={"Cache-Control": "public, max-age=300"})
     return Response(data, mimetype=ctype, headers={"Cache-Control": "public, max-age=3600",
                                                    "Content-Disposition": f'inline; filename="{name}"'})
+
+
+# ---------- digital products (see shop.py) ----------
+
+@app.get("/app/products")
+def products_page():
+    return render_app("products.html", "shop")
+
+
+def shop_owner():
+    user = current_user()
+    if not user:
+        abort(403)
+    return user
+
+
+@app.get("/api/shop")
+def api_shop():
+    acc = current_account()
+    if acc.get("demo"):
+        return jsonify(demo=True, ready=False, payout={}, products=[], sales=[], plan_fee=plans.platform_fee(acc, 499))
+    user = shop_owner()
+    base = f"{site_url()}/{acc.get('username', '')}/p/"
+    return jsonify(ready=shop.ready(), payout=shop.refresh(user), products=[{**p, "url": base + p["id"]} for p in shop.products(acc["id"])],
+                   sales=shop.sales(acc["id"], 50), plan_fee=plans.platform_fee(acc, 499))
+
+
+@app.put("/api/shop/payout")
+def api_shop_payout():
+    try:
+        return jsonify(payout=shop.onboard(shop_owner(), request.get_json(force=True) or {}))
+    except shop.ShopError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.put("/api/shop/products")
+def api_shop_save():
+    try:
+        return jsonify(product=shop.save_product(current_account(), request.get_json(force=True) or {}))
+    except shop.ShopError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.delete("/api/shop/products/<pid>")
+def api_shop_delete(pid):
+    return jsonify(ok=shop.delete_product(current_account(), pid))
+
+
+@app.post("/api/shop/upload")
+def api_shop_upload():
+    """The file a product delivers: stored privately, only served with a buyer's download link."""
+    acc = current_account()
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify(error="No file chosen."), 400
+    try:
+        item = files.upload(acc, f.filename, f.read(), f.mimetype, paid=True, listed=False)
+    except files.FileError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(file_id=item["id"], file_name=item["name"], size=item["size"])
+
+
+def shop_product(username, pid):
+    acc = store.account_by_username(username) if USERNAME_RE.fullmatch(username or "") else None
+    prod = shop.get(acc["id"], pid) if acc and re.fullmatch(r"[0-9a-f]{10}", pid or "") else None
+    if not prod or not prod.get("enabled", True):
+        abort(404)
+    return acc, prod
+
+
+@app.get("/<username>/p/<pid>")
+def product_page(username, pid):
+    acc, prod = shop_product(username, pid)
+    owner = users.owner_of(acc)
+    page = store.load_page(acc["id"]) or default_page(acc)
+    return render_template("product.html", acc=public_account(acc), prod=prod, page={**page, "theme": theme_of(page)},
+                           can_buy=shop.ready() and bool(owner) and shop.can_sell(owner))
+
+
+@app.post("/<username>/p/<pid>/order")
+def product_order(username, pid):
+    acc, prod = shop_product(username, pid)
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    if not store.claim(f"s:shopip:{ip}:{int(time.time() // 10)}", 10):
+        return jsonify(error="One moment, then try again."), 429
+    try:
+        return jsonify(shop.create_order(acc, prod, request.get_json(force=True) or {}))
+    except shop.ShopError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.post("/<username>/p/<pid>/paid")
+def product_paid(username, pid):
+    shop_product(username, pid)
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    d = request.get_json(force=True) or {}
+    try:
+        o = shop.verify_checkout(str(d.get("order_id", "")), str(d.get("payment_id", "")), d.get("signature"))
+    except shop.ShopError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(download=f"/d/{o['token']}")
+
+
+@app.get("/d/<token>")
+def download_page(token):
+    d = shop.download(token)
+    if not d:
+        return render_template("download.html", missing=True, acc={}, prod={}, left=0), 404
+    acc = store.load_account(d["acc"]) or {}
+    prod = shop.get(d["acc"], d["product"]) or {"title": d.get("title", "Your download")}
+    return render_template("download.html", missing=False, acc=public_account(acc) if acc else {}, prod=prod,
+                           token=token, left=max(0, shop.DL_MAX - d["n"]))
+
+
+@app.get("/d/<token>/file")
+def download_file(token):
+    d = shop.download(token)
+    if not d or not d.get("file_id") or not shop.count_download(token):
+        abort(404)
+    got = files.fetch(d["file_id"], paid_ok=True)  # the file as it was when they paid
+    if not got:
+        abort(404)
+    data, ctype, rec = got
+    return Response(data, mimetype=ctype, headers={"Content-Disposition": f'attachment; filename="{rec["name"]}"',
+                                                   "Cache-Control": "no-store"})
 
 
 # ---------- YouTube scheduling (see youtube.py) ----------

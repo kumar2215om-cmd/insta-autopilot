@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ prod.title }} · @{{ acc.username }}</title>
+<meta name="description" content="{{ (prod.desc or prod.title)[:150] }}">
+<meta property="og:title" content="{{ prod.title }} · ₹{{ prod.price }}">
+<meta property="og:description" content="{{ (prod.desc or '')[:150] }}">
+{% if prod.cover %}<meta property="og:image" content="{{ prod.cover }}">{% endif %}
+<link rel="icon" href="{{ acc.pic or 'data:,' }}">
+{% include "_bio_style.html" %}
+<style>
+  .pcard { margin-top:18px; }
+  .pcard .cover { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; border-bottom:2px solid var(--line); }
+  .pcard .ph { aspect-ratio:4/3; display:grid; place-items:center; font-size:84px; background:var(--thumb); border-bottom:2px solid var(--line); }
+  .pcard .body { padding:18px 18px 20px; }
+  .pcard h1 { font-size:30px; margin:0 0 6px; }
+  .price-big { font:900 34px Inter, sans-serif; margin:6px 0 10px; }
+  .desc { white-space:pre-line; color:var(--card-mute); font-weight:600; line-height:1.55; margin:0 0 16px; }
+  .buy { display:grid; gap:10px; }
+  .buy input { width:100%; padding:13px 14px; border-radius:12px; border:2px solid var(--line); font-weight:600; font-size:16px; font-family:inherit; background:transparent; color:inherit; }
+  .buy button { padding:15px; border-radius:999px; border:0; background:var(--rose); color:#fff; font-weight:900; font-size:17px; font-family:inherit; cursor:pointer; }
+  .buy button:disabled { opacity:.6; cursor:default; }
+  .msg { min-height:20px; font-weight:700; font-size:14px; margin:0; }
+  .msg.err { color:#c2410c; }
+  .trust { display:flex; gap:12px; flex-wrap:wrap; font-size:12.5px; color:var(--card-mute); font-weight:700; margin-top:12px; }
+  .t-studio .pcard .cover, .t-studio .pcard .ph { border-bottom:3px solid #111318; }
+  .t-studio .price-big { font-family:'Bricolage Grotesque', Manrope, sans-serif; }
+  .t-studio .buy input { border:2.5px solid #111318; }
+  .t-studio .buy button { background:#2E3BFF; border:2.5px solid #111318; box-shadow:4px 4px 0 #111318; }
+</style>
+</head>
+<body class="t-{{ page.theme }}">
+<div class="wrap">
+  <div class="top">
+    <a class="av" href="/{{ acc.username }}" aria-label="@{{ acc.username }}">{% if acc.pic %}<img src="{{ acc.pic }}" alt="">{% else %}<div class="ini">{{ (acc.username or "?")[0]|upper }}</div>{% endif %}</a>
+    <div><div class="handle">@{{ acc.username }}</div><div class="tags"><span class="tag">digital product</span></div></div>
+  </div>
+  <div class="card shadow pcard">
+    {% if prod.cover %}<img class="cover" src="{{ prod.cover }}" alt="">{% else %}<div class="ph" aria-hidden="true">📦</div>{% endif %}
+    <div class="body">
+      <h1>{{ prod.title }}</h1>
+      <div class="price-big">₹{{ "{:,}".format(prod.price) }}</div>
+      {% if prod.desc %}<p class="desc">{{ prod.desc }}</p>{% endif %}
+      {% if can_buy %}
+      <form class="buy" id="buy" novalidate>
+        <input id="email" type="email" placeholder="Your email (download link is sent here)" autocomplete="email" required aria-label="Your email">
+        <input id="name" type="text" placeholder="Your name (optional)" autocomplete="name" aria-label="Your name">
+        <button type="submit" id="go">Buy now · ₹{{ "{:,}".format(prod.price) }}</button>
+        <p class="msg" id="msg" role="status" aria-live="polite"></p>
+      </form>
+      <div class="trust"><span>⚡ Instant download</span><span>🔒 UPI, cards, netbanking via Razorpay</span><span>✉️ Link emailed to you</span></div>
+      {% else %}
+      <p class="msg">This product isn't on sale right now. Please check again soon.</p>
+      {% endif %}
+    </div>
+  </div>
+  <footer>Sold by <a href="/{{ acc.username }}">@{{ acc.username }}</a><br><span class="made">Made with <a href="/">{{ brand }}</a> · <a href="/terms">Terms</a> · <a href="/refund">Refunds</a></span></footer>
+</div>
+{% if can_buy %}
+<script>
+const $ = (id) => document.getElementById(id), base = location.pathname.replace(/\/$/, "");
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Something went wrong. Try again."); return d;
+}
+function say(t, bad) { $("msg").textContent = t; $("msg").className = "msg" + (bad ? " err" : ""); }
+function loadCheckout() {
+  return new Promise((ok, bad) => { if (window.Razorpay) return ok(); const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js"; s.onload = ok; s.onerror = () => bad(new Error("Couldn't load the payment window. Check your connection.")); document.head.appendChild(s); });
+}
+$("buy").onsubmit = async (e) => {
+  e.preventDefault();
+  const b = $("go"); b.disabled = true; say("Opening payment…");
+  try {
+    await loadCheckout();
+    const o = await post(base + "/order", {email: $("email").value, name: $("name").value});
+    const rzp = new Razorpay({key: o.key, order_id: o.order_id, amount: o.amount, currency: o.currency, name: "@{{ acc.username }}",
+      description: o.name, prefill: {email: o.email, name: $("name").value}, theme: {color: "#2E3BFF"},
+      handler: async (r) => {
+        say("Payment received. Getting your download…");
+        try { const d = await post(base + "/paid", {order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature}); location.href = d.download; }
+        catch (err) { say(err.message, true); }
+      },
+      modal: {ondismiss: () => { b.disabled = false; say(""); }}});
+    rzp.on("payment.failed", (r) => { say((r.error && r.error.description) || "Payment failed. Try again.", true); b.disabled = false; });
+    rzp.open();
+  } catch (err) { say(err.message, true); b.disabled = false; }
+};
+</script>
+{% endif %}
+</body>
+</html>

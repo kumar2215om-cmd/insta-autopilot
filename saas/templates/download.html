@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{ "Download" if not missing else "Link expired" }} · {{ brand }}</title>
+{% set page = {"theme": "studio"} %}
+{% include "_bio_style.html" %}
+<style>
+  .box { margin-top:28px; padding:26px 22px; text-align:center; }
+  .box h1 { font-size:30px; margin:0 0 8px; }
+  .box p { color:var(--card-mute); font-weight:600; margin:0 0 18px; }
+  .dl { display:inline-block; padding:15px 28px; border-radius:999px; background:#2E3BFF; color:#fff; font:900 17px Manrope, sans-serif; text-decoration:none;
+        border:2.5px solid #111318; box-shadow:4px 4px 0 #111318; }
+</style>
+</head>
+<body class="t-studio">
+<div class="wrap">
+  <div class="card shadow box">
+    {% if missing %}
+      <h1>This link has expired</h1>
+      <p>Download links work for 30 days. Reply to the purchase email or contact the creator for a new one.</p>
+    {% else %}
+      <div style="font-size:54px">🎉</div>
+      <h1>{{ prod.title }}</h1>
+      <p>Thanks for your purchase{% if acc.username %} from @{{ acc.username }}{% endif %}! We've also emailed you this link.</p>
+      <a class="dl" href="/d/{{ token }}/file">⬇ Download</a>
+      <p style="margin:16px 0 0; font-size:13px">{{ left }} download{{ "s" if left != 1 }} left · link works for 30 days</p>
+    {% endif %}
+  </div>
+  <footer>{% if acc.username %}<a href="/{{ acc.username }}">More from @{{ acc.username }}</a><br>{% endif %}<span class="made">Made with <a href="/">{{ brand }}</a></span></footer>
+</div>
+</body>
+</html>
