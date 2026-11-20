@@ -216,12 +216,14 @@ const QUICK = {page: location.origin + "/" + ME.username, ref: {{ "true" if role
 (async () => {
   try { QUICK.items = ((await api("/api/page")).page.items || []).filter(it => it.url && it.title); } catch (e) {}
   try { QUICK.files = (await api("/api/files")).files || []; } catch (e) {}
+  try { QUICK.shop = ((await api("/api/shop")).products || []).filter(p => p.enabled !== false); } catch (e) { QUICK.shop = []; }
 })();
 function linkPicker(field, labelField, mi) {
   const opt = (v, l, b) => `<option value="${esc(v)}" data-label="${esc(b)}">${esc(l)}</option>`;
   let o = `<option value="">＋ Insert a link…</option>` + opt(QUICK.page, "📄 My link page", "Open my page");
   if (QUICK.ref) o += opt(QUICK.ref, "🎁 My {{ brand }} referral link", "Try it free");
   if (QUICK.items.length) o += `<optgroup label="From my link page">${QUICK.items.map(it => opt(it.url, (it.type === "product" ? "🛍 " : "🔗 ") + it.title, it.type === "product" ? "Get it" : "Open")).join("")}</optgroup>`;
+  if ((QUICK.shop || []).length) o += `<optgroup label="My digital products">${QUICK.shop.map(p => opt(p.url, "💳 " + p.title + " · ₹" + p.price, "Get it")).join("")}</optgroup>`;
   if (QUICK.files.length) o += `<optgroup label="My files">${QUICK.files.map(f => opt(location.origin + f.url, "📁 " + f.name, "Download")).join("")}</optgroup>`;
   return `<select class="qpick" data-qf="${field}" data-ql="${labelField}" ${mi === undefined ? "" : `data-qmi="${mi}"`} aria-label="Insert a link">${o}</select>`;
 }

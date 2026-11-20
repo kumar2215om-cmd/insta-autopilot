@@ -78,7 +78,7 @@ def view(f):
     return {**{k: f[k] for k in ("id", "name", "size", "type", "created")}, "url": link(f)}
 
 
-def upload(acc, filename, data, mimetype):
+def upload(acc, filename, data, mimetype, paid=False, listed=True):
     name = _clean(filename)
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
     if ext not in TYPES:
@@ -88,7 +88,7 @@ def upload(acc, filename, data, mimetype):
     if len(data) > MAX_MB * 1024 * 1024:
         raise FileError(f"File is over {MAX_MB} MB. Upload it to Google Drive and paste that link instead.")
     items = load(acc["id"])
-    if len(items) >= MAX_FILES:
+    if listed and len(items) >= MAX_FILES:
         raise FileError(f"You have {MAX_FILES} files. Delete some old ones first.")
     if not configured():
         raise FileError("File storage isn't connected yet (Vercel → Storage → Blob → Connect to this project).")
@@ -109,10 +109,11 @@ def upload(acc, filename, data, mimetype):
         raise FileError(f"Upload failed ({r.status_code}). Try again.")
     blob = r.json()
     f = {"id": fid, "acc": acc["id"], "name": name, "size": len(data), "type": mimetype or "", "created": int(time.time()),
-         "blob": blob["url"], "pathname": blob["pathname"]}
+         "blob": blob["url"], "pathname": blob["pathname"], "paid": bool(paid)}
     store.set_json(f"s:file:{fid}", f)
-    items.insert(0, f)
-    store.set_json(_key(acc["id"]), items)
+    if listed:  # product files (paid) aren't listed in Files
+        items.insert(0, f)
+        store.set_json(_key(acc["id"]), items)
     return f
 
 
@@ -136,10 +137,10 @@ def delete_all(acc):
         delete(acc, f["id"])
 
 
-def fetch(fid, name):
-    """The file's bytes, type and record for /f/<id>/<name>, or None."""
+def fetch(fid, name=None, paid_ok=False):
+    """The file's bytes, type and record, or None. Paid product files only with paid_ok (a valid download token)."""
     f = store.get_json(f"s:file:{fid}") if fid else None
-    if not f or f["name"] != name or not configured():
+    if not f or (name is not None and f["name"] != name) or not configured() or (f.get("paid") and not paid_ok):
         return None
     if ".private.blob." in f["blob"]:
         r = requests.get(f["blob"], headers={"authorization": f"Bearer {_token()}"}, timeout=30)

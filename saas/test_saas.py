@@ -1939,6 +1939,99 @@ class SaasTest(unittest.TestCase):
         self.assertNotIn("om@example.com", self.c.get("/owner", headers=h).get_data(as_text=True))
         self.assertEqual(self.c.post("/owner/user/delete", headers=h, json={"user": uid}).status_code, 400)
 
+    def test_digital_products_route_flow(self):
+        import files
+        import shop
+        import users
+        self.login()
+        self.enterContext(mock.patch.dict(os.environ, RAZORPAY_KEY_ID="rzp_test_k", RAZORPAY_KEY_SECRET="sek",
+                                          RAZORPAY_WEBHOOK_SECRET="whs", BLOB_READ_WRITE_TOKEN="vercel_blob_rw_store9_secret"))
+        calls = []
+
+        def rzp(method, url, json=None, timeout=None, auth=None):
+            calls.append((method, url.replace(shop.API, ""), json))
+            path = url.replace(shop.API, "")
+            if path == "/v2/accounts":
+                return Resp({"id": "acc_L1"})
+            if path.endswith("/stakeholders"):
+                return Resp({"id": "sth_1"})
+            if path.endswith("/products") and method == "POST":
+                return Resp({"id": "acc_prd_1", "activation_status": "requested"})
+            if "/products/" in path:
+                return Resp({"id": "acc_prd_1", "activation_status": "activated", "requirements": []})
+            if path == "/v1/orders":
+                return Resp({"id": "order_S1"})
+            return Resp({}, 404)
+        self.enterContext(mock.patch.object(shop.requests, "request", rzp))
+        blobs = {}
+
+        def put(url, params=None, data=None, headers=None, timeout=None):
+            blobs[params["pathname"]] = data
+            return Resp({"url": f"https://store9.private.blob.vercel-storage.com/{params['pathname']}", "pathname": params["pathname"]})
+
+        def get(url, headers=None, timeout=None):
+            r = Resp({}, 200 if url.split(".com/", 1)[1] in blobs else 404)
+            r.content, r.headers = blobs.get(url.split(".com/", 1)[1], b""), {"content-type": "application/pdf"}
+            return r
+        self.enterContext(mock.patch.object(files.requests, "put", put))
+        self.enterContext(mock.patch.object(files.requests, "get", get))
+        self.enterContext(mock.patch.object(shop.requests, "post", lambda *a, **k: Resp({"id": "email"})))
+        anon = saas.app.test_client()
+        # payouts: validation, then the linked account with bank details; only the last 4 digits are kept
+        bank = {"name": "Om Kumar", "email": "om@example.com", "phone": "98765 43210", "pan": "abcde1234f",
+                "account_number": "4052842007", "ifsc": "kkbk0008072", "street": "12 MG Road", "city": "Bengaluru",
+                "state": "Karnataka", "pincode": "560102"}
+        self.assertIn("PAN", self.c.put("/api/shop/payout", json={**bank, "pan": "123"}).get_json()["error"])
+        p = self.c.put("/api/shop/payout", json=bank).get_json()["payout"]
+        self.assertEqual((p["account_id"], p["status"], p["bank"], p["ifsc"]), ("acc_L1", "activated", "•••• 2007", "KKBK0008072"))
+        patch = [c for c in calls if c[0] == "PATCH"][0][2]
+        self.assertEqual(patch["settlements"], {"account_number": "4052842007", "ifsc_code": "KKBK0008072", "beneficiary_name": "Om Kumar"})
+        self.assertNotIn("4052842007", json.dumps(users.by_email("om@example.com")))
+        # a product with a private file
+        up = self.c.post("/api/shop/upload", data={"file": (io.BytesIO(b"%PDF-pack"), "pack.pdf")}, headers={"X-Upload": "1"},
+                         content_type="multipart/form-data").get_json()
+        self.assertEqual(anon.get(f"/f/{up['file_id']}/pack.pdf").status_code, 404)  # never public
+        self.assertEqual(self.c.get("/api/files").status_code, 403)  # and not in Files
+        self.assertIn("Price", self.c.put("/api/shop/products", json={"title": "Pack", "price": "5", **up}).get_json()["error"])
+        prod = self.c.put("/api/shop/products", json={"title": "Prompt Pack", "price": "₹499", "desc": "39 prompts", **up}).get_json()["product"]
+        page = anon.get(f"/creator/p/{prod['id']}").get_data(as_text=True)
+        self.assertIn("Buy now · ₹499", page)
+        # order: amount from the product, creator's share transferred to the linked account
+        o = anon.post(f"/creator/p/{prod['id']}/order", json={"email": "Fan@Mail.com"}).get_json()
+        self.assertEqual((o["order_id"], o["amount"]), ("order_S1", 49900))
+        order_body = [c for c in calls if c[1] == "/v1/orders"][0][2]
+        share = saas.plans.platform_fee(store.load_account("1789"), 499)["creator_gets"]
+        self.assertEqual(order_body["transfers"][0]["account"], "acc_L1")
+        self.assertEqual(order_body["transfers"][0]["amount"], int(round(share * 100)))
+        self.assertLess(order_body["transfers"][0]["amount"], 49900)
+        # wrong signature refused; right one delivers once
+        self.assertEqual(anon.post(f"/creator/p/{prod['id']}/paid", json={"order_id": "order_S1", "payment_id": "pay_1", "signature": "x"}).status_code, 400)
+        sig = hmac.new(b"sek", b"order_S1|pay_1", hashlib.sha256).hexdigest()
+        dl = anon.post(f"/creator/p/{prod['id']}/paid", json={"order_id": "order_S1", "payment_id": "pay_1", "signature": sig}).get_json()["download"]
+        body = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {"id": "pay_1", "order_id": "order_S1", "status": "captured", "amount": 49900}}}}).encode()
+        wsig = hmac.new(b"whs", body, hashlib.sha256).hexdigest()
+        self.assertEqual(anon.post("/billing/webhook", data=body, headers={"X-Razorpay-Signature": wsig}).status_code, 200)
+        r = self.c.get("/api/shop").get_json()
+        self.assertEqual((len(r["sales"]), r["products"][0]["sales"], r["sales"][0]["email"]), (1, 1, "fan@mail.com"))
+        self.assertIn("Prompt Pack", anon.get(dl).get_data(as_text=True))
+        f = anon.get(dl + "/file")
+        self.assertEqual((f.status_code, f.data), (200, b"%PDF-pack"))
+        self.assertEqual(anon.get("/d/nope-nope-nope/file").status_code, 404)
+        # deleting the product keeps the buyer's download
+        self.c.delete(f"/api/shop/products/{prod['id']}", json={})
+        self.assertEqual(anon.get(dl + "/file").status_code, 200)
+        self.assertEqual(anon.get(f"/creator/p/{prod['id']}").status_code, 404)
+
+    def test_product_page_without_payouts_cant_buy(self):
+        import shop
+        self.login()
+        self.enterContext(mock.patch.dict(os.environ, RAZORPAY_KEY_ID="rzp_test_k", RAZORPAY_KEY_SECRET="sek"))
+        store.set_json(store.account_key("1789", "shop"), [{"id": "abcdef1234", "title": "Pack", "price": 99, "file_id": "x", "enabled": True}])
+        anon = saas.app.test_client()
+        self.assertIn("isn't on sale right now", anon.get("/creator/p/abcdef1234").get_data(as_text=True))
+        self.assertEqual(anon.post("/creator/p/abcdef1234/order", json={"email": "a@b.co"}).status_code, 400)
+        self.assertFalse(shop.can_sell({}))
+
     def test_private_files(self):
         import files
         self.login()
