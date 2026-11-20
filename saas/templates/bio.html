@@ -11,13 +11,12 @@
 <meta property="og:description" content="{{ page.bio }}">
 {% if avatar %}<meta property="og:image" content="{{ (request.host_url.rstrip('/') ~ avatar) if avatar.startswith('/') else avatar }}"><link rel="icon" href="{{ avatar }}">{% else %}<link rel="icon" href="data:,">{% endif %}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;600;700;800;900&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700&family=Manrope:wght@500;600;700;800&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
 <style>
   /* Same look as the /free page. "studio" is the exact freebies palette; other themes swap the colours. */
-  /* studio = the ReplyInbox look: warm paper, violet → coral, near-black ink */
-  .t-studio   { --bg:radial-gradient(90% 45% at 50% 0%,rgba(123,92,255,.16),transparent 70%),#F7F5F0; --ink:#0C0B10; --mute:#66636F; --card:#fff;
-                --card-ink:#17151E; --card-mute:#66636F; --line:#E7E3DA; --rose:#6A4CFF; --cer:#FF7A59; --hl:#6A4CFF;
-                --btn:#0C0B10; --btn-ink:#fff; --thumb:linear-gradient(135deg,#F4F1FF,#FFF3EE); }
+  /* studio = the ReplyInbox brand: paper + dot grid, ink outlines, cobalt accent, volt highlighter, coral catch */
+  .t-studio   { --bg:radial-gradient(rgba(17,19,24,.13) 1px,transparent 1.3px) 0 0/22px 22px,#F5F4EF; --ink:#111318; --mute:#5E6068; --card:#fff; --card-ink:#111318; --card-mute:#5E6068; --line:#111318;
+                --rose:#2E3BFF; --cer:#FF5B3A; --hl:#111318; --btn:#111318; --btn-ink:#D4FF3A; --thumb:#E6E5DE; }
   .t-sunset   { --bg:linear-gradient(165deg,#4f5bd5,#962fbf 35%,#d62976 65%,#fa7e1e 90%,#feda75); --ink:#fff; --mute:rgba(255,255,255,.82);
                 --card:#fff; --card-ink:#1d1530; --card-mute:#7a6f8a; --line:rgba(255,255,255,.35); --rose:#d62976; --cer:#4f5bd5;
                 --btn:#fff; --btn-ink:#1d1530; --hl:#FFE27A; --thumb:linear-gradient(135deg,#FFF1F8,#F3F0FF); }
@@ -32,6 +31,29 @@
                 --thumb:linear-gradient(135deg,#FFF1F8,#F4F0FF); }
   .t-mono     { --bg:#fafafa; --ink:#111; --mute:#666; --card:#fff; --card-ink:#111; --card-mute:#777; --line:#e5e5e5;
                 --rose:#111; --cer:#555; --btn:#111; --btn-ink:#fff; --thumb:linear-gradient(135deg,#f6f6f6,#efefef); }
+
+  /* ReplyInbox brand details for the studio theme */
+  .t-studio { font-family:Manrope,Inter,'Noto Sans Devanagari',system-ui,sans-serif; background-attachment:scroll; }
+  .t-studio h1, .t-studio .handle, .t-studio .t, .t-studio .kw, .t-studio .join h2 { font-family:'Bricolage Grotesque',Manrope,sans-serif; font-weight:800; letter-spacing:-.03em; }
+  .t-studio h1 span { color:#111318; background:#D4FF3A; padding:0 .14em; -webkit-box-decoration-break:clone; box-decoration-break:clone; }
+  .t-studio .kw { letter-spacing:-.02em; text-transform:uppercase; }
+  .t-studio .kw small, .t-studio .label, .t-studio .tag, .t-studio .topic, .t-studio .new { font-family:'JetBrains Mono',monospace; letter-spacing:.06em; text-transform:uppercase; }
+  .t-studio .kw small { color:#2E3BFF; }
+  .t-studio .tag { background:#2E3BFF; } .t-studio .tag.c { background:#D4FF3A; color:#111318; }
+  .t-studio .topic { background:#D4FF3A; color:#111318; border:2px solid #111318; }
+  .t-studio .new { background:#FF5B3A; border:2px solid #111318; }
+  .t-studio .card, .t-studio .join { border:3px solid #111318; }
+  .t-studio .shadow { box-shadow:6px 6px 0 #111318; }
+  .t-studio .thumb { border-bottom:3px solid #111318; }
+  .t-studio .emo { border:2px solid #111318; box-shadow:3px 3px 0 #111318; }
+  .t-studio .link .ico { border:2px solid #111318; background:#D4FF3A; }
+  .t-studio .open { border-radius:30px; border:2px solid #111318; }
+  .t-studio .socials a { border:2px solid #111318; box-shadow:3px 3px 0 #111318; }
+  .t-studio .share, .t-studio .av img, .t-studio .av .ini { border-color:#111318; }
+  .t-studio .follow { border:3px solid #111318; box-shadow:6px 6px 0 #2E3BFF; animation:none; }
+  .t-studio .freecard, .t-studio .prod.featured { animation:none; }
+  .t-studio .card:hover { transform:translate(-2px,-2px); box-shadow:8px 8px 0 #111318; }
+  .t-studio footer a { color:#2E3BFF; }
 
   * { box-sizing:border-box; }
   html, body { margin:0; min-height:100%; }

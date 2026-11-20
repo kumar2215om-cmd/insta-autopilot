@@ -175,17 +175,17 @@ def product_promo(page, username):
     price = (it.get("price") or "").strip()
     price = ("₹" + price) if price[:1].isdigit() else price
     href = f"/{e(username)}/go/{e(it['id'])}"
-    card = ('<section class="cpromo" style="background:#0C0B10;color:#fff;border:0">'
-            '<span class="stag" style="color:#B9A8FF;background:rgba(185,168,255,.18)">🛍 From the creator</span>'
+    card = ('<section class="cpromo" style="background:#111318;color:#fff;border:0">'
+            '<span class="stag" style="color:#D4FF3A;background:rgba(212,255,58,.14)">🛍 From the creator</span>'
             f'<h2 style="margin:10px 0 6px;color:#fff">{e(it["title"])}</h2>'
             + (f'<p style="margin:0;color:rgba(255,255,255,.78);font-weight:600;line-height:1.5">{e(it.get("subtitle") or "")}</p>' if it.get("subtitle") else "")
-            + f'<a href="{href}" style="display:inline-block;margin-top:12px;background:linear-gradient(120deg,#7B5CFF 0%,#B05CE8 55%,#FF7A59 100%);color:#fff;text-decoration:none;'
+            + f'<a href="{href}" style="display:inline-block;margin-top:12px;background:#2E3BFF;color:#fff;text-decoration:none;'
             f'font-weight:900;border-radius:30px;padding:11px 18px">{e(price) + " · " if price else ""}Get it →</a></section>')
     bar = ('<div class="cbn" id="cbn"><style>'
            '.cbn{position:relative;z-index:50;margin:12px auto 0;max-width:640px;width:calc(100% - 32px);box-sizing:border-box;display:flex;align-items:center;gap:12px;'
-           'background:#0C0B10;color:#fff;border-radius:18px;padding:10px 12px 10px 16px;font:700 13.5px/1.35 Inter,system-ui,sans-serif;box-shadow:0 12px 28px rgba(40,30,80,.2)}'
-           '.cbn a.cbn-go{margin-left:auto;flex:none;background:linear-gradient(120deg,#7B5CFF 0%,#B05CE8 55%,#FF7A59 100%);color:#fff;text-decoration:none;font-weight:900;border-radius:30px;padding:8px 14px;white-space:nowrap}'
-           '.cbn b{color:#B9A8FF}.cbn button{flex:none;background:none;border:0;color:#bbb;font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}'
+           'background:#111318;color:#fff;border-radius:18px;padding:10px 12px 10px 16px;font:700 13.5px/1.35 Inter,system-ui,sans-serif;box-shadow:0 12px 28px rgba(40,30,80,.2)}'
+           '.cbn a.cbn-go{margin-left:auto;flex:none;background:#2E3BFF;color:#fff;text-decoration:none;font-weight:900;border-radius:30px;padding:8px 14px;white-space:nowrap}'
+           '.cbn b{color:#D4FF3A}.cbn button{flex:none;background:none;border:0;color:#bbb;font-size:18px;line-height:1;cursor:pointer;padding:2px 4px}'
            '@media (max-width:420px){.cbn{font-size:12.5px}.cbn a.cbn-go{padding:7px 11px}}</style>'
            f'<span>✨ <b>New:</b> {e(it["title"])}</span><a class="cbn-go" href="{href}">{e(price) + " · " if price else ""}See it →</a>'
            '<button type="button" aria-label="Hide" onclick="try{sessionStorage.setItem(\'cbn\',\'1\')}catch(e){}this.parentNode.remove()">×</button>'
@@ -216,9 +216,9 @@ def render(text, filename, acc, page, raw_url, brand="ReplyInbox"):
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{e(title)} | @{e(username)}</title><meta name="description" content="{e(intro[:150])}"><meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;700;800;900&family=JetBrains+Mono:wght@500;700&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Inter:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700&family=Manrope:wght@500;600;700;800&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
 <style>
-:root{{--bg:#F7F5F0;--ink:#0C0B10;--rose:#6A4CFF;--cer:#FF7A59;--mute:#66636F;--line:#E7E3DA;--sh:0 18px 40px rgba(40,30,80,.12)}}
+:root{{--bg:#F5F4EF;--ink:#111318;--rose:#2E3BFF;--cer:#FF5B3A;--mute:#5E6068;--line:#E6E5DE;--sh:0 18px 40px rgba(17,19,24,.12)}}
 *{{box-sizing:border-box}}body{{margin:0;background:var(--bg);background-attachment:fixed;color:var(--ink);font:500 15.5px/1.6 Inter,'Noto Sans Devanagari',system-ui,sans-serif}}
 main{{max-width:640px;margin:0 auto;padding:20px 16px 60px}}a{{color:var(--rose)}}
 .top{{display:flex;align-items:center;gap:10px;flex-wrap:wrap}}.top img{{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:var(--sh);object-fit:cover}}
@@ -230,9 +230,9 @@ section{{background:#fff;border-radius:22px;padding:20px;margin:16px 0;box-shado
 .stag{{display:inline-block;font:800 11px Inter;letter-spacing:1px;text-transform:uppercase;color:var(--cer);background:rgba(255,122,89,.1);border-radius:20px;padding:3px 10px}}
 h2{{font-size:23px;line-height:1.2;margin:8px 0 10px;font-weight:900}}
 code{{font:500 .9em 'JetBrains Mono',monospace;background:#F6F2EC;border-radius:6px;padding:1px 6px}}
-.code{{position:relative;background:#0C0B10;border-radius:14px;padding:12px 14px;margin:12px 0}}.code pre{{margin:6px 0 0;color:#F3EDE3;font:500 13px/1.55 'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-word}}
+.code{{position:relative;background:#111318;border-radius:14px;padding:12px 14px;margin:12px 0}}.code pre{{margin:6px 0 0;color:#F3EDE3;font:500 13px/1.55 'JetBrains Mono',monospace;white-space:pre-wrap;word-break:break-word}}
 .code .lbl{{font:800 10px Inter;letter-spacing:1px;text-transform:uppercase;color:#B5A893}}.cp{{position:absolute;right:10px;top:10px;border:0;background:var(--rose);color:#fff;font:800 11px Inter;border-radius:8px;padding:4px 10px;cursor:pointer}}
-.prompt{{background:#F4F1FF;border:2px solid #DDD5FF}}.prompt pre{{color:var(--ink);padding-right:56px}}.prompt .lbl{{color:var(--rose)}}
+.prompt{{background:#E6E5DE;border:2px solid #111318}}.prompt pre{{color:var(--ink);padding-right:56px}}.prompt .lbl{{color:var(--rose)}}
 .tip{{border-radius:12px;padding:10px 13px;margin:12px 0;font-weight:600;font-size:14px;background:#EAF6FB;border-left:4px solid var(--cer)}}
 ol.num{{padding-left:20px}}ol.num li,ul li{{margin:5px 0}}
 .end{{text-align:center;background:var(--ink);color:#fff;border-radius:20px;padding:20px;margin-top:20px}}.end a{{display:inline-block;margin-top:10px;background:var(--rose);color:#fff;text-decoration:none;font-weight:900;border-radius:12px;padding:10px 18px}}
