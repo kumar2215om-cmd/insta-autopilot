@@ -49,6 +49,21 @@ def get(uid):
 
 def save(user):
     store.set_json(f"s:u:{user['id']}", user)
+    store.redis("SADD", "s:users", user["id"])  # every login, for /owner (older ones join when next saved)
+
+
+def all_ids():
+    return store.redis("SMEMBERS", "s:users") or []
+
+
+def delete(user):
+    """Removes the login itself (its Instagram accounts must be removed first)."""
+    store.redis("DEL", f"s:u:{user['id']}")
+    if user.get("email") and store.redis("GET", f"s:uemail:{user['email']}") == user["id"]:
+        store.redis("DEL", f"s:uemail:{user['email']}")
+    if user.get("google") and store.redis("GET", f"s:ugoogle:{user['google']}") == user["id"]:
+        store.redis("DEL", f"s:ugoogle:{user['google']}")
+    store.redis("SREM", "s:users", user["id"])
 
 
 def clean_email(value):

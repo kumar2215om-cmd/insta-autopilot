@@ -2643,23 +2643,53 @@ def owner_ok():
 
 @app.post("/owner/plan")
 def owner_set_plan():
-    """Sets an account's plan by hand until billing exists. JSON only, so a cross-site form can't trigger it."""
+    """Gives a login (or an account from before logins) a plan by hand: for 30/90/365 days, or with no end (days 0).
+    The same plan given again adds the days to the time left. JSON only, so a cross-site form can't trigger it."""
     if not owner_ok():
         return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="owner"'})
     if not request.is_json:
         return jsonify(error="JSON required"), 415
     data = request.get_json(force=True)
-    acc = store.load_account(str(data.get("id", "")))
-    if not acc or data.get("plan") not in plans.PLANS:
-        return jsonify(error="Unknown account or plan."), 400
-    owner = users.owner_of(acc)
+    plan, days = data.get("plan"), int(data.get("days") or 0) if str(data.get("days") or 0).isdigit() else -1
+    if plan not in plans.PLANS or days < 0 or days > 3660:
+        return jsonify(error="Pick a plan and a length."), 400
+    owner = users.get(str(data.get("user", ""))) if data.get("user") else None
+    acc = None if owner else store.load_account(str(data.get("id", "")))
+    if not owner and acc:
+        owner = users.owner_of(acc)
+    if not owner and not acc:
+        return jsonify(error="Unknown login or account."), 400
+    target = owner or acc
+    now = time.time()
+    until = None
+    if days and plan != "free":
+        start = target.get("plan_until") or 0
+        start = start if target.get("plan") == plan and start > now else now
+        until = int(start + days * 86400)
     if owner:  # the plan belongs to the login and covers all its Instagram accounts
-        users.set_plan(owner, data["plan"])
-        acc = store.load_account(acc["id"])
-    else:
-        acc["plan"] = data["plan"]
-        store.save_account(acc)
-    return jsonify(id=acc["id"], plan=plans.plan_of(acc))
+        users.set_plan(owner, plan, until)
+        return jsonify(user=owner["id"], plan=users.current_plan(users.get(owner["id"])), until=until)
+    acc["plan"], acc["plan_until"] = plan, until
+    store.save_account(acc)
+    return jsonify(id=acc["id"], plan=plans.plan_of(acc), until=until)
+
+
+@app.post("/owner/user/delete")
+def owner_delete_user():
+    """Deletes a login and every Instagram account under it (same clean-up as Disconnect). JSON only."""
+    if not owner_ok():
+        return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="owner"'})
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    user = users.get(str((request.get_json(force=True) or {}).get("user", "")))
+    if not user:
+        return jsonify(error="Unknown login."), 400
+    removed = 0
+    for acc in users.accounts(user):
+        remove_account(acc)
+        removed += 1
+    users.delete(user)
+    return jsonify(ok=True, accounts_removed=removed)
 
 
 @app.post("/owner/remove")
@@ -2710,6 +2740,7 @@ def owner():
             owner = users.owner_of(acc)
             rows.append({**public_account(acc), "invite": acc.get("invite", ""), "blocked": engine.is_blocked(acc),
                          "owner_email": owner.get("email", "") if owner else "", "owner_id": owner["id"] if owner else "",
+                         "plan_until": (owner or acc).get("plan_until"),
                          "limit": users.limit(owner) if owner else 1,
                          "dms_month": c.get(f"dms:{engine.month()}", 0), "dms": c.get("dms", 0),
                          "rules": len(store.load_rules(ig_id).get("reels", {})), "plan_id": plans.plan_of(acc),
@@ -2721,16 +2752,26 @@ def owner():
         acc_owner = r["owner_id"] or "acc:" + r["id"]
         g = logins.setdefault(acc_owner, {"key": acc_owner, "email": r["owner_email"], "plan_set": r["plan_set"],
                                           "plan_id": r["plan_id"], "referral_pro": r["referral_pro"], "accounts": [],
-                                          "limit": r["limit"], "created": r.get("created") or 0})
+                                          "limit": r["limit"], "created": r.get("created") or 0, "user": r["owner_id"],
+                                          "until": r.get("plan_until")})
         g["accounts"].append(r)
+    # logins that signed up but haven't connected Instagram yet
+    for uid in users.all_ids():
+        if uid in logins:
+            continue
+        u = users.get(uid)
+        if u:
+            logins[uid] = {"key": uid, "email": u.get("email", ""), "plan_set": u.get("plan") or "free",
+                           "plan_id": users.current_plan(u), "referral_pro": False, "accounts": [], "limit": users.limit(u),
+                           "created": u.get("created") or 0, "user": uid, "until": u.get("plan_until")}
     groups = sorted(logins.values(), key=lambda g: -g["created"])
     by_plan = {k: sum(1 for g in groups if g["plan_id"] == k) for k in plans.PLANS}
     # MRR counts only plans set by hand (paying); free Pro months from referrals bring no money
-    mrr = sum(plans.PLANS[g["plan_set"]]["price"] for g in groups if g["plan_set"] in plans.PLANS)
+    mrr = sum(plans.PLANS[g["plan_set"]]["price"] for g in groups if g["plan_set"] in plans.PLANS and g["plan_id"] == g["plan_set"])
     payments = [json.loads(x) for x in store.redis("LRANGE", "s:payments", 0, 49) or []]
     month_start = time.mktime(time.strptime(time.strftime("%Y-%m-01"), "%Y-%m-%d"))
     paid_month = sum(p["amount"] for p in payments if p.get("paid_at", 0) >= month_start)
-    return render_template("owner.html", rows=rows, groups=groups, plans=plans.PLANS, by_plan=by_plan, mrr=mrr, locks=plans.LOCKS_ON,
+    return render_template("owner.html", rows=rows, groups=groups, now=time.time(), plans=plans.PLANS, by_plan=by_plan, mrr=mrr, locks=plans.LOCKS_ON,
                            payments=payments, paid_month=paid_month, payouts=referrals.payout_requests(), billing_ready=billing.ready(), billing_test=billing.test_mode())
 
 
