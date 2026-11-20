@@ -11,6 +11,9 @@
   .box { margin-top:28px; padding:26px 22px; text-align:center; }
   .box h1 { font-size:30px; margin:0 0 8px; }
   .box p { color:var(--card-mute); font-weight:600; margin:0 0 18px; }
+  .when { font:800 22px 'Bricolage Grotesque', Manrope, sans-serif; color:#111318 !important; margin:4px 0 18px !important; }
+  .content { text-align:left; white-space:pre-line; background:#E6E5DE; border:2px solid #111318; border-radius:14px; padding:16px; margin:0 0 18px;
+             font-weight:600; line-height:1.55; overflow-wrap:anywhere; color:#111318; }
   .dl { display:inline-block; padding:15px 28px; border-radius:999px; background:#2E3BFF; color:#fff; font:900 17px Manrope, sans-serif; text-decoration:none;
         border:2.5px solid #111318; box-shadow:4px 4px 0 #111318; }
 </style>
@@ -22,11 +25,25 @@
       <h1>This link has expired</h1>
       <p>Download links work for 30 days. Reply to the purchase email or contact the creator for a new one.</p>
     {% else %}
-      <div style="font-size:54px">🎉</div>
+      <div style="font-size:54px">{{ {"event": "🎟", "booking": "✅", "locked": "🔓"}.get(kind, "🎉") }}</div>
       <h1>{{ prod.title }}</h1>
-      <p>Thanks for your purchase{% if acc.username %} from @{{ acc.username }}{% endif %}! We've also emailed you this link.</p>
-      <a class="dl" href="/d/{{ token }}/file">⬇ Download</a>
-      <p style="margin:16px 0 0; font-size:13px">{{ left }} download{{ "s" if left != 1 }} left · link works for 30 days</p>
+      {% if kind in ("event", "booking") %}
+        <p>{{ "Your session" if kind == "booking" else "You're in" }}{% if acc.username %} with @{{ acc.username }}{% endif %}:</p>
+        <p class="when">{{ when }}</p>
+        {% if join %}<a class="dl" href="{{ join }}" target="_blank" rel="noopener">{{ "Join now" if started else "Join link" }}</a>
+        {% else %}<p>The creator will send you the joining link before it starts.</p>{% endif %}
+        <p style="margin:16px 0 0"><a href="{{ cal }}" target="_blank" rel="noopener">＋ Add to Google Calendar</a></p>
+        <p style="margin:10px 0 0; font-size:13px">We've emailed you this page and will remind you on the day.</p>
+      {% elif kind == "locked" %}
+        <p>Thanks for your purchase{% if acc.username %} from @{{ acc.username }}{% endif %}! Here's what you unlocked:</p>
+        {% if content %}<div class="content">{{ content|urlize(60, true, target="_blank") }}</div>{% endif %}
+        {% if has_file %}<a class="dl" href="/d/{{ token }}/file">⬇ Download the file</a>{% endif %}
+        <p style="margin:16px 0 0; font-size:13px">Bookmark this page: it stays open for 30 days. We've emailed you the link.</p>
+      {% else %}
+        <p>Thanks for your purchase{% if acc.username %} from @{{ acc.username }}{% endif %}! We've also emailed you this link.</p>
+        <a class="dl" href="/d/{{ token }}/file">⬇ Download</a>
+        <p style="margin:16px 0 0; font-size:13px">{{ left }} download{{ "s" if left != 1 }} left · link works for 30 days</p>
+      {% endif %}
     {% endif %}
   </div>
   <footer>{% if acc.username %}<a href="/{{ acc.username }}">More from @{{ acc.username }}</a><br>{% endif %}<span class="made">Made with <a href="/">{{ brand }}</a></span></footer>

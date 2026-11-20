@@ -153,10 +153,53 @@ def get(acc_id, pid):
     return next((p for p in products(acc_id) if p["id"] == pid), None)
 
 
+TYPES = ("file", "locked", "event", "booking")
+IST = 19800  # India Standard Time, UTC+5:30: creators set times in IST
+DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def _https(v):
+    v = str(v or "").strip()
+    return v if v.startswith("https://") else ""
+
+
+def _int(v, lo, hi, default):
+    try:
+        n = int(float(str(v).strip()))
+    except (TypeError, ValueError):
+        return default
+    return max(lo, min(hi, n))
+
+
+def _hhmm(v):
+    m = re.fullmatch(r"(\d{1,2}):(\d{2})", str(v or "").strip())
+    return int(m.group(1)) * 60 + int(m.group(2)) if m and int(m.group(1)) < 24 and int(m.group(2)) < 60 else None
+
+
+def parse_local(v):
+    """'2026-12-05T19:30' in IST → epoch seconds, or None."""
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})", str(v or "").strip())
+    if not m:
+        return None
+    import calendar
+    y, mo, d, h, mi = map(int, m.groups())
+    try:
+        return calendar.timegm((y, mo, d, h, mi, 0)) - IST
+    except (ValueError, OverflowError):
+        return None
+
+
+def when_text(ts, minutes=0):
+    t = time.gmtime(ts + IST)
+    s = time.strftime("%a %d %b %Y, %I:%M %p", t).replace(" 0", " ")
+    return s + (f" ({minutes} min)" if minutes else "") + " IST"
+
+
 def save_product(acc, data):
     items = products(acc["id"])
     pid = str(data.get("id") or "")
     cur = next((p for p in items if p["id"] == pid), None)
+    kind = data.get("type") if data.get("type") in TYPES else (cur or {}).get("type", "file")
     title = str(data.get("title", "")).strip()[:100]
     try:
         price = int(float(str(data.get("price", "")).replace("₹", "").replace(",", "").strip()))
@@ -166,19 +209,71 @@ def save_product(acc, data):
         raise ShopError("Give the product a title.")
     if not 10 <= price <= 100000:
         raise ShopError("Price must be between ₹10 and ₹1,00,000.")
-    cover = str(data.get("cover", "")).strip()
     p = {**(cur or {"id": secrets.token_hex(5), "created": int(time.time()), "sales": 0, "revenue": 0}),
-         "title": title, "price": price, "desc": str(data.get("desc", "")).strip()[:2000],
-         "cover": cover if cover.startswith("https://") else "", "enabled": data.get("enabled", True) is not False,
+         "type": kind, "title": title, "price": price, "desc": str(data.get("desc", "")).strip()[:2000],
+         "cover": _https(data.get("cover")), "enabled": data.get("enabled", True) is not False,
          "file_id": str(data.get("file_id") or (cur or {}).get("file_id") or ""),
          "file_name": str(data.get("file_name") or (cur or {}).get("file_name") or "")[:100]}
-    if not p["file_id"]:
+    if data.get("remove_file"):
+        p["file_id"] = p["file_name"] = ""
+    if kind == "file" and not p["file_id"]:
         raise ShopError("Upload the file buyers get.")
+    if kind == "locked":
+        p["content"] = str(data.get("content", "")).strip()[:5000]
+        if not p["content"] and not p["file_id"]:
+            raise ShopError("Add the content buyers unlock (text or links), or a file.")
+    if kind == "event":
+        start = parse_local(data.get("start"))
+        if not start:
+            raise ShopError("Pick the event date and time.")
+        if not cur and start < time.time():
+            raise ShopError("The event date is in the past.")
+        p.update(start=start, minutes=_int(data.get("minutes"), 10, 600, 60), capacity=_int(data.get("capacity"), 0, 100000, 0),
+                 join_url=_https(data.get("join_url")))
+    if kind == "booking":
+        frm, to = _hhmm(data.get("from")), _hhmm(data.get("to"))
+        days = sorted({int(d) for d in data.get("days") or [] if str(d).isdigit() and int(d) < 7})
+        minutes = _int(data.get("minutes"), 10, 240, 30)
+        if frm is None or to is None or to - frm < minutes:
+            raise ShopError("Set your hours (e.g. 18:00 to 21:00), long enough for one session.")
+        if not days:
+            raise ShopError("Pick at least one day of the week.")
+        p.update(minutes=minutes, days=days, frm=frm, to=to, ahead=_int(data.get("ahead"), 1, 60, 14),
+                 notice=_int(data.get("notice"), 0, 72, 3), join_url=_https(data.get("join_url")))
     if not cur and len(items) >= MAX_PRODUCTS:
         raise ShopError(f"You can have up to {MAX_PRODUCTS} products.")
     items = [p if x["id"] == p["id"] else x for x in items] if cur else [p] + items
     store.set_json(_key(acc["id"]), items)
     return p
+
+
+# ---------- events and bookings ----------
+
+def seats_left(p):
+    return None if not p.get("capacity") else max(0, p["capacity"] - int(p.get("sales") or 0))
+
+
+def _booked_key(acc_id, pid):
+    return store.account_key(acc_id, f"booked:{pid}")
+
+
+def slots(acc_id, p, now=None):
+    """Free start times (epoch) for a booking product, in the next `ahead` days."""
+    now = now or time.time()
+    booked = set(store.redis("SMEMBERS", _booked_key(acc_id, p["id"])) or [])
+    out = []
+    day0 = int((now + IST) // 86400) * 86400 - IST  # today 00:00 IST
+    for d in range(p.get("ahead", 14) + 1):
+        base = day0 + d * 86400
+        if time.gmtime(base + IST).tm_wday not in p.get("days", []):
+            continue
+        t = p["frm"]
+        while t + p["minutes"] <= p["to"]:
+            ts = base + t * 60
+            if ts >= now + p.get("notice", 3) * 3600 and str(ts) not in booked and not store.redis("GET", f"s:slothold:{p['id']}:{ts}"):
+                out.append(ts)
+            t += p["minutes"]
+    return out[:400]
 
 
 def delete_product(acc, pid):
@@ -203,7 +298,23 @@ def create_order(acc, prod, buyer):
         raise ShopError("This product isn't for sale right now.")
     email = str(buyer.get("email", "")).strip().lower()[:200]
     if not EMAIL_RE.match(email):
-        raise ShopError("Enter your email: the download link is sent there.")
+        raise ShopError("Enter your email: your access link is sent there.")
+    name = str(buyer.get("name", "")).strip()[:80]
+    kind, slot = prod.get("type", "file"), None
+    if kind == "event":
+        if prod["start"] + prod.get("minutes", 60) * 60 < time.time():
+            raise ShopError("This event is over.")
+        if seats_left(prod) == 0:
+            raise ShopError("Sold out.")
+    if kind == "booking":
+        if not name:
+            raise ShopError("Enter your name for the booking.")
+        try:
+            slot = int(buyer.get("slot"))
+        except (TypeError, ValueError):
+            slot = 0
+        if slot not in slots(acc["id"], prod):
+            raise ShopError("That time was just taken. Pick another slot.")
     s = split(acc, prod["price"])
     receipt = "rs_" + secrets.token_hex(6)
     order = _rzp("POST", "/v1/orders", {
@@ -213,8 +324,13 @@ def create_order(acc, prod, buyer):
                        "notes": {"product": prod["title"][:60], "buyer": email[:60]},
                        "linked_account_notes": ["product"], "on_hold": 0}]})
     rec = {"id": order["id"], "acc": acc["id"], "product": prod["id"], "title": prod["title"], "price": prod["price"],
-           "creator_gets": s["creator"], "fee": s["fee"], "email": email, "name": str(buyer.get("name", "")).strip()[:80],
+           "creator_gets": s["creator"], "fee": s["fee"], "email": email, "name": name, "type": kind,
            "status": "created", "created": int(time.time())}
+    if kind == "event":
+        rec.update(when=prod["start"], minutes=prod.get("minutes", 60))
+    if slot:
+        rec.update(when=slot, minutes=prod["minutes"])
+        store.redis("SET", f"s:slothold:{prod['id']}:{slot}", order["id"], "EX", 900)  # held 15 min while they pay
     store.set_json(f"s:shoporder:{order['id']}", rec)
     return {"key": _env("RAZORPAY_KEY_ID"), "order_id": order["id"], "amount": prod["price"] * 100, "currency": "INR",
             "name": prod["title"], "email": email}
@@ -249,8 +365,19 @@ def fulfil(order_id, payment_id, paid_amount=None):
         raise ShopError("The amount paid doesn't match the price.")
     token = secrets.token_urlsafe(16)
     prod = get(o["acc"], o["product"]) or {}
+    until = time.time() + DL_DAYS * 86400
+    if o.get("when"):  # events and bookings: the page stays open until a week after it happened
+        until = max(until, o["when"] + 7 * 86400)
     store.set_json(f"s:dl:{token}", {"order": order_id, "acc": o["acc"], "product": o["product"], "n": 0, "title": o["title"],
-                                     "file_id": prod.get("file_id", ""), "until": int(time.time() + DL_DAYS * 86400)})
+                                     "type": o.get("type", "file"), "file_id": prod.get("file_id", ""), "content": prod.get("content", ""),
+                                     "when": o.get("when"), "minutes": o.get("minutes"), "join_url": prod.get("join_url", ""),
+                                     "name": o.get("name", ""), "until": int(until)})
+    if o.get("type") == "booking" and o.get("when"):
+        store.redis("SADD", _booked_key(o["acc"], o["product"]), str(o["when"]))
+    if o.get("when"):
+        up = store.get_json("s:shopupcoming", [])
+        up = [x for x in up if x["when"] > time.time() - 86400] + [{"order": order_id, "when": o["when"]}]
+        store.set_json("s:shopupcoming", up[-2000:])
     o.update(status="paid", payment_id=payment_id, paid_at=int(time.time()), token=token)
     store.set_json(key, o)
     items = products(o["acc"])
@@ -260,7 +387,8 @@ def fulfil(order_id, payment_id, paid_amount=None):
             p["revenue"] = int(p.get("revenue") or 0) + o["price"]
     store.set_json(_key(o["acc"]), items)
     sales = store.account_key(o["acc"], "shopsales")
-    store.redis("LPUSH", sales, json.dumps({k: o[k] for k in ("id", "title", "price", "creator_gets", "email", "paid_at")}))
+    store.redis("LPUSH", sales, json.dumps({**{k: o[k] for k in ("id", "title", "price", "creator_gets", "email", "paid_at")},
+                                            "name": o.get("name", ""), "type": o.get("type", "file"), "when": o.get("when")}))
     store.redis("LTRIM", sales, 0, 499)
     store.count(o["acc"], "sales")
     store.count(o["acc"], "revenue", o["price"])
@@ -273,6 +401,13 @@ def fulfil(order_id, payment_id, paid_amount=None):
     except Exception:
         pass
     send_download_email(o, acc)
+    if o.get("type") == "booking":
+        owner = users.owner_of(acc)
+        if owner and owner.get("email"):
+            _mail(owner["email"], f"New booking: {o.get('name') or o['email']} · {when_text(o['when'])}",
+                  f"<p><b>{_esc(o.get('name') or '')}</b> ({_esc(o['email'])}) booked <b>{_esc(o['title'])}</b> for "
+                  f"<b>{when_text(o['when'], o.get('minutes') or 0)}</b> and paid ₹{o['price']:,}.</p>"
+                  f"<p>Reply to this email to reach them, or write to {_esc(o['email'])}.</p>", reply_to=o["email"])
     return o
 
 
@@ -299,29 +434,74 @@ def count_download(token):
     return True
 
 
-def send_download_email(o, acc):
+def _site():
+    return (_env("SITE_URL") or _env("PUBLIC_URL") or "https://replyinbox.in").rstrip("/")
+
+
+def _mail(to, subject, html, reply_to=None):
     key = _env("RESEND_API_KEY")
-    site = (_env("SITE_URL") or _env("PUBLIC_URL") or "https://replyinbox.in").rstrip("/")
-    link = f"{site}/d/{o['token']}"
     if not key:
-        print(f"[dev] download link for {o['email']}: {link}")
-        return
+        print(f"[dev] email to {to}: {subject}")
+        return False
     brand = _env("BRAND_NAME", "ReplyInbox")
-    by = f"@{acc.get('username')}" if acc.get("username") else "the creator"
-    html = (f"<div style=\"font-family:system-ui,sans-serif;max-width:460px;margin:auto;padding:24px;color:#111318\">"
-            f"<h2 style=\"margin:0 0 8px\">Your download is ready 🎉</h2>"
-            f"<p>Thanks for buying <b>{_esc(o['title'])}</b> from {by}.</p>"
-            f"<p><a href=\"{link}\" style=\"display:inline-block;background:#2E3BFF;color:#fff;text-decoration:none;font-weight:800;"
-            f"border-radius:999px;padding:12px 22px\">Download</a></p>"
-            f"<p style=\"color:#5E6068;font-size:13px\">The link works for {DL_DAYS} days. Paid ₹{o['price']:,} · order {o['id']}.</p></div>")
+    rt = reply_to or _env("SUPPORT_EMAIL") or _env("CONTACT_EMAIL")
+    body = (f"<div style=\"font-family:system-ui,sans-serif;max-width:480px;margin:auto;padding:24px;color:#111318\">{html}"
+            f"<p style=\"color:#5E6068;font-size:12px;margin-top:22px\">Sent by {brand} on behalf of the creator.</p></div>")
     try:
         requests.post("https://api.resend.com/emails", timeout=15, headers={"Authorization": f"Bearer {key}"},
-                      json={"from": _env("MAIL_FROM", f"{brand} <no-reply@replyinbox.in>"), "to": [o["email"]],
-                            "subject": f"Your download: {o['title']}", "html": html,
-                            "text": f"Thanks for buying {o['title']} from {by}. Download: {link} (works {DL_DAYS} days)",
-                            **({"reply_to": _env("SUPPORT_EMAIL") or _env("CONTACT_EMAIL")} if (_env("SUPPORT_EMAIL") or _env("CONTACT_EMAIL")) else {})})
+                      json={"from": _env("MAIL_FROM", f"{brand} <no-reply@replyinbox.in>"), "to": [to], "subject": subject,
+                            "html": body, **({"reply_to": rt} if rt else {})})
+        return True
     except requests.RequestException:
-        pass
+        return False
+
+
+def _button(link, label):
+    return (f"<p><a href=\"{link}\" style=\"display:inline-block;background:#2E3BFF;color:#fff;text-decoration:none;font-weight:800;"
+            f"border-radius:999px;padding:12px 22px\">{label}</a></p>")
+
+
+def send_download_email(o, acc):
+    link = f"{_site()}/d/{o['token']}"
+    by = f"@{acc.get('username')}" if acc.get("username") else "the creator"
+    kind = o.get("type", "file")
+    if kind in ("event", "booking"):
+        what = "Your booking is confirmed ✅" if kind == "booking" else "You're in! 🎟"
+        html = (f"<h2 style=\"margin:0 0 8px\">{what}</h2><p><b>{_esc(o['title'])}</b> with {by}</p>"
+                f"<p style=\"font-size:18px;font-weight:800\">{when_text(o['when'], o.get('minutes') or 0)}</p>"
+                + _button(link, "See details and join link") +
+                f"<p style=\"color:#5E6068;font-size:13px\">We'll remind you on the day. Paid ₹{o['price']:,} · order {o['id']}.</p>")
+        _mail(o["email"], f"{'Booked' if kind == 'booking' else 'Your ticket'}: {o['title']} · {when_text(o['when'])}", html,
+              reply_to=None)
+        return
+    label = "Open your content" if kind == "locked" else "Download"
+    html = (f"<h2 style=\"margin:0 0 8px\">{'Unlocked' if kind == 'locked' else 'Your download is ready'} 🎉</h2>"
+            f"<p>Thanks for buying <b>{_esc(o['title'])}</b> from {by}.</p>" + _button(link, label) +
+            f"<p style=\"color:#5E6068;font-size:13px\">The link works for {DL_DAYS} days. Paid ₹{o['price']:,} · order {o['id']}.</p>")
+    _mail(o["email"], f"{'Unlocked' if kind == 'locked' else 'Your download'}: {o['title']}", html)
+
+
+def send_reminders(now=None):
+    """Events and bookings starting in the next 24 hours get one reminder email (run daily by the cron)."""
+    now = now or time.time()
+    up, keep, sent = store.get_json("s:shopupcoming", []), [], 0
+    for x in up:
+        if x["when"] < now:
+            continue
+        if x["when"] > now + 86400:
+            keep.append(x)
+            continue
+        o = store.get_json(f"s:shoporder:{x['order']}")
+        if o and o.get("status") == "paid" and not o.get("reminded"):
+            link = f"{_site()}/d/{o['token']}"
+            _mail(o["email"], f"Today: {o['title']} · {when_text(o['when'])}",
+                  f"<h2 style=\"margin:0 0 8px\">Reminder ⏰</h2><p><b>{_esc(o['title'])}</b> is coming up:</p>"
+                  f"<p style=\"font-size:18px;font-weight:800\">{when_text(o['when'], o.get('minutes') or 0)}</p>" + _button(link, "Join details"))
+            o["reminded"] = int(now)
+            store.set_json(f"s:shoporder:{x['order']}", o)
+            sent += 1
+    store.set_json("s:shopupcoming", keep)
+    return sent
 
 
 def _esc(s):
