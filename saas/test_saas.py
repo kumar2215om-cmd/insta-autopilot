@@ -1864,6 +1864,25 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(saas.app.test_client().get("/avatar/x;y").status_code, 404)
         self.assertEqual(saas.avatar_url({"id": "1", "pic": "https://x", "demo": True}), "")
 
+    def test_text_files_open_as_guides(self):
+        import files
+        import guides
+        self.login()
+        self.c.put("/api/page", json={"theme": "candy", "items": [{"type": "product", "title": "My Course", "url": "https://x.com/c",
+                                                                   "price": "499", "featured": True}]})
+        text = ("My Guide: Day 1 Plan\n\nWelcome to the plan.\n\nThe rules\n\n1. Post daily\n2. Track numbers\n\n"
+                "Prompt 1: ideas\n\nGive me 30 ideas\nfor my niche.\n\nToolkit\n\n- Claude\n- Canva\n\n<script>alert(1)</script>")
+        rec = {"id": "abc", "acc": "1789", "name": "guide.txt"}
+        with mock.patch.object(files, "fetch", return_value=(text.encode(), "text/plain", rec)):
+            h = saas.app.test_client().get("/f/abc/guide.txt").get_data(as_text=True)
+            raw = saas.app.test_client().get("/f/abc/guide.txt?raw=1")
+        for part in ('class="t-candy"', "My Guide:", "<span>Day 1 Plan</span>", 'class="stag">The rules', '<ol class="num">',
+                     "Give me 30 ideas\nfor my niche.", "My Course", "₹499 · Get it", "Follow @creator", "?raw=1"):
+            self.assertIn(part, h)
+        self.assertNotIn("<script>alert", h)  # text is escaped
+        self.assertEqual(raw.get_data(as_text=True), text)
+        self.assertEqual(guides.product_promo({"items": []}, "x"), ("", ""))
+
     def test_private_files(self):
         import files
         self.login()
