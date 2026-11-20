@@ -143,7 +143,7 @@ def public_account(acc):
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
-    ("sales", "/app/sales", "Sales", True), ("shop", "/app/products", "Digital products", False), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
+    ("sales", "/app/sales", "Sales", True), ("shop", "/app/products", "Store", False), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False), ("files", "/app/files", "Files", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("billing", "/app/billing", "Plan & billing", True), ("refer", "/app/refer", "Refer & earn", True),
@@ -1958,7 +1958,10 @@ def api_shop():
         return jsonify(demo=True, ready=False, payout={}, products=[], sales=[], plan_fee=plans.platform_fee(acc, 499))
     user = shop_owner()
     base = f"{site_url()}/{acc.get('username', '')}/p/"
-    return jsonify(ready=shop.ready(), payout=shop.refresh(user), products=[{**p, "url": base + p["id"]} for p in shop.products(acc["id"])],
+    return jsonify(ready=shop.ready(), payout=shop.refresh(user),
+                   products=[{**p, "url": base + p["id"], "seats_left": shop.seats_left(p),
+                              "when": shop.when_text(p["start"], p.get("minutes", 0)) if p.get("type") == "event" else ""}
+                             for p in shop.products(acc["id"])],
                    sales=shop.sales(acc["id"], 50), plan_fee=plans.platform_fee(acc, 499))
 
 
@@ -2010,8 +2013,28 @@ def product_page(username, pid):
     acc, prod = shop_product(username, pid)
     owner = users.owner_of(acc)
     page = store.load_page(acc["id"]) or default_page(acc)
+    kind = prod.get("type", "file")
+    over = kind == "event" and prod["start"] + prod.get("minutes", 60) * 60 < time.time()
     return render_template("product.html", acc=public_account(acc), prod=prod, page={**page, "theme": theme_of(page)},
-                           can_buy=shop.ready() and bool(owner) and shop.can_sell(owner))
+                           can_buy=shop.ready() and bool(owner) and shop.can_sell(owner) and not over, kind=kind, over=over,
+                           when=shop.when_text(prod["start"], prod.get("minutes", 0)) if kind == "event" else "",
+                           seats=shop.seats_left(prod) if kind == "event" else None,
+                           days=", ".join(shop.DAYS[d] for d in prod.get("days", [])) if kind == "booking" else "")
+
+
+@app.get("/<username>/p/<pid>/slots")
+def product_slots(username, pid):
+    acc, prod = shop_product(username, pid)
+    if prod.get("type") != "booking":
+        abort(404)
+    out = {}
+    for ts in shop.slots(acc["id"], prod):
+        t = time.gmtime(ts + shop.IST)
+        out.setdefault(time.strftime("%Y-%m-%d", t), {"label": time.strftime("%a %d %b", t).replace(" 0", " "), "slots": []})
+        out[time.strftime("%Y-%m-%d", t)]["slots"].append({"ts": ts, "label": time.strftime("%I:%M %p", t).lstrip("0")})
+    resp = jsonify(days=list(out.values()), minutes=prod["minutes"])
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.post("/<username>/p/<pid>/order")
@@ -2020,8 +2043,10 @@ def product_order(username, pid):
     if not request.is_json:
         return jsonify(error="JSON required"), 415
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
-    if not store.claim(f"s:shopip:{ip}:{int(time.time() // 10)}", 10):
-        return jsonify(error="One moment, then try again."), 429
+    k = f"s:shopip:{ip}:{int(time.time() // 60)}"
+    if (store.redis("INCR", k) or 0) > 10:  # at most 10 order attempts a minute per IP
+        return jsonify(error="Too many tries. Wait a minute, then try again."), 429
+    store.redis("EXPIRE", k, 60)
     try:
         return jsonify(shop.create_order(acc, prod, request.get_json(force=True) or {}))
     except shop.ShopError as e:
@@ -2048,8 +2073,20 @@ def download_page(token):
         return render_template("download.html", missing=True, acc={}, prod={}, left=0), 404
     acc = store.load_account(d["acc"]) or {}
     prod = shop.get(d["acc"], d["product"]) or {"title": d.get("title", "Your download")}
-    return render_template("download.html", missing=False, acc=public_account(acc) if acc else {}, prod=prod,
-                           token=token, left=max(0, shop.DL_MAX - d["n"]))
+    kind = d.get("type", "file")
+    content = (prod.get("content") if prod.get("id") else None) or d.get("content", "")
+    join = (prod.get("join_url") if prod.get("id") else None) or d.get("join_url", "")
+    cal = ""
+    if d.get("when"):
+        fmt = lambda ts: time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(ts))
+        cal = "https://calendar.google.com/calendar/render?" + urlencode({
+            "action": "TEMPLATE", "text": d.get("title", ""), "dates": f"{fmt(d['when'])}/{fmt(d['when'] + (d.get('minutes') or 60) * 60)}",
+            "details": (f"Join: {join}\n" if join else "") + f"Details: {site_url()}/d/{token}"})
+    return render_template("download.html", missing=False, acc=public_account(acc) if acc else {}, prod=prod, kind=kind,
+                           token=token, left=max(0, shop.DL_MAX - d["n"]), content=content, join=join, cal=cal,
+                           when=shop.when_text(d["when"], d.get("minutes") or 0) if d.get("when") else "",
+                           started=bool(d.get("when")) and time.time() > d["when"] - 15 * 60,
+                           has_file=bool(d.get("file_id")))
 
 
 @app.get("/d/<token>/file")
@@ -2734,6 +2771,10 @@ def cron_refresh_tokens():
     if not CRON_SECRET or request.headers.get("Authorization") != f"Bearer {CRON_SECRET}":
         abort(401)
     engine.send_due_followups(100)
+    try:
+        shop.send_reminders()  # events and bookings happening in the next 24 hours
+    except Exception as e:
+        print(f"shop reminders failed: {e}")
     for ig_id in store.account_ids():  # refused comment DMs get another try once a day
         acc = store.load_account(ig_id)
         if acc and not acc.get("demo") and engine.pending_retries(acc):

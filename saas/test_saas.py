@@ -2022,6 +2022,74 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(anon.get(dl + "/file").status_code, 200)
         self.assertEqual(anon.get(f"/creator/p/{prod['id']}").status_code, 404)
 
+    def test_store_locked_event_booking(self):
+        import shop
+        import users
+        self.login()
+        self.enterContext(mock.patch.dict(os.environ, RAZORPAY_KEY_ID="rzp_test_k", RAZORPAY_KEY_SECRET="sek"))
+        u = users.by_email("om@example.com")
+        u["payout"] = {"account_id": "acc_L1", "product_id": "p", "status": "activated"}
+        users.save(u)
+        n = {"i": 0}
+        mails = []
+
+        def rzp(method, url, json=None, timeout=None, auth=None):
+            n["i"] += 1
+            return Resp({"id": f"order_{n['i']}"})
+        self.enterContext(mock.patch.object(shop.requests, "request", rzp))
+        self.enterContext(mock.patch.object(shop, "_mail", lambda to, subject, html, reply_to=None: mails.append((to, subject)) or True))
+        anon = saas.app.test_client()
+
+        def buy(pid, **buyer):
+            o = anon.post(f"/creator/p/{pid}/order", json={"email": "fan@x.co", **buyer})
+            if o.status_code != 200:
+                return o.get_json()
+            oid = o.get_json()["order_id"]
+            sig = hmac.new(b"sek", f"{oid}|pay_{oid}".encode(), hashlib.sha256).hexdigest()
+            return anon.post(f"/creator/p/{pid}/paid", json={"order_id": oid, "payment_id": f"pay_{oid}", "signature": sig}).get_json()
+
+        # locked content: no file needed; the access page shows the content
+        self.assertIn("unlock", self.c.put("/api/shop/products", json={"type": "locked", "title": "VIP", "price": 49}).get_json()["error"])
+        lk = self.c.put("/api/shop/products", json={"type": "locked", "title": "VIP list", "price": 49,
+                                                    "content": "Join https://chat.example/vip and use code OM10"}).get_json()["product"]
+        self.assertIn("Unlock · ₹49", anon.get(f"/creator/p/{lk['id']}").get_data(as_text=True))
+        page = anon.get(buy(lk["id"])["download"]).get_data(as_text=True)
+        self.assertIn("code OM10", page)
+        self.assertIn('href="https://chat.example/vip"', page)
+        # event: date in the future, seats, sold out
+        start = time.strftime("%Y-%m-%dT19:30", time.gmtime(time.time() + 5 * 86400 + shop.IST))
+        ev = self.c.put("/api/shop/products", json={"type": "event", "title": "Live class", "price": 99, "start": start,
+                                                    "minutes": 90, "capacity": 1, "join_url": "https://meet.example/abc"}).get_json()["product"]
+        self.assertIn("1 seat left", anon.get(f"/creator/p/{ev['id']}").get_data(as_text=True))
+        page = anon.get(buy(ev["id"])["download"]).get_data(as_text=True)
+        self.assertIn("https://meet.example/abc", page)
+        self.assertIn("calendar.google.com", page)
+        self.assertIn("Sold out", anon.get(f"/creator/p/{ev['id']}").get_data(as_text=True))
+        self.assertEqual(buy(ev["id"])["error"], "Sold out.")
+        self.assertIn("past", self.c.put("/api/shop/products", json={"type": "event", "title": "Old", "price": 99,
+                                                                     "start": "2020-01-01T10:00"}).get_json()["error"])
+        # booking: free slots, a slot is held while paying and booked after
+        bk = self.c.put("/api/shop/products", json={"type": "booking", "title": "1:1 call", "price": 499, "minutes": 30,
+                                                    "days": [0, 1, 2, 3, 4, 5, 6], "from": "18:00", "to": "19:00", "ahead": 7,
+                                                    "notice": 0}).get_json()["product"]
+        days = anon.get(f"/creator/p/{bk['id']}/slots").get_json()["days"]
+        first = days[-1]["slots"][0]["ts"]
+        self.assertEqual(len(days[-1]["slots"]), 2)  # 18:00 and 18:30
+        self.assertIn("name", buy(bk["id"], slot=first)["error"])
+        anon.post(f"/creator/p/{bk['id']}/order", json={"email": "a@x.co", "name": "A", "slot": first})  # held, not paid
+        self.assertIn("taken", buy(bk["id"], name="B", slot=first)["error"])
+        store.redis("DEL", f"s:slothold:{bk['id']}:{first}")
+        r = buy(bk["id"], name="Riya", slot=first)
+        self.assertIn("/d/", r["download"])
+        free = [t["ts"] for d in anon.get(f"/creator/p/{bk['id']}/slots").get_json()["days"] for t in d["slots"]]
+        self.assertNotIn(first, free)
+        self.assertTrue(any(to == "om@example.com" and "New booking" in sub for to, sub in mails))
+        sales = self.c.get("/api/shop").get_json()["sales"]
+        self.assertEqual(sales[0]["name"], "Riya")
+        # reminders: events/bookings in the next 24 hours get one email
+        self.assertEqual(shop.send_reminders(now=first - 3600), 1)
+        self.assertEqual(shop.send_reminders(now=first - 1800), 0)
+
     def test_product_page_without_payouts_cant_buy(self):
         import shop
         self.login()

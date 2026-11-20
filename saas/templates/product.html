@@ -20,37 +20,51 @@
   .desc { white-space:pre-line; color:var(--card-mute); font-weight:600; line-height:1.55; margin:0 0 16px; }
   .buy { display:grid; gap:10px; }
   .buy input { width:100%; padding:13px 14px; border-radius:12px; border:2px solid var(--line); font-weight:600; font-size:16px; font-family:inherit; background:transparent; color:inherit; }
-  .buy button { padding:15px; border-radius:999px; border:0; background:var(--rose); color:#fff; font-weight:900; font-size:17px; font-family:inherit; cursor:pointer; }
-  .buy button:disabled { opacity:.6; cursor:default; }
+  .buy > button { padding:15px; border-radius:999px; border:0; background:var(--rose); color:#fff; font-weight:900; font-size:17px; font-family:inherit; cursor:pointer; }
+  .buy > button:disabled { opacity:.6; cursor:default; }
   .msg { min-height:20px; font-weight:700; font-size:14px; margin:0; }
   .msg.err { color:#c2410c; }
+  .info { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin:0 0 14px; font-size:15px; }
+  .pill2 { font:800 12px 'JetBrains Mono', monospace; text-transform:uppercase; background:#D4FF3A; color:#111318; border:2px solid #111318; border-radius:999px; padding:3px 10px; }
+  .pill2.bad { background:#FDECEC; color:#E5484D; border-color:#E5484D; }
+  .muted2 { color:var(--card-mute); font-weight:600; font-size:14px; margin:0; }
+  .slots { display:grid; gap:10px; }
+  .dayrow { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+  .dayrow::-webkit-scrollbar { display:none; }
+  .dayrow button, .times button { flex:none; border:2px solid var(--line); background:var(--card); color:var(--card-ink); border-radius:12px; padding:8px 12px; font-weight:800; font-size:13px; font-family:inherit; cursor:pointer; }
+  .times { display:grid; grid-template-columns:repeat(auto-fill, minmax(88px, 1fr)); gap:8px; }
+  .dayrow button[aria-pressed="true"], .times button[aria-pressed="true"] { background:#2E3BFF; border-color:#111318; color:#fff; }
   .trust { display:flex; gap:12px; flex-wrap:wrap; font-size:12.5px; color:var(--card-mute); font-weight:700; margin-top:12px; }
   .t-studio .pcard .cover, .t-studio .pcard .ph { border-bottom:3px solid #111318; }
   .t-studio .price-big { font-family:'Bricolage Grotesque', Manrope, sans-serif; }
   .t-studio .buy input { border:2.5px solid #111318; }
-  .t-studio .buy button { background:#2E3BFF; border:2.5px solid #111318; box-shadow:4px 4px 0 #111318; }
+  .t-studio .buy > button { background:#2E3BFF; border:2.5px solid #111318; box-shadow:4px 4px 0 #111318; }
 </style>
 </head>
 <body class="t-{{ page.theme }}">
 <div class="wrap">
   <div class="top">
     <a class="av" href="/{{ acc.username }}" aria-label="@{{ acc.username }}">{% if acc.pic %}<img src="{{ acc.pic }}" alt="">{% else %}<div class="ini">{{ (acc.username or "?")[0]|upper }}</div>{% endif %}</a>
-    <div><div class="handle">@{{ acc.username }}</div><div class="tags"><span class="tag">digital product</span></div></div>
+    <div><div class="handle">@{{ acc.username }}</div><div class="tags"><span class="tag">{{ {"event": "live event", "booking": "1:1 call", "locked": "members only"}.get(kind, "digital product") }}</span></div></div>
   </div>
   <div class="card shadow pcard">
-    {% if prod.cover %}<img class="cover" src="{{ prod.cover }}" alt="">{% else %}<div class="ph" aria-hidden="true">📦</div>{% endif %}
+    {% if prod.cover %}<img class="cover" src="{{ prod.cover }}" alt="">{% else %}<div class="ph" aria-hidden="true">{{ {"event": "🎟", "booking": "🗓", "locked": "🔒"}.get(kind, "📦") }}</div>{% endif %}
     <div class="body">
       <h1>{{ prod.title }}</h1>
       <div class="price-big">₹{{ "{:,}".format(prod.price) }}</div>
+      {% if kind == "event" %}<div class="info"><b>📅 {{ when }}</b>{% if seats is not none %}<span class="pill2 {{ 'bad' if seats == 0 }}">{{ "Sold out" if seats == 0 else seats ~ " seat" ~ ("s" if seats != 1 else "") ~ " left" }}</span>{% endif %}{% if over %}<span class="pill2 bad">This event is over</span>{% endif %}</div>
+      {% elif kind == "booking" %}<div class="info"><b>🗓 1:1 session · {{ prod.minutes }} min</b><span class="muted2">Available {{ days }}</span></div>
+      {% elif kind == "locked" %}<div class="info"><b>🔒 Unlocks instantly after payment</b></div>{% endif %}
       {% if prod.desc %}<p class="desc">{{ prod.desc }}</p>{% endif %}
       {% if can_buy %}
       <form class="buy" id="buy" novalidate>
-        <input id="email" type="email" placeholder="Your email (download link is sent here)" autocomplete="email" required aria-label="Your email">
-        <input id="name" type="text" placeholder="Your name (optional)" autocomplete="name" aria-label="Your name">
-        <button type="submit" id="go">Buy now · ₹{{ "{:,}".format(prod.price) }}</button>
+        {% if kind == "booking" %}<div class="slots" id="slots"><p class="muted2">Loading free times…</p></div>{% endif %}
+        <input id="email" type="email" placeholder="Your email ({{ 'confirmation' if kind in ('event', 'booking') else 'access link' }} is sent here)" autocomplete="email" required aria-label="Your email">
+        <input id="name" type="text" placeholder="Your name{{ '' if kind == 'booking' else ' (optional)' }}" autocomplete="name" aria-label="Your name">
+        {% if not (kind == "event" and seats == 0) %}<button type="submit" id="go">{{ {"event": "Get ticket", "booking": "Book", "locked": "Unlock"}.get(kind, "Buy now") }} · ₹{{ "{:,}".format(prod.price) }}</button>{% endif %}
         <p class="msg" id="msg" role="status" aria-live="polite"></p>
       </form>
-      <div class="trust"><span>⚡ Instant download</span><span>🔒 UPI, cards, netbanking via Razorpay</span><span>✉️ Link emailed to you</span></div>
+      <div class="trust"><span>⚡ {{ {"event": "Instant confirmation", "booking": "Instant confirmation", "locked": "Instant access"}.get(kind, "Instant download") }}</span><span>🔒 UPI, cards, netbanking via Razorpay</span><span>✉️ {{ "Reminder on the day" if kind in ("event", "booking") else "Link emailed to you" }}</span></div>
       {% else %}
       <p class="msg">This product isn't on sale right now. Please check again soon.</p>
       {% endif %}
@@ -70,16 +84,32 @@ function loadCheckout() {
   return new Promise((ok, bad) => { if (window.Razorpay) return ok(); const s = document.createElement("script");
     s.src = "https://checkout.razorpay.com/v1/checkout.js"; s.onload = ok; s.onerror = () => bad(new Error("Couldn't load the payment window. Check your connection.")); document.head.appendChild(s); });
 }
+let slot = null, D = [];
+{% if kind == "booking" %}
+function drawSlots(di) {
+  if (!D.length) { $("slots").innerHTML = `<p class="muted2">No free times right now. Please check again later.</p>`; return; }
+  $("slots").innerHTML = `<div class="dayrow">${D.map((d, i) => `<button type="button" data-day="${i}" aria-pressed="${i === di}">${d.label}</button>`).join("")}</div>
+    <div class="times">${D[di].slots.map(t => `<button type="button" data-ts="${t.ts}" aria-pressed="${t.ts === slot}">${t.label}</button>`).join("")}</div>
+    <p class="muted2">Times in IST · ${D[di].slots.length} free</p>`;
+}
+let di = 0;
+fetch(base + "/slots").then(r => r.json()).then(d => { D = d.days || []; drawSlots(0); }).catch(() => { $("slots").innerHTML = `<p class="muted2">Couldn't load times. Refresh the page.</p>`; });
+document.addEventListener("click", (e) => {
+  const d = e.target.closest("[data-day]"); if (d) { di = +d.dataset.day; drawSlots(di); return; }
+  const t = e.target.closest("[data-ts]"); if (t) { slot = +t.dataset.ts; drawSlots(di); }
+});
+{% endif %}
 $("buy").onsubmit = async (e) => {
   e.preventDefault();
+  {% if kind == "booking" %}if (!slot) { say("Pick a time first.", true); return; }{% endif %}
   const b = $("go"); b.disabled = true; say("Opening payment…");
   try {
     await loadCheckout();
-    const o = await post(base + "/order", {email: $("email").value, name: $("name").value});
+    const o = await post(base + "/order", {email: $("email").value, name: $("name").value, slot});
     const rzp = new Razorpay({key: o.key, order_id: o.order_id, amount: o.amount, currency: o.currency, name: "@{{ acc.username }}",
       description: o.name, prefill: {email: o.email, name: $("name").value}, theme: {color: "#2E3BFF"},
       handler: async (r) => {
-        say("Payment received. Getting your download…");
+        say("Payment received. One moment…");
         try { const d = await post(base + "/paid", {order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature}); location.href = d.download; }
         catch (err) { say(err.message, true); }
       },

@@ -1,6 +1,6 @@
 {% extends "_base.html" %}
-{% block title %}Digital products{% endblock %}
-{% block heading %}Digital products{% endblock %}
+{% block title %}Store{% endblock %}
+{% block heading %}Store{% endblock %}
 {% block actions %}<button class="btn" type="button" id="addProd">＋ New product</button>{% endblock %}
 {% block head %}
 <style>
@@ -8,6 +8,8 @@
   .grid2 .full { grid-column:1 / -1; }
   .f { display:block; font-weight:700; font-size:13px; margin:0 0 5px; }
   .fields input, .fields textarea { width:100%; }
+  .fields input[type=checkbox] { width:auto; }
+  .fields input[type=time], .fields input[type=datetime-local] { border:1.5px solid var(--line); border-radius:12px; padding:11px 12px; background:var(--card); color:var(--ink); font:500 15px var(--text); }
   .status { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   .prod { display:grid; grid-template-columns:72px minmax(0, 1fr) auto; gap:14px; align-items:center; padding:14px 0; border-top:1px solid var(--line2); }
   .prod:first-child { border-top:0; }
@@ -17,6 +19,10 @@
   .edit { display:grid; gap:12px; }
   .drop { border:2px dashed var(--line); border-radius:14px; padding:16px; text-align:center; cursor:pointer; background:var(--bg); }
   .drop:hover { border-color:var(--accent); }
+  .types { display:flex; gap:8px; flex-wrap:wrap; }
+  .types button { border:1.5px solid #CFCEC6; background:var(--card); border-radius:999px; padding:8px 14px; font:700 13.5px var(--text); cursor:pointer; color:var(--ink); }
+  .types button[aria-pressed="true"] { background:#111318; color:#fff; border-color:#111318; }
+  .days { display:flex; gap:10px; flex-wrap:wrap; font-weight:700; font-size:14px; }
   .tbl td.n { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
   @media (max-width:700px) { .grid2 { grid-template-columns:1fr; } .prod { grid-template-columns:56px minmax(0, 1fr); } .prod .cv { width:56px; height:56px; } .prod .acts { grid-column:1 / -1; justify-content:flex-start; } }
 </style>
@@ -31,16 +37,16 @@
   <p class="muted small" id="pText" style="margin:6px 0 0"></p>
   <form class="fields" id="pForm" hidden style="margin-top:14px; display:grid; gap:12px">
     <div class="grid2">
-      <div><label class="f" for="pName">Account holder name</label><input id="pName" name="name" autocomplete="name" placeholder="As on your bank account"></div>
-      <div><label class="f" for="pPan">PAN</label><input id="pPan" name="pan" maxlength="10" placeholder="ABCDE1234F" style="text-transform:uppercase"></div>
-      <div><label class="f" for="pAcct">Bank account number</label><input id="pAcct" name="account_number" inputmode="numeric" autocomplete="off"></div>
-      <div><label class="f" for="pIfsc">IFSC code</label><input id="pIfsc" name="ifsc" maxlength="11" placeholder="HDFC0001234" style="text-transform:uppercase"></div>
+      <div><label class="f" for="pName">Account holder name</label><input type="text" id="pName" name="name" autocomplete="name" placeholder="As on your bank account"></div>
+      <div><label class="f" for="pPan">PAN</label><input type="text" id="pPan" name="pan" maxlength="10" placeholder="ABCDE1234F" style="text-transform:uppercase"></div>
+      <div><label class="f" for="pAcct">Bank account number</label><input type="text" id="pAcct" name="account_number" inputmode="numeric" autocomplete="off"></div>
+      <div><label class="f" for="pIfsc">IFSC code</label><input type="text" id="pIfsc" name="ifsc" maxlength="11" placeholder="HDFC0001234" style="text-transform:uppercase"></div>
       <div><label class="f" for="pEmail">Email</label><input id="pEmail" name="email" type="email" autocomplete="email"></div>
-      <div><label class="f" for="pPhone">Mobile</label><input id="pPhone" name="phone" inputmode="tel" placeholder="98765 43210"></div>
-      <div class="full"><label class="f" for="pStreet">Address</label><input id="pStreet" name="street" autocomplete="street-address" placeholder="House, street, area"></div>
-      <div><label class="f" for="pCity">City</label><input id="pCity" name="city" autocomplete="address-level2"></div>
-      <div><label class="f" for="pState">State</label><input id="pState" name="state" autocomplete="address-level1"></div>
-      <div><label class="f" for="pPin">PIN code</label><input id="pPin" name="pincode" inputmode="numeric" maxlength="6"></div>
+      <div><label class="f" for="pPhone">Mobile</label><input type="text" id="pPhone" name="phone" inputmode="tel" placeholder="98765 43210"></div>
+      <div class="full"><label class="f" for="pStreet">Address</label><input type="text" id="pStreet" name="street" autocomplete="street-address" placeholder="House, street, area"></div>
+      <div><label class="f" for="pCity">City</label><input type="text" id="pCity" name="city" autocomplete="address-level2"></div>
+      <div><label class="f" for="pState">State</label><input type="text" id="pState" name="state" autocomplete="address-level1"></div>
+      <div><label class="f" for="pPin">PIN code</label><input type="text" id="pPin" name="pincode" inputmode="numeric" maxlength="6"></div>
     </div>
     <p class="muted small" style="margin:0">Razorpay checks these details (KYC), usually within a day. We keep only the last 4 digits of your account number.</p>
     <div class="row" style="gap:10px"><button class="btn" type="submit" id="pSave">Save bank details</button><span class="small" id="pMsg"></span></div>
@@ -50,13 +56,27 @@
 <section class="card" id="editCard" hidden>
   <h2 id="eTitle">New product</h2>
   <form class="edit fields" id="eForm">
+    <div class="types" role="group" aria-label="Product type">
+      <button type="button" data-type="file">📦 File</button><button type="button" data-type="locked">🔒 Locked content</button>
+      <button type="button" data-type="event">🎟 Event</button><button type="button" data-type="booking">🗓 1:1 booking</button></div>
     <div class="grid2">
-      <div class="full"><label class="f" for="eName">Title</label><input id="eName" maxlength="100" placeholder="e.g. 39 AI video prompts pack"></div>
-      <div><label class="f" for="ePrice">Price (₹)</label><input id="ePrice" inputmode="numeric" placeholder="149"></div>
+      <div class="full"><label class="f" for="eName">Title</label><input type="text" id="eName" maxlength="100" placeholder="e.g. 39 AI video prompts pack"></div>
+      <div><label class="f" for="ePrice">Price (₹)</label><input type="text" id="ePrice" inputmode="numeric" placeholder="149"></div>
       <div><label class="f" for="eCover">Cover image link <span class="muted">(optional, https://)</span></label><input id="eCover" type="url"></div>
       <div class="full"><label class="f" for="eDesc">What they get</label><textarea id="eDesc" rows="4" maxlength="2000" placeholder="What's inside, who it's for, how they use it."></textarea></div>
-      <div class="full"><label class="f">File buyers get <span class="muted">(PDF, zip, video… up to 4 MB)</span></label>
+      <div class="full t-locked"><label class="f" for="eContent">What they unlock <span class="muted">(text and links, shown after paying)</span></label>
+        <textarea id="eContent" rows="5" maxlength="5000" placeholder="e.g. Private Notion link, discount code, WhatsApp group invite, the full prompt list…"></textarea></div>
+      <div class="full t-file t-locked"><label class="f"><span class="t-file">File buyers get</span><span class="t-locked">Optional file</span> <span class="muted">(PDF, zip… up to 4 MB)</span></label>
         <label class="drop"><input type="file" id="eFile" hidden><span id="eFileName">Choose a file</span></label></div>
+      <div class="t-event"><label class="f" for="eStart">Date and time (IST)</label><input id="eStart" type="datetime-local"></div>
+      <div class="t-event t-booking"><label class="f" for="eMin">Length (minutes)</label><input type="text" id="eMin" inputmode="numeric" placeholder="60"></div>
+      <div class="t-event"><label class="f" for="eCap">Seats <span class="muted">(0 = no limit)</span></label><input type="text" id="eCap" inputmode="numeric" placeholder="0"></div>
+      <div class="full t-booking"><label class="f">Days you take calls</label><div class="days" id="eDays">{% for d in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] %}<label><input type="checkbox" value="{{ loop.index0 }}"> {{ d }}</label>{% endfor %}</div></div>
+      <div class="t-booking"><label class="f" for="eFrom">From</label><input id="eFrom" type="time" value="18:00"></div>
+      <div class="t-booking"><label class="f" for="eTo">To</label><input id="eTo" type="time" value="21:00"></div>
+      <div class="t-booking"><label class="f" for="eAhead">Bookable up to (days ahead)</label><input type="text" id="eAhead" inputmode="numeric" placeholder="14"></div>
+      <div class="t-booking"><label class="f" for="eNotice">Minimum notice (hours)</label><input type="text" id="eNotice" inputmode="numeric" placeholder="3"></div>
+      <div class="full t-event t-booking"><label class="f" for="eJoin">Join link <span class="muted">(Zoom, Google Meet, YouTube Live… shown only to buyers; optional)</span></label><input id="eJoin" type="url" placeholder="https://meet.google.com/…"></div>
       <label class="small full"><input type="checkbox" id="eOn" checked> For sale</label>
     </div>
     <p class="muted small" id="eSplit" style="margin:0"></p>
@@ -78,7 +98,19 @@
 {% block scripts %}
 {% if role == "owner" or acc.demo %}
 <script>
-let S = null, editing = null, upFile = null;
+let S = null, editing = null, upFile = null, ptype = "file";
+const TYPE_LABEL = {file: "📦 File", locked: "🔒 Locked", event: "🎟 Event", booking: "🗓 1:1 booking"};
+function setType(t) {
+  ptype = t;
+  document.querySelectorAll("[data-type]").forEach(b => b.setAttribute("aria-pressed", b.dataset.type === t));
+  document.querySelectorAll("#eForm [class*='t-']").forEach(el => {
+    const kinds = [...el.classList].filter(c => c.startsWith("t-")).map(c => c.slice(2));
+    if (kinds.length) el.hidden = !kinds.includes(t);
+  });
+}
+const pad = (n) => String(n).padStart(2, "0");
+function toLocal(ts) { const d = new Date((ts + 19800) * 1000); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; }
+const hm = (m) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 const day = (t) => new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"});
 const STATUS = {activated: ["on", "Payouts active"], under_review: ["", "Under review by Razorpay"], needs_clarification: ["bad", "Razorpay needs more details"],
                 suspended: ["bad", "Payouts paused"], requested: ["", "Under review by Razorpay"]};
@@ -98,13 +130,13 @@ function drawPayout() {
 function drawProds() {
   const fee = S.plan_fee;
   $("prods").innerHTML = S.products.length ? S.products.map(p => `<div class="prod">
-      <div class="cv" style="${p.cover ? `background-image:url('${esc(p.cover)}')` : ""}">${p.cover ? "" : "📦"}</div>
-      <div><b>${esc(p.title)}</b> ${p.enabled ? "" : `<span class="badge">hidden</span>`}<div class="meta">₹${fmt(p.price)} · ${fmt(p.sales || 0)} sold · ₹${fmt(p.revenue || 0)} · ${esc(p.file_name || "")}</div></div>
+      <div class="cv" style="${p.cover ? `background-image:url('${esc(p.cover)}')` : ""}">${p.cover ? "" : ({event: "🎟", booking: "🗓", locked: "🔒"}[p.type] || "📦")}</div>
+      <div><b>${esc(p.title)}</b> ${p.enabled ? "" : `<span class="badge">hidden</span>`}<div class="meta">${TYPE_LABEL[p.type || "file"]} · ₹${fmt(p.price)} · ${fmt(p.sales || 0)} sold · ₹${fmt(p.revenue || 0)}${p.when ? " · " + esc(p.when) : ""}${p.seats_left != null ? ` · ${p.seats_left} seats left` : ""}${(p.type || "file") === "file" ? " · " + esc(p.file_name || "") : ""}</div></div>
       <div class="acts"><button class="btn sm" type="button" data-copy="${esc(p.url)}">Copy link</button><a class="btn ghost sm" href="${esc(p.url)}" target="_blank" rel="noopener">Open</a>
         <button class="btn ghost sm" type="button" data-edit="${esc(p.id)}">Edit</button><button class="btn danger sm" type="button" data-del="${esc(p.id)}">Delete</button></div></div>`).join("")
-    : `<div class="empty">No products yet. Click <b>＋ New product</b> to sell your first PDF or pack.</div>`;
+    : `<div class="empty">No products yet. Click <b>＋ New product</b> to sell a file, locked content, an event ticket or 1:1 calls.</div>`;
   $("sales").innerHTML = S.sales.length ? `<thead><tr><th>Date</th><th>Product</th><th>Buyer</th><th class="n">Price</th><th class="n">You get</th></tr></thead><tbody>${S.sales.map(x =>
-      `<tr><td>${esc(day(x.paid_at))}</td><td>${esc(x.title)}</td><td>${esc(x.email)}</td><td class="n">₹${fmt(x.price)}</td><td class="n"><b>₹${fmt(x.creator_gets)}</b></td></tr>`).join("")}</tbody>`
+      `<tr><td>${esc(day(x.paid_at))}</td><td>${esc(x.title)}${x.when ? `<div class="meta">${new Date(x.when * 1000).toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</div>` : ""}</td><td>${esc(x.name ? x.name + " · " : "")}${esc(x.email)}</td><td class="n">₹${fmt(x.price)}</td><td class="n"><b>₹${fmt(x.creator_gets)}</b></td></tr>`).join("")}</tbody>`
     : `<tbody><tr><td class="muted">No sales yet.</td></tr></tbody>`;
 }
 function splitText() {
@@ -117,12 +149,19 @@ function openEdit(p) {
   editing = p || null; upFile = p ? {file_id: p.file_id, file_name: p.file_name} : null;
   $("editCard").hidden = false; $("eTitle").textContent = p ? "Edit product" : "New product";
   $("eName").value = p ? p.title : ""; $("ePrice").value = p ? p.price : ""; $("eCover").value = p ? p.cover : ""; $("eDesc").value = p ? p.desc : "";
+  setType(p ? p.type || "file" : "file");
+  $("eContent").value = p ? p.content || "" : ""; $("eStart").value = p && p.start ? toLocal(p.start) : "";
+  $("eMin").value = p ? p.minutes || "" : ""; $("eCap").value = p ? p.capacity || "" : ""; $("eJoin").value = p ? p.join_url || "" : "";
+  $("eFrom").value = p && p.frm != null ? hm(p.frm) : "18:00"; $("eTo").value = p && p.to != null ? hm(p.to) : "21:00";
+  $("eAhead").value = p ? p.ahead || "" : ""; $("eNotice").value = p && p.notice != null ? p.notice : "";
+  document.querySelectorAll("#eDays input").forEach(c => c.checked = p && p.days ? p.days.includes(+c.value) : +c.value < 5);
   $("eOn").checked = p ? p.enabled !== false : true; $("eFileName").textContent = p ? `📎 ${p.file_name} · choose to replace` : "Choose a file"; $("eMsg").textContent = "";
   splitText(); $("editCard").scrollIntoView({behavior: "smooth", block: "start"});
 }
 async function load() { S = await api("/api/shop"); drawPayout(); drawProds(); }
 $("addProd").onclick = () => S && !S.demo ? openEdit(null) : toast("Not available in the demo");
 $("eCancel").onclick = () => { $("editCard").hidden = true; };
+document.querySelectorAll("[data-type]").forEach(b => b.onclick = () => setType(b.dataset.type));
 $("ePrice").oninput = splitText;
 $("eFile").onchange = async () => {
   const f = $("eFile").files[0]; if (!f) return;
@@ -138,8 +177,11 @@ $("eFile").onchange = async () => {
 $("eForm").onsubmit = async (e) => {
   e.preventDefault();
   try {
-    await api("/api/shop/products", {method: "PUT", body: JSON.stringify({id: editing ? editing.id : "", title: $("eName").value, price: $("ePrice").value,
-      cover: $("eCover").value, desc: $("eDesc").value, enabled: $("eOn").checked, ...(upFile || {})})});
+    await api("/api/shop/products", {method: "PUT", body: JSON.stringify({id: editing ? editing.id : "", type: ptype, title: $("eName").value, price: $("ePrice").value,
+      cover: $("eCover").value, desc: $("eDesc").value, enabled: $("eOn").checked, content: $("eContent").value, start: $("eStart").value,
+      minutes: $("eMin").value, capacity: $("eCap").value, join_url: $("eJoin").value, from: $("eFrom").value, to: $("eTo").value,
+      ahead: $("eAhead").value, notice: $("eNotice").value, days: [...document.querySelectorAll("#eDays input:checked")].map(c => +c.value),
+      ...(upFile || {})})});
     $("editCard").hidden = true; toast("Product saved ✓"); load();
   } catch (err) { $("eMsg").textContent = err.message; }
 };
