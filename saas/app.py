@@ -29,6 +29,7 @@ import billing
 import referrals
 import youtube
 import files
+import guides
 import demo
 import push
 import engine
@@ -1925,7 +1926,12 @@ def file_download(fid, name):
     got = files.fetch(fid, name)
     if not got:
         abort(404)
-    data, ctype = got
+    data, ctype, rec = got
+    if name.rsplit(".", 1)[-1].lower() in guides.GUIDE_EXTS and not request.args.get("raw"):
+        acc = store.load_account(rec["acc"]) or {"id": rec["acc"]}
+        page = store.load_page(acc["id"]) or default_page(acc)
+        return Response(guides.render(data.decode("utf-8", errors="replace"), name, acc, page, f"/f/{fid}/{name}?raw=1", BRAND),
+                        mimetype="text/html", headers={"Cache-Control": "public, max-age=300"})
     return Response(data, mimetype=ctype, headers={"Cache-Control": "public, max-age=3600",
                                                    "Content-Disposition": f'inline; filename="{name}"'})
 

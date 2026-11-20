@@ -137,7 +137,7 @@ def delete_all(acc):
 
 
 def fetch(fid, name):
-    """The file's bytes and type for /f/<id>/<name>, or None."""
+    """The file's bytes, type and record for /f/<id>/<name>, or None."""
     f = store.get_json(f"s:file:{fid}") if fid else None
     if not f or f["name"] != name or not configured():
         return None
@@ -147,4 +147,4 @@ def fetch(fid, name):
         r = requests.get(f["blob"], timeout=30)
     if not r.ok:
         return None
-    return r.content, r.headers.get("content-type") or f["type"] or "application/octet-stream"
+    return r.content, r.headers.get("content-type") or f["type"] or "application/octet-stream", f
