@@ -125,10 +125,15 @@ def role_blocks(path, method):
     return ""
 
 
+def avatar_url(acc):
+    """Instagram's picture links are signed and expire after a few days, so pages use /avatar/<id>, which keeps it fresh."""
+    return f"/avatar/{acc['id']}" if acc and acc.get("pic") and not acc.get("demo") else ""
+
+
 def public_account(acc):
     """What the dashboard may see: never the token."""
-    return {**{k: acc.get(k) for k in ("id", "username", "name", "pic", "followers", "created", "paused", "demo", "plan",
-                                        "pro_until")}, "pro": store.is_pro(acc), "plan_name": plans.PLANS[plans.plan_of(acc)]["name"],
+    return {**{k: acc.get(k) for k in ("id", "username", "name", "followers", "created", "paused", "demo", "plan",
+                                        "pro_until")}, "pic": avatar_url(acc), "pro": store.is_pro(acc), "plan_name": plans.PLANS[plans.plan_of(acc)]["name"],
             "follow_gate": plans.has(acc, "follow_gate"), "locks_on": plans.LOCKS_ON}
 
 
@@ -732,7 +737,7 @@ def connect_page():
     user = current_user()
     if not user:
         return redirect(url_for("signin_page"))
-    accs = users.accounts(user)
+    accs = [{**a, "pic": avatar_url(a)} for a in users.accounts(user)]
     return render_template("connect.html", user=user, accounts=accs, limit=users.limit(user), locks=plans.LOCKS_ON,
                            error=request.args.get("error", ""), ready=bool(IG_APP_ID))
 
@@ -814,11 +819,44 @@ def auth_callback():
     return redirect(session.pop("next", None) or url_for("dashboard"))
 
 
+# ---------- profile pictures ----------
+
+AVATAR_CHECK = 6 * 3600  # how long a picture link that worked is trusted before checking it again
+
+
+@app.get("/avatar/<ig_id>")
+def avatar(ig_id):
+    """Redirects to the account's Instagram picture, asking Instagram for a new link when the saved one has expired."""
+    acc = store.load_account(ig_id) if re.fullmatch(r"\d{1,25}", ig_id or "") else None
+    if not acc or not acc.get("pic"):
+        abort(404)
+    ok_key = store.account_key(ig_id, "pic_ok")
+    url = acc["pic"]
+    if not store.redis("GET", ok_key):
+        try:
+            alive = requests.head(url, timeout=5, allow_redirects=True).status_code == 200
+        except requests.RequestException:
+            alive = False
+        if not alive:
+            try:
+                fresh = engine.Instagram(acc).get("me", fields="profile_picture_url").get("profile_picture_url")
+            except Exception:
+                fresh = ""
+            if not fresh:
+                abort(404)
+            url = acc["pic"] = fresh
+            store.save_account(acc)
+        store.redis("SET", ok_key, "1", "EX", AVATAR_CHECK)
+    resp = redirect(url)
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
+
+
 # ---------- several Instagram accounts in one login ----------
 
 def linked_accounts():
     """The signed-in user's Instagram accounts (for the account switcher)."""
-    return [{"id": a["id"], "username": a.get("username", ""), "pic": a.get("pic", "")}
+    return [{"id": a["id"], "username": a.get("username", ""), "pic": avatar_url(a)}
             for a in users.accounts(current_user())] if current_user() else []
 
 

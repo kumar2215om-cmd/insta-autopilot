@@ -1842,6 +1842,28 @@ class SaasTest(unittest.TestCase):
         self.assertEqual((page["theme"], page["photo"]), ("ocean", ""))
         self.assertIn('class="t-ocean"', self.c.get("/creator").get_data(as_text=True))
 
+    def test_avatar_link_stays_fresh(self):
+        self.login()
+        acc = store.load_account("1789")
+        acc["pic"] = "https://cdn.example/old.jpg"
+        store.save_account(acc)
+        self.assertEqual(self.c.get("/api/me").get_json().get("pic", "/avatar/1789"), "/avatar/1789")
+        heads = []
+
+        def head(url, **kw):
+            heads.append(url)
+            return mock.Mock(status_code=403 if "old" in url else 200)
+        with mock.patch.object(saas.requests, "head", head), \
+                mock.patch.object(engine.Instagram, "get", return_value={"profile_picture_url": "https://cdn.example/new.jpg"}):
+            r = saas.app.test_client().get("/avatar/1789")  # works without logging in (link pages use it)
+            self.assertEqual((r.status_code, r.location), (302, "https://cdn.example/new.jpg"))
+            self.assertEqual(store.load_account("1789")["pic"], "https://cdn.example/new.jpg")
+            saas.app.test_client().get("/avatar/1789")
+            self.assertEqual(heads, ["https://cdn.example/old.jpg"])  # checked once, then trusted for a while
+        self.assertEqual(saas.app.test_client().get("/avatar/999").status_code, 404)
+        self.assertEqual(saas.app.test_client().get("/avatar/x;y").status_code, 404)
+        self.assertEqual(saas.avatar_url({"id": "1", "pic": "https://x", "demo": True}), "")
+
     def test_private_files(self):
         import files
         self.login()
