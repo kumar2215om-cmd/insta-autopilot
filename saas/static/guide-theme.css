@@ -1,13 +1,13 @@
 /* Theme colours for the guide pages. The server links this file and adds class t-THEME to the body tag,
    using the theme chosen in the link page editor. "studio" keeps the original cream look. */
-body.t-studio{--bg:#F1EADC;--ink:#1C1A17;--mute:#8C8780;--line:#E7E0D4;--card:#fff;--card-ink:#1C1A17;--card-mute:#6F675D;--card-line:#E7E0D4;--soft:#F6F2EC;--rose:#FF2D95;--cer:#007BA7;--hl:#FF2D95;--btn:#1C1A17;--btn-ink:#fff}
+body.t-studio{--bg:radial-gradient(rgba(17,19,24,.13) 1px,transparent 1.3px) 0 0/22px 22px,#F5F4EF;--ink:#111318;--mute:#5E6068;--line:#111318;--card:#fff;--card-ink:#111318;--card-mute:#5E6068;--card-line:#E6E5DE;--soft:#E6E5DE;--rose:#2E3BFF;--cer:#FF5B3A;--hl:#111318;--btn:#111318;--btn-ink:#D4FF3A}
 body.t-sunset{--bg:linear-gradient(165deg,#4f5bd5,#962fbf 35%,#d62976 65%,#fa7e1e 90%,#feda75);--ink:#fff;--mute:rgba(255,255,255,.85);--line:rgba(255,255,255,.4);--card:#fff;--card-ink:#1d1530;--card-mute:#6b6080;--card-line:#EFE6F2;--soft:#F7F1FA;--rose:#d62976;--cer:#4f5bd5;--hl:#FFE27A;--btn:#fff;--btn-ink:#1d1530}
 body.t-midnight{--bg:radial-gradient(circle at 20% 0%,#3b1d6e,#120f1a 60%);--ink:#f1ecfa;--mute:#b8afcf;--line:#2d2540;--card:#1f1930;--card-ink:#f1ecfa;--card-mute:#b8afcf;--card-line:#2d2540;--soft:#2a2140;--rose:#f472b6;--cer:#a78bfa;--hl:#f9a8d4;--btn:#f1ecfa;--btn-ink:#120f1a;--sh:0 18px 40px rgba(0,0,0,.35)}
 body.t-ocean{--bg:linear-gradient(170deg,#0ea5e9,#0d9488 60%,#065f46);--ink:#fff;--mute:rgba(255,255,255,.86);--line:rgba(255,255,255,.4);--card:#fff;--card-ink:#0f2a33;--card-mute:#5b7480;--card-line:#E3EEF0;--soft:#EEF8FA;--rose:#0891b2;--cer:#0d9488;--hl:#BBF7D0;--btn:#fff;--btn-ink:#0f2a33}
 body.t-candy{--bg:linear-gradient(170deg,#fde2f3,#e9d5ff 55%,#c7d2fe);--ink:#3b1f4a;--mute:#6b4f7a;--line:rgba(59,31,74,.12);--card:#fff;--card-ink:#3b1f4a;--card-mute:#7d6889;--card-line:#F0E6F3;--soft:#F8F2FA;--rose:#db2777;--cer:#7c3aed;--hl:#db2777;--btn:#3b1f4a;--btn-ink:#fff}
 body.t-mono{--bg:#fafafa;--ink:#111;--mute:#666;--line:#e5e5e5;--card:#fff;--card-ink:#111;--card-mute:#666;--card-line:#eee;--soft:#f4f4f4;--rose:#111;--cer:#555;--hl:#111;--btn:#111;--btn-ink:#fff}
 
-html{background:#F1EADC}
+html{background:#F5F4EF}
 body[class^="t-"]{background:var(--bg);background-attachment:fixed;color:var(--ink);min-height:100vh}
 body[class^="t-"] a{color:var(--rose)}
 /* Page header (on the background) */
@@ -56,7 +56,7 @@ h1 span{display:inline-block;animation:gp-rise .6s cubic-bezier(.2,.8,.2,1) .15s
 .nav a:nth-child(1){animation-delay:.3s}.nav a:nth-child(2){animation-delay:.36s}.nav a:nth-child(3){animation-delay:.42s}
 .nav a:nth-child(4){animation-delay:.48s}.nav a:nth-child(5){animation-delay:.54s}.nav a:nth-child(6){animation-delay:.6s}
 .nav a:nth-child(n+7){animation-delay:.66s}
-@media (hover:hover){.nav a:hover{transform:translateY(-2px);background:var(--rose,#FF2D95)!important;color:#fff!important}}
+@media (hover:hover){.nav a:hover{transform:translateY(-2px);background:var(--rose,#6A4CFF)!important;color:#fff!important}}
 /* Sections slide up as they scroll into view (the page script adds .gp-js; without it everything just shows) */
 .gp-js section,.gp-js .end{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
 .gp-js section.gp-in,.gp-js .end.gp-in{opacity:1;transform:none}
@@ -94,3 +94,21 @@ main > h1 + p,main > h2,main > table{animation:gp-rise .6s cubic-bezier(.2,.8,.2
 section table,main > table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
 section td,section th{min-width:96px}
 section td a{word-break:break-word}
+
+/* studio = ReplyInbox brand: dot-grid paper, 3px ink outlines with hard shadows, cobalt accent, volt highlighter */
+body.t-studio{font-family:Manrope,Inter,'Noto Sans Devanagari',system-ui,sans-serif;background-attachment:scroll}
+body.t-studio h1,body.t-studio h2,body.t-studio .end b{font-family:'Bricolage Grotesque',Manrope,sans-serif;font-weight:800;letter-spacing:-.03em}
+body.t-studio h1 span{color:#111318!important;background:#D4FF3A;padding:0 .14em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+body.t-studio section{border:3px solid #111318;box-shadow:6px 6px 0 #111318}
+body.t-studio .stag,body.t-studio .pill,body.t-studio .nav a,body.t-studio .code .lbl{font-family:'JetBrains Mono',monospace;letter-spacing:.06em}
+body.t-studio .stag{background:#D4FF3A!important;color:#111318!important;border:2px solid #111318}
+body.t-studio .pill{background:#2E3BFF}
+body.t-studio .nav a{border:2px solid #111318!important;box-shadow:3px 3px 0 #111318;text-transform:uppercase;font-size:11px}
+body.t-studio .cp{background:#2E3BFF;border:2px solid #111318}
+body.t-studio .prompt{background:#E6E5DE;border:2px solid #111318}
+body.t-studio .tip{background:#fff;border:2px solid #111318;border-left:6px solid #2E3BFF}
+body.t-studio .end{background:#111318;border:3px solid #111318;box-shadow:6px 6px 0 #2E3BFF}
+body.t-studio .end a{background:#D4FF3A!important;color:#111318!important;border:2px solid #111318}
+body.t-studio .top img{border-color:#111318}
+body.t-studio .cpromo{box-shadow:6px 6px 0 #FF5B3A!important}
+body.t-studio .cpromo a{background:#D4FF3A!important;color:#111318!important;border:2px solid #D4FF3A}

@@ -59,6 +59,13 @@
       <div><label class="f" for="sg_link">Link after signup <span class="hint">optional · e.g. your freebie</span></label><input id="sg_link" type="url" placeholder="https://"></div>
     </section>
     <section class="card fields">
+      <div class="row"><h2 style="margin-right:auto">Freebies</h2><span class="badge" id="fbCount"></span>
+        <button class="btn ghost sm" type="button" id="fbImport">Import from my Auto DMs</button><button class="btn sm" type="button" id="fbAdd">＋ Freebie</button></div>
+      <p class="muted small" style="margin:-6px 0 0">Shown as one <b>FREEBIES</b> card on your page that opens a page with all your guides, searchable by the
+        reel keyword. Newest first. <a id="fbOpen" target="_blank" rel="noopener">Open freebies page</a></p>
+      <div id="fbs" style="display:grid; gap:10px"></div>
+    </section>
+    <section class="card fields">
       <div class="row"><h2 style="margin-right:auto">Links and products</h2>
         <button class="btn ghost sm" type="button" data-add="link">＋ Link</button><button class="btn sm" type="button" data-add="product">＋ Product</button></div>
       <div id="items" style="display:grid; gap:10px"></div>
@@ -71,7 +78,7 @@
 {% block scripts %}
 <script>
 const THEMES = [
-  ["studio", "linear-gradient(135deg,#FCE4EF,#F1EADC 60%,#FBE9C9)", "#1C1A17"], ["sunset", "linear-gradient(135deg,#4f5bd5,#d62976 60%,#fa7e1e)", "#fff"],
+  ["studio", "linear-gradient(135deg,#F5F4EF 55%,#D4FF3A 55%,#D4FF3A 70%,#2E3BFF 70%)", "#111318"], ["sunset", "linear-gradient(135deg,#4f5bd5,#d62976 60%,#fa7e1e)", "#fff"],
   ["midnight", "radial-gradient(circle at 20% 0%,#3b1d6e,#120f1a 70%)", "#fff"], ["ocean", "linear-gradient(170deg,#0ea5e9,#0d9488 60%,#065f46)", "#fff"],
   ["candy", "linear-gradient(170deg,#fde2f3,#e9d5ff 55%,#c7d2fe)", "#3b1f4a"], ["mono", "#fafafa", "#111"]];
 const OLD_THEMES = {violet: "studio", mint: "ocean"};
@@ -97,7 +104,59 @@ function itemCard(it, i) {
     ${it.type === "product" ? `<div><label class="f" for="im${i}">Image link <span class="hint">optional, https://</span></label><input id="im${i}" type="url" data-k="image" value="${esc(it.image || "")}"></div>` : ""}
   </div>`;
 }
+let FILES = [];
+function fbCard(f, i) {
+  return `<div class="it fbit" data-f="${i}">
+    <div class="head"><b>${esc(f.k || "Freebie")} · ${fmt(clicks["fb_" + f.id] || 0)} opens</b>
+      <label class="small"><input type="checkbox" data-fk="enabled" ${f.enabled !== false ? "checked" : ""}> Show</label>
+      <button class="btn danger sm" type="button" data-fdel aria-label="Remove">Remove</button></div>
+    <div class="two"><div><label class="f" for="fk${i}">Keyword <span class="hint">the comment word</span></label><input id="fk${i}" type="text" data-fk="k" value="${esc(f.k || "")}" maxlength="24" placeholder="LIVE"></div>
+      <div><label class="f" for="ft${i}">Title</label><input id="ft${i}" type="text" data-fk="t" value="${esc(f.t || "")}" maxlength="100" placeholder="Live Clipper guide"></div></div>
+    <div class="two"><div><label class="f" for="fp${i}">Topic <span class="hint">optional, for the filter chips</span></label><input id="fp${i}" type="text" data-fk="topic" value="${esc(f.topic || "")}" maxlength="30" placeholder="AI video"></div>
+      <div><label class="f" for="fu${i}">Link</label><input id="fu${i}" type="url" data-fk="u" value="${esc(f.u || "")}" placeholder="https://">
+        ${FILES.length ? `<select data-fpick aria-label="Use one of my files" style="margin-top:6px"><option value="">📁 Use one of my files…</option>${FILES.map(x => `<option value="${esc(location.origin + x.url)}">${esc(x.name)}</option>`).join("")}</select>` : ""}</div></div>
+  </div>`;
+}
+function drawFbs() {
+  page.freebies = page.freebies || [];
+  $("fbs").innerHTML = page.freebies.map(fbCard).join("") || `<div class="empty">No freebies yet. Add one, or import them from your Auto DMs.</div>`;
+  $("fbCount").textContent = `${page.freebies.length} freebie${page.freebies.length === 1 ? "" : "s"}`;
+  $("fbOpen").href = $("pageUrl").value + "/free";
+}
+$("fbs").addEventListener("input", (e) => {
+  const c = e.target.closest(".fbit"), k = e.target.dataset.fk;
+  if (c && k) page.freebies[+c.dataset.f][k] = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+});
+$("fbs").addEventListener("change", (e) => {
+  const c = e.target.closest(".fbit");
+  if (c && e.target.dataset.fpick !== undefined && e.target.value) {
+    const f = page.freebies[+c.dataset.f]; f.u = e.target.value;
+    if (!f.t) f.t = e.target.selectedOptions[0].textContent.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ");
+    drawFbs();
+  }
+});
+$("fbs").addEventListener("click", (e) => {
+  const c = e.target.closest(".fbit");
+  if (c && e.target.closest("[data-fdel]")) { page.freebies.splice(+c.dataset.f, 1); drawFbs(); }
+});
+$("fbAdd").onclick = () => { page.freebies.unshift({k: "", t: "", topic: "", u: "", enabled: true}); drawFbs(); $("fk0").focus(); };
+$("fbImport").onclick = async () => {
+  try {
+    const rules = (await api("/api/rules")).reels || {};
+    const have = new Set(page.freebies.map(f => (f.k || "").toUpperCase()));
+    let added = 0;
+    for (const r of Object.values(rules)) {
+      const k = ((r.keywords || [])[0] || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      const u = r.dm_button_url || ((r.menu || []).find(m => m.url) || {}).url || (String(r.dm || "").match(/https?:\/\/\S+/) || [""])[0];
+      if (!k || !u || have.has(k)) continue;
+      page.freebies.unshift({k, t: r.label || `${k.charAt(0) + k.slice(1).toLowerCase()} guide`, topic: "", u, enabled: true});
+      have.add(k); added++;
+    }
+    drawFbs(); toast(added ? `Added ${added} freebie${added === 1 ? "" : "s"}. Check the titles, then Save page.` : "No new keyword automations with a link to import.");
+  } catch (err) { toast(err.message); }
+};
 function draw() {
+  drawFbs();
   $("name").value = page.name || ""; $("bio").value = page.bio || ""; $("photo").value = page.photo || "";
   for (const k of SOC) $("s_" + k).value = (page.socials || {})[k] || "";
   const sg = page.signup || {};
@@ -139,6 +198,7 @@ $("save").onclick = async () => {
   } catch (err) { toast(err.message); }
 };
 $("copy").onclick = async () => { try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) { $("pageUrl").select(); } };
+(async () => { try { FILES = (await api("/api/files")).files || []; } catch (e) {} })();
 (async () => { loadBanners(); const d = await api("/api/page"); page = d.page; clicks = d.clicks; draw(); $("signCount").textContent = `${fmt(d.signups || 0)} signups`; })();
 </script>
 {% endblock %}

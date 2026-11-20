@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+{% set avatar = page.photo or acc.pic %}
+<title>Free guides by @{{ acc.username }} | {{ brand }}</title>
+<meta name="description" content="All free guides and kits from @{{ acc.username }} in one place. Type the keyword from the reel to find it.">
+<meta property="og:title" content="Free guides by @{{ acc.username }}">
+{% if avatar %}<meta property="og:image" content="{{ (request.host_url.rstrip('/') ~ avatar) if avatar.startswith('/') else avatar }}"><link rel="icon" href="{{ avatar }}">{% else %}<link rel="icon" href="data:,">{% endif %}
+{% include "_bio_style.html" %}
+<style>
+  .note { background:var(--card); color:var(--card-ink); border-left:5px solid var(--rose); border-radius:16px; padding:14px 16px; font-weight:700; font-size:15px; line-height:1.5; margin:4px 0 14px; }
+  .search { display:flex; align-items:center; gap:10px; background:var(--card); color:var(--card-ink); border:2px solid var(--line); border-radius:16px; padding:12px 14px; margin:6px 0 12px; }
+  .search input { flex:1; min-width:0; border:0; outline:0; background:transparent; color:inherit; font:700 16px inherit; font-family:inherit; }
+  .chips { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 6px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar { display:none; }
+  .chips button { flex:none; border:2px solid var(--line); background:var(--card); color:var(--card-ink); border-radius:30px; padding:7px 14px; font:800 13px inherit; font-family:inherit; cursor:pointer; }
+  .chips button[aria-pressed="true"] { background:var(--rose); border-color:var(--rose); color:#fff; }
+  .count { font-weight:800; color:var(--mute); margin:12px 2px 10px; font-size:14px; }
+  .fb[hidden] { display:none; }
+  .empty { text-align:center; color:var(--mute); font-weight:700; padding:24px 0; }
+  .t-studio .note { border:3px solid #111318; border-left-width:8px; border-left-color:#2E3BFF; box-shadow:6px 6px 0 #111318; }
+  .t-studio .search { border:3px solid #111318; box-shadow:4px 4px 0 #111318; }
+  .t-studio .chips button { border-color:#111318; font-family:'JetBrains Mono',monospace; text-transform:uppercase; font-size:12px; letter-spacing:.04em; }
+  .t-studio .chips button[aria-pressed="true"] { background:#D4FF3A; border-color:#111318; color:#111318; }
+</style>
+</head>
+<body class="t-{{ page.theme }}">
+{% set ig = socials_map.get("instagram") or acc.username %}
+<div class="wrap">
+  <div class="top">
+    <a class="av" href="/{{ acc.username }}" aria-label="Back to @{{ acc.username }}'s page">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">{{ (acc.username or "?")[0] | upper }}</div>{% endif %}</a>
+    <div>
+      <div class="handle">@{{ acc.username }}</div>
+      <div class="tags"><span class="tag">free guides</span>{% if acc.followers %}<span class="tag c">{{ acc.followers|compact }} followers</span>{% endif %}</div>
+    </div>
+    <button class="share" type="button" onclick="sharePage()" aria-label="Share this page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg></button>
+  </div>
+
+  <h1>All my freebies <span>in one place</span></h1>
+  <p class="bio">Type the keyword from the reel to find its guide. No DM needed.</p>
+  <div class="note">🙏 DMs can be slow when lots of comments come in, so every freebie is here too. If they help, just <b>follow</b> for more.</div>
+  <a class="follow" href="https://www.instagram.com/{{ ig }}/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg> Follow @{{ ig }}</a>
+
+  <label class="search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+    <input id="q" type="search" placeholder="Type the reel keyword (e.g. {{ (freebies[0].k or 'GUIDE') }})" aria-label="Search freebies" autocomplete="off"></label>
+  {% if topics %}<div class="chips" role="group" aria-label="Topics"><button type="button" data-topic="" aria-pressed="true">All</button>{% for t in topics %}<button type="button" data-topic="{{ t }}" aria-pressed="false">{{ t }}</button>{% endfor %}</div>{% endif %}
+  <div class="count" id="count">{{ freebies|length }} free guide{{ "s" if freebies|length != 1 }}</div>
+
+  <main class="grid" id="list">
+    {% for f in freebies %}
+    <a class="card shadow freecard fb" href="/{{ acc.username }}/free/{{ f.id }}" rel="noopener" data-k="{{ f.k|lower }}" data-t="{{ f.t|lower }}" data-topic="{{ f.topic }}">
+      <div class="thumb">
+        <div class="kw"><small>{{ "COMMENT KEYWORD" if f.k else "FREE GUIDE" }}</small>{{ f.k or "FREE" }}</div><div class="emo">🎁</div>
+        {% if loop.index <= 3 %}<span class="new">NEW</span>{% endif %}</div>
+      <div class="body"><div class="t">{{ f.t }}</div>
+        <div class="row"><span class="topic">{{ f.topic or "Free" }}</span><span class="open">Open →</span></div></div>
+    </a>
+    {% endfor %}
+  </main>
+  <p class="empty" id="none" hidden>No guide with that keyword yet. Try another word, or <a href="https://www.instagram.com/{{ ig }}/" target="_blank" rel="noopener">DM @{{ ig }}</a>.</p>
+
+  <footer><a href="/{{ acc.username }}">← Back to @{{ acc.username }}</a><br><span class="made">Made with <a href="/">{{ brand }}</a></span></footer>
+</div>
+<div class="toast" id="toast">Link copied ✓</div>
+<script>
+let topic = "";
+const cards = [...document.querySelectorAll(".fb")];
+function filter() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  let n = 0;
+  cards.forEach(c => { const hit = (!topic || c.dataset.topic === topic) && (!q || c.dataset.k.includes(q) || c.dataset.t.includes(q)); c.hidden = !hit; if (hit) n++; });
+  document.getElementById("count").textContent = `${n} free guide${n === 1 ? "" : "s"}`;
+  document.getElementById("none").hidden = n > 0;
+}
+document.getElementById("q").addEventListener("input", filter);
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-topic]");
+  if (!b || b.tagName !== "BUTTON") return;
+  topic = b.dataset.topic;
+  document.querySelectorAll(".chips button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  filter();
+});
+const kw = new URLSearchParams(location.search).get("k");
+if (kw) { document.getElementById("q").value = kw; filter(); }
+async function sharePage() {
+  const url = location.origin + "/{{ acc.username }}/free";
+  try { if (navigator.share) return await navigator.share({title: document.title, url}); } catch (e) { return; }
+  try { await navigator.clipboard.writeText(url); } catch (e) {}
+  const t = document.getElementById("toast"); t.classList.add("on"); setTimeout(() => t.classList.remove("on"), 1800);
+}
+</script>
+</body>
+</html>

@@ -1883,6 +1883,31 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(raw.get_data(as_text=True), text)
         self.assertEqual(guides.product_promo({"items": []}, "x"), ("", ""))
 
+    def test_freebies_page(self):
+        self.login()
+        anon = saas.app.test_client()
+        self.c.put("/api/page", json={"name": "C", "freebies": []})
+        self.assertNotIn("FREEBIES", anon.get("/creator").get_data(as_text=True))
+        self.assertEqual(anon.get("/creator/free").status_code, 404)
+        page = self.c.put("/api/page", json={"name": "C", "freebies": [
+            {"k": "live!", "t": "Live Clipper guide", "topic": "AI video", "u": "https://x.com/live"},
+            {"k": "tools", "t": "Clip Tools", "topic": "AI editing", "u": "https://x.com/tools"},
+            {"k": "bad", "t": "No link", "u": "javascript:alert(1)"},
+            {"k": "off", "t": "Hidden", "u": "https://x.com/off", "enabled": False}]}).get_json()["page"]
+        self.assertEqual([f["k"] for f in page["freebies"]], ["LIVE", "TOOLS", "OFF"])
+        h = anon.get("/creator").get_data(as_text=True)
+        self.assertIn("FREEBIES", h)
+        self.assertIn("2 FREE", h)
+        self.assertIn('href="/creator/free"', h)
+        f = anon.get("/creator/free").get_data(as_text=True)
+        for part in ("All my freebies", "COMMENT KEYWORD", ">LIVE<", "Clip Tools", 'data-topic="AI video"', "2 free guides"):
+            self.assertIn(part, f)
+        self.assertNotIn("Hidden", f)
+        live = page["freebies"][0]["id"]
+        self.assertEqual(anon.get(f"/creator/free/{live}").location, "https://x.com/live")
+        self.assertEqual(self.c.get("/api/page").get_json()["clicks"].get("fb_" + live), 1)
+        self.assertEqual(anon.get(f"/creator/free/{page['freebies'][2]['id']}").status_code, 404)
+
     def test_private_files(self):
         import files
         self.login()
