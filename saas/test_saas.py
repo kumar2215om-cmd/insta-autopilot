@@ -305,7 +305,7 @@ class SaasTest(unittest.TestCase):
         page = self.c.get("/owner", headers=h).get_data(as_text=True)
         self.assertIn("om@example.com", page)
         # one login with two Instagram accounts: one row group, one plan picker, counted once
-        self.assertEqual(page.count("<select data-acc"), 1)
+        self.assertEqual(page.count("<select data-p"), 1)
         self.assertEqual(page.count("<b>om@example.com</b>"), 1)
         self.assertIn("Logins <span class=\"hl\">1</span>", page)
         self.assertIn("2 Instagram accounts", page)
@@ -1907,6 +1907,37 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(anon.get(f"/creator/free/{live}").location, "https://x.com/live")
         self.assertEqual(self.c.get("/api/page").get_json()["clicks"].get("fb_" + live), 1)
         self.assertEqual(anon.get(f"/creator/free/{page['freebies'][2]['id']}").status_code, 404)
+
+    def test_owner_gives_timed_plans_and_deletes_logins(self):
+        import users
+        self.login()
+        h = {"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}
+        uid = users.by_email("om@example.com")["id"]
+        self.assertEqual(self.c.post("/owner/plan", json={"user": uid, "plan": "pro", "days": 30}).status_code, 401)
+        self.assertEqual(self.c.post("/owner/plan", headers=h, json={"user": uid, "plan": "gold", "days": 30}).status_code, 400)
+        r = self.c.post("/owner/plan", headers=h, json={"user": uid, "plan": "pro", "days": 30}).get_json()
+        self.assertEqual(r["plan"], "pro")
+        self.assertAlmostEqual(r["until"], time.time() + 30 * 86400, delta=60)
+        # the same plan again adds the days; the Instagram accounts follow
+        r = self.c.post("/owner/plan", headers=h, json={"user": uid, "plan": "pro", "days": 90}).get_json()
+        self.assertAlmostEqual(r["until"], time.time() + 120 * 86400, delta=60)
+        self.assertEqual(store.load_account("1789")["plan_until"], r["until"])
+        # no end date
+        self.assertIsNone(self.c.post("/owner/plan", headers=h, json={"user": uid, "plan": "agency", "days": 0}).get_json()["until"])
+        self.assertIn("no end date", self.c.get("/owner", headers=h).get_data(as_text=True))
+        # a login without Instagram shows up and can be deleted; deleting a login removes its accounts too
+        other = users.create("solo@example.com")
+        page = self.c.get("/owner", headers=h).get_data(as_text=True)
+        self.assertIn("solo@example.com", page)
+        self.assertIn("no Instagram connected yet", page)
+        self.assertTrue(self.c.post("/owner/user/delete", headers=h, json={"user": other["id"]}).get_json()["ok"])
+        self.assertIsNone(users.by_email("solo@example.com"))
+        r = self.c.post("/owner/user/delete", headers=h, json={"user": uid}).get_json()
+        self.assertEqual(r["accounts_removed"], 1)
+        self.assertIsNone(store.load_account("1789"))
+        self.assertIsNone(users.get(uid))
+        self.assertNotIn("om@example.com", self.c.get("/owner", headers=h).get_data(as_text=True))
+        self.assertEqual(self.c.post("/owner/user/delete", headers=h, json={"user": uid}).status_code, 400)
 
     def test_private_files(self):
         import files

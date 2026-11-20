@@ -11,6 +11,9 @@
   .scroll { overflow-x:auto; }
   table { border-collapse:collapse; width:100%; background:#fff; border-radius:16px; overflow:hidden; }
   th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; font-size:14px; }
+  .give { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .give select { font-size:13px; padding:4px 6px; }
+  .giveb { border:0; background:#2E3BFF; color:#fff; border-radius:8px; padding:5px 12px; font:700 12px inherit; cursor:pointer; }
   td.login { vertical-align:top; background:#fffdf8; border-right:1px solid var(--line); }
   tr.first td { border-top:2px solid var(--line); }
   th { background:#fffaf2; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--blue); }
@@ -22,23 +25,35 @@
   <p class="muted">One plan per login: it covers every Instagram account connected under that login. Newest first. DMs are counted when the automation sends them.</p>
   <p><b>MRR ₹{{ "{:,}".format(mrr) }}</b> ·
     {% for k, p in plans.items() %}{{ p.name }} {{ by_plan[k] }}{{ " · " if not loop.last }}{% endfor %}
-    <span class="muted small">(logins per plan; plans are set by hand below until billing is live; referral months show as Pro but add nothing to MRR)</span></p>
+    <span class="muted small">(logins per plan, active plans only; paid at checkout or given by hand below with Give; plans given by hand count in MRR too)</span></p>
   <div class="scroll"><table>
     <tr><th>Login</th><th>Plan</th><th>Instagram account</th><th>Followers</th><th>Joined</th><th>Rules</th><th>DMs this month</th><th>DMs total</th><th>Status</th><th>Invite</th><th></th></tr>
     {% for g in groups %}
-    {% for r in g.accounts %}
+    {% set n = g.accounts|length or 1 %}
+    {% for r in (g.accounts or [none]) %}
     <tr class="{{ 'first' if loop.first }}">
-      {% if loop.first %}<td rowspan="{{ g.accounts|length }}" class="login"><b>{{ g.email or "(no login)" }}</b>
-        <div class="muted small">{{ g.accounts|length }}{% if locks %} of {{ g.limit }}{% endif %} account{{ "s" if g.accounts|length != 1 }}</div></td>
-      <td rowspan="{{ g.accounts|length }}" class="login"><select data-acc="{{ r.id }}" aria-label="Plan for {{ g.email or r.username }}">{% for k, p in plans.items() %}<option value="{{ k }}" {{ "selected" if k == g.plan_set }}>{{ p.name }}{{ " ₹" ~ p.price if p.price }}</option>{% endfor %}</select>
-        {% if g.referral_pro %}<div class="muted small">Pro via referral</div>{% endif %}</td>{% endif %}
+      {% if loop.first %}<td rowspan="{{ n }}" class="login"><b>{{ g.email or "(no login)" }}</b>
+        <div class="muted small">{{ g.accounts|length }}{% if locks %} of {{ g.limit }}{% endif %} account{{ "s" if g.accounts|length != 1 }}</div>
+        {% if g.user %}<button type="button" class="rm" style="margin-top:8px" data-deluser="{{ g.user }}" data-email="{{ g.email }}" data-n="{{ g.accounts|length }}">Delete login</button>{% endif %}</td>
+      <td rowspan="{{ n }}" class="login plan" data-user="{{ g.user }}" data-acc="{{ r.id if r else '' }}">
+        <div><b>{{ plans[g.plan_id].name }}</b>
+          {% if g.plan_set != "free" and g.until %}<span class="muted small">{{ "ended" if g.until < now else "until" }} <span data-ts="{{ g.until }}"></span></span>
+          {% elif g.plan_set != "free" %}<span class="muted small">no end date</span>{% endif %}
+          {% if g.referral_pro %}<div class="muted small">Pro via referral</div>{% endif %}</div>
+        <div class="give"><select data-p aria-label="Plan for {{ g.email }}">{% for k, p in plans.items() %}<option value="{{ k }}" {{ "selected" if k == g.plan_set }}>{{ p.name }}{{ " ₹" ~ p.price if p.price }}</option>{% endfor %}</select>
+          <select data-d aria-label="For how long"><option value="30">1 month</option><option value="90">3 months</option><option value="365">1 year</option><option value="0">No end date</option></select>
+          <button type="button" class="giveb" data-give>Give</button></div></td>{% endif %}
+      {% if r %}
       <td><a href="https://www.instagram.com/{{ r.username }}/" target="_blank" rel="noopener">@{{ r.username }}</a></td>
       <td>{{ "{:,}".format(r.followers) if r.followers is not none else "–" }}</td>
       <td><span class="joined" data-t="{{ r.created or 0 }}"></span></td>
       <td>{{ r.rules }}</td><td>{{ r.dms_month }}</td><td>{{ r.dms }}</td>
       <td>{{ "paused" if r.paused else (r.blocked or "active") }}</td>
       <td>{{ r.invite }}</td>
-      <td><button type="button" class="rm" data-rm="{{ r.id }}" data-name="{{ r.username }}">Remove</button></td></tr>
+      <td><button type="button" class="rm" data-rm="{{ r.id }}" data-name="{{ r.username }}">Remove</button></td>
+      {% else %}
+      <td colspan="9" class="muted">Signed up, no Instagram connected yet · joined <span data-ts="{{ g.created }}"></span></td>
+      {% endif %}</tr>
     {% endfor %}
     {% else %}
     <tr><td colspan="11" class="muted">No accounts yet.</td></tr>
@@ -65,8 +80,23 @@
   <script>document.querySelectorAll("[data-ts]").forEach(e => e.textContent = new Date(+e.dataset.ts * 1000).toLocaleDateString());</script>
 </main>
 <script>
-document.querySelectorAll("[data-acc]").forEach(sel => sel.onchange = async () => {
-  const r = await fetch("/owner/plan", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: sel.dataset.acc, plan: sel.value})});
+document.querySelectorAll("[data-give]").forEach(b => b.onclick = async () => {
+  const cell = b.closest(".plan"), plan = cell.querySelector("[data-p]"), days = cell.querySelector("[data-d]");
+  const what = `${plan.selectedOptions[0].textContent} · ${days.selectedOptions[0].textContent}`;
+  if (!confirm(`Give ${what}?`)) return;
+  b.disabled = true;
+  const body = cell.dataset.user ? {user: cell.dataset.user} : {id: cell.dataset.acc};
+  const r = await fetch("/owner/plan", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({...body, plan: plan.value, days: +days.value})});
+  if (r.ok) location.reload(); else { alert((await r.json().catch(() => ({}))).error || "Couldn't change the plan"); b.disabled = false; }
+});
+document.querySelectorAll("[data-deluser]").forEach(b => b.onclick = async () => {
+  const n = +b.dataset.n;
+  if (!confirm(`Delete the login ${b.dataset.email}${n ? ` and its ${n} Instagram account${n === 1 ? "" : "s"}` : ""}? Automations, contacts and stats are deleted. This can't be undone.`)) return;
+  if (prompt(`Type DELETE to confirm`) !== "DELETE") return;
+  b.disabled = true;
+  const r = await fetch("/owner/user/delete", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({user: b.dataset.deluser})});
+  if (r.ok) location.reload(); else { alert((await r.json().catch(() => ({}))).error || "Couldn't delete it"); b.disabled = false; }
+});
   if (r.ok) location.reload(); else alert((await r.json()).error || "Couldn't change the plan");
 });
 document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
