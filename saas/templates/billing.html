@@ -107,7 +107,7 @@ document.addEventListener("click", async (e) => {
     const o = await api("/api/billing/order", {method: "POST", body: JSON.stringify({plan: b.dataset.buy, period})});
     const rzp = new Razorpay({
       key: o.key, order_id: o.order_id, amount: o.amount, currency: o.currency, name: "{{ brand }}",
-      description: `${o.name} plan · ${o.period === "year" ? "1 year" : "1 month"}`, prefill: {email: o.email}, theme: {color: "#6A4CFF"},
+      description: `${o.name} plan · ${o.period === "year" ? "1 year" : "1 month"}`, prefill: {email: o.email}, theme: {color: "#2E3BFF"},
       handler: async (r) => {
         try {
           S = {...S, ...(await api("/api/billing/verify", {method: "POST", body: JSON.stringify({order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature})}))};

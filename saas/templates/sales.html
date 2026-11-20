@@ -87,7 +87,7 @@ function chart(daily) {
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Revenue per day: ${esc(daily.map(d => `${day(d.date)} ₹${d.revenue}`).join(", "))}">${v.map((x, i) => {
     const h = x ? Math.max(3, x / max * (H - 8)) : 0;
     return `<rect x="${(i * bw + bw * .15).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="url(#rg)"><title>${esc(day(daily[i].date))}: ₹${fmt(x)} · ${fmt(daily[i].sales)} sales</title></rect>`;
-  }).join("")}<defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7B5CFF"/><stop offset="1" stop-color="#FF7A59"/></linearGradient></defs>
+  }).join("")}<defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E3BFF"/><stop offset="1" stop-color="#FF5B3A"/></linearGradient></defs>
   <line x1="0" y1="${H - .5}" x2="${W}" y2="${H - .5}" stroke="currentColor" stroke-opacity=".15"/></svg>
   <div class="ax"><span>${day(daily[0].date)}</span><span>${day(daily[14].date)}</span><span>Today</span></div>`;
 }

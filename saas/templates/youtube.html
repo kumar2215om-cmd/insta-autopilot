@@ -289,7 +289,7 @@ function wrap(ctx, text, max) {
 }
 function drawCover() {
   const c = $("canvas"), ctx = c.getContext("2d"), m = document.querySelector("[name=cmode]:checked").value;
-  ctx.fillStyle = "#14121B"; ctx.fillRect(0, 0, 1280, 720);
+  ctx.fillStyle = "#16181E"; ctx.fillRect(0, 0, 1280, 720);
   if (m === "none") { ctx.fillStyle = "#888"; ctx.font = "600 40px system-ui"; ctx.textAlign = "center"; ctx.fillText("YouTube picks the cover", 640, 370); return; }
   if (m === "own") { if (coverImg) fitCover(ctx, coverImg); return; }
   if ($("probe").readyState >= 2) fitCover(ctx, $("probe"));

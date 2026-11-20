@@ -81,7 +81,7 @@
   .wf .stp { margin-right:auto; font:500 12.5px var(--mono); color:var(--mute); }
   .acct { text-align:center; display:grid; justify-items:center; gap:6px; }
   .acct .ring { width:64px; height:64px; border-radius:50%; padding:3px; background:var(--grad); }
-  .acct .ring img, .acct .ring span { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; border:3px solid #fff; background:linear-gradient(135deg, #FFB199, #FF7A59); }
+  .acct .ring img, .acct .ring span { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; border:3px solid #fff; background:linear-gradient(135deg, #FFB199, #FF5B3A); }
   .opt { display:flex; gap:12px; align-items:center; width:100%; padding:14px 16px; border:1px solid var(--line); border-radius:14px; background:var(--card); text-align:left;
          font:500 15px var(--text); color:var(--ink); cursor:pointer; }
   .opt:hover { border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
@@ -276,8 +276,8 @@ function spark(values) {
   const v = values && values.length ? values : [0], max = Math.max(1, ...v), W = 130, H = 44;
   const pts = v.map((x, i) => [i * (W / Math.max(v.length - 1, 1)), H - 4 - (x / max) * (H - 10)]);
   const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
-  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6A4CFF" stop-opacity=".22"/><stop offset="1" stop-color="#6A4CFF" stop-opacity="0"/></linearGradient></defs>
-    <path d="${line} L${W},${H} L0,${H} Z" fill="url(#sg)"/><path d="${line}" fill="none" stroke="#6A4CFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E3BFF" stop-opacity=".22"/><stop offset="1" stop-color="#2E3BFF" stop-opacity="0"/></linearGradient></defs>
+    <path d="${line} L${W},${H} L0,${H} Z" fill="url(#sg)"/><path d="${line}" fill="none" stroke="#2E3BFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 const short = (s, n) => (s || "").replace(/\s+/g, " ").trim().slice(0, n);
 
@@ -690,7 +690,7 @@ function barChart(values, labelOf) {
   const W = 600, H = 150, n = values.length, max = Math.max(1, ...values), bw = W / n;
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(labelOf(-1))}">${values.map((v, i) => {
     const h = v ? Math.max(3, (v / max) * (H - 8)) : 0;
-    return `<rect x="${(i * bw + bw * .15).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${v === max && v ? "#6A4CFF" : "#B9AAFF"}"><title>${esc(labelOf(i))}</title></rect>`;
+    return `<rect x="${(i * bw + bw * .15).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${(bw * .7).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${v === max && v ? "#2E3BFF" : "#B9AAFF"}"><title>${esc(labelOf(i))}</title></rect>`;
   }).join("")}<line x1="0" y1="${H - .5}" x2="${W}" y2="${H - .5}" stroke="currentColor" stroke-opacity=".15"/></svg>`;
 }
 function drawInsights() {
