@@ -363,6 +363,16 @@ def fulfil(order_id, payment_id, paid_amount=None):
         return o
     if paid_amount is not None and int(paid_amount) != o["price"] * 100:
         raise ShopError("The amount paid doesn't match the price.")
+    if o.get("type") == "course":  # a course purchase (see courses.py)
+        import courses
+        o.update(status="paid", payment_id=payment_id, paid_at=int(time.time()))
+        store.set_json(key, o)
+        courses.enroll(o)
+        sales = store.account_key(o["acc"], "shopsales")
+        store.redis("LPUSH", sales, json.dumps({**{k: o[k] for k in ("id", "title", "price", "creator_gets", "email", "paid_at")},
+                                                "name": o.get("name", ""), "type": "course"}))
+        store.redis("LTRIM", sales, 0, 499)
+        return o
     token = secrets.token_urlsafe(16)
     prod = get(o["acc"], o["product"]) or {}
     until = time.time() + DL_DAYS * 86400

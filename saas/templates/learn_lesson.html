@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+{% set icons = {"video": "🎬", "text": "📝", "audio": "🎙", "quiz": "🏅", "assignment": "✍️"} %}
+{% set sales = "/" ~ acc.username ~ "/c/" ~ (c.slug or c.id) %}
+{% set done = ls.id in e.progress %}
+<title>{{ ls.title }} · {{ c.title }}</title>
+{% include "_course_style.html" %}
+<style>
+  .hd { position:sticky; top:0; z-index:4; background:var(--card); border-bottom:2.5px solid var(--line); }
+  .hd .in { padding:10px 16px; display:flex; align-items:center; gap:12px; }
+  .hd a.back { width:38px; height:38px; flex:none; border-radius:50%; border:2px solid var(--line); display:grid; place-items:center; text-decoration:none; color:var(--ink); font-weight:900; }
+  .hd .tt { flex:1; min-width:0; }
+  .hd .tt b { display:block; font:800 16px var(--head); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hd .tt span { font:700 12px var(--mono); color:var(--mute); }
+  .tog { width:38px; height:38px; border-radius:50%; border:2px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; font-size:16px; flex:none; }
+  .menu { display:none; }
+  .lay { display:grid; grid-template-columns:minmax(0, 1fr) 340px; min-height:calc(100vh - 62px); }
+  .content { padding:24px clamp(16px, 4vw, 48px) 40px; max-width:900px; width:100%; margin:0 auto; display:grid; gap:18px; align-content:start; }
+  .content h1 { font-size:clamp(24px, 3.4vw, 32px); font-weight:800; }
+  .vid { aspect-ratio:16/9; overflow:hidden; background:#000; }
+  .vid iframe { width:100%; height:100%; border:0; display:block; }
+  audio { width:100%; }
+  .aud { padding:20px; display:grid; gap:12px; }
+  .res { padding:16px 18px; display:grid; gap:8px; }
+  .res a { display:flex; gap:10px; align-items:center; padding:10px 12px; border:1.5px solid var(--hair); border-radius:12px; text-decoration:none; color:var(--ink); font-weight:700; }
+  .res a span.s { margin-left:auto; font:700 12px var(--mono); color:var(--mute); }
+  .q { padding:18px; display:grid; gap:10px; }
+  .q b { font-size:16px; }
+  .q label { display:flex; gap:10px; align-items:center; padding:11px 13px; border:2px solid var(--hair); border-radius:12px; cursor:pointer; font-weight:700; }
+  .q label:has(input:checked) { border-color:var(--acc); background:rgba(46,59,255,.07); }
+  .result { padding:16px 18px; font-weight:800; border-radius:16px; border:2.5px solid var(--line); }
+  .result.ok { background:rgba(22,163,74,.12); } .result.no { background:rgba(229,72,77,.1); }
+  .act { display:flex; gap:12px; flex-wrap:wrap; align-items:center; padding-top:6px; border-top:1.5px solid var(--hair); }
+  .act .btn.done { background:var(--win); }
+  .cta { padding:20px; display:grid; gap:10px; background:var(--volt); color:#111318; border-color:#111318; box-shadow:5px 5px 0 #111318; }
+  .side { border-left:2.5px solid var(--line); background:var(--card); overflow-y:auto; max-height:calc(100vh - 62px); position:sticky; top:62px; }
+  .side h3 { font-size:15px; padding:16px 16px 6px; margin:0; }
+  .side .mt { padding:14px 16px 6px; font:700 11.5px var(--mono); text-transform:uppercase; letter-spacing:.08em; color:var(--mute); }
+  .side a, .side .x { display:flex; gap:10px; align-items:center; padding:10px 16px; color:var(--ink); text-decoration:none; font-weight:700; font-size:14px; }
+  .side a:hover { background:var(--soft); }
+  .side a.cur { background:var(--soft); box-shadow:inset 4px 0 0 var(--acc); }
+  .side .x { opacity:.5; }
+  .ck { width:22px; height:22px; border-radius:50%; border:2px solid var(--hair); flex:none; display:grid; place-items:center; font-size:11px; color:#fff; }
+  .ck.on { background:var(--win); border-color:var(--win); }
+  .side .tl { flex:1; min-width:0; }
+  @media (max-width:900px) {
+    .lay { grid-template-columns:1fr; }
+    .menu { display:block; }
+    .side { position:fixed; inset:62px 0 0 auto; width:min(340px, 88vw); max-height:none; z-index:5; transform:translateX(102%); transition:transform .2s; border-top:0; }
+    .side.open { transform:none; box-shadow:-10px 0 40px rgba(0,0,0,.25); }
+  }
+</style>
+</head>
+<body class="{{ 'dark' if c.theme == 'dark' }}">
+<header class="hd"><div class="in">
+  <a class="back" href="{{ sales if guest else '/learn/' ~ c.id }}" aria-label="Back">←</a>
+  <div class="tt"><b>{{ ls.title }}</b><span>Module {{ mod_index + 1 }} · Lesson {{ pos }}/{{ mod_count }}</span></div>
+  <button class="tog" type="button" id="tog" aria-label="Dark mode">🌙</button>
+  <button class="tog menu" type="button" id="menu" aria-label="Lessons" aria-expanded="false">☰</button>
+  {% if guest %}<a class="btn sm" href="{{ sales }}">Enroll</a>
+  {% elif nxt %}<a class="btn sm" href="/learn/{{ c.id }}/{{ nxt.id }}">Next →</a>{% else %}<a class="btn sm" href="/learn/{{ c.id }}">Finish</a>{% endif %}
+</div></header>
+<div class="lay">
+  <main class="content">
+    {% if preview and not guest %}<p style="margin:0; padding:10px 14px; border-radius:12px; background:var(--volt); color:#111318; font-weight:800; border:2px solid #111318">Preview mode: progress isn't saved.</p>{% endif %}
+    {% if ls.type == "video" %}
+      {% if embed %}<div class="box vid"><iframe src="{{ embed }}" title="{{ ls.title }}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+      {% elif ls.video %}<a class="btn ghost" href="{{ ls.video }}" target="_blank" rel="noopener">▶ Watch the video</a>
+      {% else %}<div class="box vid" style="display:grid; place-items:center; color:#fff; font-weight:700">Video coming soon</div>{% endif %}
+    {% endif %}
+    <h1>{{ ls.title }}</h1>
+    {% if ls.type == "audio" %}<div class="box aud"><span class="chip" style="justify-self:start">🎙 Audio lesson</span>
+      {% if ls.audio_file %}<audio controls preload="metadata" src="/learn/{{ c.id }}/{{ ls.id }}/file/{{ ls.audio_file }}?inline=1"></audio>
+      {% elif ls.audio %}<audio controls preload="metadata" src="{{ ls.audio }}"></audio>{% else %}<p class="muted" style="margin:0">Audio coming soon.</p>{% endif %}</div>{% endif %}
+    {% if body_html %}<div class="prose">{{ body_html|safe }}</div>{% endif %}
+
+    {% if ls.type == "quiz" %}
+      {% set r = e.quiz.get(ls.id) %}
+      {% if r %}<div class="result {{ 'ok' if r.passed else 'no' }}" id="qres">{{ "🎉 Passed" if r.passed else "Not passed yet" }}: {{ r.right }}/{{ r.total }} right ({{ r.score }}%). Pass mark {{ ls.pass_pct or 60 }}%.</div>{% else %}<div id="qres" hidden></div>{% endif %}
+      <form id="quiz" style="display:grid; gap:14px">
+        {% for q in ls.questions %}{% set qi = loop.index0 %}<fieldset class="box q" style="margin:0"><legend class="sr" hidden>Question {{ loop.index }}</legend><b>{{ loop.index }}. {{ q.q }}</b>
+          {% for o in q.options %}<label><input type="radio" name="q{{ qi }}" value="{{ loop.index0 }}"> {{ o }}</label>{% endfor %}</fieldset>{% endfor %}
+        {% if not guest and not preview %}<button class="btn" type="submit" style="justify-self:start">Submit answers</button>{% endif %}
+      </form>
+    {% endif %}
+
+    {% if ls.type == "assignment" %}
+      {% set w = e.work.get(ls.id) %}
+      {% if w %}<div class="box" style="padding:16px 18px; display:grid; gap:6px"><b>✅ Submitted</b><div class="muted" style="white-space:pre-line">{{ w.text }}</div>
+        {% if w.link %}<a href="{{ w.link }}" target="_blank" rel="noopener">{{ w.link }}</a>{% endif %}
+        {% if w.grade or w.feedback %}<div class="result ok" style="margin-top:6px">Grade: {{ w.grade or "–" }}{% if w.feedback %}<div style="font-weight:600; margin-top:4px; white-space:pre-line">{{ w.feedback }}</div>{% endif %}</div>
+        {% else %}<span class="muted" style="font-size:14px">Waiting for review.</span>{% endif %}</div>{% endif %}
+      {% if not guest and not preview %}<form id="work" class="box" style="padding:18px; display:grid; gap:10px">
+        <b>{{ "Update your submission" if w else "Your submission" }}</b>
+        <textarea class="field" id="wtext" rows="6" placeholder="Write your answer here">{{ w.text if w }}</textarea>
+        <input class="field" id="wlink" type="url" placeholder="Link (Google Drive, Docs, Instagram…), optional" value="{{ w.link if w }}">
+        <button class="btn" type="submit" style="justify-self:start">Submit</button></form>{% endif %}
+    {% endif %}
+
+    {% if ls.files %}<section class="box res"><b>📎 Resources</b>
+      {% for f in ls.files %}<a href="/learn/{{ c.id }}/{{ ls.id }}/file/{{ f.id }}">📄 {{ f.name }}<span class="s">{{ ((f.size or 0) / 1024)|round|int }} KB ⬇</span></a>{% endfor %}</section>{% endif %}
+
+    {% if guest %}
+    <section class="box cta"><b style="font-size:19px">Liked this free lesson?</b><span style="font-weight:600">Enroll to unlock all {{ flat|length }} lessons{% if c.cert and c.cert.enabled %} and get a certificate{% endif %}.</span>
+      <a class="btn" href="{{ sales }}" style="justify-self:start">{{ c.button or "Enroll now" }}</a></section>
+    {% else %}
+    <div class="act">
+      {% if prev %}<a class="btn ghost sm" href="/learn/{{ c.id }}/{{ prev.id }}">← Previous</a>{% endif %}
+      {% if ls.type in ("video", "text", "audio") and not preview %}<button class="btn sm {{ 'done' if done }}" type="button" id="mark" aria-pressed="{{ 'true' if done else 'false' }}">{{ "✓ Completed" if done else "Mark as complete" }}</button>{% endif %}
+      {% if nxt %}<a class="btn sm" href="/learn/{{ c.id }}/{{ nxt.id }}" style="margin-left:auto">Next lesson →</a>{% else %}<a class="btn sm" href="/learn/{{ c.id }}" style="margin-left:auto">Back to course</a>{% endif %}
+    </div>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+    {% endif %}
+  </main>
+  <nav class="side" id="side" aria-label="Lessons"><h3>{{ c.title }}</h3>
+    {% for mm in c.modules %}{% set mi = loop.index0 %}{% if mm.get("live", True) %}
+      <div class="mt">{{ mm.title }}</div>
+      {% for l in mm.lessons if l.get("live", True) %}
+        {% if guest %}{% set href = sales ~ "/preview/" ~ l.id if l.free else "" %}{% else %}{% set href = "/learn/" ~ c.id ~ "/" ~ l.id if unlocked[mi] else "" %}{% endif %}
+        {% if href %}<a href="{{ href }}" class="{{ 'cur' if l.id == ls.id }}" {% if l.id == ls.id %}aria-current="page"{% endif %}><span class="ck {{ 'on' if l.id in e.progress }}">{{ "✓" if l.id in e.progress }}</span><span class="tl">{{ l.title }}</span><span aria-hidden="true">{{ icons.get(l.type) }}</span></a>
+        {% else %}<div class="x"><span class="ck">🔒</span><span class="tl">{{ l.title }}</span></div>{% endif %}
+      {% endfor %}
+    {% endif %}{% endfor %}
+  </nav>
+</div>
+<script>
+const $ = (id) => document.getElementById(id), B = "/learn/{{ c.id }}/{{ ls.id }}";
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Something went wrong. Try again."); return d;
+}
+function say(t, bad) { if (!$("msg")) return; $("msg").textContent = t; $("msg").className = "msg" + (bad ? " err" : ""); }
+// dark mode: remembered per device
+try { const m = localStorage.getItem("learn-dark"); if (m !== null) document.body.classList.toggle("dark", m === "1"); } catch {}
+const icon = () => { $("tog").textContent = document.body.classList.contains("dark") ? "☀️" : "🌙"; }; icon();
+$("tog").onclick = () => { const on = document.body.classList.toggle("dark"); icon(); try { localStorage.setItem("learn-dark", on ? "1" : "0"); } catch {} };
+$("menu").onclick = () => { const o = $("side").classList.toggle("open"); $("menu").setAttribute("aria-expanded", o); };
+{% if not guest and not preview %}
+if ($("mark")) $("mark").onclick = async () => {
+  const b = $("mark"), on = b.getAttribute("aria-pressed") !== "true"; b.disabled = true;
+  try { await post(B + "/done", {done: on}); b.setAttribute("aria-pressed", on); b.classList.toggle("done", on); b.textContent = on ? "✓ Completed" : "Mark as complete";
+    const cur = document.querySelector(".side a.cur .ck"); if (cur) { cur.classList.toggle("on", on); cur.textContent = on ? "✓" : ""; }
+    say(on ? "Nice! Lesson completed." : ""); }
+  catch (err) { say(err.message, true); }
+  b.disabled = false;
+};
+if ($("quiz")) $("quiz").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const n = {{ (ls.questions or [])|length }}, answers = [];
+  for (let i = 0; i < n; i++) { const x = document.querySelector(`input[name="q${i}"]:checked`); answers.push(x ? +x.value : -1); }
+  if (answers.includes(-1)) { say("Answer every question first.", true); return; }
+  try { const r = (await post(B + "/quiz", {answers})).result; const el = $("qres"); el.hidden = false; el.className = "result " + (r.passed ? "ok" : "no");
+    el.textContent = `${r.passed ? "🎉 Passed" : "Not passed yet"}: ${r.right}/${r.total} right (${r.score}%). Pass mark {{ ls.pass_pct or 60 }}%.${r.passed ? "" : " Try again!"}`;
+    if (r.passed) { const cur = document.querySelector(".side a.cur .ck"); if (cur) { cur.classList.add("on"); cur.textContent = "✓"; } }
+    el.scrollIntoView({block: "center"}); say(""); }
+  catch (err) { say(err.message, true); }
+};
+if ($("work")) $("work").onsubmit = async (ev) => {
+  ev.preventDefault();
+  try { await post(B + "/work", {text: $("wtext").value, link: $("wlink").value}); location.reload(); } catch (err) { say(err.message, true); }
+};
+{% endif %}
+</script>
+</body>
+</html>

@@ -28,6 +28,7 @@ import users
 import billing
 import referrals
 import shop
+import courses
 import youtube
 import files
 import guides
@@ -100,7 +101,7 @@ def current_account():
 # ---------- team: managers and viewers who log in with an invite link ----------
 
 ROLES = {"manager": "Manager", "viewer": "Viewer"}
-OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing", "/api/refer", "/api/shop")
+OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing", "/api/refer", "/api/shop", "/api/courses")
 MAX_TEAM = 5
 
 
@@ -143,13 +144,13 @@ def public_account(acc):
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
-    ("sales", "/app/sales", "Sales", True), ("shop", "/app/products", "Store", False), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
+    ("sales", "/app/sales", "Sales", True), ("shop", "/app/products", "Store", False), ("courses", "/app/courses", "Courses", False), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False), ("files", "/app/files", "Files", False),
     ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("billing", "/app/billing", "Plan & billing", True), ("refer", "/app/refer", "Refer & earn", True),
     ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"shop": True, "plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
+DEFAULT_APPS = {"shop": True, "courses": True, "plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
 
 
 def apps_of(acc):
@@ -199,7 +200,7 @@ def brand():
 
 
 PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report",
-                    "/billing", "/signin", "/connect", "/admin", "/f", "/d")
+                    "/billing", "/signin", "/connect", "/admin", "/f", "/d", "/learn", "/cert")
 
 
 def is_private_path(path):
@@ -222,7 +223,7 @@ def guard():
         if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
             return jsonify(error="Please log in again."), 401
         # file uploads are multipart; a custom header still can't be sent cross-site without CORS
-        upload = request.path in ("/api/files", "/api/shop/upload") and request.headers.get("X-Upload") == "1"
+        upload = request.path in ("/api/files", "/api/shop/upload", "/api/courses/upload") and request.headers.get("X-Upload") == "1"
         if request.method in ("POST", "PUT", "DELETE") and not request.is_json and not upload:
             return jsonify(error="JSON required"), 415
         blocked = role_blocks(request.path, request.method)
@@ -2100,6 +2101,408 @@ def download_file(token):
     data, ctype, rec = got
     return Response(data, mimetype=ctype, headers={"Content-Disposition": f'attachment; filename="{rec["name"]}"',
                                                    "Cache-Control": "no-store"})
+
+
+# ---------- courses (see courses.py) ----------
+
+@app.get("/app/courses")
+def courses_page():
+    return render_app("courses.html", "courses")
+
+
+@app.get("/app/courses/<cid>")
+def course_edit_page(cid):
+    acc = current_account()
+    c = courses.get(cid)
+    if acc and (not c or c["acc"] != acc["id"]):
+        return redirect("/app/courses")
+    return render_app("course_edit.html", "courses", course_id=cid)
+
+
+def my_course(cid):
+    acc = current_account()
+    c = courses.get(cid)
+    if not c or c["acc"] != acc["id"] or c.get("deleted"):
+        abort(404)
+    return acc, c
+
+
+def course_public_url(acc, c):
+    return f"{site_url()}/{acc.get('username', '')}/c/{c.get('slug') or c['id']}"
+
+
+@app.get("/api/courses")
+def api_courses():
+    acc = current_account()
+    rows = []
+    for c in courses.of_account(acc["id"]):
+        if c.get("deleted"):
+            continue
+        n_mod, n_les = courses.counts(c)
+        v = courses.views(c)
+        rows.append({"id": c["id"], "title": c["title"], "status": c["status"], "price": courses.price_now(c), "cover": c.get("cover", ""),
+                     "sales": c.get("sales", 0), "revenue": c.get("revenue", 0), "views": v, "modules": n_mod, "lessons": n_les,
+                     "url": course_public_url(acc, c), "created": c.get("created")})
+    sales, revenue, views = sum(r["sales"] for r in rows), sum(r["revenue"] for r in rows), sum(r["views"] for r in rows)
+    return jsonify(courses=rows, sales=sales, revenue=revenue, conversion=round(100 * sales / views, 1) if views else 0,
+                   payouts=shop.can_sell(current_user()) if current_user() else False)
+
+
+@app.post("/api/courses")
+def api_course_create():
+    try:
+        c = courses.create(current_account(), (request.get_json(force=True) or {}).get("title"))
+    except courses.CourseError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(id=c["id"])
+
+
+@app.get("/api/courses/<cid>")
+def api_course_get(cid):
+    acc, c = my_course(cid)
+    return jsonify(course=c, url=course_public_url(acc, c), sessions=courses.sessions(c), plan_fee=plans.platform_fee(acc, 499),
+                   payouts=shop.can_sell(current_user()) if current_user() else False)
+
+
+@app.put("/api/courses/<cid>")
+def api_course_save(cid):
+    acc, c = my_course(cid)
+    try:
+        c = courses.clean(acc, cid, request.get_json(force=True) or {})
+    except courses.CourseError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(course=c, url=course_public_url(acc, c), sessions=courses.sessions(c))
+
+
+@app.delete("/api/courses/<cid>")
+def api_course_delete(cid):
+    acc, c = my_course(cid)
+    return jsonify(ok=courses.delete(acc, cid))
+
+
+@app.post("/api/courses/upload")
+def api_course_upload():
+    """Uploads for courses: kind=cover (public image) or kind=file (private: lesson resources and audio)."""
+    acc = current_account()
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify(error="No file chosen."), 400
+    cover = request.args.get("kind") == "cover"
+    if cover and not re.search(r"\.(png|jpe?g|webp|gif)$", f.filename, re.I):
+        return jsonify(error="Use a PNG, JPG, WEBP or GIF image."), 400
+    try:
+        item = files.upload(acc, f.filename, f.read(), f.mimetype, paid=not cover, listed=False)
+    except files.FileError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(id=item["id"], name=item["name"], size=item["size"], url=files.link(item) if cover else "")
+
+
+@app.get("/api/courses/<cid>/students")
+def api_course_students(cid):
+    acc, c = my_course(cid)
+    titles = {ls["id"]: ls["title"] for _, ls in courses.lessons(c, True)}
+    out = []
+    for e in courses.students(cid):
+        out.append({"email": e["email"], "name": e.get("name", ""), "phone": e.get("phone", ""), "at": e.get("at"), "until": e.get("until"),
+                    "paid": e.get("paid", 0), "percent": courses.percent(c, e),
+                    "work": [{"lesson": lid, "title": titles.get(lid, ""), **w} for lid, w in (e.get("work") or {}).items()]})
+    return jsonify(students=out)
+
+
+@app.get("/api/courses/<cid>/students.csv")
+def api_course_students_csv(cid):
+    acc, c = my_course(cid)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["name", "email", "phone", "enrolled", "paid", "progress %", "access until"])
+    for e in courses.students(cid):
+        w.writerow([e.get("name", ""), e["email"], e.get("phone", ""), time.strftime("%Y-%m-%d", time.gmtime(e.get("at", 0))),
+                    e.get("paid", 0), courses.percent(c, e), time.strftime("%Y-%m-%d", time.gmtime(e["until"])) if e.get("until") else "lifetime"])
+    return Response(buf.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f'attachment; filename="{c.get("slug") or cid}-students.csv"'})
+
+
+@app.put("/api/courses/<cid>/review")
+def api_course_review(cid):
+    acc, c = my_course(cid)
+    d = request.get_json(force=True) or {}
+    try:
+        return jsonify(work=courses.review_work(c, str(d.get("email", "")).lower(), str(d.get("lesson", "")), d.get("grade"), d.get("feedback")))
+    except courses.CourseError as e:
+        return jsonify(error=str(e)), 400
+
+
+def public_course(username, slug):
+    acc = store.account_by_username(username) if USERNAME_RE.fullmatch(username or "") else None
+    c = courses.by_slug(acc["id"], slug) if acc else None
+    if not c or c["acc"] != acc["id"] or c.get("deleted"):
+        abort(404)
+    mine = (current_account() or {}).get("id") == acc["id"]
+    if c["status"] != "published" and not mine:
+        abort(404)
+    return acc, c, mine
+
+
+@app.get("/<username>/c/<slug>")
+def course_sales_page(username, slug):
+    acc, c, mine = public_course(username, slug)
+    if not mine:
+        courses.count_view(c)
+    owner = users.owner_of(acc)
+    n_mod, n_les = courses.counts(c)
+    free = next(((m, ls) for m, ls in courses.lessons(c) if ls.get("free")), None)
+    return render_template("course_sales.html", acc=public_account(acc), c=c, n_mod=n_mod, n_les=n_les, mine=mine,
+                           desc_html=guides.blocks_html(c.get("desc", "")), about_html=guides.blocks_html(c.get("about", "")),
+                           enrolled=len(store.redis("SMEMBERS", f"s:enrs:{c['id']}") or []), free=free,
+                           price=courses.price_now(c), pay_ok=shop.ready() and bool(owner) and shop.can_sell(owner),
+                           free_ok=c.get("price_mode") == "pwyw" and not c.get("min_price"),
+                           sessions=courses.sessions(c), when=shop.when_text, embed=courses.embed(c.get("cover_video", "")))
+
+
+@app.post("/<username>/c/<slug>/order")
+def course_order(username, slug):
+    acc, c, _ = public_course(username, slug)
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    k = f"s:shopip:{ip}:{int(time.time() // 60)}"
+    if (store.redis("INCR", k) or 0) > 10:
+        return jsonify(error="Too many tries. Wait a minute, then try again."), 429
+    store.redis("EXPIRE", k, 60)
+    try:
+        r = courses.order(acc, c, request.get_json(force=True) or {})
+    except (courses.CourseError, shop.ShopError) as e:
+        return jsonify(error=str(e)), 400
+    if r.get("free"):
+        session["student"] = str((request.get_json(force=True) or {}).get("email", "")).strip().lower()
+        r["next"] = f"/learn/{c['id']}"
+    return jsonify(r)
+
+
+@app.post("/<username>/c/<slug>/paid")
+def course_paid(username, slug):
+    acc, c, _ = public_course(username, slug)
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    d = request.get_json(force=True) or {}
+    try:
+        o = shop.verify_checkout(str(d.get("order_id", "")), str(d.get("payment_id", "")), d.get("signature"))
+    except shop.ShopError as e:
+        return jsonify(error=str(e)), 400
+    session["student"] = o["email"]
+    return jsonify(next=f"/learn/{c['id']}")
+
+
+@app.get("/<username>/c/<slug>/preview/<lid>")
+def course_free_lesson(username, slug, lid):
+    acc, c, mine = public_course(username, slug)
+    pair = next(((m, ls) for m, ls in courses.lessons(c) if ls["id"] == lid and (ls.get("free") or mine)), None)
+    if not pair:
+        abort(404)
+    return learn_render(acc, c, None, pair, preview=True)
+
+
+# ---------- students ----------
+
+def student():
+    return session.get("student") or ""
+
+
+@app.get("/learn")
+def learn_home():
+    email = student()
+    if not email:
+        return render_template("learn_login.html", email_ready=users.email_ready())
+    rows = []
+    for c in courses.my_courses(email):
+        e = courses.enrollment(c["id"], email)
+        if e:
+            acc = store.load_account(c["acc"]) or {}
+            rows.append({"c": c, "pct": courses.percent(c, e), "expired": e.get("expired"), "by": acc.get("username", "")})
+    return render_template("learn_home.html", email=email, rows=rows)
+
+
+@app.post("/learn/start")
+def learn_start():
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    try:
+        email = users.start_email((request.get_json(force=True) or {}).get("email"), ip)
+    except users.LoginError as e:
+        return jsonify(error=str(e).replace(" Wait an hour, or use Google.", " Wait an hour.").replace(" Use Google for now.", "")), 400
+    return jsonify(email=email)
+
+
+@app.post("/learn/verify")
+def learn_verify():
+    if not request.is_json:
+        return jsonify(error="JSON required"), 415
+    d = request.get_json(force=True) or {}
+    try:
+        email = users.verify_email(d.get("email"), d.get("code"))
+    except users.LoginError as e:
+        return jsonify(error=str(e)), 400
+    session["student"] = email
+    return jsonify(next="/learn")
+
+
+@app.get("/learn/in/<tok>")
+def learn_magic(tok):
+    m = courses.use_magic(tok)
+    if not m:
+        return redirect("/learn")
+    session["student"] = m["email"]
+    return redirect(f"/learn/{m['course']}" if m.get("course") else "/learn")
+
+
+@app.post("/learn/logout")
+def learn_logout():
+    session.pop("student", None)
+    return redirect("/learn")
+
+
+def learner(cid):
+    """(account, course, enrollment, preview) for the signed-in student, or the creator previewing their own course."""
+    c = courses.get(cid)
+    if not c:
+        abort(404)
+    acc = store.load_account(c["acc"]) or {"id": c["acc"]}
+    if (current_account() or {}).get("id") == c["acc"] and not courses.enrollment(cid, student()):
+        return acc, c, {"email": "", "name": "Preview", "progress": {}, "quiz": {}, "work": {}, "at": 0}, True
+    email = student()
+    e = courses.enrollment(cid, email) if email else None
+    if not e:
+        return acc, c, None, False
+    return acc, c, e, False
+
+
+@app.get("/learn/<cid>")
+def learn_dashboard(cid):
+    acc, c, e, preview = learner(cid)
+    if not e:
+        return redirect("/learn")
+    if e.get("expired"):
+        return render_template("learn_home.html", email=student(), rows=[], expired=c)
+    mods = []
+    flat = courses.lessons(c)
+    for i, m in enumerate(c["modules"]):
+        if not m.get("live", True):
+            continue
+        ls = [x for x in m["lessons"] if x.get("live", True)]
+        mods.append({"m": m, "lessons": ls, "open": preview or courses.unlocked(c, e, i), "done": sum(1 for x in ls if x["id"] in e["progress"])})
+    nxt = next((ls for _, ls in flat if ls["id"] not in e["progress"]), flat[0][1] if flat else None)
+    cert = courses.certificate(c, e["email"]) if not preview else None
+    return render_template("learn_dash.html", acc=public_account(acc) if acc.get("username") else {}, c=c, e=e, mods=mods, preview=preview,
+                           pct=courses.percent(c, e), nxt=nxt, n_les=len(flat), sessions=courses.sessions(c), when=shop.when_text,
+                           cert=cert, started=bool(e.get("progress")), now=time.time())
+
+
+def learn_lesson_pair(c, e, lid, preview):
+    for i, m in enumerate(c["modules"]):
+        for ls in m["lessons"]:
+            if ls["id"] == lid and m.get("live", True) and ls.get("live", True):
+                if not preview and not courses.unlocked(c, e, i):
+                    raise courses.CourseError("This lesson unlocks later.")
+                return m, ls
+    abort(404)
+
+
+@app.get("/learn/<cid>/<lid>")
+def learn_lesson(cid, lid):
+    acc, c, e, preview = learner(cid)
+    if not e or e.get("expired"):
+        return redirect("/learn")
+    try:
+        pair = learn_lesson_pair(c, e, lid, preview)
+    except courses.CourseError:
+        return redirect(f"/learn/{cid}")
+    return learn_render(acc, c, e, pair, preview=preview)
+
+
+def learn_render(acc, c, e, pair, preview=False):
+    m, ls = pair
+    flat = courses.lessons(c)
+    idx = next(i for i, (_, x) in enumerate(flat) if x["id"] == ls["id"])
+    mod_lessons = [x for x in m["lessons"] if x.get("live", True)]
+    return render_template("learn_lesson.html", c=c, m=m, ls=ls, e=e or {"progress": {}, "quiz": {}, "work": {}}, preview=preview,
+                           guest=e is None, idx=idx, flat=flat, prev=flat[idx - 1][1] if idx > 0 else None,
+                           nxt=flat[idx + 1][1] if idx + 1 < len(flat) else None, body_html=guides.blocks_html(ls.get("body", "")),
+                           embed=courses.embed(ls.get("video", "")), pos=mod_lessons.index(ls) + 1 if ls in mod_lessons else 1,
+                           mod_count=len(mod_lessons), mod_index=[x for x in c["modules"] if x.get("live", True)].index(m) if m in c["modules"] else 0,
+                           unlocked={i: (preview or e is None or courses.unlocked(c, e, i)) for i in range(len(c["modules"]))},
+                           acc=public_account(acc) if acc.get("username") else {})
+
+
+def learn_json(cid, lid):
+    if not request.is_json:
+        abort(415)
+    acc, c, e, preview = learner(cid)
+    if not e or e.get("expired") or preview:
+        abort(403)
+    try:
+        _, ls = learn_lesson_pair(c, e, lid, False)
+    except courses.CourseError as err:
+        return c, None, str(err)
+    return c, ls, None
+
+
+@app.post("/learn/<cid>/<lid>/done")
+def learn_done(cid, lid):
+    c, ls, err = learn_json(cid, lid)
+    if err:
+        return jsonify(error=err), 400
+    e = courses.mark(c, student(), lid, (request.get_json(force=True) or {}).get("done", True) is not False)
+    return jsonify(pct=courses.percent(c, e))
+
+
+@app.post("/learn/<cid>/<lid>/quiz")
+def learn_quiz(cid, lid):
+    c, ls, err = learn_json(cid, lid)
+    if err or ls.get("type") != "quiz":
+        return jsonify(error=err or "Not a quiz."), 400
+    try:
+        return jsonify(result=courses.grade_quiz(c, student(), ls, (request.get_json(force=True) or {}).get("answers") or []))
+    except courses.CourseError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.post("/learn/<cid>/<lid>/work")
+def learn_work(cid, lid):
+    c, ls, err = learn_json(cid, lid)
+    if err or ls.get("type") != "assignment":
+        return jsonify(error=err or "Not an assignment."), 400
+    d = request.get_json(force=True) or {}
+    try:
+        return jsonify(work=courses.submit_work(c, student(), ls, d.get("text"), d.get("link")))
+    except courses.CourseError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.get("/learn/<cid>/<lid>/file/<fid>")
+def learn_file(cid, lid, fid):
+    acc, c, e, preview = learner(cid)
+    pair = next(((m, ls) for m, ls in courses.lessons(c) if ls["id"] == lid), None)
+    if not pair or not (e or pair[1].get("free")) or (e and e.get("expired")):
+        abort(404)
+    ls = pair[1]
+    if fid not in [f["id"] for f in ls.get("files", [])] + [ls.get("audio_file")]:
+        abort(404)
+    got = files.fetch(fid, paid_ok=True)
+    if not got:
+        abort(404)
+    data, ctype, rec = got
+    inline = request.args.get("inline") == "1"
+    return Response(data, mimetype=ctype, headers={"Content-Disposition": f'{"inline" if inline else "attachment"}; filename="{rec["name"]}"',
+                                                   "Cache-Control": "private, no-store"})
+
+
+@app.get("/cert/<cert_id>")
+def cert_page(cert_id):
+    cert = courses.get_cert(cert_id)
+    if not cert:
+        abort(404)
+    acc = store.load_account(cert["acc"]) or {}
+    return render_template("cert.html", cert=cert, by=acc.get("username", ""), date=time.strftime("%d %B %Y", time.gmtime(cert["at"] + shop.IST)))
 
 
 # ---------- YouTube scheduling (see youtube.py) ----------

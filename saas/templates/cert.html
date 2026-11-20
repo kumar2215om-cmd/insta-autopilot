@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Certificate · {{ cert.name }} · {{ cert.course }}</title>
+<meta property="og:title" content="{{ cert.name }} completed {{ cert.course }}">
+<meta property="og:description" content="Certificate of completion{% if by %} from @{{ by }}{% endif %}.">
+{% include "_course_style.html" %}
+<style>
+  .wrap { max-width:1000px; margin:0 auto; padding:28px 16px; display:grid; gap:18px; }
+  .cert { aspect-ratio:1.414; padding:clamp(18px, 5vw, 56px); display:grid; align-content:space-between; text-align:center; position:relative; overflow:hidden; background:#fff; color:#111318; }
+  .cert::before { content:""; position:absolute; inset:clamp(8px, 1.6vw, 16px); border:2px solid #111318; border-radius:12px; pointer-events:none; }
+  .cert .k { font:700 clamp(10px, 1.4vw, 14px) var(--mono); letter-spacing:.24em; text-transform:uppercase; color:#2E3BFF; }
+  .cert h1 { font-size:clamp(22px, 5vw, 52px); font-weight:800; }
+  .cert .nm { font:800 clamp(26px, 6.4vw, 64px) var(--head); letter-spacing:-.03em; border-bottom:4px solid #D4FF3A; display:inline-block; padding:0 12px; }
+  .cert p { margin:0; font-weight:600; font-size:clamp(12px, 1.8vw, 18px); color:#5E6068; }
+  .cert .course { font:800 clamp(16px, 3vw, 30px) var(--head); color:#111318; }
+  .foot { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; text-align:left; }
+  .foot .sig { font:800 clamp(14px, 2.4vw, 24px) var(--head); border-top:2px solid #111318; padding-top:6px; min-width:30%; }
+  .foot small { display:block; font:700 clamp(9px, 1.2vw, 12px) var(--mono); color:#5E6068; }
+  .seal { width:clamp(54px, 10vw, 100px); aspect-ratio:1; border-radius:50%; background:#D4FF3A; border:2.5px solid #111318; display:grid; place-items:center; font-size:clamp(24px, 5vw, 46px); }
+  .acts { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  @media print { body { background:#fff; } .acts, .made { display:none; } .wrap { padding:0; } .cert { box-shadow:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="box cert">
+    <div><div class="k">Certificate of completion</div></div>
+    <div style="display:grid; gap:clamp(6px, 1.6vw, 16px)"><p>This certifies that</p><div><span class="nm">{{ cert.name }}</span></div>
+      <p>has successfully completed</p><div class="course">{{ cert.course }}</div></div>
+    <div class="foot"><div class="sig">{{ cert.signer or ("@" ~ by if by else "Instructor") }}<small>{{ "Instructor" }}{% if by %} · @{{ by }}{% endif %}</small></div>
+      <div class="seal" aria-hidden="true">🏅</div>
+      <div class="sig" style="text-align:right">{{ date }}<small>ID {{ cert.id }}</small></div></div>
+  </div>
+  <div class="acts"><button class="btn" type="button" onclick="print()">⬇ Download / print</button>
+    <a class="btn ghost" target="_blank" rel="noopener" href="https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name={{ cert.course|urlencode }}&organizationName={{ ('@' ~ by if by else brand)|urlencode }}&issueYear={{ date[-4:] }}&certUrl={{ request.url|urlencode }}&certId={{ cert.id }}">Add to LinkedIn</a>
+    <a class="btn ghost" href="/learn">My courses</a></div>
+</div>
+<p class="made">Made with <a href="/">{{ brand }}</a></p>
+</body>
+</html>

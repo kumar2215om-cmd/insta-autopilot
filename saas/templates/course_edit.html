@@ -1,0 +1,389 @@
+{% extends "_base.html" %}
+{% block title %}Edit course{% endblock %}
+{% block heading %}<a href="/app/courses" style="color:inherit; text-decoration:none">Courses</a> <span class="muted">/</span> <span id="hTitle">…</span>{% endblock %}
+{% block actions %}<select id="status" aria-label="Status" style="width:auto"><option value="draft">Draft</option><option value="published">Published</option><option value="unpublished">Unpublished</option></select>
+<button class="btn" type="button" id="publish">Publish changes</button>{% endblock %}
+{% block head %}
+<style>
+  .ed { display:grid; grid-template-columns:minmax(0, 460px) minmax(0, 1fr); gap:18px; align-items:start; }
+  .tabs { display:flex; gap:6px; border-bottom:1.5px solid var(--line2); margin-bottom:14px; }
+  .tabs button { border:0; background:none; padding:10px 12px; font:700 14px var(--text); color:var(--mute); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1.5px; }
+  .tabs button[aria-selected="true"] { color:#2E3BFF; border-bottom-color:#2E3BFF; }
+  .panel { display:grid; gap:14px; }
+  .panel h3 { font-size:16px; margin:6px 0 0; }
+  .f { display:block; font-weight:700; font-size:13px; margin:0 0 5px; }
+  .panel input:not([type=checkbox]):not([type=radio]), .panel textarea, .panel select { width:100%; }
+  .panel input[type=time], .panel input[type=date] { border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--card); font:500 14px var(--text); }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .opt { display:flex; gap:10px; align-items:flex-start; border:1.5px solid #DCDBD3; border-radius:14px; padding:12px 14px; cursor:pointer; background:var(--card); }
+  .opt input { margin-top:4px; }
+  .opt.on { border-color:#2E3BFF; box-shadow:0 0 0 3px rgba(46,59,255,.12); }
+  .opt b { display:block; font-size:14px; } .opt span { font-size:13px; color:var(--mute); }
+  .lst { display:grid; gap:8px; }
+  .li { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; align-items:start; border:1.5px solid #DCDBD3; border-radius:12px; padding:10px; background:var(--card); }
+  .li .x { border:0; background:none; color:var(--bad); font-weight:800; cursor:pointer; font-size:16px; }
+  .mod { border:1.5px solid #DCDBD3; border-radius:16px; background:var(--card); overflow:hidden; }
+  .mod .mh { display:flex; gap:8px; align-items:center; padding:12px 14px; background:#F7F6F1; }
+  .mod .mh b { flex:1; min-width:0; font-size:14px; }
+  .chip { font:700 11px var(--mono); text-transform:uppercase; letter-spacing:.06em; border-radius:999px; padding:3px 9px; background:#E5F6EC; color:#16A34A; }
+  .chip.d { background:#ECEBE4; color:#5E6068; } .chip.f { background:#E8EAFF; color:#2E3BFF; }
+  .les { display:flex; gap:8px; align-items:center; padding:10px 14px; border-top:1px solid #ECEBE4; font-size:14px; }
+  .les .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+  .les .ty { font-size:16px; width:22px; text-align:center; }
+  .mini { border:1px solid #DCDBD3; background:#fff; border-radius:8px; padding:3px 8px; font:700 12px var(--text); cursor:pointer; color:var(--ink); }
+  .addrow { display:flex; gap:12px; padding:10px 14px; border-top:1px solid #ECEBE4; }
+  .link { border:0; background:none; color:#2E3BFF; font:700 13.5px var(--text); cursor:pointer; padding:0; }
+  .pv { position:sticky; top:16px; display:grid; gap:10px; }
+  .pvbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .seg { display:inline-flex; gap:4px; padding:4px; border:1px solid var(--line); border-radius:99px; background:var(--card); }
+  .seg button { border:0; background:none; border-radius:99px; padding:7px 13px; font:700 13px var(--text); color:var(--mute); cursor:pointer; }
+  .seg button[aria-pressed="true"] { background:#111318; color:#fff; }
+  .frame { border:2.5px solid #111318; border-radius:18px; overflow:hidden; background:#fff; box-shadow:5px 5px 0 #111318; margin:0 auto; transition:width .2s; }
+  .frame { height:calc(100vh - 170px); min-height:560px; position:relative; }
+  .frame iframe { width:100%; height:100%; border:0; display:block; transform-origin:0 0; }
+  dialog { border:0; border-radius:20px; padding:0; width:min(640px, calc(100vw - 32px)); max-height:calc(100vh - 40px); box-shadow:0 30px 80px rgba(17,19,24,.35); }
+  dialog::backdrop { background:rgba(17,19,24,.55); }
+  .dlg { padding:20px; display:grid; gap:14px; }
+  .dlg h2 { margin:0; font-size:20px; }
+  .types { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .types button { text-align:left; border:1.5px solid #DCDBD3; background:#fff; border-radius:14px; padding:14px; cursor:pointer; font:inherit; color:var(--ink); }
+  .types button:hover { border-color:#2E3BFF; }
+  .types b { display:block; font-size:15px; margin-bottom:4px; } .types span { font-size:13px; color:var(--mute); }
+  .q { border:1.5px solid #DCDBD3; border-radius:12px; padding:10px; display:grid; gap:8px; }
+  .q .o { display:flex; gap:8px; align-items:center; }
+  .sess { font-size:13px; color:var(--mute); }
+  @media (max-width:1100px) { .ed { grid-template-columns:1fr; } .pv { position:static; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="banner info" id="payBanner" hidden>Paid courses need your bank details: <a href="/app/products">Store → Get paid to your bank</a>.</div>
+<div class="ed">
+  <section class="card">
+    <div class="tabs" role="tablist"><button type="button" role="tab" data-tab="page" aria-selected="true">Page details</button>
+      <button type="button" role="tab" data-tab="course" aria-selected="false">Course</button><button type="button" role="tab" data-tab="settings" aria-selected="false">Settings</button></div>
+    <div id="body"><div class="empty">Loading…</div></div>
+  </section>
+  <section class="pv">
+    <div class="pvbar"><div class="seg" role="group" aria-label="Preview"><button type="button" data-pv="sales" aria-pressed="true">Sales page</button>
+      <button type="button" data-pv="dash" aria-pressed="false">Student dashboard</button><button type="button" data-pv="view" aria-pressed="false">Course view</button></div>
+      <div class="seg" role="group" aria-label="Device"><button type="button" data-dev="desk" aria-pressed="true">Desktop</button><button type="button" data-dev="mob" aria-pressed="false">Mobile</button></div>
+      <a class="btn ghost sm" id="openPage" target="_blank" rel="noopener" style="margin-left:auto">Open ↗</a></div>
+    <div class="frame" id="frame"><iframe id="pv" title="Preview"></iframe></div>
+    <p class="muted small" style="margin:0; text-align:center">Preview updates when you publish changes.</p>
+  </section>
+</div>
+
+<dialog id="typeDlg"><div class="dlg"><div class="row"><h2 style="margin-right:auto">Add a lesson</h2><button class="mini" type="button" data-close>✕</button></div>
+  <div class="types">
+    <button type="button" data-newtype="video"><b>🎬 Video</b><span>YouTube, Vimeo, Loom or Google Drive link.</span></button>
+    <button type="button" data-newtype="text"><b>📝 Text &amp; images</b><span>A reading lesson with text, links and images.</span></button>
+    <button type="button" data-newtype="audio"><b>🎙 Audio</b><span>Upload an audio file or paste a link.</span></button>
+    <button type="button" data-newtype="quiz"><b>🏅 Quiz</b><span>Multiple-choice questions, graded automatically.</span></button>
+    <button type="button" data-newtype="assignment"><b>✍️ Assignment</b><span>Students submit work; you review and grade it.</span></button>
+  </div></div></dialog>
+
+<dialog id="lesDlg"><div class="dlg panel" id="lesBody"></div></dialog>
+
+<dialog id="stuDlg"><div class="dlg" id="stuBody"></div></dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+const CID = "{{ course_id }}", ICON = {video: "🎬", text: "📝", audio: "🎙", quiz: "🏅", assignment: "✍️"};
+let C = null, URL_ = "", SESS = [], tab = "page", pv = "sales", dev = "desk", editing = null, addTo = null, dirty = false;
+const val = (v) => v == null ? "" : v;
+const rid = () => Math.random().toString(16).slice(2, 12).padEnd(10, "0");
+function opt(name, value, cur, title, sub) {
+  return `<label class="opt ${cur === value ? "on" : ""}"><input type="radio" name="${name}" value="${value}" ${cur === value ? "checked" : ""}><div><b>${title}</b><span>${sub}</span></div></label>`;
+}
+function listEditor(key, items, fields) {
+  return `<div class="lst">${items.map((it, i) => `<div class="li"><div style="display:grid; gap:6px">${fields.map(([f, ph, rows]) => rows
+      ? `<textarea rows="${rows}" data-list="${key}" data-i="${i}" data-k="${f}" placeholder="${ph}">${esc(val(it[f]))}</textarea>`
+      : `<input type="text" data-list="${key}" data-i="${i}" data-k="${f}" placeholder="${ph}" value="${esc(val(typeof it === "string" ? it : it[f]))}">`).join("")}</div>
+    <button class="x" type="button" data-del="${key}" data-i="${i}" aria-label="Remove">✕</button></div>`).join("")}
+    <button class="link" type="button" data-add="${key}">＋ Add</button></div>`;
+}
+function drawPage() {
+  return `<div class="panel">
+    <div><label class="f" for="fTitle">Course title</label><input type="text" id="fTitle" data-f="title" maxlength="75" value="${esc(C.title)}"></div>
+    <div><label class="f">Cover image</label>
+      ${C.cover ? `<img src="${esc(C.cover)}" alt="" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:12px; border:1.5px solid #DCDBD3; margin-bottom:8px">` : ""}
+      <div class="row2"><label class="btn ghost sm" style="cursor:pointer">⬆ Upload image<input type="file" id="coverFile" accept="image/*" hidden></label>
+        <input type="url" data-f="cover" placeholder="or paste an image link (https://)" value="${esc(val(C.cover))}"></div>
+      <p class="muted small" style="margin:6px 0 0">1280×720 (16:9) recommended, up to 4 MB.</p></div>
+    <div><label class="f" for="fVid">Or a cover video <span class="muted">(YouTube / Vimeo link, shown instead of the image)</span></label><input type="url" id="fVid" data-f="cover_video" value="${esc(val(C.cover_video))}"></div>
+    <div><label class="f" for="fDesc">Description</label><textarea id="fDesc" rows="12" data-f="desc" placeholder="What students learn. **bold**, - lists, 1. steps and links work.">${esc(val(C.desc))}</textarea></div>
+    <div><label class="f" for="fBtn">Button text</label><input type="text" id="fBtn" data-f="button" maxlength="25" value="${esc(val(C.button))}"></div>
+    <h3>Optional sections</h3>
+    <div><label class="f">Frequently asked questions</label>${listEditor("faqs", C.faqs || [], [["q", "Question"], ["a", "Answer", 2]])}</div>
+    <div><label class="f"><input type="checkbox" data-c="show_about" ${C.show_about !== false ? "checked" : ""}> About me</label>
+      <textarea rows="4" data-f="about" placeholder="Who you are and why they should learn from you.">${esc(val(C.about))}</textarea></div>
+    <div><label class="f">Course benefits</label>${listEditor("benefits", (C.benefits || []).map(b => ({b})), [["b", "e.g. 30-day content plan in 10 minutes"]])}</div>
+    <label class="opt ${C.show_enrolled ? "on" : ""}"><input type="checkbox" data-c="show_enrolled" ${C.show_enrolled ? "checked" : ""}><div><b>Show enrollment count</b><span>Social proof that updates itself as students join.</span></div></label>
+  </div>`;
+}
+function drawCourse() {
+  const mods = C.modules.map((m, mi) => `<div class="mod">
+      <div class="mh"><b>${esc(m.title)}</b><span class="chip ${m.live ? "" : "d"}">${m.live ? "Live" : "Draft"}</span>
+        <button class="mini" type="button" data-mod="${mi}" data-act="menu">⋯</button></div>
+      <div id="mm${mi}" hidden style="padding:10px 14px; display:grid; gap:8px; border-top:1px solid #ECEBE4; background:#FBFAF6">
+        <input type="text" data-mf="title" data-mi="${mi}" value="${esc(m.title)}" aria-label="Module title">
+        <div class="row2"><select data-mf="live" data-mi="${mi}"><option value="1" ${m.live ? "selected" : ""}>Live</option><option value="0" ${m.live ? "" : "selected"}>Draft</option></select>
+          <select data-mf="unlock" data-mi="${mi}"><option value="now" ${m.unlock === "now" ? "selected" : ""}>Unlocks immediately</option>
+            <option value="delay" ${m.unlock === "delay" ? "selected" : ""}>After a delay</option><option value="after_prev" ${m.unlock === "after_prev" ? "selected" : ""}>After finishing the previous module</option></select></div>
+        ${m.unlock === "delay" ? `<label class="small">Unlock <input type="number" min="0" max="365" data-mf="delay" data-mi="${mi}" value="${m.delay || 0}" style="width:80px"> days after enrolling</label>` : ""}
+        <div class="row" style="gap:6px"><button class="mini" type="button" data-mod="${mi}" data-act="up">↑ Move up</button><button class="mini" type="button" data-mod="${mi}" data-act="down">↓ Move down</button>
+          <button class="mini" type="button" data-mod="${mi}" data-act="del" style="color:var(--bad)">Delete module</button></div></div>
+      ${m.lessons.map((l, li) => `<div class="les"><span class="ty">${ICON[l.type]}</span><span class="t" data-edit="${mi}:${li}">${esc(l.title)}</span>
+        ${l.free ? `<span class="chip f">Free preview</span>` : ""}<span class="chip ${l.live ? "" : "d"}">${l.live ? "Live" : "Draft"}</span>
+        <button class="mini" type="button" data-lmove="${mi}:${li}:-1" aria-label="Up">↑</button><button class="mini" type="button" data-lmove="${mi}:${li}:1" aria-label="Down">↓</button>
+        <button class="mini" type="button" data-edit="${mi}:${li}">Edit</button></div>`).join("")}
+      <div class="addrow"><button class="link" type="button" data-addles="${mi}">＋ Add a lesson</button></div></div>`).join("");
+  const v = C.validity || {kind: "life", months: 6}, lv = C.live || {}, ct = C.cert || {};
+  const pct = C.discount_on && C.price && C.sale_price ? Math.round(100 - 100 * C.sale_price / C.price) : 0;
+  return `<div class="panel">
+    <div class="row"><h3 style="margin:0 auto 0 0">Course syllabus</h3><button class="btn ghost sm" type="button" id="addMod">＋ Add module</button></div>
+    ${mods || `<div class="empty">No modules yet.</div>`}
+    <h3>Pricing</h3>
+    ${opt("pmode", "fixed", C.price_mode || "fixed", "Fixed price", "Charge a one-time fixed price")}
+    ${opt("pmode", "pwyw", C.price_mode || "fixed", "Customer decides price", "Let customers pay any amount (set a minimum, or 0 for free)")}
+    ${(C.price_mode || "fixed") === "fixed" ? `<div><label class="f" for="fPrice">Price (₹)</label><input type="number" id="fPrice" data-f="price" min="0" value="${val(C.price)}"></div>
+      <label class="small"><input type="checkbox" data-c="discount_on" ${C.discount_on ? "checked" : ""}> Offer discounted price</label>
+      ${C.discount_on ? `<div><label class="f" for="fSale">Discounted price (₹)</label><input type="number" id="fSale" data-f="sale_price" min="0" value="${val(C.sale_price)}">
+        ${pct > 0 ? `<p class="small" style="margin:6px 0 0">₹${fmt(C.sale_price)} <s>₹${fmt(C.price)}</s> <b style="color:#16A34A">(${pct}% off)</b></p>` : ""}</div>` : ""}`
+      : `<div><label class="f" for="fMin">Minimum price (₹, 0 = free)</label><input type="number" id="fMin" data-f="min_price" min="0" value="${val(C.min_price)}"></div>`}
+    <p class="muted small" id="feeNote" style="margin:0"></p>
+    <h3>Course validity</h3>
+    ${opt("valid", "life", v.kind, "Lifetime access", "Students have access forever")}
+    ${opt("valid", "limited", v.kind, "Limited access", "Access is removed after a set time")}
+    ${v.kind === "limited" ? `<div><label class="f">Access for <input type="number" min="1" max="60" id="fMonths" value="${v.months || 6}" style="width:80px; display:inline-block"> months from the purchase date</label></div>` : ""}
+    <h3>Live classes</h3>
+    <label class="small"><input type="checkbox" data-live="enabled" ${lv.enabled ? "checked" : ""}> This course has live classes</label>
+    ${lv.enabled ? `<div class="row2"><div><label class="f">Title</label><input type="text" data-live="title" value="${esc(val(lv.title))}" placeholder="Live class"></div>
+        <div><label class="f">Platform</label><input type="text" data-live="provider" value="${esc(val(lv.provider || "Zoom"))}"></div></div>
+      <div><label class="f">Join link (shown to students)</label><input type="url" data-live="link" value="${esc(val(lv.link))}" placeholder="https://zoom.us/j/…"></div>
+      <div><label class="f">Days</label><div class="row" style="gap:10px">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => `<label class="small"><input type="checkbox" data-liveday="${i}" ${(lv.days || []).includes(i) ? "checked" : ""}> ${d}</label>`).join("")}</div></div>
+      <div class="row2"><div><label class="f">Starts (IST)</label><input type="time" data-live="start" value="${val(lv.start)}"></div><div><label class="f">Ends</label><input type="time" data-live="end" value="${val(lv.end)}"></div></div>
+      <div class="row2"><div><label class="f">First class</label><input type="date" data-live="from" value="${val(lv.from)}"></div><div><label class="f">Last class</label><input type="date" data-live="to" value="${val(lv.to)}"></div></div>
+      ${SESS.length ? `<p class="sess">${SESS.length} classes · ${SESS.filter(s => s.done).length}/${SESS.length} completed</p>` : ""}` : ""}
+    <h3>Completion certificate</h3>
+    <label class="opt ${ct.enabled ? "on" : ""}"><input type="checkbox" data-cert="enabled" ${ct.enabled ? "checked" : ""}><div><b>Reward students who finish</b><span>Every student who completes all lessons gets a certificate with their name and your signature, plus a link they can share on LinkedIn.</span></div></label>
+    ${ct.enabled ? `<div><label class="f">Signed by</label><input type="text" data-cert="signer" value="${esc(val(ct.signer))}" placeholder="Your name"></div>` : ""}
+  </div>`;
+}
+function drawSettings() {
+  return `<div class="panel">
+    <h3>Theme</h3>
+    ${opt("theme", "light", C.theme || "light", "Light", "Paper background, ink text, cobalt buttons")}
+    ${opt("theme", "dark", C.theme || "light", "Dark", "Ink background for the sales page and lessons")}
+    <h3>Checkout</h3>
+    <p class="muted small" style="margin:0">Buyers always give their name and email (their course access is emailed).</p>
+    <label class="small"><input type="checkbox" data-c="ask_phone" ${C.ask_phone ? "checked" : ""}> Also ask for their phone number</label>
+    <h3>Discount coupons</h3>
+    <div class="lst">${(C.coupons || []).map((cp, i) => `<div class="li"><div class="row2" style="grid-template-columns:1.1fr 1fr .7fr .8fr">
+        <input type="text" data-list="coupons" data-i="${i}" data-k="code" placeholder="CODE" value="${esc(cp.code)}" style="text-transform:uppercase">
+        <select data-list="coupons" data-i="${i}" data-k="kind"><option value="pct" ${cp.kind === "pct" ? "selected" : ""}>% off</option><option value="flat" ${cp.kind === "flat" ? "selected" : ""}>₹ off</option></select>
+        <input type="number" data-list="coupons" data-i="${i}" data-k="value" value="${val(cp.value)}" placeholder="10">
+        <input type="number" data-list="coupons" data-i="${i}" data-k="max" value="${val(cp.max)}" placeholder="Max uses"></div>
+        <button class="x" type="button" data-del="coupons" data-i="${i}">✕</button>${cp.used ? `<span class="small muted">${cp.used} used</span>` : ""}</div>`).join("")}
+      <button class="link" type="button" data-add="coupons">＋ Add coupon</button></div>
+    <h3>Terms and policies</h3>
+    <label class="small"><input type="checkbox" data-c="terms" ${C.terms !== false ? "checked" : ""}> Show Terms, Refund and Privacy links on the page</label>
+    <h3>Page URL</h3>
+    <div><input type="text" data-f="slug" value="${esc(val(C.slug))}"><p class="muted small" style="margin:6px 0 0">${esc(URL_)}</p></div>
+    <h3>Tracking</h3>
+    <div><label class="f" for="fPix">Meta Pixel ID</label><input type="text" id="fPix" data-f="pixel" inputmode="numeric" value="${esc(val(C.pixel))}" placeholder="e.g. 1667034868290085"></div>
+    <h3>Students</h3>
+    <div class="row" style="gap:8px"><button class="btn ghost sm" type="button" id="showStu">View students &amp; assignments</button><a class="btn ghost sm" href="/api/courses/${CID}/students.csv">Export CSV</a></div>
+    <h3 style="color:var(--bad)">Danger zone</h3>
+    <button class="btn danger sm" type="button" id="delCourse">Delete course</button>
+  </div>`;
+}
+function draw() {
+  document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  $("body").innerHTML = tab === "page" ? drawPage() : tab === "course" ? drawCourse() : drawSettings();
+  $("hTitle").textContent = C.title; $("status").value = C.status;
+  if ($("feeNote")) feeNote();
+}
+function feeNote() {
+  const p = (C.price_mode || "fixed") === "fixed" ? (C.discount_on && C.sale_price ? +C.sale_price : +C.price) : +C.min_price;
+  if (!p) { $("feeNote").textContent = ""; return; }
+  const f = window.FEE || {fee_pct: 5, gateway: 0}, fee = Math.round(p * f.fee_pct) / 100, gst = Math.round(fee * 18) / 100, gw = f.gateway ? Math.round(p * 2.36) / 100 : 0;
+  $("feeNote").innerHTML = `On ₹${fmt(p)} you get about <b>₹${fmt(Math.round((p - fee - gst - gw) * 100) / 100)}</b> per sale (${f.fee_pct}% fee + GST${gw ? " + gateway" : ""}).`;
+}
+function previewSrc() {
+  const first = C.modules.flatMap(m => m.lessons)[0];
+  return pv === "sales" ? new URL(URL_).pathname : pv === "dash" ? `/learn/${CID}` : first ? `/learn/${CID}/${first.id}` : `/learn/${CID}`;
+}
+function refreshPreview() {
+  document.querySelectorAll("[data-pv]").forEach(b => b.setAttribute("aria-pressed", b.dataset.pv === pv));
+  document.querySelectorAll("[data-dev]").forEach(b => b.setAttribute("aria-pressed", b.dataset.dev === dev));
+  $("frame").style.width = dev === "mob" ? "390px" : "100%";
+  fitFrame();
+  $("pv").src = previewSrc() + (previewSrc().includes("?") ? "&" : "?") + "t=" + Date.now();
+  $("openPage").href = URL_;
+}
+function fitFrame() {
+  // Desktop: render the page at 1280px wide and scale it down so it looks like a real laptop screen.
+  const f = $("frame"), i = $("pv");
+  if (dev === "mob") { i.style.width = "100%"; i.style.height = "100%"; i.style.transform = ""; return; }
+  const k = Math.min(1, f.clientWidth / 1280);
+  i.style.width = (100 / k) + "%"; i.style.height = (100 / k) + "%"; i.style.transform = `scale(${k})`;
+}
+window.addEventListener("resize", () => fitFrame());
+function body() {
+  return {...C, discount: !!C.discount_on, benefits: (C.benefits || []).map(b => typeof b === "string" ? b : b.b)};
+}
+async function save() {
+  try {
+    const r = await api(`/api/courses/${CID}`, {method: "PUT", body: JSON.stringify(body())});
+    setC(r); dirty = false; draw(); refreshPreview(); toast("Saved ✓");
+  } catch (err) { toast(err.message); }
+}
+function setC(r) { C = r.course; C.discount_on = !!C.sale_price; URL_ = r.url; SESS = r.sessions || []; if (r.plan_fee) window.FEE = r.plan_fee; }
+// ---------- inputs ----------
+$("body").addEventListener("input", (e) => {
+  const t = e.target; dirty = true;
+  if (t.dataset.f) { C[t.dataset.f] = t.type === "number" ? (t.value === "" ? "" : +t.value) : t.value; if (t.dataset.f === "title") $("hTitle").textContent = t.value; if ($("feeNote")) feeNote(); }
+  if (t.dataset.list) { const arr = C[t.dataset.list]; const it = arr[+t.dataset.i];
+    if (t.dataset.list === "benefits") arr[+t.dataset.i] = t.value; else it[t.dataset.k] = t.type === "number" ? +t.value : t.value; }
+  if (t.dataset.mf) { const m = C.modules[+t.dataset.mi]; if (t.dataset.mf === "title") m.title = t.value; if (t.dataset.mf === "delay") m.delay = +t.value; }
+  if (t.dataset.live) { C.live = C.live || {}; if (t.type !== "checkbox") C.live[t.dataset.live] = t.value; }
+  if (t.dataset.cert && t.type !== "checkbox") { C.cert = C.cert || {}; C.cert[t.dataset.cert] = t.value; }
+  if (t.id === "fMonths") C.validity = {kind: "limited", months: +t.value};
+});
+$("body").addEventListener("change", async (e) => {
+  const t = e.target; dirty = true;
+  if (t.dataset.c) { C[t.dataset.c] = t.checked; if (["discount_on"].includes(t.dataset.c)) { if (t.checked && !C.sale_price) C.sale_price = Math.round(C.price / 2); draw(); } else t.closest(".opt") && t.closest(".opt").classList.toggle("on", t.checked); }
+  if (t.name === "pmode") { C.price_mode = t.value; draw(); }
+  if (t.name === "valid") { C.validity = {kind: t.value, months: (C.validity || {}).months || 6}; draw(); }
+  if (t.name === "theme") { C.theme = t.value; draw(); }
+  if (t.dataset.mf === "live") { C.modules[+t.dataset.mi].live = t.value === "1"; draw(); $("mm" + t.dataset.mi).hidden = false; }
+  if (t.dataset.mf === "unlock") { C.modules[+t.dataset.mi].unlock = t.value; draw(); $("mm" + t.dataset.mi).hidden = false; }
+  if (t.dataset.live === "enabled") { C.live = {...(C.live || {}), enabled: t.checked}; draw(); }
+  if (t.dataset.liveday) { const d = +t.dataset.liveday, days = new Set(C.live.days || []); t.checked ? days.add(d) : days.delete(d); C.live.days = [...days].sort(); }
+  if (t.dataset.cert === "enabled") { C.cert = {...(C.cert || {}), enabled: t.checked}; draw(); }
+  if (t.dataset.list === "coupons" && t.tagName === "SELECT") C.coupons[+t.dataset.i].kind = t.value;
+  if (t.id === "coverFile" && t.files[0]) {
+    const up = await upload(t.files[0], "cover"); if (up) { C.cover = up.url; draw(); }
+  }
+});
+async function upload(file, kind) {
+  if (file.size > 4 * 1048576) { toast("Over 4 MB."); return null; }
+  const form = new FormData(); form.append("file", file); toast("Uploading " + file.name + "…");
+  const r = await fetch(`/api/courses/upload?kind=${kind}`, {method: "POST", headers: {"X-Upload": "1"}, body: form});
+  const d = await r.json().catch(() => ({})); if (!r.ok) { toast(d.error || "Upload failed"); return null; }
+  toast("Uploaded ✓"); return d;
+}
+// ---------- clicks ----------
+document.addEventListener("click", async (e) => {
+  const t = e.target;
+  const tb = t.closest("[data-tab]"); if (tb) { tab = tb.dataset.tab; draw(); return; }
+  const p = t.closest("[data-pv]"); if (p) { pv = p.dataset.pv; refreshPreview(); return; }
+  const dv = t.closest("[data-dev]"); if (dv) { dev = dv.dataset.dev; refreshPreview(); return; }
+  if (t.closest("[data-close]")) { t.closest("dialog").close(); return; }
+  const ad = t.closest("[data-add]");
+  if (ad) { const k = ad.dataset.add; C[k] = C[k] || [];
+    C[k].push(k === "faqs" ? {q: "", a: ""} : k === "coupons" ? {code: "", kind: "pct", value: 10, max: 0, on: true} : ""); draw(); return; }
+  const dl = t.closest("[data-del]"); if (dl) { C[dl.dataset.del].splice(+dl.dataset.i, 1); draw(); return; }
+  if (t.id === "addMod") { C.modules.push({id: rid(), title: `Module ${C.modules.length + 1}`, live: true, unlock: "now", delay: 0, lessons: []}); draw(); return; }
+  const md = t.closest("[data-mod]");
+  if (md) { const i = +md.dataset.mod, a = md.dataset.act;
+    if (a === "menu") { $("mm" + i).hidden = !$("mm" + i).hidden; return; }
+    if (a === "up" && i > 0) [C.modules[i - 1], C.modules[i]] = [C.modules[i], C.modules[i - 1]];
+    if (a === "down" && i < C.modules.length - 1) [C.modules[i + 1], C.modules[i]] = [C.modules[i], C.modules[i + 1]];
+    if (a === "del") { if (!confirm(`Delete "${C.modules[i].title}" and its ${C.modules[i].lessons.length} lessons?`)) return; C.modules.splice(i, 1); }
+    draw(); return; }
+  const lm = t.closest("[data-lmove]");
+  if (lm) { const [mi, li, d] = lm.dataset.lmove.split(":").map(Number), arr = C.modules[mi].lessons, j = li + d;
+    if (j >= 0 && j < arr.length) { [arr[li], arr[j]] = [arr[j], arr[li]]; draw(); } return; }
+  const al = t.closest("[data-addles]"); if (al) { addTo = +al.dataset.addles; $("typeDlg").showModal(); return; }
+  const nt = t.closest("[data-newtype]");
+  if (nt) { const ty = nt.dataset.newtype, l = {id: rid(), type: ty, title: {video: "New video lesson", text: "New reading", audio: "New audio lesson", quiz: "Quiz", assignment: "Assignment"}[ty],
+      live: true, free: false, body: "", video: "", audio: "", files: [], questions: ty === "quiz" ? [{q: "", options: ["", ""], answer: 0}] : [], pass_pct: 60};
+    C.modules[addTo].lessons.push(l); $("typeDlg").close(); draw(); openLesson(addTo, C.modules[addTo].lessons.length - 1); return; }
+  const ed = t.closest("[data-edit]"); if (ed) { const [mi, li] = ed.dataset.edit.split(":").map(Number); openLesson(mi, li); return; }
+  if (t.id === "showStu") { showStudents(); return; }
+  if (t.id === "delCourse") { if (!confirm("Delete this course? The page stops selling. Enrolled students keep access.")) return;
+    await api(`/api/courses/${CID}`, {method: "DELETE", body: "{}"}); location.href = "/app/courses"; return; }
+});
+$("publish").onclick = save;
+$("status").onchange = () => { C.status = $("status").value; save(); };
+window.addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+// ---------- lesson editor ----------
+function openLesson(mi, li) {
+  editing = [mi, li]; const l = C.modules[mi].lessons[li];
+  const files = (l.files || []).map((f, i) => `<div class="o"><span style="flex:1">📎 ${esc(f.name)}</span><button class="mini" type="button" data-lfdel="${i}">Remove</button></div>`).join("");
+  $("lesBody").innerHTML = `<div class="row"><h2 style="margin-right:auto">${ICON[l.type]} Edit lesson</h2><button class="mini" type="button" data-close>✕</button></div>
+    <div><label class="f">Title</label><input type="text" data-l="title" value="${esc(l.title)}"></div>
+    ${l.type === "video" ? `<div><label class="f">Video link</label><input type="url" data-l="video" value="${esc(val(l.video))}" placeholder="YouTube (unlisted), Vimeo, Loom or Google Drive link">
+      <p class="muted small" style="margin:6px 0 0">Tip: upload to YouTube as <b>Unlisted</b> and paste the link.</p></div>` : ""}
+    ${l.type === "audio" ? `<div><label class="f">Audio</label><div class="row2"><label class="btn ghost sm" style="cursor:pointer">⬆ Upload audio<input type="file" id="audFile" accept="audio/*" hidden></label>
+      <input type="url" data-l="audio" value="${esc(val(l.audio))}" placeholder="or an audio link (https://)"></div>${l.audio_file ? `<p class="small" style="margin:6px 0 0">🎙 Uploaded file attached</p>` : ""}</div>` : ""}
+    ${l.type === "quiz" ? `<div><label class="f">Questions <span class="muted">(tick the right answer)</span></label><div style="display:grid; gap:10px">${(l.questions || []).map((q, qi) => `<div class="q">
+        <div class="o"><input type="text" data-q="${qi}" data-qk="q" value="${esc(q.q)}" placeholder="Question ${qi + 1}"><button class="mini" type="button" data-qdel="${qi}">✕</button></div>
+        ${q.options.map((o, oi) => `<div class="o"><input type="radio" name="ans${qi}" data-ans="${qi}" value="${oi}" ${q.answer === oi ? "checked" : ""} aria-label="Correct answer">
+          <input type="text" data-q="${qi}" data-opt="${oi}" value="${esc(o)}" placeholder="Option ${oi + 1}"></div>`).join("")}
+        ${q.options.length < 6 ? `<button class="link" type="button" data-qopt="${qi}">＋ Option</button>` : ""}</div>`).join("")}
+        <button class="link" type="button" id="addQ">＋ Add question</button></div>
+      <label class="small" style="margin-top:8px; display:block">Pass mark <input type="number" min="0" max="100" data-l="pass_pct" value="${l.pass_pct || 60}" style="width:70px; display:inline-block">%</label></div>` : ""}
+    <div><label class="f">${l.type === "assignment" ? "Assignment brief" : l.type === "text" ? "Lesson text" : "Notes under the lesson"} <span class="muted">(**bold**, - lists, links)</span></label>
+      <textarea rows="${l.type === "text" ? 12 : 5}" data-l="body">${esc(val(l.body))}</textarea></div>
+    <div><label class="f">Resources <span class="muted">(PDFs, worksheets… up to 4 MB each)</span></label><div style="display:grid; gap:6px">${files}</div>
+      <label class="btn ghost sm" style="cursor:pointer; margin-top:6px">⬆ Add a resource<input type="file" id="resFile" hidden></label></div>
+    <label class="small"><input type="checkbox" data-lc="free" ${l.free ? "checked" : ""}> Free preview (anyone can watch it from the sales page)</label>
+    <label class="small"><input type="checkbox" data-lc="live" ${l.live ? "checked" : ""}> Live (uncheck to keep it as a draft)</label>
+    <div class="row" style="gap:8px"><button class="btn" type="button" id="lesDone">Done</button><button class="btn danger sm" type="button" id="lesDel" style="margin-left:auto">Delete lesson</button></div>`;
+  if (!$("lesDlg").open) $("lesDlg").showModal();
+}
+const curL = () => C.modules[editing[0]].lessons[editing[1]];
+$("lesBody").addEventListener("input", (e) => {
+  const t = e.target, l = curL(); dirty = true;
+  if (t.dataset.l) l[t.dataset.l] = t.type === "number" ? +t.value : t.value;
+  if (t.dataset.q != null && t.dataset.qk) l.questions[+t.dataset.q].q = t.value;
+  if (t.dataset.opt != null) l.questions[+t.dataset.q].options[+t.dataset.opt] = t.value;
+});
+$("lesBody").addEventListener("change", async (e) => {
+  const t = e.target, l = curL(); dirty = true;
+  if (t.dataset.lc) l[t.dataset.lc] = t.checked;
+  if (t.dataset.ans != null) l.questions[+t.dataset.ans].answer = +t.value;
+  if (t.id === "resFile" && t.files[0]) { const up = await upload(t.files[0], "file"); if (up) { l.files = [...(l.files || []), {id: up.id, name: up.name, size: up.size}]; openLesson(...editing); } }
+  if (t.id === "audFile" && t.files[0]) { const up = await upload(t.files[0], "file"); if (up) { l.audio_file = up.id; openLesson(...editing); } }
+});
+$("lesBody").addEventListener("click", (e) => {
+  const t = e.target, l = curL();
+  if (t.id === "addQ") { l.questions.push({q: "", options: ["", ""], answer: 0}); openLesson(...editing); }
+  if (t.dataset.qopt != null) { l.questions[+t.dataset.qopt].options.push(""); openLesson(...editing); }
+  if (t.dataset.qdel != null) { l.questions.splice(+t.dataset.qdel, 1); openLesson(...editing); }
+  if (t.dataset.lfdel != null) { l.files.splice(+t.dataset.lfdel, 1); openLesson(...editing); }
+  if (t.id === "lesDone") { $("lesDlg").close(); draw(); }
+  if (t.id === "lesDel" && confirm("Delete this lesson?")) { C.modules[editing[0]].lessons.splice(editing[1], 1); $("lesDlg").close(); draw(); }
+});
+$("lesDlg").addEventListener("close", () => draw());
+// ---------- students ----------
+async function showStudents() {
+  $("stuBody").innerHTML = `<div class="row"><h2 style="margin-right:auto">Students</h2><button class="mini" type="button" data-close>✕</button></div><div class="empty">Loading…</div>`;
+  $("stuDlg").showModal();
+  const d = await api(`/api/courses/${CID}/students`);
+  $("stuBody").innerHTML = `<div class="row"><h2 style="margin-right:auto">Students (${d.students.length})</h2><button class="mini" type="button" data-close>✕</button></div>` +
+    (d.students.length ? d.students.map(s => `<div class="li" style="grid-template-columns:1fr"><div><b>${esc(s.name || s.email)}</b> <span class="muted small">${esc(s.email)}${s.phone ? " · " + esc(s.phone) : ""}</span>
+      <div class="small muted">Enrolled ${new Date(s.at * 1000).toLocaleDateString()} · ${s.percent}% done${s.until ? " · access until " + new Date(s.until * 1000).toLocaleDateString() : ""}</div>
+      ${s.work.map(w => `<div class="q" style="margin-top:8px"><b class="small">✍️ ${esc(w.title)}</b><div class="small" style="white-space:pre-line">${esc(w.text || "")}</div>
+        ${w.link ? `<a class="small" href="${esc(w.link)}" target="_blank" rel="noopener">${esc(w.link)}</a>` : ""}
+        <div class="row2"><input type="text" placeholder="Grade (e.g. A, 8/10)" value="${esc(w.grade || "")}" data-gr="${esc(s.email)}|${w.lesson}">
+          <input type="text" placeholder="Feedback" value="${esc(w.feedback || "")}" data-fb="${esc(s.email)}|${w.lesson}"></div>
+        <button class="mini" type="button" data-review="${esc(s.email)}|${w.lesson}">Save review</button></div>`).join("")}</div></div>`).join("")
+    : `<div class="empty">No students yet.</div>`);
+}
+$("stuBody").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-review]"); if (!b) return;
+  const k = b.dataset.review, [email, lesson] = k.split("|");
+  try { await api(`/api/courses/${CID}/review`, {method: "PUT", body: JSON.stringify({email, lesson,
+      grade: document.querySelector(`[data-gr="${CSS.escape(k)}"]`).value, feedback: document.querySelector(`[data-fb="${CSS.escape(k)}"]`).value})}); toast("Review saved ✓"); }
+  catch (err) { toast(err.message); }
+});
+(async () => {
+  try { const r = await api(`/api/courses/${CID}`); setC(r); $("payBanner").hidden = r.payouts; draw(); refreshPreview(); } catch (err) { $("body").innerHTML = `<div class="empty">${esc(err.message)}</div>`; }
+  loadBanners();
+})();
+</script>
+{% endblock %}

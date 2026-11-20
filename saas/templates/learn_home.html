@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>My courses</title>
+{% include "_course_style.html" %}
+<style>
+  .top { max-width:1000px; margin:0 auto; padding:18px 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .top h1 { font-size:30px; font-weight:800; margin-right:auto; }
+  .top form button { border:0; background:none; color:var(--mute); font:700 14px Manrope, sans-serif; cursor:pointer; text-decoration:underline; }
+  .grid { max-width:1000px; margin:0 auto; padding:0 16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:18px; }
+  .cc { overflow:hidden; text-decoration:none; color:inherit; display:flex; flex-direction:column; }
+  .cc .cv { aspect-ratio:16/9; background:var(--soft) center/cover; border-bottom:2.5px solid var(--line); display:grid; place-items:center; font-size:48px; }
+  .cc .b { padding:16px; display:grid; gap:10px; flex:1; }
+  .cc h2 { font-size:19px; }
+  .cc .row { display:flex; justify-content:space-between; font:700 12.5px var(--mono); color:var(--mute); }
+  .note { max-width:968px; margin:0 auto 18px; padding:14px 16px; border-radius:14px; background:#FDECEC; color:#8A1D21; border:2px solid #E5484D; font-weight:700; }
+</style>
+</head>
+<body>
+<header class="top"><h1>My courses</h1><span class="muted" style="font-weight:700; font-size:14px">{{ email }}</span>
+  <form method="post" action="/learn/logout"><button type="submit">Sign out</button></form></header>
+{% if expired %}<p class="note">Your access to “{{ expired.title }}” has ended. Contact the creator to renew it.</p>{% endif %}
+<main class="grid">
+  {% for r in rows %}
+  <a class="box cc" href="{{ '/learn/' ~ r.c.id if not r.expired else '#' }}" {% if r.expired %}aria-disabled="true" style="opacity:.6"{% endif %}>
+    <div class="cv" style="{% if r.c.cover %}background-image:url('{{ r.c.cover }}'){% endif %}">{% if not r.c.cover %}🎓{% endif %}</div>
+    <div class="b"><h2>{{ r.c.title }}</h2>{% if r.by %}<span class="muted" style="font-size:14px; font-weight:700">by @{{ r.by }}</span>{% endif %}
+      <div class="bar" role="progressbar" aria-valuenow="{{ r.pct }}" aria-valuemin="0" aria-valuemax="100" aria-label="Progress"><i style="width:{{ r.pct }}%"></i></div>
+      <div class="row"><span>{{ r.pct }}% complete</span><span>{{ "Access ended" if r.expired else ("Continue →" if r.pct else "Start →") }}</span></div></div>
+  </a>
+  {% else %}
+  <div class="box" style="padding:26px; grid-column:1/-1; text-align:center"><h2 style="font-size:22px; margin-bottom:6px">No courses on this email yet</h2>
+    <p class="muted" style="margin:0">Enrolled with another email? Sign out and use that one.</p></div>
+  {% endfor %}
+</main>
+<p class="made">Made with <a href="/">{{ brand }}</a></p>
+</body>
+</html>

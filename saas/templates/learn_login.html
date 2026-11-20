@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>My courses · Sign in</title>
+{% include "_course_style.html" %}
+<style>
+  .wrap { max-width:440px; margin:0 auto; padding:60px 16px 20px; }
+  .box { padding:28px 24px; display:grid; gap:14px; }
+  h1 { font-size:32px; font-weight:800; }
+  .ic { width:58px; height:58px; border-radius:16px; background:var(--volt); border:2.5px solid #111318; display:grid; place-items:center; font-size:28px; box-shadow:3px 3px 0 #111318; }
+  #code { letter-spacing:.4em; font:700 22px var(--mono); text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="box">
+    <div class="ic" aria-hidden="true">🎓</div>
+    <h1>Your courses</h1>
+    <p class="muted" style="margin:0; font-weight:600">Sign in with the email you used to enroll. We'll send you a 6-digit code.</p>
+    {% if email_ready %}
+    <form id="f1" style="display:grid; gap:12px" novalidate>
+      <input class="field" id="email" type="email" autocomplete="email" placeholder="you@email.com" aria-label="Email" required>
+      <button class="btn" type="submit" id="b1">Send code</button>
+    </form>
+    <form id="f2" style="display:grid; gap:12px" hidden novalidate>
+      <p style="margin:0; font-weight:700" id="sent"></p>
+      <input class="field" id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" aria-label="6-digit code" required>
+      <button class="btn" type="submit" id="b2">Sign in</button>
+      <button type="button" id="back" style="border:0; background:none; color:var(--acc); font:700 14px Manrope, sans-serif; cursor:pointer">Use a different email</button>
+    </form>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+    <p class="muted" style="margin:0; font-size:13.5px">Tip: the "Start learning" button in your welcome email signs you in straight away.</p>
+    {% else %}
+    <p class="msg err">Email sign-in isn't switched on yet. Open the "Start learning" button in your welcome email.</p>
+    {% endif %}
+  </div>
+</div>
+<p class="made">Made with <a href="/">{{ brand }}</a></p>
+{% if email_ready %}
+<script>
+const $ = (id) => document.getElementById(id);
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "Something went wrong. Try again."); return d;
+}
+function say(t, bad) { $("msg").textContent = t; $("msg").className = "msg" + (bad ? " err" : ""); }
+let email = "";
+$("f1").onsubmit = async (e) => {
+  e.preventDefault(); $("b1").disabled = true; say("Sending…");
+  try { email = (await post("/learn/start", {email: $("email").value})).email; $("f1").hidden = true; $("f2").hidden = false;
+    $("sent").textContent = `Code sent to ${email}. Check spam too.`; say(""); $("code").focus(); }
+  catch (err) { say(err.message, true); }
+  $("b1").disabled = false;
+};
+$("f2").onsubmit = async (e) => {
+  e.preventDefault(); $("b2").disabled = true; say("Checking…");
+  try { location.href = (await post("/learn/verify", {email, code: $("code").value})).next; }
+  catch (err) { say(err.message, true); $("b2").disabled = false; }
+};
+$("back").onclick = () => { $("f2").hidden = true; $("f1").hidden = false; say(""); };
+</script>
+{% endif %}
+</body>
+</html>
