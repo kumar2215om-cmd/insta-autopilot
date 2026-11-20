@@ -2342,7 +2342,19 @@ def clean_page(data, acc):
               "button": str(sign.get("button", "")).strip()[:30] or "Send it to me",
               "thanks": str(sign.get("thanks", "")).strip()[:200] or "Done! Check your inbox 🎉",
               "link": safe_url(sign.get("link"))}
-    return {"signup": signup, "name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
+    freebies = []
+    for i, fb in enumerate((data.get("freebies") or [])[:200]):
+        if not isinstance(fb, dict):
+            continue
+        kw = re.sub(r"[^A-Za-z0-9]", "", str(fb.get("k", ""))).upper()[:24]
+        title, url = str(fb.get("t", "")).strip()[:100], safe_url(fb.get("u"))
+        if not title or not url:
+            continue
+        freebies.append({"id": re.sub(r"[^a-z0-9]", "", str(fb.get("id", "")).lower())[:12] or f"f{i}{secrets.token_hex(3)}",
+                         "k": kw, "t": title, "topic": str(fb.get("topic", "")).strip()[:30], "u": url,
+                         "enabled": fb.get("enabled", True) is not False})
+    return {"signup": signup, "freebies": freebies,
+            "name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
             "bio": str(data.get("bio", "")).strip()[:300],
             "theme": theme_of(data),
             "photo": safe_url(data.get("photo")) if str(data.get("photo", "")).startswith("https://") else "",
@@ -2804,6 +2816,29 @@ def bio_click(username, item_id):
         abort(404)
     store.count_click(acc["id"], item_id)
     return redirect(item["url"])
+
+
+@app.get("/<username>/free")
+def bio_freebies(username):
+    """All of a creator's freebies on one page: search by the reel keyword, filter by topic."""
+    acc, page = public_page(username)
+    freebies = [f for f in page.get("freebies", []) if f.get("enabled", True)]
+    if not freebies:
+        abort(404)
+    topics = sorted({f["topic"] for f in freebies if f.get("topic")})
+    page = {**page, "theme": theme_of(page)}
+    return render_template("free.html", acc=public_account(acc), page=page, freebies=freebies, topics=topics,
+                           socials_map=page.get("socials") or {})
+
+
+@app.get("/<username>/free/<fid>")
+def bio_freebie_click(username, fid):
+    acc, page = public_page(username)
+    fb = next((f for f in page.get("freebies", []) if f.get("id") == fid and f.get("enabled", True)), None)
+    if not fb:
+        abort(404)
+    store.count_click(acc["id"], "fb_" + fid)
+    return redirect(fb["u"])
 
 
 if __name__ == "__main__":
