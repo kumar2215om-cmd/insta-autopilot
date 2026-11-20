@@ -14,8 +14,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;600;700;800;900&family=Noto+Sans+Devanagari:wght@700;800&display=swap" rel="stylesheet">
 <style>
   /* Same look as the /free page. "studio" is the exact freebies palette; other themes swap the colours. */
-  .t-studio   { --bg:#F1EADC; --ink:#1C1A17; --mute:#8C8780; --card:#fff; --card-ink:#1C1A17; --card-mute:#8C8780; --line:#E7E0D4;
-                --rose:#FF2D95; --cer:#007BA7; --btn:#1C1A17; --btn-ink:#fff; --thumb:linear-gradient(135deg,#FFF7FB,#F2FAFD); }
+  /* studio = the ReplyInbox look: warm paper, violet → coral, near-black ink */
+  .t-studio   { --bg:radial-gradient(90% 45% at 50% 0%,rgba(123,92,255,.16),transparent 70%),#F7F5F0; --ink:#0C0B10; --mute:#66636F; --card:#fff;
+                --card-ink:#17151E; --card-mute:#66636F; --line:#E7E3DA; --rose:#6A4CFF; --cer:#FF7A59; --hl:#6A4CFF;
+                --btn:#0C0B10; --btn-ink:#fff; --thumb:linear-gradient(135deg,#F4F1FF,#FFF3EE); }
   .t-sunset   { --bg:linear-gradient(165deg,#4f5bd5,#962fbf 35%,#d62976 65%,#fa7e1e 90%,#feda75); --ink:#fff; --mute:rgba(255,255,255,.82);
                 --card:#fff; --card-ink:#1d1530; --card-mute:#7a6f8a; --line:rgba(255,255,255,.35); --rose:#d62976; --cer:#4f5bd5;
                 --btn:#fff; --btn-ink:#1d1530; --hl:#FFE27A; --thumb:linear-gradient(135deg,#FFF1F8,#F3F0FF); }
