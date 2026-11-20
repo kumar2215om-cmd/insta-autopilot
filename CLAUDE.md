@@ -22,6 +22,8 @@ Full handoff (routes, data shapes, env var names, Blob uploads, design system, t
 - Uploads ≤ 4 MB (Vercel body limit). Blob store is **private**: files are served via `/free/f/…`. Never revoke the Blob token.
 - No secrets in code/commits (env var names only). Keep public copy Hinglish and friendly.
 - Not in this repo: reel making/editing (separate Remotion studio). Guide generator: `tools/guide_builder` in the handoff zip.
+- ReplyInbox content (carousels, posts, reels, covers for @replyinbox.in) is made only in the "ReplyInbox carousel generator (seo-launch)" chat, in the comic style (`saas/tools/comic.py`) and the ReplyInbox brand. Other chats don't create it; they pass requests to that chat.
+- ReplyInbox brand: paper #F5F4EF (dot grid), ink #111318, cobalt #2E3BFF accent, volt #D4FF3A highlighter, coral #FF5B3A, mist #E6E5DE, win #16A34A, loss #E5484D; Bricolage Grotesque 800 / Manrope / JetBrains Mono; ink outlines + hard offset shadows. The dashboard uses the calm version (thin borders, bold only on key cards).
 
 ## Test locally
 `D=$(mktemp -d); DATA_DIR=$D DASHBOARD_PASSWORD= python3 -c "import app; app.app.run(port=5055)"`. Restart after template edits (Jinja caches).
