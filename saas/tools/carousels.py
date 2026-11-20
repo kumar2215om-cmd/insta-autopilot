@@ -270,7 +270,7 @@ def section_slides(heading, body_html, n):
 
 
 def title_hook(title, override=None):
-    """(plain, accent) for the hook headline; accent is set in Instrument Serif italic."""
+    """(plain, accent) for the hook headline; accent gets the volt highlighter."""
     if override:
         return override
     t = no_parens(clean(title))
@@ -500,48 +500,55 @@ def logo_mark(size, uid):
 CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:1080px;height:1350px;overflow:hidden}
-body{font-family:Geist,Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{font-family:Manrope,Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 .s{position:relative;width:1080px;height:1350px;padding:88px 92px 0;display:flex;flex-direction:column;overflow:hidden}
-.ink{background:#0C0B10;color:#fff}.paper{background:#F7F5F0;color:#0C0B10}
-.grad{background:linear-gradient(140deg,#7B5CFF 0%,#B05CE8 55%,#FF7A59 100%);color:#fff}
-.glow{position:absolute;inset:0;background:radial-gradient(55% 45% at 15% 12%,rgba(123,92,255,.55),transparent 70%),radial-gradient(50% 40% at 100% 100%,rgba(255,122,89,.38),transparent 70%)}
-.grid{position:absolute;inset:0;opacity:.6;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:72px 72px;-webkit-mask-image:radial-gradient(90% 70% at 25% 25%,#000 30%,transparent 85%)}
-.paper .grid{background-image:linear-gradient(rgba(12,11,16,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(12,11,16,.05) 1px,transparent 1px)}
+.ink{background:#111318;color:#fff}.paper{background:#F5F4EF;color:#111318}
+.grad{background:#2E3BFF;color:#fff}
+.glow{position:absolute;inset:0;background:radial-gradient(55% 40% at 12% 8%,rgba(46,59,255,.45),transparent 70%)}
+.paper .glow,.grad .glow{display:none}
+.grid{position:absolute;inset:0;background:radial-gradient(rgba(255,255,255,.10) 3px,transparent 3.6px) 0 0/54px 54px}
+.paper .grid{background:radial-gradient(rgba(17,19,24,.13) 3px,transparent 3.6px) 0 0/54px 54px}
+.grad .grid{background:radial-gradient(rgba(255,255,255,.14) 3px,transparent 3.6px) 0 0/54px 54px}
 .top{position:relative;display:flex;align-items:center;justify-content:space-between}
-.logo{display:flex;align-items:center;gap:20px;font-weight:600;font-size:44px;letter-spacing:-.035em}
-.logo span{color:#6A4CFF}.ink .logo span,.grad .logo span{color:#B9A8FF}.grad .logo span{color:#fff;opacity:.8}
-.count{font:500 40px "Geist Mono",monospace;opacity:.55;letter-spacing:.02em}
+.logo{display:flex;align-items:center;gap:20px;font-family:"Bricolage Grotesque",Manrope,sans-serif;font-weight:800;font-size:46px;letter-spacing:-.04em}
+.logo span{color:#2E3BFF}.ink .logo span,.grad .logo span{color:#D4FF3A}
+.count{font:700 38px "JetBrains Mono",monospace;opacity:.6;letter-spacing:.04em}
 .main{position:relative;flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:40px}
-.kicker{font:500 40px "Geist Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:#6A4CFF;margin-bottom:34px}
-.ink .kicker{color:#B9A8FF}
-h1{font-weight:600;font-size:112px;line-height:1.0;letter-spacing:-.05em}
-h2{font-weight:600;font-size:94px;line-height:1.04;letter-spacing:-.045em;margin-bottom:52px}
-em{font-family:"Instrument Serif",serif;font-weight:400;font-style:italic;letter-spacing:-.01em;background:linear-gradient(120deg,#8B6CFF,#C06BE6 55%,#FF8A6A);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
-.sub{margin-top:44px;font-size:54px;line-height:1.3;color:#B4B0C0;letter-spacing:-.02em}
-.body{font-size:68px;line-height:1.28;letter-spacing:-.025em}
-.text{color:#2A2733}.ink .text{color:#ECE9F2}
+.kicker{align-self:flex-start;font:700 36px "JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.12em;color:#111318;background:#D4FF3A;border:4px solid #111318;border-radius:999px;padding:10px 28px;margin-bottom:40px}
+h1,h2,.cta-pre,.cta{font-family:"Bricolage Grotesque",Manrope,sans-serif;font-weight:800}
+h1{font-size:118px;line-height:.98;letter-spacing:-.055em}
+h2{font-size:96px;line-height:1.02;letter-spacing:-.05em;margin-bottom:52px}
+em{font-style:normal;background:#D4FF3A;color:#111318;padding:0 .12em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.sub{margin-top:44px;font-size:52px;line-height:1.3;color:#A7A9B0;letter-spacing:-.02em;font-weight:600}
+.paper .sub{color:#5E6068}
+.body{font-size:66px;line-height:1.28;letter-spacing:-.025em;font-weight:600}
+.text{color:#2A2C33}.ink .text{color:#ECEDF0}
 ul.l{list-style:none;display:flex;flex-direction:column;gap:40px}
-ul.l li{display:flex;gap:30px;align-items:flex-start;font-size:62px;line-height:1.22;letter-spacing:-.025em}
-.mk{flex:none;width:84px;height:84px;border-radius:24px;display:flex;align-items:center;justify-content:center;font:600 44px "Geist Mono",monospace;color:#fff;background:linear-gradient(140deg,#7B5CFF,#B05CE8 60%,#FF7A59);margin-top:-8px}
-.dot{flex:none;width:28px;height:28px;border-radius:50%;margin-top:24px;background:linear-gradient(140deg,#7B5CFF,#FF7A59)}
-.them .dot{background:#9C98A8}
-.chat{display:flex;flex-direction:column;gap:30px}
-.b{max-width:90%;padding:32px 40px;border-radius:40px;font-size:56px;line-height:1.28;letter-spacing:-.02em}
-.b small{display:block;font:500 40px "Geist Mono",monospace;opacity:.7;margin-bottom:8px;letter-spacing:.04em}
-.b.in{background:#fff;border:2px solid #E6E1D6;align-self:flex-start;border-bottom-left-radius:12px}
-.b.out{background:#6A4CFF;color:#fff;align-self:flex-end;border-bottom-right-radius:12px}
-.note{margin-top:44px;font:500 40px/1.3 "Geist Mono",monospace;color:#6B6777;letter-spacing:-.01em}
-.foot{position:relative;display:flex;align-items:center;justify-content:space-between;height:150px;font:500 40px "Geist Mono",monospace;opacity:.6}
-.bar{position:absolute;left:0;bottom:0;height:14px;background:linear-gradient(90deg,#7B5CFF,#B05CE8 60%,#FF7A59)}
-.cta-pre{font-weight:600;font-size:96px;letter-spacing:-.045em}
-.kw{display:inline-block;margin:36px 0 40px;padding:26px 52px;border-radius:36px;background:#fff;color:#4B2FE6;font:600 128px "Geist Mono",monospace;letter-spacing:-.02em;box-shadow:0 30px 80px -20px rgba(40,10,90,.45);white-space:nowrap}
-.cta{font-weight:600;font-size:84px;line-height:1.05;letter-spacing:-.045em}
-.cta em{background:none;color:#fff;-webkit-background-clip:initial;background-clip:initial}
-.follow{margin-top:60px;font:500 44px "Geist Mono",monospace;opacity:.85}
+ul.l li{display:flex;gap:30px;align-items:flex-start;font-size:60px;line-height:1.22;letter-spacing:-.025em;font-weight:600}
+.mk{flex:none;width:88px;height:88px;border-radius:24px;display:flex;align-items:center;justify-content:center;font:700 44px "JetBrains Mono",monospace;color:#111318;background:#D4FF3A;border:4px solid #111318;box-shadow:6px 6px 0 #111318;margin-top:-8px}
+.ink .mk{box-shadow:6px 6px 0 #2E3BFF}
+.dot{flex:none;width:30px;height:30px;border-radius:50%;margin-top:24px;background:#2E3BFF;border:4px solid #111318}
+.them .dot{background:#E6E5DE}
+.chat{display:flex;flex-direction:column;gap:34px}
+.b{max-width:90%;padding:30px 40px;border-radius:40px;font-size:54px;line-height:1.28;letter-spacing:-.02em;font-weight:600;border:4px solid #111318}
+.b small{display:block;font:700 36px "JetBrains Mono",monospace;opacity:.75;margin-bottom:8px;letter-spacing:.06em}
+.b.in{background:#fff;color:#111318;align-self:flex-start;border-bottom-left-radius:12px;box-shadow:8px 8px 0 #111318}
+.b.out{background:#2E3BFF;color:#fff;align-self:flex-end;border-bottom-right-radius:12px;box-shadow:8px 8px 0 #111318}
+.ink .b{border-color:#fff}.ink .b.in{box-shadow:8px 8px 0 #2E3BFF}.ink .b.out{box-shadow:8px 8px 0 #D4FF3A}
+.note{margin-top:48px;font:600 38px/1.35 "JetBrains Mono",monospace;color:#5E6068;letter-spacing:-.01em}
+.ink .note{color:#A7A9B0}
+.foot{position:relative;display:flex;align-items:center;justify-content:space-between;height:150px;font:700 38px "JetBrains Mono",monospace;opacity:.7}
+.bar{position:absolute;left:0;bottom:0;height:18px;background:#2E3BFF}
+.ink .bar{background:#D4FF3A}.grad .bar{background:#D4FF3A}
+.cta-pre{font-size:96px;letter-spacing:-.05em}
+.kw{display:inline-block;margin:40px 0 44px;padding:24px 54px;border-radius:36px;background:#D4FF3A;color:#111318;font:700 124px "JetBrains Mono",monospace;letter-spacing:-.02em;border:6px solid #111318;box-shadow:14px 14px 0 #111318;white-space:nowrap}
+.cta{font-size:84px;line-height:1.05;letter-spacing:-.05em}
+.cta em{background:none;color:#D4FF3A;padding:0}
+.follow{margin-top:60px;font:700 42px "JetBrains Mono",monospace;opacity:.9}
 """
 
-FONTS = ('<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500;600'
-         '&family=Instrument+Serif:ital@1&display=block" rel="stylesheet">')
+FONTS = ('<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800'
+         '&family=JetBrains+Mono:wght@500;600;700&family=Manrope:wght@500;600;700;800&display=block" rel="stylesheet">')
 
 
 def e(text):
