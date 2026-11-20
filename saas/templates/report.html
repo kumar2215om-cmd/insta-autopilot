@@ -38,7 +38,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const COLORS = {views: "#DAD4C8", comments: "#DAD4C8", keyword: "#C9BEFF", dm: "#9F8BFF", link: "#6A4CFF", follow: "#FF7A59"};
+const COLORS = {views: "#DAD4C8", comments: "#DAD4C8", keyword: "#C9BEFF", dm: "#9F8BFF", link: "#2E3BFF", follow: "#FF5B3A"};
 function funnel(r, steps) {
   const top = Math.log10((r.views || r.comments || 1) + 1);
   return steps.map(([k, label]) => {

@@ -9,7 +9,7 @@
 {% include "_style.html" %}
 <style>
   body { min-height:100vh; display:grid; place-items:center; padding:32px 16px;
-         background:radial-gradient(70% 50% at 50% 0%, rgba(123,92,255,.16), transparent 70%), var(--bg); }
+         background:radial-gradient(70% 50% at 50% 0%, rgba(46,59,255,.16), transparent 70%), var(--bg); }
   main { width:100%; max-width:420px; }
   .card { padding:30px 26px; }
   .top { display:flex; justify-content:center; margin-bottom:18px; }
@@ -21,8 +21,8 @@
   .or::before, .or::after { content:""; flex:1; height:1px; background:var(--line); }
   label { display:block; font-weight:700; font-size:14px; margin:0 0 6px; }
   input[type=email], input[type=text] { width:100%; border:1.5px solid var(--line); border-radius:12px; padding:12px 14px;
-         font:16px Geist, Inter, sans-serif; background:#fff; color:var(--ink); }
-  input:focus { outline:none; border-color:var(--rose); box-shadow:0 0 0 4px rgba(91,61,245,.12); }
+         font:16px Manrope, Inter, sans-serif; background:#fff; color:var(--ink); }
+  input:focus { outline:none; border-color:var(--rose); box-shadow:0 0 0 4px rgba(46,59,255,.12); }
   .code { letter-spacing:.5em; text-align:center; font-weight:800; font-size:22px !important; }
   form .btn { width:100%; margin-top:12px; }
   .msg { min-height:20px; font-size:14px; margin:10px 0 0; text-align:center; }
@@ -32,7 +32,7 @@
   .steps > * { white-space:nowrap; }
   .steps b { color:var(--rose); }
   .small { font-size:13px; }
-  .link { background:none; border:0; color:var(--blue); font:600 14px Geist, Inter, sans-serif; cursor:pointer; padding:0; }
+  .link { background:none; border:0; color:var(--blue); font:600 14px Manrope, Inter, sans-serif; cursor:pointer; padding:0; }
 </style>
 </head>
 <body>
@@ -77,7 +77,7 @@
       <form id="pwForm" novalidate style="margin-top:12px">
         <label for="pwEmail">Email</label><input id="pwEmail" type="email" autocomplete="username" required style="margin-bottom:10px">
         <label for="pwPass">Password</label><input id="pwPass" type="password" autocomplete="current-password" required
-          style="width:100%; border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; font:16px Geist, Inter, sans-serif">
+          style="width:100%; border:1.5px solid var(--line); border-radius:12px; padding:12px 14px; font:16px Manrope, Inter, sans-serif">
         <button class="btn" type="submit" id="pwBtn">Sign in</button>
         <p class="msg" id="pwMsg" role="status" aria-live="polite"></p>
       </form>

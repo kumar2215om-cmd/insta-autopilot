@@ -1,11 +1,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#F7F7F4; --ink:#15151A; --rose:#5B3DF5; --blue:#4A2FE0; --mute:#5C5C66; --line:#E4E4DE;
+  :root { --bg:#F7F7F4; --ink:#15151A; --rose:#2E3BFF; --blue:#1F2BD8; --mute:#5C5C66; --line:#E4E4DE;
           --card:#fff; --ok:#15803d; --bad:#c2410c; --shadow:0 18px 40px rgba(60,40,20,.12); }
   * { box-sizing:border-box; }
   html, body { margin:0; }
-  body { background:var(--bg); color:var(--ink); font:15px/1.55 Geist, Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { background:var(--bg); color:var(--ink); font:15px/1.55 Manrope, Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
   a { color:var(--blue); }
   h1, h2, h3 { font-weight:900; letter-spacing:-.02em; line-height:1.1; margin:0; }
   .wrap { max-width:1080px; margin:0 auto; padding:0 16px; }
@@ -13,9 +13,9 @@
   .hl { color:var(--rose); }
   .card { background:var(--card); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow); padding:20px; }
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:999px;
-         padding:12px 20px; font:700 15px Geist, Inter, sans-serif; cursor:pointer; text-decoration:none;
+         padding:12px 20px; font:700 15px Manrope, Inter, sans-serif; cursor:pointer; text-decoration:none;
          background:var(--rose); color:#fff; transition:transform .15s, box-shadow .15s; }
-  .btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(91,61,245,.28); }
+  .btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(46,59,255,.28); }
   .btn.dark { background:var(--ink); }
   .btn.ghost { background:transparent; color:var(--ink); border:2px solid var(--ink); }
   .btn.small { padding:8px 14px; font-size:13px; }
@@ -32,4 +32,11 @@
   .autobanner p { margin:0; flex:1 1 320px; }
   .autobanner .btn.ghost { color:#fff; border-color:#6b6660; }
   @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+
+  /* ReplyInbox brand */
+  body { background:radial-gradient(rgba(17,19,24,.10) 1px, transparent 1.3px) 0 0/22px 22px, #F5F4EF; }
+  h1, h2, h3 { font-family:"Bricolage Grotesque", Manrope, sans-serif; font-weight:800; letter-spacing:-.035em; }
+  .label { font-family:"JetBrains Mono", monospace; color:#2E3BFF; }
+  .card { border:2.5px solid #111318; box-shadow:5px 5px 0 #111318; }
+  .btn { border-radius:999px; border:2px solid #111318; box-shadow:3px 3px 0 #111318; font-weight:800; }
 </style>
