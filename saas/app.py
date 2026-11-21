@@ -29,6 +29,7 @@ import billing
 import referrals
 import shop
 import courses
+import pagestats
 import agents
 import assistant
 import leads
@@ -3128,7 +3129,13 @@ def clean_page(data, acc):
         freebies.append({"id": re.sub(r"[^a-z0-9]", "", str(fb.get("id", "")).lower())[:12] or f"f{i}{secrets.token_hex(3)}",
                          "k": kw, "t": title, "topic": str(fb.get("topic", "")).strip()[:30], "u": url,
                          "enabled": fb.get("enabled", True) is not False})
-    return {"signup": signup, "freebies": freebies,
+    seo = data.get("seo") or {}
+    seo_img = str(seo.get("image", "")).strip()
+    accent = str(data.get("accent", "")).strip()
+    look = {"accent": accent if re.fullmatch(r"#[0-9a-fA-F]{6}", accent) else "", "layout": "two" if data.get("layout") == "two" else "single",
+            "seo": {"title": str(seo.get("title", "")).strip()[:70], "description": str(seo.get("description", "")).strip()[:160],
+                    "image": seo_img if seo_img.startswith("https://") or re.fullmatch(r"/f/[\w-]{6,20}/[\w.-]{1,100}", seo_img) else ""}}
+    return {**look, "signup": signup, "freebies": freebies,
             "name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
             "bio": str(data.get("bio", "")).strip()[:300],
             "theme": theme_of(data),
@@ -3176,6 +3183,21 @@ def api_get_page():
     return jsonify(page=store.load_page(acc["id"]) or default_page(acc), clicks=store.clicks(acc["id"]),
                    signups=store.counts(acc["id"]).get("page_signups", 0),
                    url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}")
+
+
+@app.get("/api/page/analytics")
+def api_page_analytics():
+    acc = current_account()
+    try:
+        days = int(request.args.get("days", 7))
+    except ValueError:
+        days = 7
+    r = pagestats.report(acc["id"], days)
+    page = store.load_page(acc["id"]) or default_page(acc)
+    titles = {it["id"]: it["title"] for it in page.get("items", [])}
+    titles.update({"fb_" + f["id"]: "Freebie: " + (f.get("t") or f.get("k", "")) for f in page.get("freebies", [])})
+    r["links"] = [[titles.get(k, k), v] for k, v in r["links"]]
+    return jsonify(r)
 
 
 @app.put("/api/page")
@@ -3934,6 +3956,14 @@ def bio_page(username):
     if not any(k == "instagram" for k, _ in social_links):
         social_links.insert(0, ("instagram", f"https://www.instagram.com/{acc.get('username', '')}/"))
     page = {**page, "theme": theme_of(page)}
+    if (current_account() or {}).get("id") != acc["id"]:  # the owner's own visits don't count
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+        from urllib.parse import unquote
+        try:
+            pagestats.visit(acc["id"], ip, request.headers.get("User-Agent", ""), request.headers.get("x-vercel-ip-country", ""),
+                            unquote(request.headers.get("x-vercel-ip-city", "")), request.referrer or "")
+        except Exception as e:  # analytics must never break the page
+            print(f"page visit not counted: {e}")
     return render_template("bio.html", acc=public_account(acc), page=page, items=items, socials_map=socials_map, social_links=social_links,
                            joined=request.args.get("joined") == "1", error=request.args.get("error", ""))
 
@@ -3971,6 +4001,15 @@ def bio_click(username, item_id):
     if not item:
         abort(404)
     store.count_click(acc["id"], item_id)
+    if (current_account() or {}).get("id") != acc["id"]:
+        try:
+            secs = float(request.args.get("t", "")) if request.args.get("t") else None
+        except ValueError:
+            secs = None
+        try:
+            pagestats.click(acc["id"], item_id, request.headers.get("User-Agent", ""), secs)
+        except Exception as e:
+            print(f"page click not counted: {e}")
     return redirect(item["url"])
 
 
@@ -3994,6 +4033,11 @@ def bio_freebie_click(username, fid):
     if not fb:
         abort(404)
     store.count_click(acc["id"], "fb_" + fid)
+    if (current_account() or {}).get("id") != acc["id"]:
+        try:
+            pagestats.click(acc["id"], "fb_" + fid, request.headers.get("User-Agent", ""))
+        except Exception as e:
+            print(f"freebie click not counted: {e}")
     return redirect(fb["u"])
 
 

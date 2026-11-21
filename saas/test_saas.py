@@ -2732,6 +2732,37 @@ class SaasTest(unittest.TestCase):
         self.assertIn("Lead Qualifier", self.c.get("/app/agents").get_data(as_text=True))
         self.assertIn("What should we work on", self.c.get("/app").get_data(as_text=True))
 
+    def test_batch_d_page_analytics_and_settings(self):
+        self.login()
+        page = self.c.put("/api/page", json={"name": "Om Kumar", "bio": "AI for creators", "items": [
+            {"type": "link", "title": "Guide", "url": "https://x.com/g"}],
+            "accent": "#ff5b3a", "layout": "two", "seo": {"title": "Om | AI tools", "description": "Free AI guides", "image": "javascript:x"}}).get_json()["page"]
+        self.assertEqual((page["accent"], page["layout"], page["seo"]["image"]), ("#ff5b3a", "two", ""))
+        self.assertEqual(self.c.put("/api/page", json={**page, "accent": "red"}).get_json()["page"]["accent"], "")
+        page = self.c.put("/api/page", json={**page, "seo": {"title": "Om | AI tools", "description": "Free AI guides", "image": "https://img.example/og.png"}}).get_json()["page"]
+        anon = saas.app.test_client()
+        phone = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Instagram 300.0"
+        html = anon.get("/creator", headers={"User-Agent": phone, "x-vercel-ip-country": "IN", "x-vercel-ip-city": "Bengaluru"}).get_data(as_text=True)
+        for t in ("<title>Om | AI tools</title>", 'content="Free AI guides"', "https://img.example/og.png", "--rose:#ff5b3a", 'class="wrap two"'):
+            self.assertIn(t, html)
+        anon.get("/creator", headers={"User-Agent": phone, "x-vercel-ip-country": "IN", "x-vercel-ip-city": "Bengaluru"})  # same person again
+        saas.app.test_client().get("/creator", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0) Chrome/120", "x-vercel-ip-country": "US"},
+                                   environ_base={"REMOTE_ADDR": "9.9.9.9"})
+        anon.get("/creator", headers={"User-Agent": "facebookexternalhit/1.1"})  # link preview bot
+        self.c.get("/creator")  # the owner
+        item = page["items"][0]["id"]
+        self.assertEqual(anon.get(f"/creator/go/{item}?t=12", headers={"User-Agent": phone}).status_code, 302)
+        anon.get(f"/creator/go/{item}?t=4", headers={"User-Agent": phone})
+        r = self.c.get("/api/page/analytics?days=7").get_json()
+        self.assertEqual((r["visits"], r["unique"], r["clicks"], r["ctr"], r["time_to_click"]), (3, 2, 2, 66.7, 8.0))
+        self.assertEqual(dict(r["countries"]), {"IN": 2, "US": 1})
+        self.assertEqual(dict(r["cities"])["Bengaluru, IN"], 2)
+        self.assertEqual(dict(r["sources"]), {"instagram": 2, "direct": 1})
+        self.assertEqual(dict(r["devices"]), {"mobile": 2, "desktop": 1})
+        self.assertEqual(r["links"], [["Guide", 2]])
+        self.assertEqual(len(r["series"]), 7)
+        self.assertIn("Analytics", self.c.get("/app/links").get_data(as_text=True))
+
 
 
 class CarouselTest(unittest.TestCase):

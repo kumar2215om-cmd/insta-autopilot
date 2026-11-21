@@ -5,14 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 {% set nm = page.name or acc.username or "" %}
 {% set avatar = page.photo or acc.pic %}
-<title>{{ nm }} (@{{ acc.username }}) | {{ brand }}</title>
-<meta name="description" content="{{ page.bio }}">
-<meta property="og:title" content="{{ nm }}">
-<meta property="og:description" content="{{ page.bio }}">
-{% if avatar %}<meta property="og:image" content="{{ (request.host_url.rstrip('/') ~ avatar) if avatar.startswith('/') else avatar }}"><link rel="icon" href="{{ avatar }}">{% else %}<link rel="icon" href="data:,">{% endif %}
+{% set seo = page.seo or {} %}
+{% set share_img = seo.image or avatar %}
+<title>{{ seo.title or (nm ~ " (@" ~ acc.username ~ ") | " ~ brand) }}</title>
+<meta name="description" content="{{ seo.description or page.bio }}">
+<meta property="og:title" content="{{ seo.title or nm }}">
+<meta property="og:description" content="{{ seo.description or page.bio }}">
+<meta property="og:type" content="profile"><meta name="twitter:card" content="{{ 'summary_large_image' if seo.image else 'summary' }}">
+{% if share_img %}<meta property="og:image" content="{{ (request.host_url.rstrip('/') ~ share_img) if share_img.startswith('/') else share_img }}">{% endif %}
+{% if avatar %}<link rel="icon" href="{{ avatar }}">{% else %}<link rel="icon" href="data:,">{% endif %}
 {% include "_bio_style.html" %}
+{% if page.accent %}<style>
+  body.acc { --rose:{{ page.accent }}; }
+  body.acc .tag:not(.c), body.acc .new { background:{{ page.accent }}; }
+  body.acc .kw small, body.acc .price, body.acc h1 span { color:{{ page.accent }}; }
+  body.acc.t-studio h1 span { color:#111318; }
+</style>{% endif %}
+<style>
+  @media (min-width: 900px) {
+    .wrap.two { max-width:980px; }
+    .wrap.two main.grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .wrap.two > .top, .wrap.two > h1, .wrap.two > .bio, .wrap.two > .socials, .wrap.two > .follow, .wrap.two > .join, .wrap.two > .freecard { max-width:520px; margin-left:auto; margin-right:auto; }
+  }
+</style>
 </head>
-<body class="t-{{ page.theme }}">
+<body class="t-{{ page.theme }}{{ ' acc' if page.accent }}">
 {% set icons = {
   "instagram": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>',
   "youtube": '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8zM9.7 15.1V8.9l5.8 3.1-5.8 3.1z"/></svg>',
@@ -23,7 +40,7 @@
 } %}
 {% set LABELS = {"instagram": "Instagram", "youtube": "YouTube", "whatsapp": "WhatsApp", "email": "Email", "x": "X", "website": "Website"} %}
 {% set ig = socials_map.get("instagram") or acc.username %}
-<div class="wrap">
+<div class="wrap {{ 'two' if page.layout == 'two' }}">
   <div class="top">
     <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">{{ (nm or "?")[0] | upper }}</div>{% endif %}</div>
     <div>
@@ -111,6 +128,12 @@
 </div>
 <div class="toast" id="toast">Link copied ✓</div>
 <script>
+// time to click: links carry the seconds since the page opened (for the creator's analytics)
+const T0 = Date.now();
+document.addEventListener("click", (e) => {
+  const a = e.target.closest('a[href*="/go/"]'); if (!a) return;
+  const u = new URL(a.href, location.href); u.searchParams.set("t", Math.round((Date.now() - T0) / 1000)); a.href = u.toString();
+}, true);
 async function sharePage() {
   const url = location.origin + "/{{ acc.username }}";
   try { if (navigator.share) return await navigator.share({title: document.title, url}); } catch (e) { return; }
