@@ -2596,6 +2596,65 @@ class SaasTest(unittest.TestCase):
         r = self.c.get("/api/refer").get_json()
         self.assertEqual((r["earned_today"], r["earned_week"], r["people"]), (0, 0, []))
 
+    def test_batch_b_leads_carts_payments(self):
+        import courses
+        import leads
+        import shop
+        cid = self.course_setup()
+        self.course_body(cid, ask_phone=True)
+        acc = store.load_account("1789")
+        anon = saas.app.test_client()
+        # an Instagram contact (follower) and a link-page subscriber
+        store.touch_contact("1789", "fan_one", "11", keyword="REELS", followed=True)
+        store.touch_contact("1789", "", "web:sub@x.co", source="bio_page", email="sub@x.co")
+        # a buyer (paid) and an abandoned checkout
+        o = anon.post("/creator/c/reels/order", json={"name": "Buyer B", "email": "buy@x.co", "phone": "9876543210"}).get_json()
+        sig = hmac.new(b"sek", f"{o['order_id']}|pay_l1".encode(), hashlib.sha256).hexdigest()
+        anon.post("/creator/c/reels/paid", json={"order_id": o["order_id"], "payment_id": "pay_l1", "signature": sig})
+        o2 = anon.post("/creator/c/reels/order", json={"name": "Cart C", "email": "cart@x.co", "phone": "9123456780"}).get_json()
+        self.assertEqual(self.c.get("/api/leads?segment=carts").get_json()["total"], 0)  # too fresh to count
+        rec = store.get_json(f"s:shoporder:{o2['order_id']}")
+        rec["created"] -= 3600
+        store.set_json(f"s:shoporder:{o2['order_id']}", rec)
+        d = self.c.get("/api/leads").get_json()
+        self.assertEqual({k: d["counts"][k] for k in ("all", "customers", "instagram", "followers", "subscribers", "carts")},
+                         {"all": 4, "customers": 1, "instagram": 1, "followers": 1, "subscribers": 2, "carts": 1})
+        b = next(p for p in d["leads"] if p["email"] == "buy@x.co")
+        self.assertEqual((b["spent"], b["phone"], b["access"][0]["title"], sorted(b["sources"])), (999, "9876543210", "Reels Mastery", ["buyer", "student"]))
+        self.assertEqual([p["email"] for p in self.c.get("/api/leads?segment=customers&min_spent=500").get_json()["leads"]], ["buy@x.co"])
+        self.assertEqual(self.c.get("/api/leads?min_spent=5000").get_json()["total"], 0)
+        self.assertEqual(self.c.get("/api/leads?q=fan_one").get_json()["leads"][0]["keyword"], "REELS")
+        self.assertEqual(self.c.get("/api/leads?sort=spent").get_json()["leads"][0]["email"], "buy@x.co")
+        # remind once
+        cart = self.c.get("/api/leads?segment=carts").get_json()["leads"][0]["cart"]
+        self.mails.clear()
+        self.assertEqual(self.c.post(f"/api/leads/carts/{cart['id']}/remind", json={}).status_code, 200)
+        self.assertTrue(any(m[0] == "cart@x.co" and "/creator/c/reels" in m[2] for m in self.mails))
+        self.assertIn("already", self.c.post(f"/api/leads/carts/{cart['id']}/remind", json={}).get_json()["error"])
+        # buying later clears the cart
+        sig = hmac.new(b"sek", f"{o2['order_id']}|pay_l2".encode(), hashlib.sha256).hexdigest()
+        anon.post("/creator/c/reels/paid", json={"order_id": o2["order_id"], "payment_id": "pay_l2", "signature": sig})
+        self.assertEqual(self.c.get("/api/leads").get_json()["counts"]["carts"], 0)
+        # CSV is formula-safe
+        store.touch_contact("1789", "", "web:=x@x.co", source="bio_page", email="=cmd@x.co")
+        self.assertIn("'=cmd@x.co", self.c.get("/api/leads.csv").get_data(as_text=True))
+        # payments: earnings, period, product filter, payouts status
+        p = self.c.get("/api/payments?period=7").get_json()
+        self.assertEqual((p["count"], p["gross"], len(p["series"])), (2, 1998, 7))
+        self.assertGreater(p["earned"], 0)
+        self.assertEqual(self.c.get("/api/payments?period=7&item=Nope").get_json()["count"], 0)
+        self.assertEqual(self.c.get("/api/payments?period=custom&from=2020-01-01&to=2020-01-02").get_json()["count"], 0)
+        self.assertIn("Reels Mastery", self.c.get("/api/payments.csv?period=life").get_data(as_text=True))
+
+        def rzp(method, url, json=None, timeout=None, auth=None):
+            return Resp({"items": [{"id": "trf_1", "status": "processed", "settlement_status": "settled", "recipient_settlement_id": "setl_1"}]})
+        with mock.patch.object(shop.requests, "request", rzp):
+            po = self.c.get("/api/payments/payouts").get_json()["payouts"]
+        self.assertEqual([x["status"] for x in po], ["completed", "completed"])
+        self.assertEqual(store.get_json(f"s:shoporder:{o['order_id']}")["payout_status"], "completed")
+        self.assertIn("Payments", self.c.get("/app/payments").get_data(as_text=True))
+        self.assertIn("Abandoned carts", self.c.get("/app/leads").get_data(as_text=True))
+
 
 
 class CarouselTest(unittest.TestCase):

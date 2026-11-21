@@ -29,6 +29,7 @@ import billing
 import referrals
 import shop
 import courses
+import leads
 import devices
 import videos
 import youtube
@@ -103,7 +104,7 @@ def current_account():
 # ---------- team: managers and viewers who log in with an invite link ----------
 
 ROLES = {"manager": "Manager", "viewer": "Viewer"}
-OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing", "/api/refer", "/api/shop", "/api/courses")
+OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations", "/api/billing", "/api/refer", "/api/shop", "/api/courses", "/api/payments")
 MAX_TEAM = 5
 
 
@@ -146,13 +147,13 @@ def public_account(acc):
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
     ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
-    ("sales", "/app/sales", "Sales", True), ("shop", "/app/products", "Store", False), ("courses", "/app/courses", "Courses", False), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
+    ("sales", "/app/sales", "Sales", True), ("payments", "/app/payments", "Payments", False), ("shop", "/app/products", "Store", False), ("courses", "/app/courses", "Courses", False), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False), ("files", "/app/files", "Files", False),
-    ("contacts", "/app/contacts", "Contacts", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
+    ("contacts", "/app/leads", "Leads", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("billing", "/app/billing", "Plan & billing", True), ("refer", "/app/refer", "Refer & earn", True),
     ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"shop": True, "courses": True, "plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
+DEFAULT_APPS = {"payments": True, "shop": True, "courses": True, "plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
 
 
 def apps_of(acc):
@@ -3181,6 +3182,161 @@ def api_put_page():
     page = clean_page(request.get_json(force=True), acc)
     store.save_page(acc["id"], page)
     return jsonify(page=page)
+
+
+@app.get("/app/leads")
+def leads_page():
+    return render_app("leads.html", "contacts")
+
+
+def csv_safe(v):
+    """A CSV cell that spreadsheets won't run as a formula."""
+    v = "" if v is None else str(v)
+    return "'" + v if v[:1] in ("=", "+", "-", "@", "\t", "\r") else v
+
+
+def leads_filtered(acc, args):
+    rows = leads.people(acc)
+    seg = args.get("segment") if args.get("segment") in leads.SEGMENTS else "all"
+    q, item = str(args.get("q", "")).strip().lower(), str(args.get("item", ""))
+    try:
+        min_spent = int(args.get("min_spent") or 0)
+    except ValueError:
+        min_spent = 0
+    expiring = args.get("expiry")  # "soon" (within 7 days) or "ended"
+    now = time.time()
+
+    def ok(p):
+        if seg not in p["segments"] or (item and not any(i["title"] == item for i in p["items"])) or p["spent"] < min_spent:
+            return False
+        if expiring == "soon" and not any(a["until"] and now < a["until"] < now + 7 * 86400 for a in p["access"]):
+            return False
+        if expiring == "ended" and not any(a["until"] and a["until"] < now for a in p["access"]):
+            return False
+        return not q or q in " ".join([p["name"], p["email"], p["phone"], p["username"], p["keyword"]]).lower()
+    out = [p for p in rows if ok(p)]
+    order = args.get("sort", "new")
+    if order == "az":
+        out.sort(key=lambda p: (p["name"] or p["username"] or p["email"]).lower())
+    elif order == "za":
+        out.sort(key=lambda p: (p["name"] or p["username"] or p["email"]).lower(), reverse=True)
+    elif order == "old":
+        out.sort(key=lambda p: p["first_at"] or p["last_at"])
+    elif order == "spent":
+        out.sort(key=lambda p: -p["spent"])
+    return rows, out
+
+
+@app.get("/api/leads")
+def api_leads():
+    acc = current_account()
+    rows, out = leads_filtered(acc, request.args)
+    counts = {s: sum(1 for p in rows if s in p["segments"]) for s in leads.SEGMENTS}
+    items = sorted({i["title"] for p in rows for i in p["items"]})
+    return jsonify(leads=out[:1000], total=len(out), counts=counts, items=items)
+
+
+@app.get("/api/leads.csv")
+def api_leads_csv():
+    _, out = leads_filtered(current_account(), request.args)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    for r in leads.csv_rows(out):
+        w.writerow([csv_safe(x) for x in r])
+    return Response(buf.getvalue(), mimetype="text/csv", headers={"Content-Disposition": 'attachment; filename="leads.csv"'})
+
+
+@app.post("/api/leads/carts/<oid>/remind")
+def api_cart_remind(oid):
+    try:
+        leads.remind(current_account(), oid)
+    except shop.ShopError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(ok=True)
+
+
+@app.get("/app/payments")
+def payments_page():
+    return render_app("payments.html", "payments")
+
+
+def payments_window(args):
+    """(start, end) epoch seconds for ?period=today|yesterday|7|30|90|life|custom (&from=&to= as YYYY-MM-DD, IST)."""
+    now = time.time()
+    day0 = now - (now + shop.IST) % 86400
+    period = args.get("period", "30")
+    if period == "today":
+        return day0, now
+    if period == "yesterday":
+        return day0 - 86400, day0
+    if period == "life":
+        return 0, now
+    if period == "custom":
+        a, b = courses._date(args.get("from")), courses._date(args.get("to"))
+        if a is not None and b is not None and a <= b:
+            return a, b + 86400
+    days = {"7": 7, "30": 30, "90": 90}.get(period, 30)
+    return day0 - (days - 1) * 86400, now
+
+
+@app.get("/api/payments")
+def api_payments():
+    """Payments (like SuperProfile → Payments): earnings for a period and product, the chart, transactions and abandoned checkouts."""
+    acc = current_account()
+    if acc.get("demo"):
+        return jsonify(demo=True)
+    start, end = payments_window(request.args)
+    item = str(request.args.get("item", ""))
+    sales = [s for s in shop.sales(acc["id"], 500) if not item or s.get("title") == item]
+    inside = [s for s in sales if start <= s.get("paid_at", 0) < end]
+    span = end - start
+    before = [s for s in sales if start - span <= s.get("paid_at", 0) < start] if start else []
+    earned = round(sum(float(s.get("creator_gets") or 0) for s in inside), 2)
+    prev = round(sum(float(s.get("creator_gets") or 0) for s in before), 2)
+    # one point per IST day (or per month for long periods)
+    first = start or min([s.get("paid_at", end) for s in sales] or [end])
+    days = max(1, int((end - first) // 86400) + 1)
+    step = 86400 if days <= 120 else 30 * 86400
+    series, t = [], first - (first + shop.IST) % 86400
+    while t < end and len(series) < 400:
+        series.append({"t": int(t), "v": round(sum(float(s.get("creator_gets") or 0) for s in inside if t <= s.get("paid_at", 0) < t + step), 2)})
+        t += step
+    cart = [c for c in leads.carts(acc["id"]) if start <= c["at"] < end and (not item or c["title"] == item)]
+    user = current_user()
+    pay = shop.payout(user) if user else {}
+    return jsonify(earned=earned, gross=sum(int(s.get("price") or 0) for s in inside), count=len(inside),
+                   change=round(100 * (earned - prev) / prev) if prev else None, series=series, step=step,
+                   transactions=inside, abandoned=cart, items=sorted({s.get("title", "") for s in shop.sales(acc["id"], 500)}),
+                   payout={"status": pay.get("status", ""), "bank": pay.get("bank", ""), "name": pay.get("name", ""), "ifsc": pay.get("ifsc", "")})
+
+
+@app.get("/api/payments/payouts")
+def api_payouts():
+    """The creator's share of each recent sale and whether it has reached their bank (Razorpay Route transfers)."""
+    acc = current_account()
+    out = []
+    for s in shop.sales(acc["id"], 30):
+        o = store.get_json(f"s:shoporder:{s['id']}") or {}
+        if not o.get("payment_id"):
+            continue
+        out.append({"id": s["id"], "title": s.get("title", ""), "email": s.get("email", ""), "paid_at": s.get("paid_at"),
+                    "amount": s.get("creator_gets"), "status": shop.transfer_status(o)})
+    return jsonify(payouts=out)
+
+
+@app.get("/api/payments.csv")
+def api_payments_csv():
+    acc = current_account()
+    start, end = payments_window(request.args)
+    item = str(request.args.get("item", ""))
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Date (IST)", "Name", "Email", "Phone", "Item", "Type", "Paid (₹)", "You get (₹)", "Order"])
+    for s in shop.sales(acc["id"], 500):
+        if start <= s.get("paid_at", 0) < end and (not item or s.get("title") == item):
+            w.writerow([csv_safe(x) for x in [time.strftime("%Y-%m-%d %H:%M", time.gmtime(s["paid_at"] + shop.IST)), s.get("name", ""), s.get("email", ""),
+                                              s.get("phone", ""), s.get("title", ""), s.get("type", ""), s.get("price", 0), s.get("creator_gets", 0), s.get("id", "")]])
+    return Response(buf.getvalue(), mimetype="text/csv", headers={"Content-Disposition": 'attachment; filename="payments.csv"'})
 
 
 @app.get("/api/contacts")

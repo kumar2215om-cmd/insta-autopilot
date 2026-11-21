@@ -1,0 +1,148 @@
+{% extends "_base.html" %}
+{% block title %}Payments{% endblock %}
+{% block heading %}Payments{% endblock %}
+{% block actions %}<span class="badge" id="payStatus">Payouts: …</span>{% endblock %}
+{% block head %}
+<style>
+  .earn { display:grid; gap:12px; }
+  .earn .top2 { display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+  .earn .k { font:700 12px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
+  .earn .big { font:800 40px var(--display); letter-spacing:-.03em; line-height:1.1; margin-top:4px; }
+  .chg { font:700 13px var(--text); } .chg.up { color:#16A34A; } .chg.down { color:#E5484D; }
+  .earn select, .earn input[type=date] { width:auto; }
+  .chart svg { width:100%; height:200px; display:block; }
+  .chart .ax { display:flex; justify-content:space-between; font:500 11px var(--mono); color:var(--mute); margin-top:4px; }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .tabs button { border:1.5px solid #CFCEC6; background:var(--card); border-radius:999px; padding:8px 16px; font:700 14px var(--text); cursor:pointer; color:var(--ink); }
+  .tabs button[aria-pressed="true"] { background:#111318; color:#fff; border-color:#111318; }
+  .quick { display:flex; gap:6px; align-items:center; font-size:13px; color:var(--mute); }
+  .quick button { border:1px solid var(--line); background:var(--card); border-radius:999px; padding:5px 12px; font:600 13px var(--text); cursor:pointer; color:var(--ink); }
+  .quick button[aria-pressed="true"] { background:var(--accent-soft); border-color:#2E3BFF; color:#1F2BD8; }
+  .tbl { width:100%; border-collapse:collapse; font-size:14px; }
+  .tbl th { text-align:left; font:600 11px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); padding:0 8px 8px; white-space:nowrap; }
+  .tbl td { padding:11px 8px; border-top:1px solid var(--line2); vertical-align:middle; }
+  .tbl td.n, .tbl th.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .typ { font:600 11px var(--mono); text-transform:uppercase; padding:2px 7px; border-radius:99px; background:#ECEBE4; margin-right:6px; }
+  .typ.course { background:#E8EAFF; color:#2E3BFF; } .typ.event, .typ.booking { background:#FFF1D6; color:#9A5B00; } .typ.locked { background:#F1E8FF; color:#6B3FD1; }
+  .st { font:700 12px var(--text); padding:3px 10px; border-radius:99px; }
+  .st.completed { background:#E5F6EC; color:#16794A; } .st.processing { background:#FFF1D6; color:#9A5B00; } .st.on_hold { background:#ECEBE4; } .st.failed { background:#FDECEC; color:#E5484D; }
+  .scroll { overflow-x:auto; }
+  .bank { display:flex; gap:12px; align-items:center; padding:12px 14px; border:1px solid var(--line2); border-radius:14px; flex-wrap:wrap; }
+</style>
+{% endblock %}
+{% block content %}
+{% if acc.demo %}<div class="banner info">Demo: your Store and Course payments show here. Not available in the demo.</div>{% else %}
+<section class="card earn">
+  <div class="top2">
+    <div style="margin-right:auto"><div class="k" id="kLabel">Earnings · last 30 days</div><div class="big" id="kEarn">–</div>
+      <div class="small muted"><span class="chg" id="kChg"></span> <span id="kMeta"></span></div></div>
+    <select id="item" aria-label="Product"><option value="">All products</option></select>
+    <select id="period" aria-label="Period"><option value="today">Today</option><option value="yesterday">Yesterday</option><option value="7">Last 7 days</option>
+      <option value="30" selected>Last 30 days</option><option value="90">Last 3 months</option><option value="life">Lifetime</option><option value="custom">Custom dates</option></select>
+  </div>
+  <div class="row" id="custom" hidden style="gap:8px"><input type="date" id="from" aria-label="From"><span class="muted">to</span><input type="date" id="to" aria-label="To"><button class="btn ghost sm" type="button" id="apply">Apply</button></div>
+  <div class="chart" id="chart"></div>
+  <p class="muted small" style="margin:0">Earnings = what reaches your bank after the platform fee and GST. Store products and courses sold through {{ brand }}.</p>
+</section>
+
+<section class="card" style="display:grid; gap:14px">
+  <div class="tabs"><button type="button" data-tab="tx" aria-pressed="true">Transactions</button><button type="button" data-tab="po" aria-pressed="false">Payouts</button>
+    <input id="q" type="search" placeholder="Search name, email or product" aria-label="Search" style="flex:1; min-width:180px; margin-left:auto; max-width:320px">
+    <a class="btn ghost sm" id="csv" href="/api/payments.csv">Export</a></div>
+  <div class="quick" id="quick">Quick filters: <button type="button" data-quick="ok" aria-pressed="true">Successful</button><button type="button" data-quick="ab" aria-pressed="false">Abandoned</button>
+    <span style="margin-left:auto" id="count"></span></div>
+  <div class="bank" id="bank" hidden></div>
+  <div class="scroll"><table class="tbl" id="tbl"><tbody><tr><td class="muted">Loading…</td></tr></tbody></table></div>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if not acc.demo %}
+<script>
+let D = null, tab = "tx", quick = "ok", PO = null;
+const when = (t) => new Date(t * 1000).toLocaleString(undefined, {day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit"});
+const LABEL = {today: "today", yesterday: "yesterday", 7: "last 7 days", 30: "last 30 days", 90: "last 3 months", life: "lifetime", custom: "custom dates"};
+const STATUS = {completed: "In your bank", processing: "Processing", on_hold: "On hold", failed: "Failed"};
+function qs() {
+  const p = new URLSearchParams({period: $("period").value, item: $("item").value});
+  if ($("period").value === "custom") { p.set("from", $("from").value); p.set("to", $("to").value); }
+  return p;
+}
+function chart(series, step) {
+  if (!series.length) { $("chart").innerHTML = ""; return; }
+  const W = 800, H = 200, max = Math.max(1, ...series.map(s => s.v)), n = series.length;
+  const x = (i) => n === 1 ? W / 2 : (i / (n - 1)) * W, y = (v) => H - 14 - (v / max) * (H - 30);
+  const line = series.map((s, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(s.v).toFixed(1)}`).join(" ");
+  const fmtD = (t) => new Date(t * 1000).toLocaleDateString(undefined, step > 86400 ? {month: "short", year: "2-digit"} : {day: "numeric", month: "short"});
+  $("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Earnings chart">
+      <defs><linearGradient id="gEarn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E3BFF" stop-opacity=".22"/><stop offset="1" stop-color="#2E3BFF" stop-opacity="0"/></linearGradient></defs>
+      <path d="${line} L${x(n - 1)},${H} L${x(0)},${H} Z" fill="url(#gEarn)"/><path d="${line}" fill="none" stroke="#2E3BFF" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+      ${series.map((s, i) => s.v ? `<circle cx="${x(i)}" cy="${y(s.v)}" r="3.5" fill="#2E3BFF" vector-effect="non-scaling-stroke"><title>${fmtD(s.t)}: ₹${s.v}</title></circle>` : "").join("")}</svg>
+    <div class="ax"><span>${fmtD(series[0].t)}</span>${n > 2 ? `<span>${fmtD(series[Math.floor(n / 2)].t)}</span>` : ""}<span>${fmtD(series[n - 1].t)}</span></div>`;
+}
+async function load() {
+  D = await api("/api/payments?" + qs());
+  $("kLabel").textContent = "Earnings · " + LABEL[$("period").value];
+  $("kEarn").textContent = "₹" + D.earned.toLocaleString("en-IN", {maximumFractionDigits: 2});
+  $("kChg").className = "chg " + (D.change > 0 ? "up" : D.change < 0 ? "down" : "");
+  $("kChg").textContent = D.change == null ? "" : `${D.change > 0 ? "↗" : D.change < 0 ? "↘" : "→"} ${Math.abs(D.change)}% vs the period before`;
+  $("kMeta").textContent = `${D.change == null ? "" : "· "}${D.count} sale${D.count === 1 ? "" : "s"} · ₹${fmt(D.gross)} paid by buyers`;
+  const cur = $("item").value;
+  $("item").innerHTML = `<option value="">All products</option>` + D.items.map(t => `<option ${t === cur ? "selected" : ""}>${esc(t)}</option>`).join("");
+  const p = D.payout;
+  $("payStatus").className = "badge " + (p.status === "activated" ? "on" : "");
+  $("payStatus").textContent = p.status === "activated" ? "Payouts: Active" : p.status ? "Payouts: " + p.status : "Payouts: not set up";
+  $("csv").href = "/api/payments.csv?" + qs();
+  chart(D.series, D.step); draw();
+}
+function draw() {
+  document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-pressed", b.dataset.tab === tab));
+  document.querySelectorAll("[data-quick]").forEach(b => b.setAttribute("aria-pressed", b.dataset.quick === quick));
+  $("quick").hidden = tab !== "tx"; $("bank").hidden = tab !== "po"; $("csv").hidden = tab !== "tx";
+  const q = $("q").value.trim().toLowerCase(), m = (x) => !q || [x.name, x.email, x.title, x.phone].join(" ").toLowerCase().includes(q);
+  if (tab === "tx" && quick === "ok") {
+    const rows = D.transactions.filter(m);
+    $("count").textContent = `${rows.length} transaction${rows.length === 1 ? "" : "s"}`;
+    $("tbl").innerHTML = rows.length ? `<thead><tr><th>Date</th><th>Customer</th><th>Product</th><th class="n">Paid</th><th class="n">You get</th></tr></thead><tbody>${rows.map(s => `<tr>
+        <td class="small">${esc(when(s.paid_at))}</td><td><b>${esc(s.name || "")}</b><div class="muted small">${esc(s.email)}${s.phone ? " · " + esc(s.phone) : ""}</div></td>
+        <td><span class="typ ${esc(s.type || "file")}">${esc({course: "Course", event: "Event", booking: "1:1", locked: "Locked"}[s.type] || "Product")}</span>${esc(s.title)}</td>
+        <td class="n">₹${fmt(s.price)}</td><td class="n"><b>₹${(+s.creator_gets || 0).toLocaleString("en-IN", {maximumFractionDigits: 2})}</b></td></tr>`).join("")}</tbody>`
+      : `<tbody><tr><td class="muted">No payments in this period.</td></tr></tbody>`;
+  } else if (tab === "tx") {
+    const rows = D.abandoned.filter(m);
+    $("count").textContent = `${rows.length} abandoned`;
+    $("tbl").innerHTML = rows.length ? `<thead><tr><th>Started</th><th>Customer</th><th>Product</th><th class="n">Amount</th><th></th></tr></thead><tbody>${rows.map(c => `<tr>
+        <td class="small">${esc(when(c.at))}</td><td><b>${esc(c.name || "")}</b><div class="muted small">${esc(c.email)}${c.phone ? " · " + esc(c.phone) : ""}</div></td>
+        <td>${esc(c.title)}</td><td class="n">₹${fmt(c.price)}</td>
+        <td>${c.reminded ? `<span class="badge on">Reminded</span>` : `<button class="btn sm" type="button" data-remind="${esc(c.id)}">✉️ Remind</button>`}</td></tr>`).join("")}</tbody>`
+      : `<tbody><tr><td class="muted">No abandoned checkouts in this period.</td></tr></tbody>`;
+  } else drawPayouts();
+}
+async function drawPayouts() {
+  const p = D.payout;
+  $("bank").innerHTML = p.status === "activated"
+    ? `<span style="font-size:22px" aria-hidden="true">🏦</span><div style="flex:1"><b>${esc(p.name || "Your bank")}</b> <span class="muted">${esc([p.bank, p.ifsc].filter(Boolean).join(" · "))}</span>
+       <div class="muted small">Razorpay sends your share of each sale straight to this account, usually within 2 working days (T+2).</div></div><a class="btn ghost sm" href="/app/products">Change bank</a>`
+    : `<span style="font-size:22px" aria-hidden="true">🏦</span><div style="flex:1"><b>Add your bank account</b><div class="muted small">Needed before you can sell. Money from each sale goes straight to it.</div></div><a class="btn sm" href="/app/products">Set up payouts</a>`;
+  if (!PO) { $("tbl").innerHTML = `<tbody><tr><td class="muted">Checking with Razorpay…</td></tr></tbody>`; try { PO = (await api("/api/payments/payouts")).payouts; } catch (err) { PO = []; } }
+  const rows = PO.filter(x => !$("q").value.trim() || [x.email, x.title].join(" ").toLowerCase().includes($("q").value.trim().toLowerCase()));
+  if (tab !== "po") return;
+  $("tbl").innerHTML = rows.length ? `<thead><tr><th>Sale</th><th>Product</th><th>Buyer</th><th class="n">To your bank</th><th>Status</th></tr></thead><tbody>${rows.map(x => `<tr>
+      <td class="small">${esc(when(x.paid_at))}</td><td>${esc(x.title)}</td><td class="small">${esc(x.email)}</td>
+      <td class="n"><b>₹${(+x.amount || 0).toLocaleString("en-IN", {maximumFractionDigits: 2})}</b></td><td><span class="st ${esc(x.status)}">${esc(STATUS[x.status] || x.status)}</span></td></tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="muted">No payouts yet. They appear after your first paid sale.</td></tr></tbody>`;
+}
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-tab]"); if (t) { tab = t.dataset.tab; draw(); return; }
+  const k = e.target.closest("[data-quick]"); if (k) { quick = k.dataset.quick; draw(); return; }
+  const r = e.target.closest("[data-remind]");
+  if (r) { r.disabled = true; try { await api(`/api/leads/carts/${r.dataset.remind}/remind`, {method: "POST", body: "{}"}); toast("Reminder sent ✓"); load(); } catch (err) { toast(err.message); r.disabled = false; } }
+});
+$("period").onchange = () => { $("custom").hidden = $("period").value !== "custom"; if ($("period").value !== "custom") load(); };
+$("apply").onclick = () => { if ($("from").value && $("to").value) load(); else toast("Pick both dates."); };
+$("item").onchange = load;
+$("q").oninput = () => draw();
+load().catch(err => $("tbl").innerHTML = `<tbody><tr><td class="muted">${esc(err.message)}</td></tr></tbody>`); loadBanners();
+</script>
+{% endif %}
+{% endblock %}
