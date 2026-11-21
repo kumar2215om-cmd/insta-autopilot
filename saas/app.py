@@ -1391,6 +1391,8 @@ def save_rule(acc, key, data):
         "dm": str(data.get("dm", ""))[:1000].strip(),
         "dm_button_text": str(data.get("dm_button_text", ""))[:20].strip(),
         "dm_button_url": safe_url(data.get("dm_button_url")),
+        "dm_buttons_more": [{"text": str(b.get("text", "")).strip()[:20], "url": safe_url(b.get("url"))}
+                            for b in (data.get("dm_buttons_more") or [])[:2] if isinstance(b, dict) and str(b.get("url", "")).strip()],
         "replies_on": data.get("replies_on", True) is not False,
         "exclude": [k.strip()[:40] for k in data.get("exclude", []) if str(k).strip()][:20],
         "menu": [{"title": str(m.get("title", "")).strip()[:20], "text": str(m.get("text", "")).strip()[:640],
@@ -1423,6 +1425,10 @@ def save_rule(acc, key, data):
         rule["since"] = (store.load_rules(acc["id"]).get("reels", {}).get("next") or {}).get("since") or ig_now()
     if data.get("dm_button_url") and not rule["dm_button_url"]:
         raise ValueError("The button link must start with https://")
+    if any(not b["url"] for b in rule["dm_buttons_more"]):
+        raise ValueError("Every button link must start with https://")
+    if not rule["dm_button_url"] or rule["menu"]:
+        rule["dm_buttons_more"] = []  # extra buttons only go with the first link button
     if rule["starts_at"] and rule["ends_at"] and rule["ends_at"] <= rule["starts_at"]:
         raise ValueError("The end time must be after the start time.")
     if rule["followup_on"] and not rule["followup_dm"]:

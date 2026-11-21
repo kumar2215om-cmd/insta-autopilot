@@ -872,7 +872,9 @@ def deliver(acc, ig, igsid, key, rule, username, media_id, detail, action="dm"):
     if menu:
         ig.send_buttons({"id": igsid}, text, postbacks=[(m["title"], f"MENU|{key}|{i}") for i, m in enumerate(menu)])
     elif rule.get("dm_button_url"):
-        ig.send_buttons({"id": igsid}, text, links=[(rule.get("dm_button_text") or "Open", track(acc, key, rule["dm_button_url"], rule))])
+        more = [b for b in rule.get("dm_buttons_more") or [] if b.get("url")][:2]
+        ig.send_buttons({"id": igsid}, text, links=[(rule.get("dm_button_text") or "Open", track(acc, key, rule["dm_button_url"], rule))]
+                        + [(b.get("text") or "Open", track(acc, key, b["url"], rule)) for b in more])
     else:
         ig.send_dm({"id": igsid}, {"text": text})
     store.count(acc["id"], "links_sent")

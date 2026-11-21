@@ -1554,6 +1554,25 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(len(self.ig.messages()), n)
         self.assertEqual(store.rule_stats("1789", ["kw:START"])["kw:START"].get("menu_0"), 1)
 
+    def test_three_link_buttons(self):
+        self.login()
+        self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",
+                                       dm_button_text="Course", dm_button_url="https://c.com",
+                                       dm_buttons_more=[{"text": "Bad", "url": "javascript:x"}]).status_code, 400)
+        self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one", track_links=False,
+                      dm_button_text="Course", dm_button_url="https://c.com",
+                      dm_buttons_more=[{"text": "CLIP", "url": "https://l.com"}, {"text": "Prompt", "url": "https://p.com"},
+                                       {"text": "4th", "url": "https://x.com"}])
+        rule = store.load_rules("1789")["reels"]["kw:B3"]
+        self.assertEqual([b["text"] for b in rule["dm_buttons_more"]], ["CLIP", "Prompt"])
+        self.hook(dm("b3", sender="71"))
+        btns = self.ig.messages()[-1]["message"]["attachment"]["payload"]["buttons"]
+        self.assertEqual([(b["title"], b["url"]) for b in btns],
+                         [("Course", "https://c.com"), ("CLIP", "https://l.com"), ("Prompt", "https://p.com")])
+        self.put_rule("kw:B4", keywords=["B4"], require_follow=False, dm="No main button",
+                      dm_buttons_more=[{"text": "CLIP", "url": "https://l.com"}])
+        self.assertEqual(store.load_rules("1789")["reels"]["kw:B4"]["dm_buttons_more"], [])
+
     def test_welcome_message(self):
         self.login()
         self.put_rule("kw:GUIDE", keywords=["GUIDE"], require_follow=False, comment_reply="", dm="Guide https://g.com")

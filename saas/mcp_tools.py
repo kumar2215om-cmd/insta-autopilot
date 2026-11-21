@@ -29,7 +29,7 @@ KIND = {"*": "comments on any post", "next": "comments on your next post", "stor
         "story:mention": "story mentions", "live": "comments on your Live"}
 # save_rule fields Claude may set as they are (see save_automation's schema)
 PASS = ("comment_reply", "opening_dm", "opening_dm_b", "button_text", "require_follow", "follow_dm", "followed_button_text",
-        "dm_button_text", "dm_button_url", "replies_on", "exclude", "menu", "track_links", "once_per_person", "delay_min",
+        "dm_button_text", "dm_button_url", "dm_buttons_more", "replies_on", "exclude", "menu", "track_links", "once_per_person", "delay_min",
         "tags", "ask_email", "email_dm", "email_required", "ask_phone", "phone_dm", "phone_required", "followup_on",
         "followup_hours", "followup_dm", "followup_button", "followup_url", "label")
 STAT_FIELDS = ("runs", "clicks", "link_clicks", "follows", "leads", "sales", "revenue")
@@ -572,6 +572,8 @@ def tools_for(acc, svc, read_only=False):
         "require_follow": {"type": "boolean", "description": "Only send the link to followers."},
         "follow_dm": _STR, "followed_button_text": {"type": "string", "maxLength": 20},
         "dm_button_text": {"type": "string", "maxLength": 20}, "dm_button_url": {"type": "string", "description": "https:// link button on the final DM."},
+        "dm_buttons_more": {"type": "array", "maxItems": 2, "description": "Up to 2 more link buttons on the final DM (needs dm_button_url).",
+                            "items": {"type": "object", "properties": {"text": {"type": "string", "maxLength": 20}, "url": {"type": "string"}}}},
         "menu": {"type": "array", "maxItems": 3, "description": "Instead of one link: up to 3 options, each sends its own message.",
                  "items": {"type": "object", "properties": {"title": {"type": "string", "maxLength": 20}, "text": _STR, "url": _STR,
                                                             "button": {"type": "string", "maxLength": 20}}, "required": ["title"]}},
