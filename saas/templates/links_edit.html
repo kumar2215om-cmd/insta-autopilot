@@ -17,11 +17,72 @@
   .it .head b { margin-right:auto; }
   .phone { position:sticky; top:16px; border:10px solid var(--ink); border-radius:34px; overflow:hidden; background:var(--card); height:640px; }
   .phone iframe { width:100%; height:100%; border:0; }
+  .ltabs { display:flex; gap:6px; border-bottom:1.5px solid var(--line2); margin-bottom:4px; }
+  .ltabs button { border:0; background:none; padding:10px 14px; font:700 14px var(--text); color:var(--mute); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1.5px; }
+  .ltabs button[aria-selected="true"] { color:#2E3BFF; border-bottom-color:#2E3BFF; }
+  .kpis { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:12px; }
+  .kpi { border:1px solid var(--line2); border-radius:14px; padding:12px 14px; background:var(--card); }
+  .kpi .k { font:700 11px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
+  .kpi .n { font:800 26px var(--display); letter-spacing:-.02em; margin-top:2px; } .kpi .d { font-size:12px; color:var(--mute); }
+  .up { color:#16A34A; } .down { color:#E5484D; }
+  .an2 { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+  .toplist { display:grid; gap:8px; } .toplist .r { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:4px 10px; font-size:14px; }
+  .toplist .r i { grid-column:1 / -1; display:block; height:6px; border-radius:99px; background:#2E3BFF; opacity:.8; }
+  .bars svg { width:100%; height:180px; display:block; }
+  .legend { display:flex; gap:14px; font-size:12.5px; color:var(--mute); } .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; background:var(--c); }
+  .seoprev { border:1px solid var(--line2); border-radius:14px; overflow:hidden; max-width:420px; background:var(--card); }
+  .seoprev .im { aspect-ratio:1.91; background:#E6E5DE center/cover; display:grid; place-items:center; color:var(--mute); font-size:13px; }
+  .seoprev .tx { padding:10px 12px; font-size:13px; } .seoprev .tx b { display:block; font-size:14.5px; color:var(--ink); }
+  @media (max-width: 1000px) { .kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); } .an2 { grid-template-columns:1fr; } }
   @media (max-width: 1000px) { .cols { grid-template-columns:minmax(0, 1fr); } .phone { position:static; height:560px; } }
 </style>
 {% endblock %}
 {% block content %}
-<div class="cols">
+<div class="ltabs" role="tablist"><button type="button" role="tab" data-ltab="page" aria-selected="true">Page</button>
+  <button type="button" role="tab" data-ltab="an" aria-selected="false">Analytics</button><button type="button" role="tab" data-ltab="set" aria-selected="false">Settings</button></div>
+
+<div id="tab-an" hidden style="display:grid; gap:20px">
+  <div class="row"><h2 style="margin-right:auto">Activity</h2>
+    <select id="anDays" aria-label="Period" style="width:auto"><option value="1">Today</option><option value="7" selected>Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></div>
+  <div class="kpis" id="kpis"></div>
+  <section class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin-right:auto">Visits and clicks</h2>
+    <div class="legend"><span style="--c:#C9CCFF">Visits</span><span style="--c:#2E3BFF">Clicks</span></div></div><div class="bars" id="anChart"></div></section>
+  <div class="an2">
+    <section class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin-right:auto">Top locations</h2>
+      <div class="seg" role="group" aria-label="Location type" style="display:flex; gap:4px"><button class="btn ghost sm" type="button" data-loc="countries" aria-pressed="true">Countries</button><button class="btn ghost sm" type="button" data-loc="cities" aria-pressed="false">Cities</button></div></div>
+      <div class="toplist" id="anLoc"></div></section>
+    <section class="card"><h2 style="margin-bottom:8px">Most clicked</h2><div class="toplist" id="anLinks"></div></section>
+    <section class="card"><h2 style="margin-bottom:8px">Where visitors come from</h2><div class="toplist" id="anSrc"></div></section>
+    <section class="card"><h2 style="margin-bottom:8px">Devices</h2><div class="toplist" id="anDev"></div></section>
+  </div>
+  <p class="muted small" style="margin:0">Your own visits while logged in, and link-preview bots, aren't counted. Locations come from the visitor's network.</p>
+</div>
+
+<div id="tab-set" hidden style="display:grid; gap:20px; max-width:760px">
+  <section class="card fields"><h2>Page details</h2>
+    <div><label class="f">Your page's link</label><div class="row"><input type="text" value="{{ page_url }}" readonly style="flex:1; min-width:0" aria-label="Your page link">
+      <button class="btn ghost sm" type="button" id="copy2">Copy</button></div>
+      <p class="hint" style="margin:6px 0 0">It uses your Instagram username, so it stays the same everywhere.</p></div>
+    <div><label class="f" for="accent">Brand colour <span class="hint">buttons, tags and highlights</span></label>
+      <div class="row" style="gap:10px"><input type="color" id="accent" value="#2E3BFF" style="width:56px; height:40px; padding:2px; border-radius:10px">
+        <input type="text" id="accentHex" placeholder="Theme default" maxlength="7" style="width:130px"><button class="btn ghost sm" type="button" id="accentReset">Use theme colour</button></div></div>
+    <div><label class="f" for="layout">Desktop layout <span class="hint">how it looks on a laptop</span></label>
+      <select id="layout" style="width:auto"><option value="single">Single column (like a phone)</option><option value="two">Two columns of links and products</option></select></div>
+  </section>
+  <section class="card fields"><h2>SEO and sharing</h2>
+    <p class="hint" style="margin:-4px 0 0">What Google, WhatsApp and Instagram show when someone shares your page. Leave empty to use your name, bio and photo.</p>
+    <div class="row" style="gap:16px; align-items:flex-start; flex-wrap:wrap">
+      <div class="seoprev"><div class="im" id="seoIm">Your photo</div><div class="tx"><span class="muted" id="seoHost"></span><b id="seoT"></b><span class="muted" id="seoD"></span></div></div>
+      <div style="display:grid; gap:8px"><label class="btn ghost sm" style="cursor:pointer">⬆ Upload share image<input type="file" id="seoFile" accept="image/*" hidden></label>
+        <button class="btn ghost sm" type="button" id="seoClear">Remove image</button><span class="hint">1200×630 works best</span></div></div>
+    <div><label class="f" for="seoTitle">Title <span class="hint" id="seoTc"></span></label><input type="text" id="seoTitle" maxlength="70"></div>
+    <div><label class="f" for="seoDesc">Description <span class="hint" id="seoDc"></span></label><textarea id="seoDesc" rows="2" maxlength="160"></textarea></div>
+    <p class="hint" style="margin:0">Changes can take a while to show on other apps (they keep old previews for some time).</p>
+  </section>
+  <div><button class="btn" type="button" id="save2">Save settings</button></div>
+</div>
+
+<div class="cols" id="tab-page">
   <div style="display:grid; gap:20px">
     <section class="card fields">
       <h2>Profile</h2>
@@ -67,6 +128,7 @@
     </section>
     <section class="card fields">
       <div class="row"><h2 style="margin-right:auto">Links and products</h2>
+        <button class="btn ghost sm" type="button" id="addWa">＋ WhatsApp chat</button>
         <button class="btn ghost sm" type="button" data-add="link">＋ Link</button><button class="btn sm" type="button" data-add="product">＋ Product</button></div>
       <div id="items" style="display:grid; gap:10px"></div>
     </section>
@@ -196,6 +258,95 @@ $("save").onclick = async () => {
     draw(); $("preview").src = $("pageUrl").value + "?t=" + Date.now();
     toast(skipped ? `Saved. ${skipped} item(s) without a title or link were left out.` : "Page saved");
   } catch (err) { toast(err.message); }
+};
+// ---------- tabs: Page / Analytics / Settings ----------
+let tab = "page", AN = null, loc = "countries";
+const FLAG = (cc) => cc && cc.length === 2 ? String.fromCodePoint(...[...cc.toUpperCase()].map(c => 127397 + c.charCodeAt(0))) : "";
+const SRC = {instagram: "Instagram", whatsapp: "WhatsApp", facebook: "Facebook", youtube: "YouTube", google: "Google", x: "X", telegram: "Telegram", linkedin: "LinkedIn", direct: "Direct / app", other: "Other sites"};
+function showTab() {
+  document.querySelectorAll("[data-ltab]").forEach(b => b.setAttribute("aria-selected", b.dataset.ltab === tab));
+  $("tab-page").hidden = tab !== "page"; $("tab-an").hidden = tab !== "an"; $("tab-set").hidden = tab !== "set";
+  $("save").hidden = tab !== "page";
+  if (tab === "an") loadAn(); if (tab === "set") drawSet();
+}
+function toplist(rows, label) {
+  const max = Math.max(1, ...rows.map(r => r[1]));
+  return rows.length ? rows.map(([k, v]) => `<div class="r"><span>${label(k)}</span><b>${fmt(v)}</b><i style="width:${Math.max(3, 100 * v / max)}%"></i></div>`).join("") : `<div class="empty">No data yet.</div>`;
+}
+async function loadAn() {
+  AN = await api("/api/page/analytics?days=" + $("anDays").value);
+  const chg = (c) => c == null ? "" : `<span class="${c >= 0 ? "up" : "down"}">${c >= 0 ? "▲" : "▼"} ${Math.abs(c)}%</span> vs before`;
+  $("kpis").innerHTML = [["Visits", fmt(AN.visits), chg(AN.change.visits)], ["Unique visitors", fmt(AN.unique), "people"], ["Clicks", fmt(AN.clicks), chg(AN.change.clicks)],
+    ["CTR", AN.ctr + "%", "clicks ÷ visits"], ["Time to click", AN.time_to_click == null ? "–" : AN.time_to_click + "s", "average"]]
+    .map(([k, n, d]) => `<div class="kpi"><div class="k">${k}</div><div class="n">${n}</div><div class="d">${d}</div></div>`).join("");
+  const S = AN.series, W = 700, H = 180, pad = 22, bw = W / S.length, max = Math.max(1, ...S.map(x => x.visits));
+  const y = (v) => (H - pad) * (1 - v / max);
+  const lab = (d) => new Date(d + "T00:00:00").toLocaleDateString([], {day: "numeric", month: "short"});
+  $("anChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Visits and clicks per day">
+    <line x1="0" x2="${W}" y1="${H - pad}" y2="${H - pad}" stroke="var(--line)"></line>
+    ${S.map((x, i) => `<g><title>${lab(x.date)}: ${x.visits} visits, ${x.clicks} clicks</title>
+      <rect x="${i * bw + bw * .12}" y="${y(x.visits)}" width="${bw * .38}" height="${H - pad - y(x.visits)}" rx="3" fill="#C9CCFF"></rect>
+      <rect x="${i * bw + bw * .5}" y="${y(x.clicks)}" width="${bw * .38}" height="${H - pad - y(x.clicks)}" rx="3" fill="#2E3BFF"></rect></g>`).join("")}
+    <text x="0" y="${H - 5}" font-size="11" fill="var(--mute)">${lab(S[0].date)}</text><text x="${W}" y="${H - 5}" font-size="11" fill="var(--mute)" text-anchor="end">${lab(S[S.length - 1].date)}</text></svg>
+    ${AN.visits ? "" : `<p class="muted small" style="margin:6px 0 0; text-align:center">No visits yet in this period. Share your link in your Instagram bio.</p>`}`;
+  drawLoc();
+  $("anLinks").innerHTML = toplist(AN.links, (k) => esc(k));
+  $("anSrc").innerHTML = toplist(AN.sources, (k) => esc(SRC[k] || k));
+  $("anDev").innerHTML = toplist(AN.devices, (k) => ({mobile: "📱 Phone", desktop: "💻 Laptop / desktop", tablet: "Tablet"})[k] || esc(k));
+}
+function drawLoc() {
+  document.querySelectorAll("[data-loc]").forEach(b => b.setAttribute("aria-pressed", b.dataset.loc === loc));
+  $("anLoc").innerHTML = toplist(AN[loc], (k) => loc === "countries" ? `${FLAG(k)} ${esc(new Intl.DisplayNames(["en"], {type: "region"}).of(k) || k)}` : esc(k));
+}
+function drawSet() {
+  $("accentHex").value = page.accent || ""; $("accent").value = page.accent || "#2E3BFF";
+  $("layout").value = page.layout || "single";
+  const seo = page.seo || {}; $("seoTitle").value = seo.title || ""; $("seoDesc").value = seo.description || "";
+  previewSeo();
+}
+function previewSeo() {
+  const seo = page.seo = page.seo || {};
+  seo.title = $("seoTitle").value; seo.description = $("seoDesc").value;
+  $("seoT").textContent = seo.title || `${page.name || ""} (@{{ acc.username }}) | {{ brand }}`;
+  $("seoD").textContent = seo.description || page.bio || "";
+  $("seoHost").textContent = new URL($("pageUrl").value).host;
+  $("seoIm").style.backgroundImage = seo.image || page.photo ? `url('${seo.image || page.photo}')` : ""; $("seoIm").textContent = seo.image || page.photo ? "" : "Your photo";
+  $("seoTc").textContent = `${seo.title.length}/70`; $("seoDc").textContent = `${seo.description.length}/160`;
+}
+["seoTitle", "seoDesc"].forEach(id => $(id).addEventListener("input", previewSeo));
+$("accent").addEventListener("input", () => { $("accentHex").value = $("accent").value.toUpperCase(); page.accent = $("accentHex").value; });
+$("accentHex").addEventListener("input", () => { const v = $("accentHex").value.trim(); if (/^#[0-9a-f]{6}$/i.test(v)) { $("accent").value = v; page.accent = v; } else if (!v) page.accent = ""; });
+$("accentReset").onclick = () => { page.accent = ""; $("accentHex").value = ""; };
+$("layout").onchange = () => { page.layout = $("layout").value; };
+$("seoFile").onchange = async () => {
+  const f = $("seoFile").files[0]; if (!f) return;
+  if (f.size > 4 * 1048576) return toast("Over 4 MB.");
+  const form = new FormData(); form.append("file", f); toast("Uploading…");
+  const r = await fetch("/api/courses/upload?kind=cover", {method: "POST", headers: {"X-Upload": "1"}, body: form});
+  const d = await r.json().catch(() => ({})); if (!r.ok) return toast(d.error || "Upload failed");
+  page.seo = page.seo || {}; page.seo.image = d.url; previewSeo(); toast("Uploaded ✓ Save settings to use it.");
+};
+$("seoClear").onclick = () => { page.seo = page.seo || {}; page.seo.image = ""; previewSeo(); };
+$("save2").onclick = async () => {
+  collect(); previewSeo();
+  try { page = (await api("/api/page", {method: "PUT", body: JSON.stringify(page)})).page; draw(); drawSet(); $("preview").src = $("pageUrl").value + "?t=" + Date.now(); toast("Saved ✓"); }
+  catch (err) { toast(err.message); }
+};
+$("copy2").onclick = async () => { try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) {} };
+$("anDays").onchange = loadAn;
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-ltab]"); if (t) { if (tab === "page") collect(); tab = t.dataset.ltab; showTab(); return; }
+  const l = e.target.closest("[data-loc]"); if (l) { loc = l.dataset.loc; drawLoc(); }
+});
+$("addWa").onclick = () => {
+  const num = (prompt("Your WhatsApp number with country code (e.g. 91 98765 43210)") || "").replace(/\D/g, "");
+  if (!num) return;
+  if (num.length < 10) return toast("That number looks too short.");
+  const msg = prompt("Message people start the chat with (optional)", "Hi! I found you on Instagram 👋") || "";
+  collect();
+  page.items.push({type: "link", title: "Chat with me on WhatsApp", url: `https://wa.me/${num.length === 10 ? "91" + num : num}${msg ? "?text=" + encodeURIComponent(msg) : ""}`,
+    subtitle: "Quick replies on WhatsApp", price: "", enabled: true, featured: false});
+  draw(); toast("Added. Save page to publish it.");
 };
 $("copy").onclick = async () => { try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) { $("pageUrl").select(); } };
 (async () => { try { FILES = (await api("/api/files")).files || []; } catch (e) {} })();
