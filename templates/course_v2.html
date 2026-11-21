@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+{% if fbverify %}<meta name="facebook-domain-verification" content="{{ fbverify }}">
+{% endif %}<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ c.TITLE }} · course by @{{ username }}</title>
+<meta name="description" content="{{ c.SUBTITLE|replace("{F}", fk) }}">
+<meta property="og:title" content="{{ c.TITLE }}: zero to {{ fk }} followers">
+<meta property="og:description" content="{{ c.SUBTITLE|replace("{F}", fk) }}">
+<meta property="og:image" content="{{ request.host_url }}{{ c.COVER }}?v={{ asset_v(c.COVER[5:]) }}">
+<meta name="twitter:card" content="summary_large_image">
+{% if avatar %}<link rel="icon" href="{{ avatar }}">{% endif %}
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+{% set has_url = course.url %}
+{% set off = (((course.mrp|int) - (course.price|int)) * 100 / (course.mrp|int))|round|int if (course.mrp|int) > (course.price|int) > 0 else 0 %}
+{% set preview_url = (course.url or "")|replace("?checkout=true", "")|replace("&checkout=true", "") %}
+{% set waitlist = "https://ig.me/m/" ~ username %}
+<style>
+  :root { --bg:#F1EADC; --ink:#1C1A17; --mute:#857F77; --card:#fff; --line:#E7E0D4; --rose:#FF2D95; --rose-d:#E0127C; --cer:#007BA7; --gold:#F5B83D;
+          --shadow:0 18px 40px rgba(60,40,20,.14); --soft:0 8px 22px rgba(60,40,20,.08); }
+  * { box-sizing:border-box; } html,body { margin:0; } html { scroll-behavior:smooth; }
+  body { background:var(--bg); color:var(--ink); font-family:Inter,system-ui,sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative; padding-bottom:90px; }
+  body::before { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background:radial-gradient(900px 700px at 0% 0%, rgba(255,45,149,.15), transparent 70%), radial-gradient(900px 700px at 100% 30%, rgba(0,123,167,.10), transparent 70%),
+               radial-gradient(900px 700px at 0% 75%, rgba(255,45,149,.09), transparent 70%); }
+  a { color:inherit; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 16px; }
+  .kicker { font:800 12px Inter; letter-spacing:3px; color:var(--cer); text-transform:uppercase; }
+  h2 { font-size:clamp(30px,5vw,46px); line-height:1.02; letter-spacing:-1.6px; margin:10px 0 12px; font-weight:900; } h2 span { color:var(--rose); }
+  .sub { color:#6E6862; font-weight:600; font-size:16px; line-height:1.55; margin:0 0 24px; max-width:640px; }
+  section { padding:76px 0 0; } .center { text-align:center; } .center .sub { margin-left:auto; margin-right:auto; }
+
+  /* promo strip */
+  .strip { background:var(--ink); color:#fff; text-align:center; font:800 13.5px Inter; padding:10px 14px; }
+  .strip i { display:inline-block; width:8px; height:8px; border-radius:50%; background:#FF4D4D; margin-right:7px; vertical-align:1px; animation:ping 1.6s infinite; }
+  .strip b { color:#FF8CC6; } .strip .left { font:400 15px Anton,Inter; letter-spacing:.5px; color:#fff; }
+  @keyframes ping { 0% { box-shadow:0 0 0 0 rgba(255,77,77,.7); } 70%,100% { box-shadow:0 0 0 9px rgba(255,77,77,0); } }
+
+  .top { display:flex; align-items:center; gap:10px; padding:16px 0 0; }
+  .av { width:44px; height:44px; border-radius:50%; padding:3px; flex:none; background:conic-gradient(var(--rose),var(--gold),var(--cer),var(--rose)); }
+  .av img { width:100%; height:100%; border-radius:50%; border:2.5px solid #fff; object-fit:cover; display:block; }
+  .top b { font-weight:900; font-size:15px; } .top small { display:block; color:var(--mute); font-weight:700; font-size:12px; }
+  .back { margin-left:auto; text-decoration:none; font-weight:800; font-size:13px; background:#fff; border:2px solid var(--line); border-radius:30px; padding:7px 13px; }
+
+  /* hero */
+  .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:40px; align-items:center; padding:34px 0 0; }
+  .fire { display:inline-flex; gap:8px; align-items:center; font:900 12.5px Inter; letter-spacing:1px; text-transform:uppercase; background:#FFE6F2; color:var(--rose-d); border-radius:99px; padding:7px 13px; }
+  h1 { font-size:clamp(42px,7vw,76px); line-height:.96; letter-spacing:-2.8px; margin:16px 0 14px; font-weight:900; } h1 span { color:var(--rose); display:block; }
+  .pains { margin:0 0 14px; } .pains p { margin:4px 0; font-weight:800; font-size:17px; color:#4A4540; }
+  .lead { color:#6E6862; font-weight:600; font-size:16.5px; line-height:1.55; margin:0; }
+  .langnote { display:inline-block; margin-top:12px; font:800 13px Inter; color:#0F6E8F; background:#E6F4FA; border-radius:99px; padding:6px 12px; }
+
+  .buy { margin-top:22px; background:#fff; border-radius:26px; box-shadow:var(--shadow); padding:20px; }
+  .buy .p { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .price { font:400 54px/1 Anton,Inter; letter-spacing:.5px; } .mrp { color:var(--mute); font-weight:800; font-size:20px; text-decoration:line-through; }
+  .off { font:900 12.5px Inter; color:#fff; background:var(--rose); border-radius:99px; padding:5px 10px; }
+  .btn { display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; font-weight:900; font-size:18px; padding:17px 22px; border-radius:18px; margin-top:14px; }
+  .btn.rose { background:var(--rose); color:#fff; box-shadow:0 14px 30px rgba(255,45,149,.38); animation:pulse 2.6s ease-in-out infinite; }
+  .btn.ghost { background:#fff; border:2px solid var(--line); font-size:15.5px; padding:13px 18px; margin-top:10px; }
+  @keyframes pulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.02); } }
+  .micro { text-align:center; color:var(--mute); font:700 12.5px Inter; margin-top:10px; }
+  .ticks { display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin-top:14px; }
+  .ticks span { font:800 13px Inter; } .ticks span::before { content:"✓ "; color:var(--rose); font-weight:900; }
+  .count { display:flex; align-items:center; gap:8px; font:800 13.5px Inter; color:var(--rose-d); margin-bottom:8px; flex-wrap:wrap; }
+  .count b { font:400 19px/1 Anton,Inter; letter-spacing:.5px; color:var(--ink); }
+
+  /* phone mockups */
+  .phone { width:290px; max-width:100%; margin:0 auto; background:#111; border-radius:42px; padding:12px; box-shadow:0 30px 60px rgba(30,20,10,.28); position:relative; }
+  .phone .scr { background:#fff; border-radius:32px; overflow:hidden; height:560px; position:relative; }
+  .phone .notch { position:absolute; top:12px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#111; border-radius:0 0 16px 16px; z-index:3; }
+  .chat { padding:44px 14px 14px; font-size:12.5px; line-height:1.45; }
+  .chat .hd { display:flex; align-items:center; gap:8px; font-weight:900; font-size:13px; padding-bottom:10px; border-bottom:1px solid #eee; margin-bottom:10px; }
+  .chat .hd i { width:22px; height:22px; border-radius:7px; background:#D97757; display:inline-block; }
+  .me { background:#F1EADC; border-radius:14px 14px 4px 14px; padding:9px 11px; margin:0 0 10px 34px; font-weight:700; }
+  .ai { font-weight:600; color:#333; }
+  .ai table { width:100%; border-collapse:collapse; margin-top:8px; font-size:11px; }
+  .ai td, .ai th { border:1px solid #eee; padding:5px 6px; text-align:left; } .ai th { background:#FAF7F1; font-weight:900; }
+  .ai .tag { display:inline-block; font:800 10px Inter; padding:1px 6px; border-radius:6px; background:#FFE6F2; color:var(--rose-d); }
+  .ig { padding:40px 0 0; font-size:12.5px; }
+  .ig .reel { height:250px; background:linear-gradient(160deg,#2a1a3a,#7a1f52 60%,#FF2D95); position:relative; color:#fff; padding:16px; display:flex; flex-direction:column; justify-content:flex-end; }
+  .ig .reel b { font:400 26px/1.05 Anton,Inter; letter-spacing:.5px; } .ig .reel small { opacity:.8; font-weight:700; }
+  .ig .stats { position:absolute; right:12px; bottom:16px; display:grid; gap:12px; text-align:center; font:800 11px Inter; }
+  .ig .cm { padding:10px 14px; display:grid; gap:9px; }
+  .ig .c { display:flex; gap:8px; } .ig .c i { width:24px; height:24px; border-radius:50%; flex:none; }
+  .ig .c b { font-weight:900; } .ig .kw { background:#FFE6F2; color:var(--rose-d); font-weight:900; border-radius:5px; padding:0 4px; }
+  .ig .dm { margin:4px 14px 0; background:#3797F0; color:#fff; border-radius:16px 16px 4px 16px; padding:10px 12px; font-weight:700; }
+  .ig .dm a { display:block; margin-top:7px; background:#fff; color:#111; text-align:center; border-radius:10px; padding:7px; font-weight:900; text-decoration:none; }
+  .float { position:absolute; background:#fff; border-radius:16px; box-shadow:var(--shadow); padding:10px 13px; font:800 12.5px Inter; display:flex; align-items:center; gap:8px; z-index:4; white-space:nowrap; }
+  .float b { font:400 22px/1 Anton,Inter; color:var(--rose); }
+
+  /* proof */
+  .stats3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:18px; }
+  .st { background:var(--ink); color:#fff; border-radius:22px; padding:20px; }
+  .st b { display:block; font:400 46px/1 Anton,Inter; color:#FF8CC6; letter-spacing:.5px; } .st span { font-weight:700; font-size:14px; color:#D9D3C9; }
+  .reels { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .rc { text-decoration:none; background:#fff; border-radius:22px; box-shadow:var(--soft); overflow:hidden; display:block; }
+  .rc .t { background:linear-gradient(150deg,#2a1a3a,#7a1f52 65%,#FF2D95); color:#fff; padding:18px; min-height:130px; display:flex; flex-direction:column; justify-content:flex-end; }
+  .rc .t b { font:400 38px/1 Anton,Inter; } .rc .t small { font-weight:800; opacity:.85; }
+  .rc .b { padding:14px 16px; font-weight:700; font-size:14px; } .rc .b em { font-style:normal; color:var(--rose-d); font-weight:900; }
+  .asof { color:var(--mute); font:700 12px Inter; margin-top:10px; }
+
+  /* timing */
+  .timeline { display:grid; grid-template-columns:repeat(3,1fr); gap:0; background:#fff; border-radius:26px; box-shadow:var(--shadow); overflow:hidden; }
+  .tl { padding:22px; border-right:1px solid var(--line); position:relative; } .tl:last-child { border-right:0; }
+  .tl small { font:800 11.5px Inter; letter-spacing:2px; text-transform:uppercase; color:var(--mute); }
+  .tl b { display:block; font:400 34px/1.1 Anton,Inter; margin:6px 0; } .tl p { margin:0; color:var(--mute); font-weight:600; font-size:14px; line-height:1.5; }
+  .tl.now { background:#FFE6F2; } .tl.now b { color:var(--rose-d); }
+  .tl.now::after { content:"You are here"; position:absolute; top:14px; right:14px; font:900 11px Inter; background:var(--rose); color:#fff; border-radius:99px; padding:4px 9px; }
+  .punch { text-align:center; font:900 22px Inter; margin-top:20px; } .punch span { background:linear-gradient(transparent 60%, #FFD3E8 60%); }
+
+  .demo { display:grid; grid-template-columns:1fr 1fr; gap:30px; align-items:start; }
+  .demo .cap { text-align:center; margin-top:16px; } .demo .cap b { display:block; font-size:18px; font-weight:900; } .demo .cap span { color:var(--mute); font-weight:600; font-size:14px; }
+
+  /* inside: folder tree */
+  .tree { background:#17151A; color:#EDE7DD; border-radius:26px; padding:22px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; box-shadow:var(--shadow); }
+  .tree .bar { display:flex; gap:6px; margin-bottom:14px; } .tree .bar i { width:11px; height:11px; border-radius:50%; background:#444; }
+  .tree .bar i:nth-child(1) { background:#FF5F57; } .tree .bar i:nth-child(2) { background:#FEBC2E; } .tree .bar i:nth-child(3) { background:#28C840; }
+  .tree .root { color:#FF8CC6; font-weight:700; margin-bottom:8px; }
+  .row { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:baseline; padding:9px 0; border-top:1px dashed rgba(255,255,255,.1); }
+  .row .f { color:#7FD3F0; font-weight:700; white-space:nowrap; } .row .d { color:#CFC8BD; font-family:Inter; font-weight:600; font-size:14px; }
+  .row .tg { font:800 11px Inter; background:rgba(255,140,198,.16); color:#FF8CC6; border-radius:6px; padding:3px 7px; white-space:nowrap; }
+  .notlist { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; justify-content:center; }
+  .notlist span { font:800 13px Inter; background:#fff; border:2px solid var(--line); border-radius:99px; padding:7px 12px; }
+  .notlist span.x { text-decoration:line-through; color:var(--mute); } .notlist span.ok { background:var(--ink); color:#fff; border-color:var(--ink); }
+
+  .gifts { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .gift { background:#fff; border-radius:22px; padding:18px; box-shadow:var(--soft); position:relative; }
+  .gift .no { position:absolute; top:14px; right:14px; font:900 11px Inter; background:var(--rose); color:#fff; border-radius:99px; padding:3px 9px; }
+  .gift .e { font-size:28px; } .gift b { display:block; font-size:16.5px; font-weight:900; margin-top:8px; }
+  .gift .k { font:800 11px Inter; letter-spacing:1.5px; color:var(--cer); text-transform:uppercase; }
+  .gift p { margin:6px 0 0; color:var(--mute); font-weight:600; font-size:13.5px; line-height:1.5; }
+
+  table.math { width:100%; border-collapse:separate; border-spacing:0; background:#fff; border-radius:24px; overflow:hidden; box-shadow:var(--shadow); font-size:15px; }
+  .math th, .math td { padding:14px 16px; text-align:left; border-bottom:1px solid var(--line); }
+  .math th { font:900 14px Inter; background:#FAF7F1; } .math th.us { background:var(--rose); color:#fff; }
+  .math td:first-child { font-weight:900; } .math td.them { color:var(--mute); font-weight:700; } .math td.us { font-weight:900; background:#FFF4F9; }
+  .math tr:last-child td { border-bottom:0; }
+
+  .live { background:#fff; border:3px solid var(--rose); border-radius:26px; padding:22px; box-shadow:var(--shadow); }
+  .live ol { list-style:none; padding:0; margin:14px 0 0; display:grid; grid-template-columns:1fr 1fr; gap:8px 18px; counter-reset:c; }
+  .live li { counter-increment:c; display:flex; gap:10px; align-items:center; font-weight:700; font-size:14.5px; }
+  .live li::before { content:counter(c); width:26px; height:26px; border-radius:8px; background:var(--rose); color:#fff; display:grid; place-items:center; font:900 12px Inter; flex:none; }
+  .live li small { display:block; color:var(--rose-d); font:800 11.5px Inter; }
+
+  .stack { background:#fff; border-radius:28px; box-shadow:var(--shadow); padding:26px; max-width:620px; margin:0 auto; }
+  .stack .it { display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px dashed var(--line); font-weight:800; font-size:15px; }
+  .stack .it span:last-child { color:var(--cer); white-space:nowrap; }
+  .stack .tot { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:16px; flex-wrap:wrap; }
+
+  .quotes { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .q { background:#fff; border-radius:22px; padding:18px; box-shadow:var(--soft); font-weight:600; font-size:14.5px; line-height:1.55; }
+  .q b { display:block; margin-top:10px; font-weight:900; } .q small { color:var(--mute); font-weight:700; }
+
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .step { background:#fff; border-radius:22px; padding:20px; box-shadow:var(--soft); }
+  .step .n { font:400 40px/1 Anton,Inter; color:var(--rose); } .step b { display:block; font-size:18px; font-weight:900; margin-top:6px; }
+  .step p { margin:6px 0 10px; color:var(--mute); font-weight:600; font-size:14px; line-height:1.5; }
+  .step span { font:800 12px Inter; background:#E6F4FA; color:#0F6E8F; border-radius:99px; padding:4px 10px; }
+
+  .mods { display:grid; gap:10px; }
+  details.mod, details.faq { background:#fff; border-radius:18px; box-shadow:var(--soft); }
+  details.mod summary, details.faq summary { list-style:none; cursor:pointer; padding:16px 18px; font-weight:900; display:flex; align-items:center; gap:12px; }
+  details summary::-webkit-details-marker { display:none; }
+  details summary::after { content:"+"; margin-left:auto; font-size:22px; color:var(--rose); } details[open] summary::after { content:"–"; }
+  details.mod ol { margin:0; padding:0 18px 16px 46px; color:#555; font-weight:600; font-size:14.5px; line-height:1.8; }
+  details.faq p { margin:0; padding:0 18px 16px; color:#555; font-weight:600; font-size:14.5px; line-height:1.6; }
+  .mn { font:400 24px/1 Anton,Inter; color:var(--rose); width:22px; } .free { font:800 11px Inter; background:#E6F4FA; color:#0F6E8F; border-radius:99px; padding:3px 9px; }
+
+  .about { display:grid; grid-template-columns:auto 1fr; gap:22px; align-items:center; background:#fff; border-radius:26px; padding:24px; box-shadow:var(--shadow); }
+  .about .av { width:96px; height:96px; padding:4px; } .about p { margin:6px 0 0; color:#6E6862; font-weight:600; line-height:1.6; }
+
+  .final { margin-top:76px; background:var(--ink); color:#fff; border-radius:32px; padding:44px 24px; text-align:center; position:relative; overflow:hidden; }
+  .final::before { content:""; position:absolute; inset:-40%; background:radial-gradient(circle at 30% 30%, rgba(255,45,149,.38), transparent 40%), radial-gradient(circle at 75% 70%, rgba(0,123,167,.35), transparent 40%); }
+  .final > * { position:relative; } .final h2 { color:#fff; } .final p { color:#D9D3C9; font-weight:600; font-size:16.5px; max-width:560px; margin:0 auto; line-height:1.55; }
+  .final .hl { color:#FF8CC6; font-weight:900; font-size:19px; margin-top:16px; }
+  .final .btn { max-width:420px; margin:22px auto 0; }
+  .warn { margin-top:18px; background:#FFF6E0; border-left:4px solid var(--gold); border-radius:14px; padding:14px 16px; font-weight:700; font-size:14.5px; line-height:1.5; }
+  footer { text-align:center; padding:34px 0 20px; color:var(--mute); font:700 13px Inter; line-height:2; } footer a { color:var(--ink); text-decoration:none; font-weight:800; }
+
+  .bar { position:fixed; left:0; right:0; bottom:0; z-index:30; background:rgba(28,26,23,.96); color:#fff; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); display:flex; align-items:center; gap:12px;
+         transform:translateY(110%); transition:transform .3s; }
+  .bar.on { transform:none; } .bar .price { font-size:30px; } .bar .mrp { color:#B9B2A8; font-size:15px; }
+  .bar .btn { margin:0 0 0 auto; padding:13px 20px; font-size:16px; border-radius:14px; animation:none; }
+  .bar .count { margin:0; color:#FF8CC6; font-size:11.5px; } .bar .count b { color:#fff; font-size:14px; }
+
+  .rv { opacity:0; transform:translateY(20px); transition:opacity .6s, transform .6s cubic-bezier(.2,.8,.2,1); } .rv.in { opacity:1; transform:none; }
+  @media (max-width:860px) {
+    .hero, .demo { grid-template-columns:1fr; } .hero .ph { order:2; }
+    .stats3, .reels, .gifts, .quotes, .steps { grid-template-columns:1fr; } .timeline { grid-template-columns:1fr; }
+    .tl { border-right:0; border-bottom:1px solid var(--line); } .live ol { grid-template-columns:1fr; }
+    .math th, .math td { padding:11px 10px; font-size:13.5px; } .row { grid-template-columns:1fr; gap:2px; } .row .tg { justify-self:start; }
+    .about { grid-template-columns:1fr; text-align:center; justify-items:center; }
+    .float.f1 { left:-6px !important; } .float.f2 { right:-6px !important; }
+  }
+  @media (max-width:420px) { .bar .count .lbl, .bar .mrp { display:none; } .ticks { grid-template-columns:1fr; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } .rv { opacity:1; transform:none; } }
+</style>
+{% set pixel_product = {"name": c.TITLE, "price": course.price} %}{% include "_pixel.html" %}
+</head>
+<body>
+{% macro buybtn(label="") -%}
+  {% if bstate == "full" %}<a class="btn rose" href="{{ waitlist }}" target="_blank" rel="noopener">Join the next batch waitlist →</a>
+  {% elif has_url %}<a class="btn rose" href="{{ course.url }}" rel="noopener">{{ label or ("Join now · ₹" ~ course.price) }} →</a>
+  {% else %}<a class="btn rose" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">Coming soon · DM COURSE</a>{% endif %}
+{%- endmacro %}
+{% macro micro() -%}<div class="micro">One-time ₹{{ course.price }} · 6 months access · instant access · taught in Hinglish</div>{%- endmacro %}
+
+{% if bstate %}<div class="strip">
+  {% if bstate == "open" %}<i></i>{{ live.name }} live classes on Zoom{% if starts %} start in <span class="left" data-starts="{{ starts }}">{{ live.start }}</span>{% elif live.start %} from <b>{{ live.start }}</b>{% endif %}
+  {% elif bstate == "started" %}<i></i><b>{{ live.name }} is live now</b> · join anytime, every class is recorded
+  {% elif bstate == "ended" %}📼 Includes all <b>{{ live.name }}</b> live class recordings
+  {% else %}🙏 {{ live.name }} is full · <b>DM for the next batch</b>{% endif %}
+</div>{% endif %}
+
+<div class="wrap">
+  <div class="top">
+    <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% endif %}</div>
+    <div><b>@{{ username }}</b><small>{{ fk }} followers · AI tools &amp; tips daily</small></div>
+    {% if not ad %}<a class="back" href="/links">← Links</a>{% endif %}
+  </div>
+
+  <header class="hero">
+    <div>
+      <span class="fire">🔥 Instagram growth system · built with Claude</span>
+      <h1>{{ c.HOOK_A }}<span>{{ c.HOOK_B }}</span></h1>
+      <div class="pains">{% for p in c.PAINS %}<p>{{ p }}</p>{% endfor %}</div>
+      <p class="lead">{{ c.SUBTITLE|replace("{F}", fk) }}</p>
+      <span class="langnote">{{ c.LANG_NOTE }}</span>
+      <div class="buy" id="buy">
+        {% if starts %}<div class="count">⏳ {{ live.name }} starts in <b class="left" data-starts="{{ starts }}">{{ live.start }}</b></div>{% endif %}
+        <div class="p"><span class="price">₹{{ course.price }}</span>{% if off and bstate != "full" %}<span class="mrp">₹{{ course.mrp }}</span><span class="off">{{ off }}% OFF · launch price</span>{% endif %}</div>
+        {{ buybtn() }}
+        {% if c.FREE_PREVIEW and preview_url and bstate != "full" %}<a class="btn ghost" href="{{ preview_url }}" rel="noopener">▶ Watch a free lesson first</a>{% endif %}
+        {{ micro() }}
+        <div class="ticks"><span>8 modules · 32 lessons</span><span>Workbook + 6 bonuses</span><span>Live Zoom classes</span><span>Comment → DM setup</span></div>
+      </div>
+    </div>
+    <div class="ph" style="position:relative">
+      <div class="float f1" style="left:-20px;top:70px">📈 <b>{{ fk }}</b> followers</div>
+      <div class="float f2" style="right:-14px;bottom:90px">💬 <b>2,946</b> comments, 1 reel</div>
+      <div class="phone"><div class="notch"></div><div class="scr"><div class="chat">
+        <div class="hd"><i></i>Claude · My Brand Project</div>
+        <div class="me">Make my 30-day reel plan for an AI tools page. Hooks + comment keywords.</div>
+        <div class="ai">Here's your plan, based on what's working in your niche right now 👇
+          <table><tr><th>Day</th><th>Hook</th><th>Keyword</th></tr>
+            <tr><td>1</td><td>This free AI replaced my ₹5,000 tool</td><td><span class="tag">FREE</span></td></tr>
+            <tr><td>2</td><td>Stop posting without this one check</td><td><span class="tag">CHECK</span></td></tr>
+            <tr><td>3</td><td>I let Claude run my Instagram for 7 days</td><td><span class="tag">CLAUDE</span></td></tr>
+            <tr><td>4</td><td>3 AI tools nobody is talking about</td><td><span class="tag">TOOLS</span></td></tr>
+            <tr><td>5</td><td>Why your reels stop at 300 views</td><td><span class="tag">FIX</span></td></tr>
+            <tr><td colspan="3" style="text-align:center;color:#999">+ 25 more days…</td></tr></table>
+          <p style="margin:10px 0 0">Want scripts for Day 1–5? 🎬</p></div>
+      </div></div></div>
+    </div>
+  </header>
+
+  <section class="rv">
+    <div class="kicker">Proof, not promises</div>
+    <h2>It works. <span>Here are my real numbers.</span></h2>
+    <p class="sub">The same system from this course, on my own page @{{ username }}. Tap a reel to see it on Instagram.</p>
+    <div class="stats3">{% for n, l in c.PROOF_STATS %}<div class="st"><b>{{ n|replace("{F}", fk) }}</b><span>{{ l }}</span></div>{% endfor %}</div>
+    <div class="reels">{% for r in c.PROOF_REELS %}<a class="rc" href="{{ r.url }}" target="_blank" rel="noopener">
+      <div class="t"><b>{{ r.views }}</b><small>views · {{ r.comments }} comments</small></div>
+      <div class="b">{{ r.what }} · <em>{{ r.note }}</em></div></a>{% endfor %}</div>
+    <div class="asof">Numbers from Instagram, {{ c.PROOF_ASOF }}. No paid promotion on these reels.</div>
+  </section>
+
+  <section class="rv">
+    <div class="kicker">Why now</div>
+    <h2>AI + Instagram is <span>still early.</span></h2>
+    <p class="sub">Every few years a new skill rewards whoever moves first. Right now it's creators who run their page with AI.</p>
+    <div class="timeline">{% for when, word, txt in c.TIMING %}<div class="tl {{ 'now' if loop.first }}"><small>{{ when }}</small><b>{{ word }}</b><p>{{ txt }}</p></div>{% endfor %}</div>
+    <p class="punch"><span>{{ c.TIMING_LINE }}</span></p>
+  </section>
+
+  <section class="rv">
+    <div class="kicker center">See it in action</div>
+    <h2 class="center">One prompt in. <span>A month of content out.</span></h2>
+    <div class="demo" style="margin-top:22px">
+      <div><div class="phone"><div class="notch"></div><div class="scr"><div class="ig">
+        <div class="reel"><small>@{{ username }}</small><b>FREE AI TOOL THAT REPLACED MY EDITOR</b><small>Comment "TOOL" 👇</small>
+          <div class="stats"><div>❤️<br>18K</div><div>💬<br>2.9K</div><div>↗️<br>4.1K</div></div></div>
+        <div class="cm">
+          <div class="c"><i style="background:#F5B83D"></i><div><b>riya.creates</b> <span class="kw">TOOL</span> 🙏</div></div>
+          <div class="c"><i style="background:#7FD3F0"></i><div><b>arjun.edits</b> <span class="kw">tool</span> please</div></div>
+          <div class="c"><i style="background:#FF8CC6"></i><div><b>{{ username }}</b> Check your DM 📩</div></div>
+        </div>
+        <div class="dm">Hey Riya! 👋 Here's the tool + my setup guide. Follow for more 🙌<span style="display:block;margin-top:7px;background:#fff;color:#111;text-align:center;border-radius:10px;padding:7px;font-weight:900">Open the guide</span></div>
+      </div></div></div>
+      <div class="cap"><b>The comment → DM machine</b><span>Every comment gets a reply and a DM with your link. 92 people followed me from this alone.</span></div></div>
+      <div><div class="phone"><div class="notch"></div><div class="scr"><div class="chat">
+        <div class="hd"><i></i>Claude · Reel Script</div>
+        <div class="me">Script for Day 1: "This free AI replaced my ₹5,000 tool". 35 seconds, Hinglish.</div>
+        <div class="ai"><b>Hook (0–3s):</b> "₹5,000 ka tool… ab free mein? 😳"<br><br><b>Problem (3–10s):</b> Har mahine subscription, aur kaam wahi…<br><br><b>Reveal (10–25s):</b> Ye free AI tool same kaam karta hai. Dekho kaise 👇<br><br><b>CTA (25–35s):</b> Comment <span class="tag">TOOL</span>, main DM mein setup bhej dunga.<br><br><span style="color:#999">+ caption, hashtags, cover text</span></div>
+      </div></div></div>
+      <div class="cap"><b>Scripts in seconds</b><span>Hooks, scripts, captions: copy-ready Claude prompts for every lesson.</span></div></div>
+    </div>
+  </section>
+
+  <section class="rv">
+    <div class="kicker">What's inside</div>
+    <h2>Not a PDF. <span>A complete system.</span></h2>
+    <p class="sub">8 modules that take you from "what do I even post" to a page that grows every week.</p>
+    <div class="tree"><div class="bar"><i></i><i></i><i></i></div><div class="root">grow-on-instagram-with-claude/</div>
+      {% for code, name, badge, lessons in c.MODULES %}<div class="row"><span class="f">{{ "%02d"|format(loop.index0) }}_{{ c.FOLDERS[loop.index0] if c.FOLDERS|length > loop.index0 else name.split(" ")[0]|lower }}/</span><span class="d">{{ name }} · {{ lessons|length }} lessons</span><span class="tg">{{ badge or ("Recorded class" if bstate == "ended" else "Live class" if bstate in ("open", "started") else "Video") }}</span></div>{% endfor %}
+      <div class="row"><span class="f">workbook.pdf</span><span class="d">A copy-ready Claude prompt for every lesson, plus templates</span><span class="tg">Included</span></div>
+      <div class="row"><span class="f">bonus/</span><span class="d">6 bonuses: playbooks, prompt vault, scripts, kits</span><span class="tg">Free</span></div>
+    </div>
+    <div class="notlist"><span class="x">PDF guide</span><span class="x">Prompt list</span><span class="x">Theory course</span><span class="ok">✓ A system you run every week</span></div>
+    <div class="mods" style="margin-top:22px">{% for code, name, badge, lessons in c.MODULES %}<details class="mod" {% if loop.first %}open{% endif %}><summary><span class="mn">{{ loop.index0 }}</span>{{ name }}{% if badge %}<span class="free">{{ badge }}</span>{% endif %}</summary><ol>{% for l in lessons %}<li>{{ l|replace("{F}", fk) }}</li>{% endfor %}</ol></details>{% endfor %}</div>
+    <div style="max-width:440px;margin:22px auto 0">{{ buybtn() }}{{ micro() }}</div>
+  </section>
+
+  <section class="rv">
+    <div class="kicker">Free with the course</div>
+    <h2>🎁 6 bonuses, <span>yours to keep.</span></h2>
+    <div class="gifts">{% for e, t, k, d in c.BONUSES %}<div class="gift"><span class="no">BONUS {{ loop.index }}</span><div class="e">{{ e }}</div><b>{{ t }}</b><span class="k">{{ k }}</span><p>{{ d }}</p></div>{% endfor %}</div>
+  </section>
+
+  <section class="rv">
+    <div class="kicker">The ₹{{ course.price }} math</div>
+    <h2>One month of a manager costs <span>more than this.</span></h2>
+    <table class="math"><tr><th></th><th>{{ c.MATH_COLS[0] }}</th><th class="us">{{ c.MATH_COLS[1] }}</th></tr>
+      {% for a, b, d in c.MATH %}<tr><td>{{ a }}</td><td class="them">{{ b }}</td><td class="us">{{ d|replace("₹499", "₹" ~ course.price) }}</td></tr>{% endfor %}</table>
+    <div style="max-width:440px;margin:22px auto 0">{{ buybtn() }}{{ micro() }}</div>
+  </section>
+
+  {% if live.enabled and sessions and bstate != "full" %}
+  <section class="rv">
+    <div class="kicker">{{ "Class recordings" if bstate == "ended" else "Live on Zoom" }}</div>
+    <h2>{{ live.name }} · <span>{{ "recorded classes" if bstate == "ended" else "learn live with me" }}</span></h2>
+    <div class="live"><b>🎥 {{ sessions|length }} classes{% if live.time and bstate != "ended" %} · {{ live.time }}{% endif %}</b>
+      <p style="margin:6px 0 0;color:var(--mute);font-weight:600">{% if bstate == "ended" %}Every class was recorded with real student questions, and all recordings are in the course.{% else %}I teach every module live, on screen, with Q&amp;A. Missed one? Every class is recorded and added to the course.{% endif %}</p>
+      <ol>{% for when, topic in sessions %}<li><span>{% if when %}<small>{{ when }}</small>{% endif %}{{ topic }}</span></li>{% endfor %}</ol></div>
+  </section>
+  {% endif %}
+
+  {% if c.TESTIMONIALS %}
+  <section class="rv"><div class="kicker">Students</div><h2>What students <span>say</span></h2>
+    <div class="quotes">{% for q, n, r in c.TESTIMONIALS %}<div class="q">“{{ q }}”<b>{{ n }}</b><small>{{ r }}</small></div>{% endfor %}</div></section>
+  {% endif %}
+
+  <section class="rv">
+    <div class="kicker center">Everything you get</div>
+    <h2 class="center">Today, for <span>₹{{ course.price }}</span></h2>
+    <div class="stack">
+      <div class="it"><span>🎥 32 video lessons (8 modules)</span><span>Included</span></div>
+      <div class="it"><span>📘 Student workbook + templates</span><span>Included</span></div>
+      {% if live.enabled and sessions %}<div class="it"><span>🔴 {{ live.name }} {{ "class recordings" if bstate == "ended" else "live classes on Zoom" }}</span><span>Included</span></div>{% endif %}
+      <div class="it"><span>💬 Comment → DM machine setup</span><span>Included</span></div>
+      <div class="it"><span>🎁 6 bonuses</span><span>Free</span></div>
+      <div class="it"><span>⏳ 6 months access</span><span>Included</span></div>
+      <div class="tot"><span class="price">₹{{ course.price }}</span>{% if off and bstate != "full" %}<span class="mrp">₹{{ course.mrp }}</span><span class="off">{{ off }}% OFF</span>{% endif %}</div>
+      {% if starts %}<div class="count" style="justify-content:center;margin-top:8px">⏳ {{ live.name }} starts in <b class="left" data-starts="{{ starts }}">{{ live.start }}</b></div>{% endif %}
+      {{ buybtn() }}{{ micro() }}
+    </div>
+  </section>
+
+  <section class="rv">
+    <div class="kicker">How it works</div>
+    <h2>Start in <span>3 steps</span></h2>
+    <div class="steps">{% for t, d, tag in c.STEPS %}<div class="step"><div class="n">0{{ loop.index }}</div><b>{{ t }}</b><p>{{ d }}</p><span>{{ tag }}</span></div>{% endfor %}</div>
+  </section>
+
+  <section class="rv">
+    <div class="kicker">Who's teaching</div>
+    <div class="about" style="margin-top:12px"><div class="av">{% if avatar %}<img src="{{ avatar }}" alt="Om">{% endif %}</div>
+      <div><b style="font-size:20px">Om · @{{ username }}</b><p>Founder of Advoc Media, building Likho and ReplyInbox. I grew @{{ username }} from zero to {{ fk }} followers with Claude, and I teach the whole system in Hinglish, step by step.</p></div></div>
+    <div class="warn">⚠️ Honest note: this is not a follower guarantee. It's the exact system I use. Your results depend on your niche, consistency and content.</div>
+  </section>
+
+  <section class="rv">
+    <div class="kicker">Questions</div>
+    <h2>Before you <span>join</span></h2>
+    <div class="mods">{% for q, a in c.FAQ %}<details class="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}</div>
+  </section>
+
+  <div class="final rv">
+    <div class="kicker" style="color:#7FD3F0">Stop guessing · start growing</div>
+    <h2>You're one decision away from <span>a page that grows.</span></h2>
+    <p>A social media manager costs ₹10,000+ every month. This whole system is ₹{{ course.price }} once, and it's yours to run for as long as you post.</p>
+    <p class="hl">{{ c.FINAL_PUNCH }}</p>
+    {{ buybtn() }}
+    <div class="micro" style="color:#B9B2A8">One-time ₹{{ course.price }} · 6 months access · taught in Hinglish</div>
+    <p style="margin-top:14px;font-size:14px">Questions? <a href="mailto:kumarom1315@gmail.com" style="color:#FF8CC6;font-weight:900">kumarom1315@gmail.com</a> or DM <b>@{{ username }}</b></p>
+  </div>
+
+  <footer>{% if not ad %}<a href="/">Home</a> · <a href="/free/">Free guides</a> · <a href="/links">Links</a><br>{% endif %}<a href="/terms">Terms</a> · <a href="/refund-policy">Refund policy</a> · <a href="/privacy-policy">Privacy</a> · <a href="/contact">Contact</a></footer>
+</div>
+
+<div class="bar" id="bar"><span class="price">₹{{ course.price }}</span>{% if off and bstate != "full" %}<span class="mrp">₹{{ course.mrp }}</span>{% endif %}
+  {% if starts %}<span class="count">⏳ <span class="lbl">Starts in</span> <b class="left" data-starts="{{ starts }}">{{ live.start }}</b></span>{% endif %}
+  {{ buybtn("Join now") }}</div>
+
+<script>
+(function () {
+  var els = document.querySelectorAll("[data-starts]");
+  function tick() { els.forEach(function (el) { var ms = new Date(el.dataset.starts) - new Date(); if (ms <= 0) { (el.closest(".count") || el).remove(); return; }
+    var d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s = Math.floor(ms / 1e3) % 60;
+    el.textContent = d > 0 ? d + "d " + h + "h " + m + "m" : h + "h " + m + "m " + s + "s"; }); }
+  if (els.length) { tick(); setInterval(tick, 1000); }
+  var rv = document.querySelectorAll(".rv");
+  if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) rv.forEach(function (e) { e.classList.add("in"); });
+  else { var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, { rootMargin: "0px 0px -8% 0px" }); rv.forEach(function (e) { io.observe(e); }); }
+  var box = document.getElementById("buy"), bar = document.getElementById("bar");
+  if (box && "IntersectionObserver" in window) new IntersectionObserver(function (es) { bar.classList.toggle("on", !es[0].isIntersecting && es[0].boundingClientRect.top < 0); }).observe(box);
+})();
+</script>
+</body>
+</html>

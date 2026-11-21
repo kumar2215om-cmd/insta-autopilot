@@ -1515,7 +1515,7 @@ def course_page():
                 sessions.append((when.strip(), topic.strip()) if topic.strip() else ("", when.strip()))
         else:
             sessions = [("", t) for t in course_data.LIVE_SESSIONS]
-    return render_template("course.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
+    return render_template("course_v2.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
                            tab=1, c2=course2_data if course2.get("enabled", True) else None, course2=course2,
                            starts=(lambda t: t.isoformat() if t and t > datetime.now(IST) and batch_state(live) == "open" else "")(batch_start(live)),
                            bstate=batch_state(live),

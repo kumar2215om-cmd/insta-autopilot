@@ -76,3 +76,44 @@ FAQ = [("Do I need Claude Pro?", "No. Most lessons work on the free plan. Long s
        ("What if I miss a live class?", "No problem. Every class is recorded and the recording is added to the course."),
        ("Can I get a refund?", "It's a digital course, so there are no refunds once access is given. If there's any problem with payment or access, email us or DM on Instagram and we'll sort it out within 48 hours. Full policy: advocmedia.in/refund-policy."),
        ("Are followers guaranteed?", "No. No honest course can promise that. You get the system; the work is yours.")]
+
+# ---------------- Sales page v2 (templates/course_v2.html) ----------------
+HOOK_A = "Grow on Instagram with Claude."
+HOOK_B = "Even from zero."
+PAINS = ["…and stop guessing what to post every single day.",
+         "No editor, no team, no ₹15,000/month agency."]
+FOLDERS = ["welcome", "niche-profile", "content-plan", "reels", "dm-machine", "freebies", "growth-loop", "monetize"]
+FREE_PREVIEW = True  # Module 0 is a free preview on SuperProfile: shows "Watch a free lesson"
+
+# Real numbers from @aiwith.om (Instagram API, checked 21 Nov 2026). Update when they grow.
+PROOF_ASOF = "21 Nov 2026"
+PROOF_STATS = [("{F}", "followers on @aiwith.om"), ("135K", "views on one reel"), ("92", "follows from auto-DMs alone")]
+PROOF_REELS = [
+    {"views": "135,215", "comments": "2,946", "what": "GTA 6 money reel", "note": "Planned & scripted with Claude", "url": "https://www.instagram.com/reel/DfzJCigpq6j/"},
+    {"views": "29,456", "comments": "614", "what": "GTA 5 creators reel", "note": "Hook written with Claude", "url": "https://www.instagram.com/reel/Df3lZh0uRXk/"},
+    {"views": "7,360", "comments": "207", "what": "GTA 6 pre-orders reel", "note": "Same system, same week", "url": "https://www.instagram.com/reel/Df7ZRy9T3XI/"},
+]
+
+TIMING = [("Now", "Early", "Very few creators use Claude properly. Huge reach for whoever shows up."),
+          ("Next year", "Crowded", "Everyone has an AI workflow. Reach gets harder."),
+          ("After that", "Saturated", "Only the best systems win. The early advantage is gone.")]
+TIMING_LINE = "Jo pehle aayega, wahi jeetega."
+
+# The "₹499 math": the real alternative is paying someone to do it (typical Indian market ranges).
+MATH_COLS = ("Hire a social media manager", "This course")
+MATH = [("Cost", "₹10,000–30,000 every month", "₹499 once"),
+        ("Who knows the system", "They do. It leaves with them", "You do, for good"),
+        ("Content plan", "Wait for their calendar", "30 days in 10 minutes with Claude"),
+        ("Reels", "Brief, wait, revise", "Script → voice → edit yourself"),
+        ("Comment → DM", "Extra tool, extra fee", "Set up in the course"),
+        ("Language", "Usually 1–2", "Any language Claude writes")]
+
+STEPS = [("Join", "Pay ₹499 on SuperProfile. The course opens instantly: videos, workbook and all 6 bonuses.", "Instant"),
+         ("Follow the plan", "Module by module: niche, profile, 30-day plan, reels, DM machine. Copy-ready Claude prompts for each lesson.", "1 module a day"),
+         ("Post and grow", "Post with a plan, let the DM machine work every comment, and fix one thing a week with the growth loop.", "Every week")]
+
+FINAL_PUNCH = "Soch lo: ek aur mahina guesswork, ya ek system jo kaam karta hai?"
+TESTIMONIALS = []  # (quote, name, role) — only real student messages, added with permission
+
+FAQ = FAQ + [("Can I do this on my phone?", "Mostly yes: Claude, Instagram and CapCut all work on a phone. Path B reels (Claude Code + Remotion) need a laptop, and they're optional."),
+             ("I have zero followers. Will this work?", "Yes, the course starts from zero: niche, profile and your first 30 days. No course can guarantee followers, but you get the exact system I used.")]
