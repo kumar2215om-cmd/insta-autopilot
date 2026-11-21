@@ -133,7 +133,10 @@ function drawProds() {
       <div class="cv" style="${p.cover ? `background-image:url('${esc(p.cover)}')` : ""}">${p.cover ? "" : ({event: "🎟", booking: "🗓", locked: "🔒"}[p.type] || "📦")}</div>
       <div><b>${esc(p.title)}</b> ${p.enabled ? "" : `<span class="badge">hidden</span>`}<div class="meta">${TYPE_LABEL[p.type || "file"]} · ₹${fmt(p.price)} · ${fmt(p.sales || 0)} sold · ₹${fmt(p.revenue || 0)}${p.when ? " · " + esc(p.when) : ""}${p.seats_left != null ? ` · ${p.seats_left} seats left` : ""}${(p.type || "file") === "file" ? " · " + esc(p.file_name || "") : ""}</div></div>
       <div class="acts"><button class="btn sm" type="button" data-copy="${esc(p.url)}">Copy link</button><a class="btn ghost sm" href="${esc(p.url)}" target="_blank" rel="noopener">Open</a>
-        <button class="btn ghost sm" type="button" data-edit="${esc(p.id)}">Edit</button><button class="btn danger sm" type="button" data-del="${esc(p.id)}">Delete</button></div></div>`).join("")
+        <button class="btn ghost sm" type="button" data-edit="${esc(p.id)}">Edit</button>
+        <button class="btn ghost sm" type="button" data-dup="${esc(p.id)}" title="Make a hidden copy">Duplicate</button>
+        <button class="btn ghost sm" type="button" data-addpage="${esc(p.id)}" title="Add a card for it to your link in bio">＋ Link in bio</button>
+        <button class="btn danger sm" type="button" data-del="${esc(p.id)}">Delete</button></div></div>`).join("")
     : `<div class="empty">No products yet. Click <b>＋ New product</b> to sell a file, locked content, an event ticket or 1:1 calls.</div>`;
   $("sales").innerHTML = S.sales.length ? `<thead><tr><th>Date</th><th>Product</th><th>Buyer</th><th class="n">Price</th><th class="n">You get</th></tr></thead><tbody>${S.sales.map(x =>
       `<tr><td>${esc(day(x.paid_at))}</td><td>${esc(x.title)}${x.when ? `<div class="meta">${new Date(x.when * 1000).toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}</div>` : ""}</td><td>${esc(x.name ? x.name + " · " : "")}${esc(x.email)}</td><td class="n">₹${fmt(x.price)}</td><td class="n"><b>₹${fmt(x.creator_gets)}</b></td></tr>`).join("")}</tbody>`
@@ -196,6 +199,12 @@ $("pForm").onsubmit = async (e) => {
 document.addEventListener("click", async (e) => {
   const c = e.target.closest("[data-copy]");
   if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); toast("Link copied ✓"); } catch { prompt("Copy this link:", c.dataset.copy); } return; }
+  const du = e.target.closest("[data-dup]");
+  if (du) { try { await api(`/api/shop/products/${du.dataset.dup}/duplicate`, {method: "POST", body: "{}"}); toast("Copied ✓ The copy is hidden until you switch it on."); load(); } catch (err) { toast(err.message); } return; }
+  const ap = e.target.closest("[data-addpage]");
+  if (ap) { const p = S.products.find(x => x.id === ap.dataset.addpage);
+    try { const r = await api("/api/page/add", {method: "POST", body: JSON.stringify({title: p.title, url: p.url, price: "₹" + fmt(p.price)})});
+      toast(r.added ? "Added to your link in bio ✓" : "It's already on your link in bio"); } catch (err) { toast(err.message); } return; }
   const ed = e.target.closest("[data-edit]");
   if (ed) { openEdit(S.products.find(p => p.id === ed.dataset.edit)); return; }
   const d = e.target.closest("[data-del]");

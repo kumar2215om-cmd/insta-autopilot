@@ -10,15 +10,24 @@
   .tabs { display:flex; gap:8px; flex-wrap:wrap; }
   .tabs button { border:1.5px solid #CFCEC6; background:var(--card); border-radius:999px; padding:8px 16px; font:700 14px var(--text); cursor:pointer; color:var(--ink); }
   .tabs button[aria-pressed="true"] { background:#111318; color:#fff; border-color:#111318; }
-  .bar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-  .bar input { flex:1; min-width:200px; }
-  .crow { display:grid; grid-template-columns:72px minmax(0, 1fr) 90px 70px 100px auto; gap:14px; align-items:center; padding:14px 0; border-top:1px solid var(--line2); }
+  .fbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .fbar input { flex:1; min-width:200px; }
+  .crow { display:grid; grid-template-columns:72px minmax(0, 1fr) 80px 60px 90px 70px auto; gap:14px; align-items:center; padding:14px 0; border-top:1px solid var(--line2); }
   .crow:first-child { border-top:0; }
   .crow .cv { width:72px; height:48px; border-radius:10px; background:var(--accent-soft) center/cover; display:grid; place-items:center; font-size:22px; }
   .crow .t { font-weight:800; color:var(--ink); text-decoration:none; }
   .crow .meta { font:500 12.5px var(--mono); color:var(--mute); }
   .crow .n { font-variant-numeric:tabular-nums; font-weight:700; }
   .crow .acts { display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap; }
+  .menu-wrap { position:relative; }
+  .menu-wrap .pop { position:absolute; right:0; top:calc(100% + 6px); z-index:20; min-width:210px; background:var(--card); border:1px solid var(--line); border-radius:14px;
+                    box-shadow:0 18px 40px rgba(17,19,24,.14); padding:6px; display:grid; }
+  .menu-wrap .pop[hidden] { display:none; }
+  .pop button, .pop a { display:flex; gap:10px; align-items:center; text-align:left; border:0; background:none; padding:9px 10px; border-radius:9px; font:600 14px var(--text); color:var(--ink); cursor:pointer; text-decoration:none; }
+  .pop button:hover, .pop a:hover { background:var(--accent-soft); }
+  .pop .bad { color:var(--bad); }
+  .assess { display:flex; gap:14px; align-items:center; }
+  .assess .ic { width:44px; height:44px; border-radius:12px; background:var(--accent-soft); display:grid; place-items:center; font-size:22px; flex:none; }
   .head { font:700 11.5px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); border-top:0 !important; padding-bottom:4px !important; }
   @media (max-width:760px) { .kpis { grid-template-columns:1fr; } .crow { grid-template-columns:56px minmax(0, 1fr); } .crow .hide-m { display:none; } .crow .acts { grid-column:1 / -1; justify-content:flex-start; } }
 </style>
@@ -31,38 +40,69 @@
   <div class="card kpi tile"><div class="k">Total revenue</div><div class="n" id="kRev">–</div></div>
   <div class="card kpi tile"><div class="k">Conversion</div><div class="n" id="kConv">–</div></div>
 </section>
+<a class="card assess" href="/app/courses/assessments" style="text-decoration:none; color:inherit"><span class="ic" aria-hidden="true">📝</span>
+  <div style="flex:1"><b>Course assessments</b><div class="muted small">Every quiz result and assignment from all your courses, in one place.</div></div><span class="btn ghost sm">View</span></a>
 <section class="card" style="display:grid; gap:14px">
   <div class="tabs" role="group" aria-label="Status"><button type="button" data-st="published" aria-pressed="true">Published</button>
     <button type="button" data-st="unpublished" aria-pressed="false">Unpublished</button><button type="button" data-st="draft" aria-pressed="false">Draft</button></div>
-  <div class="bar"><input id="q" type="search" placeholder="Search courses" aria-label="Search courses"></div>
+  <div class="fbar"><input id="q" type="search" placeholder="Search courses" aria-label="Search courses"></div>
   <div id="list"><div class="empty">Loading…</div></div>
 </section>
 {% endblock %}
 {% block scripts %}
 {% if not acc.demo %}
 <script>
-let D = null, st = "published";
+let D = null, st = "published", st_ = null;
 function draw() {
   const q = $("q").value.trim().toLowerCase();
   document.querySelectorAll("[data-st]").forEach(b => b.setAttribute("aria-pressed", b.dataset.st === st));
   document.querySelectorAll("[data-st]").forEach(b => { const n = D.courses.filter(c => c.status === b.dataset.st).length; b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${n})`; });
   const rows = D.courses.filter(c => c.status === st && (!q || c.title.toLowerCase().includes(q)));
-  $("list").innerHTML = rows.length ? `<div class="crow head"><span></span><span>Course</span><span class="hide-m">Price</span><span class="hide-m">Sales</span><span class="hide-m">Revenue</span><span></span></div>` + rows.map(c => `<div class="crow">
+  $("list").innerHTML = rows.length ? `<div class="crow head"><span></span><span>Course</span><span class="hide-m">Price</span><span class="hide-m">Sales</span><span class="hide-m">Revenue</span><span class="hide-m">Conv.</span><span></span></div>` + rows.map(c => `<div class="crow">
       <div class="cv" style="${c.cover ? `background-image:url('${esc(c.cover)}')` : ""}">${c.cover ? "" : "🎓"}</div>
-      <div><a class="t" href="/app/courses/${c.id}">${esc(c.title)}</a><div class="meta">${c.modules} modules · ${c.lessons} lessons · ${fmt(c.views)} page views</div></div>
-      <div class="n hide-m">₹${fmt(c.price)}</div><div class="n hide-m">${fmt(c.sales)}</div><div class="n hide-m">₹${fmt(c.revenue)}</div>
+      <div><a class="t" href="/app/courses/${c.id}">${esc(c.title)}</a>${c.paused ? ` <span class="badge">payments paused</span>` : ""}<div class="meta">${c.modules} modules · ${c.lessons} lessons · ${fmt(c.views)} page views</div></div>
+      <div class="n hide-m">₹${fmt(c.price)}</div><div class="n hide-m">${fmt(c.sales)}</div><div class="n hide-m">₹${fmt(c.revenue)}</div><div class="n hide-m">${c.conversion}%</div>
       <div class="acts"><a class="btn sm" href="/app/courses/${c.id}">Edit</a><button class="btn ghost sm" type="button" data-copy="${esc(c.url)}">Copy link</button>
-        <a class="btn ghost sm" href="/api/courses/${c.id}/students.csv">Export</a></div></div>`).join("")
+        <div class="menu-wrap"><button class="btn ghost sm" type="button" data-menu="${c.id}" aria-label="More actions" aria-expanded="false">⋯</button>
+          <div class="pop" id="pop${c.id}" hidden>
+            <a href="${esc(c.url)}" target="_blank" rel="noopener">↗ Open page</a>
+            <button type="button" data-dup="${c.id}">⧉ Duplicate</button>
+            <button type="button" data-addpage="${c.id}">＋ Add to link in bio</button>
+            <button type="button" data-pause="${c.id}">${c.paused ? "▶ Resume payments" : "⏸ Pause payments"}</button>
+            <button type="button" data-status="${c.id}">${c.status === "published" ? "⊘ Unpublish" : "✓ Publish"}</button>
+            <a href="/api/courses/${c.id}/students.csv">⬇ Export students</a>
+            <button type="button" class="bad" data-delc="${c.id}">🗑 Delete</button>
+          </div></div></div></div>`).join("")
     : `<div class="empty">${st === "published" ? "No published courses yet. Click <b>＋ Create course</b> to start one." : "Nothing here."}</div>`;
 }
 async function load() {
   D = await api("/api/courses");
   $("kSales").textContent = fmt(D.sales); $("kRev").textContent = "₹" + fmt(D.revenue); $("kConv").textContent = D.conversion + "%";
-  $("payBanner").hidden = D.payouts; draw();
+  $("payBanner").hidden = D.payouts; if (st_) { st = st_; st_ = null; } draw();
 }
 $("q").oninput = () => draw();
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-st]"); if (b) { st = b.dataset.st; draw(); return; }
+  const m = e.target.closest("[data-menu]");
+  document.querySelectorAll(".pop").forEach(p => { if (!m || p.id !== "pop" + m.dataset.menu) p.hidden = true; });
+  if (m) { const p = $("pop" + m.dataset.menu); p.hidden = !p.hidden; m.setAttribute("aria-expanded", !p.hidden); return; }
+  const row = (id) => D.courses.find(x => x.id === id);
+  try {
+    const dup = e.target.closest("[data-dup]");
+    if (dup) { const r = await api(`/api/courses/${dup.dataset.dup}/duplicate`, {method: "POST", body: "{}"}); toast("Copied as a draft ✓"); location.href = "/app/courses/" + r.id; return; }
+    const ad = e.target.closest("[data-addpage]");
+    if (ad) { const c = row(ad.dataset.addpage); const r = await api("/api/page/add", {method: "POST", body: JSON.stringify({title: c.title, url: c.url, price: "₹" + fmt(c.price)})});
+      toast(r.added ? "Added to your link in bio ✓" : "It's already on your link in bio"); return; }
+    const pa = e.target.closest("[data-pause]");
+    if (pa) { const c = row(pa.dataset.pause); await api(`/api/courses/${c.id}/flags`, {method: "PUT", body: JSON.stringify({paused: !c.paused})});
+      toast(c.paused ? "Payments resumed ✓" : "Payments paused: the page stays up, nobody can buy"); return load(); }
+    const st = e.target.closest("[data-status]");
+    if (st) { const c = row(st.dataset.status); const to = c.status === "published" ? "unpublished" : "published";
+      await api(`/api/courses/${c.id}/flags`, {method: "PUT", body: JSON.stringify({status: to})}); st_ = to; toast(to === "published" ? "Published ✓" : "Unpublished"); return load(); }
+    const dl = e.target.closest("[data-delc]");
+    if (dl) { if (!confirm("Delete this course? The page stops selling. Enrolled students keep access.")) return;
+      await api(`/api/courses/${dl.dataset.delc}`, {method: "DELETE", body: "{}"}); toast("Deleted"); return load(); }
+  } catch (err) { toast(err.message); return; }
   const c = e.target.closest("[data-copy]"); if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); toast("Link copied ✓"); } catch { prompt("Copy:", c.dataset.copy); } }
 });
 $("newCourse").onclick = async () => {

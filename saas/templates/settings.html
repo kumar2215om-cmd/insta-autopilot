@@ -135,6 +135,13 @@
   </div>
 </section>
 
+<section class="card" id="security" {% if role != "owner" %}hidden{% endif %}>
+  <div class="row"><h2 style="margin-right:auto">Security: your devices</h2><span class="badge" id="devCount"></span></div>
+  <p class="muted small" style="margin:6px 0 12px">Everywhere you're signed in. Signing a device out works immediately: its next click asks it to log in again.</p>
+  <div id="devList" style="display:grid; gap:8px"><div class="empty">Loading…</div></div>
+  <button class="btn danger sm" type="button" id="devAll" style="margin-top:12px" hidden>Sign out everywhere else</button>
+</section>
+
 <section class="card" {% if role != "owner" %}hidden{% endif %}>
   <h2>Account</h2>
   <p class="muted small" style="margin:6px 0 12px">Disconnecting deletes your automations, contacts, page and activity from {{ brand }}, and stops the automation.</p>
@@ -166,6 +173,27 @@ $("autoForm").addEventListener("submit", async (e) => {
     $("autoMsg").className = "small ok"; $("autoMsg").textContent = "Saved."; setBadge($("autoStatus"), f.enabled.checked, "on", "off");
   } catch (err) { $("autoMsg").className = "small err"; $("autoMsg").textContent = err.message; }
 });
+
+async function loadDevices() {
+  const {devices} = await api("/api/security");
+  const ago = (ts) => { const m = Math.round((Date.now() / 1000 - ts) / 60); return m < 2 ? "active now" : m < 60 ? `active ${m} min ago` : m < 1440 ? `active ${Math.round(m / 60)} h ago` : `active ${Math.round(m / 1440)} d ago`; };
+  $("devCount").textContent = devices.length;
+  $("devList").innerHTML = devices.map(d => `<div class="row" style="gap:12px; padding:12px; border:1px solid var(--line2); border-radius:12px">
+      <span style="font-size:22px" aria-hidden="true">${/iPhone|Android/.test(d.name) ? "📱" : "💻"}</span>
+      <div style="flex:1; min-width:0"><b>${esc(d.name)}</b> ${d.this ? `<span class="badge on">this device</span>` : ""}
+        <div class="muted small">Signed in ${new Date(d.created * 1000).toLocaleDateString()} · ${ago(d.seen)}${d.city || d.country ? " · " + esc([d.city, d.country].filter(Boolean).join(", ")) : ""}${d.ip ? " · " + esc(d.ip) : ""}</div></div>
+      ${d.this ? "" : `<button class="btn ghost sm" type="button" data-devout="${esc(d.sid)}" style="color:var(--bad)">Sign out</button>`}</div>`).join("") || `<div class="empty">No devices.</div>`;
+  $("devAll").hidden = devices.filter(d => !d.this).length === 0;
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-devout]");
+  if (b) { try { await api("/api/security/signout", {method: "POST", body: JSON.stringify({sid: b.dataset.devout})}); toast("Signed out ✓"); loadDevices(); } catch (err) { toast(err.message); } }
+});
+$("devAll").onclick = async () => {
+  if (!confirm("Sign out of every other device? You'll stay signed in here.")) return;
+  try { const r = await api("/api/security/signout", {method: "POST", body: JSON.stringify({all: true})}); toast(`Signed out of ${r.ended} device${r.ended === 1 ? "" : "s"} ✓`); loadDevices(); } catch (err) { toast(err.message); }
+};
+if (!$("security").hidden) loadDevices().catch(() => { $("devList").innerHTML = `<div class="empty">Couldn't load devices.</div>`; });
 
 api("/api/mcp-key").then(d => setBadge($("mcpStatus"), d.active, d.read_only ? "read-only link" : "link active", "not connected")).catch(() => {});
 $("mcpNew").onclick = async () => {

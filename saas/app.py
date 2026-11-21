@@ -29,6 +29,7 @@ import billing
 import referrals
 import shop
 import courses
+import devices
 import videos
 import youtube
 import files
@@ -219,6 +220,15 @@ def no_index_private(resp):
 
 @app.before_request
 def guard():
+    # a sign-in that was signed out from another device (Settings → Security) ends here
+    if session.get("user") and (request.path.startswith("/app") or request.path.startswith("/api/")):
+        if not session.get("sid"):  # signed in before devices were tracked
+            session["sid"] = devices.start(session["user"], *client_info())
+        elif not devices.check(session["user"], session["sid"], *client_info()):
+            session.clear()
+            if request.path.startswith("/api/"):
+                return jsonify(error="You were signed out. Please log in again."), 401
+            return redirect("/signin")
     # Logged-in API calls that change data must be JSON: a cross-site form can't send that without CORS.
     if request.path.startswith("/api/"):
         if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
@@ -630,6 +640,7 @@ def start_session(user):
     session.update(keep)
     session.permanent = True
     session["user"] = user["id"]
+    session["sid"] = devices.start(user["id"], *client_info())
     first = next(iter(users.accounts(user)), None)
     if first:
         session["uid"] = first["id"]
@@ -637,6 +648,14 @@ def start_session(user):
     if session.get("next") == "/app/billing":  # buying a plan works before Instagram is connected
         return session.pop("next")
     return url_for("connect_page")
+
+
+def client_info():
+    """(user agent, ip, city, country) of this request, for Settings → Security."""
+    from urllib.parse import unquote
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    return (request.headers.get("User-Agent", ""), ip, unquote(request.headers.get("x-vercel-ip-city", "")),
+            request.headers.get("x-vercel-ip-country", ""))
 
 
 def new_user_allowed(email):
@@ -932,6 +951,8 @@ def join_team(token):
 
 @app.post("/logout")
 def logout():
+    if session.get("user") and session.get("sid"):
+        devices.end(session["user"], session["sid"])
     session.clear()
     return redirect(url_for("landing"))
 
@@ -971,6 +992,56 @@ def api_disconnect():
 
 
 # ---------- dashboard API ----------
+
+@app.get("/api/security")
+def api_security():
+    """Settings → Security: everywhere this login is signed in."""
+    u = current_user()
+    if not u:
+        return jsonify(devices=[])
+    return jsonify(devices=[{"sid": d["sid"], "name": devices.label(d.get("ua")), "city": d.get("city", ""), "country": d.get("country", ""),
+                             "ip": d.get("ip", ""), "created": d.get("created"), "seen": d.get("seen"),
+                             "this": d["sid"] == session.get("sid")} for d in devices.all_of(u["id"])])
+
+
+@app.post("/api/security/signout")
+def api_security_signout():
+    u = current_user()
+    d = request.get_json(force=True) or {}
+    if not u:
+        return jsonify(error="Please log in again."), 401
+    if d.get("all"):
+        return jsonify(ended=devices.end_others(u["id"], session.get("sid")))
+    sid = str(d.get("sid", ""))
+    if sid == session.get("sid"):
+        return jsonify(error="Use Log out to sign out of this device."), 400
+    devices.end(u["id"], sid)
+    return jsonify(ended=1)
+
+
+@app.post("/api/feedback")
+def api_feedback():
+    """Feature requests and help messages from the account menu: kept for the owner page and emailed to support."""
+    acc, u = current_account(), current_user()
+    d = request.get_json(force=True) or {}
+    text = str(d.get("text", "")).strip()[:3000]
+    kind = "help" if d.get("kind") == "help" else "feature"
+    if len(text) < 5:
+        return jsonify(error="Write a few words first."), 400
+    k = f"s:fbrate:{(u or {}).get('id') or acc['id']}:{int(time.time() // 3600)}"
+    if (store.redis("INCR", k) or 0) > 5:
+        return jsonify(error="That's a lot of messages. Try again in an hour."), 429
+    store.redis("EXPIRE", k, 3600)
+    item = {"at": int(time.time()), "kind": kind, "text": text, "email": (u or {}).get("email", ""), "username": acc.get("username", "")}
+    store.redis("LPUSH", "s:feedback", json.dumps(item))
+    store.redis("LTRIM", "s:feedback", 0, 499)
+    to = os.environ.get("SUPPORT_EMAIL", "").strip()
+    if to:
+        shop._mail(to, f"{'Help request' if kind == 'help' else 'Feature request'} from @{item['username'] or item['email']}",
+                   f"<p style=\"white-space:pre-line\">{shop._esc(text)}</p><p>{shop._esc(item['email'])} · @{shop._esc(item['username'])}</p>",
+                   reply_to=item["email"] or None)
+    return jsonify(ok=True)
+
 
 @app.get("/api/me")
 def api_me():
@@ -1968,6 +2039,16 @@ def api_shop():
                    sales=shop.sales(acc["id"], 50), plan_fee=plans.platform_fee(acc, 499))
 
 
+@app.post("/api/shop/products/<pid>/duplicate")
+def api_product_duplicate(pid):
+    acc = current_account()
+    try:
+        p = shop.duplicate(acc, pid)
+    except shop.ShopError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(product=p)
+
+
 @app.put("/api/shop/payout")
 def api_shop_payout():
     try:
@@ -2144,7 +2225,8 @@ def api_courses():
         v = courses.views(c)
         rows.append({"id": c["id"], "title": c["title"], "status": c["status"], "price": courses.price_now(c), "cover": c.get("cover", ""),
                      "sales": c.get("sales", 0), "revenue": c.get("revenue", 0), "views": v, "modules": n_mod, "lessons": n_les,
-                     "url": course_public_url(acc, c), "created": c.get("created")})
+                     "url": course_public_url(acc, c), "created": c.get("created"), "paused": bool(c.get("paused")),
+                     "conversion": round(100 * c.get("sales", 0) / v, 1) if v else 0})
     sales, revenue, views = sum(r["sales"] for r in rows), sum(r["revenue"] for r in rows), sum(r["views"] for r in rows)
     return jsonify(courses=rows, sales=sales, revenue=revenue, conversion=round(100 * sales / views, 1) if views else 0,
                    payouts=shop.can_sell(current_user()) if current_user() else False)
@@ -2227,6 +2309,72 @@ def api_video_done(vid):
     except videos.VideoError as e:
         return jsonify(error=str(e)), 400
     return jsonify(id=v["id"], name=v["name"], size=v["size"])
+
+
+@app.get("/app/courses/assessments")
+def assessments_page():
+    return render_app("assessments.html", "courses")
+
+
+@app.get("/api/courses/assessments")
+def api_assessments():
+    """Every assignment submission and quiz attempt across this account's courses."""
+    acc = current_account()
+    work, quizzes = [], []
+    for c in courses.of_account(acc["id"]):
+        titles = {ls["id"]: ls["title"] for _, ls in courses.lessons(c, True)}
+        for e in courses.students(c["id"]):
+            who = {"email": e["email"], "name": e.get("name", ""), "course": c["title"], "course_id": c["id"]}
+            for lid, w in (e.get("work") or {}).items():
+                work.append({**who, **w, "lesson": lid, "title": titles.get(lid, "Assignment")})
+            for lid, q in (e.get("quiz") or {}).items():
+                quizzes.append({**who, **q, "lesson": lid, "title": titles.get(lid, "Quiz")})
+    work.sort(key=lambda w: (w.get("grade") is not None, -w.get("at", 0)))
+    quizzes.sort(key=lambda q: -q.get("at", 0))
+    return jsonify(work=work, quizzes=quizzes)
+
+
+@app.post("/api/courses/<cid>/duplicate")
+def api_course_duplicate(cid):
+    acc, c = my_course(cid)
+    try:
+        copy = courses.duplicate(acc, c)
+    except courses.CourseError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(id=copy["id"])
+
+
+@app.put("/api/courses/<cid>/flags")
+def api_course_flags(cid):
+    """Quick switches from the course list: publish / unpublish, pause / resume payments."""
+    acc, c = my_course(cid)
+    d = request.get_json(force=True) or {}
+    if "paused" in d:
+        c["paused"] = bool(d["paused"])
+    if d.get("status") in ("published", "unpublished", "draft"):
+        if d["status"] == "published" and not courses.lessons(c):
+            return jsonify(error="Add at least one lesson before publishing."), 400
+        c["status"] = d["status"]
+    store.set_json(f"s:course:{cid}", c)
+    return jsonify(status=c["status"], paused=bool(c.get("paused")))
+
+
+@app.post("/api/page/add")
+def api_page_add():
+    """Adds a product or course card to the link-in-bio page (from the Store and Courses lists)."""
+    acc = current_account()
+    d = request.get_json(force=True) or {}
+    url, title = str(d.get("url", "")), str(d.get("title", "")).strip()[:100]
+    if not url.startswith(site_url() + "/") or not title:
+        return jsonify(error="Nothing to add."), 400
+    page = store.load_page(acc["id"]) or default_page(acc)
+    items = page.get("items") or []
+    if any(i.get("url") == url for i in items):
+        return jsonify(added=False, already=True)
+    items.insert(0, {"type": "product", "title": title, "url": url, "price": str(d.get("price", ""))[:20], "featured": False})
+    page = clean_page({**page, "items": items}, acc)
+    store.save_page(acc["id"], page)
+    return jsonify(added=True)
 
 
 @app.get("/api/courses/<cid>/students")
@@ -3397,13 +3545,14 @@ def owner():
                            "plan_id": users.current_plan(u), "referral_pro": False, "accounts": [], "limit": users.limit(u),
                            "created": u.get("created") or 0, "user": uid, "until": u.get("plan_until")}
     groups = sorted(logins.values(), key=lambda g: -g["created"])
+    feedback = [json.loads(x) for x in store.redis("LRANGE", "s:feedback", 0, 99) or []]
     by_plan = {k: sum(1 for g in groups if g["plan_id"] == k) for k in plans.PLANS}
     # MRR counts only plans set by hand (paying); free Pro months from referrals bring no money
     mrr = sum(plans.PLANS[g["plan_set"]]["price"] for g in groups if g["plan_set"] in plans.PLANS and g["plan_id"] == g["plan_set"])
     payments = [json.loads(x) for x in store.redis("LRANGE", "s:payments", 0, 49) or []]
     month_start = time.mktime(time.strptime(time.strftime("%Y-%m-01"), "%Y-%m-%d"))
     paid_month = sum(p["amount"] for p in payments if p.get("paid_at", 0) >= month_start)
-    return render_template("owner.html", rows=rows, groups=groups, now=time.time(), plans=plans.PLANS, by_plan=by_plan, mrr=mrr, locks=plans.LOCKS_ON,
+    return render_template("owner.html", feedback=feedback, rows=rows, groups=groups, now=time.time(), plans=plans.PLANS, by_plan=by_plan, mrr=mrr, locks=plans.LOCKS_ON,
                            payments=payments, paid_month=paid_month, payouts=referrals.payout_requests(), billing_ready=billing.ready(), billing_test=billing.test_mode())
 
 
