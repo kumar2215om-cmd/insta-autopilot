@@ -65,8 +65,12 @@
   <div class="row"><h2 style="margin-right:auto">Connect Claude <span id="mcpLock"></span></h2><span class="badge" id="mcpStatus">not connected</span></div>
   <p class="muted small" style="margin:6px 0 10px">Run {{ brand }} by chatting with Claude: <i>"Which reel made the most money this week?"</i>,
     <i>"Set up my next reel: keyword PROMPTS, ask for WhatsApp, follow-up with the ₹149 pack"</i>, <i>"Draft replies for the chats waiting for me"</i>,
-    <i>"Plan my launch on Friday"</i>. Claude can see your numbers, sales, contacts and inbox, and every change it makes shows up in Activity.</p>
-  <p class="small muted" style="margin:0 0 10px">Ready-made prompts in Claude: <b>Weekly review</b>, <b>Plan a launch</b>, <b>Set up a reel</b>, <b>Health check</b>, <b>Catch up on DMs</b>.</p>
+    <i>"Plan my launch on Friday"</i>, <i>"Build a 5-module course on Claude for reels at ₹799"</i>, <i>"Launch my prompt pack with the keyword PROMPTS"</i>,
+    <i>"Remind everyone who left a cart this week"</i>. Claude can see and run your automations, Store, Courses, Leads, Payments,
+    link in bio and AI agents. Every change shows up in Activity, and <b>"undo that"</b> puts it back.</p>
+  <p class="small muted" style="margin:0 0 10px">Ready-made prompts in Claude: <b>Weekly review</b>, <b>Launch a product</b>, <b>Build a course</b>,
+    <b>Recover abandoned carts</b>, <b>Reply to brand deals</b>, <b>Set up a reel</b>, <b>Health check</b>, <b>Catch up on DMs</b>{% if acc.plan_view and acc.plan_view.has.mcp_multi %}, <b>Client report</b>.
+    <br><b>Agency:</b> this one link manages every Instagram account on your login: just say which account.{% else %}.{% endif %}</p>
   <div class="row small" role="radiogroup" aria-label="What Claude may do" style="margin-bottom:10px">
     <label><input type="radio" name="mcpMode" value="full" checked> <b>Full access</b>: look, change and send (asks you first)</label>
     <label><input type="radio" name="mcpMode" value="read"> <b>Read-only</b>: look and advise, never change or send</label>

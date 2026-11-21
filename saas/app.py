@@ -3344,16 +3344,8 @@ def api_home():
 
 def assistant_tools(acc):
     """The Connect Claude tools plus a few only the in-app assistant has. Viewers get read-only tools."""
-    tools = mcp_tools.tools_for(acc, mcp_services(), read_only=current_role() == "viewer")
+    tools = mcp_v2.all_tools(acc, mcp_services(), read_only=current_role() == "viewer")
     tools += [
-        {"name": "list_brand_requests", "title": "Brand requests", "read_only": True,
-         "fn": lambda a: {"requests": agents.requests(acc, a.get("status", ""))},
-         "description": "Brand and collaboration offers found in DMs by the Brand Collab agent: brand, offer, budget, deliverables, fit, status.",
-         "input_schema": {"type": "object", "properties": {"status": {"type": "string", "enum": ["new", "interested", "declined", "done"]}}}},
-        {"name": "list_qualified_leads", "title": "Qualified leads", "read_only": True,
-         "fn": lambda a: {"leads": agents.leads(acc, a.get("temperature", ""))[:50]},
-         "description": "DM leads sorted into hot / warm / cold by the Lead Qualifier agent, with what they want and the next step.",
-         "input_schema": {"type": "object", "properties": {"temperature": {"type": "string", "enum": ["hot", "warm", "cold"]}}}},
         {"name": "get_alerts", "title": "What needs attention", "read_only": True,
          "fn": lambda a: {"alerts": home_alerts(acc), "today": today_so_far(acc)},
          "description": "Problems and to-dos right now (refused DMs, chats waiting, brand requests, carts, assignments) and today's numbers.",
@@ -3567,8 +3559,12 @@ def api_payments():
     acc = current_account()
     if acc.get("demo"):
         return jsonify(demo=True)
-    start, end = payments_window(request.args)
-    item = str(request.args.get("item", ""))
+    return jsonify(payments_summary(acc, request.args, current_user()))
+
+
+def payments_summary(acc, args, user=None):
+    start, end = payments_window(args)
+    item = str(args.get("item", ""))
     sales = [s for s in shop.sales(acc["id"], 500) if not item or s.get("title") == item]
     inside = [s for s in sales if start <= s.get("paid_at", 0) < end]
     span = end - start
@@ -3584,9 +3580,8 @@ def api_payments():
         series.append({"t": int(t), "v": round(sum(float(s.get("creator_gets") or 0) for s in inside if t <= s.get("paid_at", 0) < t + step), 2)})
         t += step
     cart = [c for c in leads.carts(acc["id"]) if start <= c["at"] < end and (not item or c["title"] == item)]
-    user = current_user()
     pay = shop.payout(user) if user else {}
-    return jsonify(earned=earned, gross=sum(int(s.get("price") or 0) for s in inside), count=len(inside),
+    return dict(earned=earned, gross=sum(int(s.get("price") or 0) for s in inside), count=len(inside),
                    change=round(100 * (earned - prev) / prev) if prev else None, series=series, step=step,
                    transactions=inside, abandoned=cart, items=sorted({s.get("title", "") for s in shop.sales(acc["id"], 500)}),
                    payout={"status": pay.get("status", ""), "bank": pay.get("bank", ""), "name": pay.get("name", ""), "ifsc": pay.get("ifsc", "")})
@@ -3595,7 +3590,10 @@ def api_payments():
 @app.get("/api/payments/payouts")
 def api_payouts():
     """The creator's share of each recent sale and whether it has reached their bank (Razorpay Route transfers)."""
-    acc = current_account()
+    return jsonify(payouts=payouts_list(current_account()))
+
+
+def payouts_list(acc):
     out = []
     for s in shop.sales(acc["id"], 30):
         o = store.get_json(f"s:shoporder:{s['id']}") or {}
@@ -3603,7 +3601,7 @@ def api_payouts():
             continue
         out.append({"id": s["id"], "title": s.get("title", ""), "email": s.get("email", ""), "paid_at": s.get("paid_at"),
                     "amount": s.get("creator_gets"), "status": shop.transfer_status(o)})
-    return jsonify(payouts=out)
+    return out
 
 
 @app.get("/api/payments.csv")
@@ -3665,6 +3663,7 @@ def api_contacts_csv():
 # ---------- MCP server: creators run ReplyInbox from Claude ----------
 
 import mcp_tools  # noqa: E402
+import mcp_v2  # noqa: E402
 from mcp_protocol import handle_http  # noqa: E402
 
 
@@ -3685,7 +3684,10 @@ def mcp_services():
     from types import SimpleNamespace
     return SimpleNamespace(save_rule=save_rule, build_report=build_report, delete_rule=delete_rule, copy_rule=copy_rule,
                            rule_insights=rule_insights, sales_summary=sales_summary, add_product=add_product,
-                           broadcast_batch=broadcast_batch, inbox_send=inbox_send, set_welcome=set_welcome, update_ai=update_ai)
+                           broadcast_batch=broadcast_batch, inbox_send=inbox_send, set_welcome=set_welcome, update_ai=update_ai,
+                           clean_page=clean_page, default_page=default_page, site_url=site_url, course_public_url=course_public_url,
+                           leads_filtered=leads_filtered, payments_summary=payments_summary, payouts_list=payouts_list,
+                           home_alerts=home_alerts, today_so_far=today_so_far, owner_of=users.owner_of)
 
 
 @app.route("/mcp", methods=["GET", "POST", "DELETE"])
@@ -3701,9 +3703,12 @@ def mcp_endpoint():
         return jsonify(error=f"Connect Claude is on the {plans.needs('mcp')} plan and up. Upgrade in your {BRAND} dashboard → Plan & billing."), 403
     if request.method != "POST":
         return "", 405, {"Allow": "POST"}
-    tools = mcp_tools.tools_for(acc, mcp_services(), read_only=read_only)
-    status, body = handle_http(request.get_data(), tools, BRAND.lower(), mcp_tools.instructions(acc, BRAND, read_only),
-                               prompts=mcp_tools.prompts())
+    owner = users.owner_of(acc)
+    multi = plans.has(acc, "mcp_multi") and owner and len(users.accounts(owner)) > 1
+    tools = (mcp_v2.agency(acc, mcp_services(), users.accounts(owner), read_only) if multi
+             else mcp_v2.all_tools(acc, mcp_services(), read_only=read_only))
+    status, body = handle_http(request.get_data(), tools, BRAND.lower(), mcp_tools.instructions(acc, BRAND, read_only, multi=bool(multi)),
+                               prompts=mcp_tools.prompts() + mcp_v2.prompts())
     return (jsonify(body), status) if body is not None else ("", status)
 
 
