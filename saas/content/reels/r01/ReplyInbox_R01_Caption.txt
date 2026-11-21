@@ -1,0 +1,15 @@
+Claude ko apna Instagram manager banao 🤖📲
+
+→ ReplyInbox mein Instagram se login karo, Settings → Create Claude link
+→ Claude: Customize → Connectors → Add custom connector → "ReplyInbox" → link paste → Add
+→ Claude tumhari reels study karta hai: kaunsi reels followers aur sales laati hain
+→ Poore hafte ka reel plan: hook, script, caption, comment keyword (tumhare approval ke saath)
+→ Har reel ka comment-to-DM set: har comment pe tumhara link
+
+Note: Connect Claude is on the Pro plan. Claude har change se pehle poochta hai. Reel report numbers in the video are an illustration.
+
+Comment SETUP aur main poora setup DM kar dunga 📩
+
+Idea credit: @jayantcreates.ai
+
+#claude #claudeai #instagramautomation #aitools #instagramtips #dmautomation #creatortips #replyinbox

@@ -1,0 +1,903 @@
+{
+"phrases": [
+{
+"s": 0.0,
+"e": 2.17,
+"words": [
+{
+"w": "Aise",
+"key": false,
+"s": 0.0
+},
+{
+"w": "mujhe",
+"key": false,
+"s": 0.207
+},
+{
+"w": "apna",
+"key": false,
+"s": 0.465
+},
+{
+"w": "personal",
+"key": false,
+"s": 0.672
+},
+{
+"w": "Instagram",
+"key": true,
+"s": 1.085
+},
+{
+"w": "manager",
+"key": true,
+"s": 1.55
+},
+{
+"w": "banao",
+"key": false,
+"s": 1.912
+}
+]
+},
+{
+"s": 2.34,
+"e": 2.83,
+"words": [
+{
+"w": "Pehle…",
+"key": false,
+"s": 2.34
+}
+]
+},
+{
+"s": 3.0,
+"e": 3.88,
+"words": [
+{
+"w": "ReplyInbox",
+"key": true,
+"s": 3.0
+},
+{
+"w": "kholo,",
+"key": false,
+"s": 3.55
+}
+]
+},
+{
+"s": 4.08,
+"e": 5.15,
+"words": [
+{
+"w": "Instagram",
+"key": false,
+"s": 4.08
+},
+{
+"w": "se",
+"key": false,
+"s": 4.539
+},
+{
+"w": "login",
+"key": true,
+"s": 4.64
+},
+{
+"w": "karo,",
+"key": false,
+"s": 4.895
+}
+]
+},
+{
+"s": 5.34,
+"e": 6.04,
+"words": [
+{
+"w": "Settings",
+"key": true,
+"s": 5.34
+},
+{
+"w": "mein",
+"key": false,
+"s": 5.69
+},
+{
+"w": "jao…",
+"key": false,
+"s": 5.865
+}
+]
+},
+{
+"s": 6.24,
+"e": 7.62,
+"words": [
+{
+"w": "aur",
+"key": false,
+"s": 6.24
+},
+{
+"w": "Create",
+"key": true,
+"s": 6.406
+},
+{
+"w": "Claude",
+"key": true,
+"s": 6.737
+},
+{
+"w": "link",
+"key": true,
+"s": 7.068
+},
+{
+"w": "dabao.",
+"key": false,
+"s": 7.289
+}
+]
+},
+{
+"s": 7.79,
+"e": 8.45,
+"words": [
+{
+"w": "Phir",
+"key": false,
+"s": 7.79
+},
+{
+"w": "Claude",
+"key": true,
+"s": 7.955
+},
+{
+"w": "kholo…",
+"key": false,
+"s": 8.203
+}
+]
+},
+{
+"s": 8.66,
+"e": 9.42,
+"words": [
+{
+"w": "Customize",
+"key": true,
+"s": 8.66
+},
+{
+"w": "mein",
+"key": false,
+"s": 9.062
+},
+{
+"w": "jao…",
+"key": false,
+"s": 9.241
+}
+]
+},
+{
+"s": 9.62,
+"e": 10.52,
+"words": [
+{
+"w": "aur",
+"key": false,
+"s": 9.62
+},
+{
+"w": "phir",
+"key": false,
+"s": 9.77
+},
+{
+"w": "Connectors.",
+"key": true,
+"s": 9.97
+}
+]
+},
+{
+"s": 10.7,
+"e": 11.87,
+"words": [
+{
+"w": "Add",
+"key": true,
+"s": 10.7
+},
+{
+"w": "Custom",
+"key": true,
+"s": 10.846
+},
+{
+"w": "Connector",
+"key": true,
+"s": 11.139
+},
+{
+"w": "dabao,",
+"key": false,
+"s": 11.578
+}
+]
+},
+{
+"s": 12.07,
+"e": 13.42,
+"words": [
+{
+"w": "naam",
+"key": false,
+"s": 12.07
+},
+{
+"w": "do",
+"key": false,
+"s": 12.388
+},
+{
+"w": "ReplyInbox…",
+"key": true,
+"s": 12.546
+}
+]
+},
+{
+"s": 13.62,
+"e": 14.59,
+"words": [
+{
+"w": "aur",
+"key": false,
+"s": 13.62
+},
+{
+"w": "wo",
+"key": false,
+"s": 13.765
+},
+{
+"w": "link",
+"key": true,
+"s": 13.862
+},
+{
+"w": "paste",
+"key": false,
+"s": 14.056
+},
+{
+"w": "kar",
+"key": false,
+"s": 14.299
+},
+{
+"w": "do.",
+"key": false,
+"s": 14.444
+}
+]
+},
+{
+"s": 14.8,
+"e": 15.23,
+"words": [
+{
+"w": "Add",
+"key": true,
+"s": 14.8
+},
+{
+"w": "dabao.",
+"key": false,
+"s": 14.943
+}
+]
+},
+{
+"s": 15.41,
+"e": 15.7,
+"words": [
+{
+"w": "Ho",
+"key": true,
+"s": 15.41
+},
+{
+"w": "gaya!",
+"key": true,
+"s": 15.493
+}
+]
+},
+{
+"s": 15.85,
+"e": 17.84,
+"words": [
+{
+"w": "Ab",
+"key": false,
+"s": 15.85
+},
+{
+"w": "tumhara",
+"key": false,
+"s": 15.971
+},
+{
+"w": "Insta",
+"key": false,
+"s": 16.393
+},
+{
+"w": "mujhse",
+"key": false,
+"s": 16.694
+},
+{
+"w": "connected",
+"key": true,
+"s": 17.056
+},
+{
+"w": "hai.",
+"key": false,
+"s": 17.599
+}
+]
+},
+{
+"s": 18.02,
+"e": 18.62,
+"words": [
+{
+"w": "Ab",
+"key": false,
+"s": 18.02
+},
+{
+"w": "main",
+"key": false,
+"s": 18.129
+},
+{
+"w": "khud…",
+"key": false,
+"s": 18.347
+}
+]
+},
+{
+"s": 18.81,
+"e": 20.55,
+"words": [
+{
+"w": "tumhari",
+"key": false,
+"s": 18.81
+},
+{
+"w": "poori",
+"key": false,
+"s": 19.168
+},
+{
+"w": "profile",
+"key": true,
+"s": 19.424
+},
+{
+"w": "study",
+"key": true,
+"s": 19.782
+},
+{
+"w": "karta",
+"key": false,
+"s": 20.038
+},
+{
+"w": "hoon,",
+"key": false,
+"s": 20.294
+}
+]
+},
+{
+"s": 20.71,
+"e": 23.41,
+"words": [
+{
+"w": "dekhta",
+"key": false,
+"s": 20.71
+},
+{
+"w": "hoon",
+"key": false,
+"s": 20.999
+},
+{
+"w": "kaunsi",
+"key": false,
+"s": 21.192
+},
+{
+"w": "reels",
+"key": false,
+"s": 21.481
+},
+{
+"w": "sach",
+"key": false,
+"s": 21.723
+},
+{
+"w": "mein",
+"key": false,
+"s": 21.915
+},
+{
+"w": "followers",
+"key": true,
+"s": 22.108
+},
+{
+"w": "aur",
+"key": false,
+"s": 22.542
+},
+{
+"w": "sales",
+"key": true,
+"s": 22.687
+},
+{
+"w": "laati",
+"key": false,
+"s": 22.928
+},
+{
+"w": "hain…",
+"key": false,
+"s": 23.169
+}
+]
+},
+{
+"s": 23.59,
+"e": 25.3,
+"words": [
+{
+"w": "aur",
+"key": false,
+"s": 23.59
+},
+{
+"w": "tumhari",
+"key": false,
+"s": 23.722
+},
+{
+"w": "reels",
+"key": true,
+"s": 24.028
+},
+{
+"w": "plan",
+"key": true,
+"s": 24.248
+},
+{
+"w": "karna",
+"key": false,
+"s": 24.423
+},
+{
+"w": "shuru",
+"key": false,
+"s": 24.642
+},
+{
+"w": "karta",
+"key": false,
+"s": 24.862
+},
+{
+"w": "hoon.",
+"key": false,
+"s": 25.081
+}
+]
+},
+{
+"s": 25.48,
+"e": 25.75,
+"words": [
+{
+"w": "Hook…",
+"key": true,
+"s": 25.48
+}
+]
+},
+{
+"s": 25.93,
+"e": 26.33,
+"words": [
+{
+"w": "script…",
+"key": true,
+"s": 25.93
+}
+]
+},
+{
+"s": 26.54,
+"e": 26.91,
+"words": [
+{
+"w": "caption…",
+"key": true,
+"s": 26.54
+}
+]
+},
+{
+"s": 27.12,
+"e": 28.0,
+"words": [
+{
+"w": "aur",
+"key": false,
+"s": 27.12
+},
+{
+"w": "comment",
+"key": true,
+"s": 27.246
+},
+{
+"w": "keyword",
+"key": true,
+"s": 27.539
+},
+{
+"w": "bhi.",
+"key": false,
+"s": 27.832
+}
+]
+},
+{
+"s": 28.2,
+"e": 30.13,
+"words": [
+{
+"w": "Aur",
+"key": false,
+"s": 28.2
+},
+{
+"w": "tumhe",
+"key": false,
+"s": 28.356
+},
+{
+"w": "milta",
+"key": false,
+"s": 28.617
+},
+{
+"w": "hai",
+"key": false,
+"s": 28.878
+},
+{
+"w": "poore",
+"key": false,
+"s": 29.035
+},
+{
+"w": "hafte",
+"key": false,
+"s": 29.295
+},
+{
+"w": "ka",
+"key": false,
+"s": 29.556
+},
+{
+"w": "reel",
+"key": true,
+"s": 29.661
+},
+{
+"w": "plan…",
+"key": true,
+"s": 29.869
+}
+]
+},
+{
+"s": 30.33,
+"e": 31.0,
+"words": [
+{
+"w": "tumhare",
+"key": false,
+"s": 30.33
+},
+{
+"w": "brand",
+"key": true,
+"s": 30.606
+},
+{
+"w": "mein…",
+"key": false,
+"s": 30.803
+}
+]
+},
+{
+"s": 31.19,
+"e": 32.45,
+"words": [
+{
+"w": "bas",
+"key": false,
+"s": 31.19
+},
+{
+"w": "tumhare",
+"key": false,
+"s": 31.341
+},
+{
+"w": "approval",
+"key": true,
+"s": 31.694
+},
+{
+"w": "ka",
+"key": false,
+"s": 32.097
+},
+{
+"w": "wait.",
+"key": false,
+"s": 32.198
+}
+]
+},
+{
+"s": 32.63,
+"e": 33.41,
+"words": [
+{
+"w": "Aur",
+"key": false,
+"s": 32.63
+},
+{
+"w": "sabse",
+"key": false,
+"s": 32.768
+},
+{
+"w": "mast",
+"key": true,
+"s": 32.997
+},
+{
+"w": "part?",
+"key": true,
+"s": 33.181
+}
+]
+},
+{
+"s": 33.59,
+"e": 35.73,
+"words": [
+{
+"w": "Har",
+"key": false,
+"s": 33.59
+},
+{
+"w": "reel",
+"key": false,
+"s": 33.747
+},
+{
+"w": "ka",
+"key": false,
+"s": 33.955
+},
+{
+"w": "comment-to-DM",
+"key": true,
+"s": 34.06
+},
+{
+"w": "main",
+"key": false,
+"s": 34.738
+},
+{
+"w": "set",
+"key": false,
+"s": 34.947
+},
+{
+"w": "kar",
+"key": false,
+"s": 35.104
+},
+{
+"w": "deta",
+"key": false,
+"s": 35.26
+},
+{
+"w": "hoon…",
+"key": false,
+"s": 35.469
+}
+]
+},
+{
+"s": 35.9,
+"e": 37.68,
+"words": [
+{
+"w": "toh",
+"key": false,
+"s": 35.9
+},
+{
+"w": "har",
+"key": false,
+"s": 36.033
+},
+{
+"w": "comment",
+"key": false,
+"s": 36.167
+},
+{
+"w": "pe",
+"key": false,
+"s": 36.478
+},
+{
+"w": "tumhara",
+"key": false,
+"s": 36.567
+},
+{
+"w": "link",
+"key": true,
+"s": 36.879
+},
+{
+"w": "chala",
+"key": false,
+"s": 37.057
+},
+{
+"w": "jaata",
+"key": false,
+"s": 37.279
+},
+{
+"w": "hai.",
+"key": false,
+"s": 37.502
+}
+]
+},
+{
+"s": 37.86,
+"e": 38.95,
+"words": [
+{
+"w": "Tumhe",
+"key": false,
+"s": 37.86
+},
+{
+"w": "bas…",
+"key": false,
+"s": 38.108
+},
+{
+"w": "haan",
+"key": true,
+"s": 38.306
+},
+{
+"w": "bolna",
+"key": false,
+"s": 38.504
+},
+{
+"w": "hai.",
+"key": false,
+"s": 38.752
+}
+]
+},
+{
+"s": 39.12,
+"e": 39.85,
+"words": [
+{
+"w": "SETUP",
+"key": true,
+"s": 39.12
+},
+{
+"w": "comment",
+"key": false,
+"s": 39.335
+},
+{
+"w": "karo…",
+"key": false,
+"s": 39.635
+}
+]
+},
+{
+"s": 40.05,
+"e": 41.19,
+"words": [
+{
+"w": "main",
+"key": false,
+"s": 40.05
+},
+{
+"w": "poora",
+"key": false,
+"s": 40.24
+},
+{
+"w": "setup",
+"key": true,
+"s": 40.477
+},
+{
+"w": "bhej",
+"key": false,
+"s": 40.715
+},
+{
+"w": "dunga.",
+"key": false,
+"s": 40.905
+}
+]
+}
+],
+"vo": 41.19,
+"end": 42.6
+}
