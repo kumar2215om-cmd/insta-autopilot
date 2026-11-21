@@ -68,7 +68,9 @@
   <main class="content">
     {% if preview and not guest %}<p style="margin:0; padding:10px 14px; border-radius:12px; background:var(--volt); color:#111318; font-weight:800; border:2px solid #111318">Preview mode: progress isn't saved.</p>{% endif %}
     {% if ls.type == "video" %}
-      {% if embed %}<div class="box vid"><iframe src="{{ embed }}" title="{{ ls.title }}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
+      {% if ls.video_file %}<div class="box vid"><video controls playsinline preload="metadata" controlslist="nodownload" oncontextmenu="return false"
+        src="/learn/{{ c.id }}/{{ ls.id }}/video" style="width:100%; height:100%; display:block; background:#000"></video></div>
+      {% elif embed %}<div class="box vid"><iframe src="{{ embed }}" title="{{ ls.title }}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>
       {% elif ls.video %}<a class="btn ghost" href="{{ ls.video }}" target="_blank" rel="noopener">▶ Watch the video</a>
       {% else %}<div class="box vid" style="display:grid; place-items:center; color:#fff; font-weight:700">Video coming soon</div>{% endif %}
     {% endif %}

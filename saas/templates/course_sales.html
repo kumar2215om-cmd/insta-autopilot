@@ -61,6 +61,14 @@
   .cpn button { border:2px solid var(--line); background:var(--card); color:var(--ink); border-radius:12px; padding:0 14px; font:800 14px Manrope, sans-serif; cursor:pointer; }
   .trust { display:flex; gap:10px 14px; flex-wrap:wrap; font-size:12.5px; color:var(--mute); font-weight:700; }
   .mbar { display:none; }
+  body[data-cur="USD"] .inr, body[data-cur="INR"] .usd { display:none !important; }
+  .cur { border:0; background:none; color:var(--acc); font:800 13px Manrope, sans-serif; cursor:pointer; padding:0; justify-self:start; text-decoration:underline; }
+  .gstl { font-size:13px; font-weight:700; color:var(--mute); margin:-6px 0 0; }
+  .bump { display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border:2px dashed var(--coral); border-radius:14px; background:rgba(255,91,58,.07); cursor:pointer; }
+  .bump input { width:20px; height:20px; margin-top:2px; accent-color:var(--acc); flex:none; }
+  .bump b { display:block; font-size:14.5px; } .bump span { font-size:13px; color:var(--mute); font-weight:600; }
+  .tot { display:flex; justify-content:space-between; font-weight:800; font-size:15px; padding-top:4px; }
+  .tot small { display:block; font-weight:600; font-size:12px; color:var(--mute); }
   .legal { text-align:center; font-size:13px; margin-top:22px; } .legal a { color:var(--mute); margin:0 6px; }
   @media (max-width:900px) {
     .page { grid-template-columns:1fr; }
@@ -72,6 +80,11 @@
     body { padding-bottom:84px; }
   }
 </style>
+{% if c.ga %}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ c.ga }}"></script>
+<script>window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '{{ c.ga }}');
+gtag('event', 'view_item', {currency: 'INR', value: {{ price }}, items: [{item_id: '{{ c.id }}', item_name: {{ c.title|tojson }}}]});</script>
+{% endif %}
 {% if c.pixel %}
 <script>
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
@@ -79,7 +92,7 @@ fbq('init', '{{ c.pixel }}'); fbq('track', 'PageView'); fbq('track', 'ViewConten
 </script>
 {% endif %}
 </head>
-<body class="{{ 'dark' if c.theme == 'dark' }}">
+<body class="{{ 'dark' if c.theme == 'dark' }}" data-cur="{{ 'USD' if usd and abroad else 'INR' }}">
 <header class="top">
   {% if acc.username %}<a class="av" href="/{{ acc.username }}" aria-label="@{{ acc.username }}">{% if acc.pic %}<img src="{{ acc.pic }}" alt="">{% else %}{{ acc.username[0]|upper }}{% endif %}</a>
   <a href="/{{ acc.username }}"><b>@{{ acc.username }}</b></a>{% endif %}
@@ -131,10 +144,14 @@ fbq('init', '{{ c.pixel }}'); fbq('track', 'PageView'); fbq('track', 'ViewConten
   <aside class="box buy" id="buy">
     <div class="price">{% if pwyw %}<b>{{ "Free" if not c.min_price else "₹" ~ "{:,}".format(c.min_price) ~ "+" }}</b><span class="muted" style="font-weight:700">Pay what you want</span>
       {% elif price == 0 %}<b>Free</b>
-      {% else %}<b>₹{{ "{:,}".format(price) }}</b>{% if c.sale_price and c.sale_price < c.price %}<s>₹{{ "{:,}".format(c.price) }}</s><span class="off">{{ ((1 - c.sale_price / c.price) * 100)|round|int }}% off</span>{% endif %}{% endif %}</div>
+      {% else %}<b class="inr">₹{{ "{:,}".format(price) }}</b>{% if c.sale_price and c.sale_price < c.price %}<s class="inr">₹{{ "{:,}".format(c.price) }}</s><span class="off inr">{{ ((1 - c.sale_price / c.price) * 100)|round|int }}% off</span>{% endif %}
+        {% if usd %}<b class="usd">${{ "{:,}".format(usd) }}</b>{% if c.intl.usd_sale %}<s class="usd">${{ "{:,}".format(c.intl.usd) }}</s><span class="off usd">{{ ((1 - c.intl.usd_sale / c.intl.usd) * 100)|round|int }}% off</span>{% endif %}{% endif %}{% endif %}</div>
+    {% if c.gst and c.gst.enabled and price %}<p class="gstl inr">+ {{ c.gst.pct }}% GST{% if c.gst.gstin %} · GST invoice in your email{% endif %}</p>{% endif %}
+    {% if usd and not pwyw %}<button type="button" class="cur" id="cur"><span class="inr">Outside India? Pay in US$</span><span class="usd">In India? Pay in ₹ (UPI)</span></button>{% endif %}
     <ul class="incl">
       <li>📚 {{ n_les }} lessons in {{ n_mod }} modules</li>
       {% if sessions %}<li>🔴 {{ sessions|length }} live classes</li>{% endif %}
+      {% if c.community and c.community.enabled %}<li>👥 Private {{ {"whatsapp": "WhatsApp group", "telegram": "Telegram group", "discord": "Discord server"}.get(c.community.kind, "community") }}</li>{% endif %}
       {% if c.cert and c.cert.enabled %}<li>🏅 Certificate of completion</li>{% endif %}
       <li>⏳ {{ "Lifetime access" if (c.validity or {}).get("kind") != "limited" else ("Access for " ~ c.validity.months ~ " months") }}</li>
       <li>📱 Learn on phone or laptop</li>
@@ -147,17 +164,19 @@ fbq('init', '{{ c.pixel }}'); fbq('track', 'PageView'); fbq('track', 'ViewConten
       {% if c.ask_phone %}<input class="field" id="phone" type="tel" inputmode="numeric" placeholder="Mobile number" autocomplete="tel" aria-label="Mobile number" required>{% endif %}
       {% if pwyw %}<input class="field" id="amount" type="number" min="{{ c.min_price or 0 }}" placeholder="Your price in ₹ (min ₹{{ c.min_price or 0 }})" aria-label="Your price" value="{{ c.min_price or '' }}">{% endif %}
       {% if c.coupons and price > 0 or (c.coupons and pwyw) %}<div class="cpn"><input class="field" id="coupon" type="text" placeholder="Coupon code" aria-label="Coupon code"></div>{% endif %}
+      {% if bump %}<label class="bump inr"><input type="checkbox" id="bump"><div><b>Yes, add {{ c.bump.title }} for ₹{{ "{:,}".format(c.bump.price) }}</b>{% if c.bump.desc %}<span>{{ c.bump.desc }}</span>{% endif %}</div></label>{% endif %}
+      {% if (c.gst and c.gst.enabled) or bump %}<div class="tot" id="tot" hidden></div>{% endif %}
       <button class="btn" type="submit" id="go">{{ c.button or "Enroll now" }}</button>
     </form>
     <p class="msg" id="msg" role="status" aria-live="polite"></p>
-    <div class="trust"><span>⚡ Instant access</span>{% if price or pwyw %}<span>🔒 UPI, cards, netbanking via Razorpay</span>{% endif %}<span>✉️ Login link emailed</span></div>
+    <div class="trust"><span>⚡ Instant access</span>{% if price or pwyw %}<span class="inr">🔒 UPI, cards, netbanking via Razorpay</span><span class="usd">🔒 International cards via Razorpay</span>{% endif %}<span>✉️ Login link emailed</span></div>
     {% else %}
     <p class="msg">{{ "Enrolment opens soon." if c.status == "published" else "This course isn't published yet." }}</p>
     {% endif %}
     <p style="margin:0; font-size:13.5px; text-align:center" class="muted">Already enrolled? <a href="/learn">Sign in</a></p>
   </aside>
 </main>
-<div class="mbar">{% if pwyw %}<b>Pay what you want</b>{% elif price == 0 %}<b>Free</b>{% else %}<b>₹{{ "{:,}".format(price) }}</b>{% if c.sale_price and c.sale_price < c.price %}<s>₹{{ "{:,}".format(c.price) }}</s>{% endif %}{% endif %}
+<div class="mbar">{% if pwyw %}<b>Pay what you want</b>{% elif price == 0 %}<b>Free</b>{% else %}<b class="inr">₹{{ "{:,}".format(price) }}</b>{% if c.sale_price and c.sale_price < c.price %}<s class="inr">₹{{ "{:,}".format(c.price) }}</s>{% endif %}{% if usd %}<b class="usd">${{ "{:,}".format(usd) }}</b>{% endif %}{% endif %}
   <a class="btn" href="#buy" id="mgo">{{ c.button or "Enroll now" }}</a></div>
 <p class="made">Made with <a href="/">{{ brand }}</a></p>
 {% if c.status == "published" %}
@@ -170,6 +189,16 @@ async function post(path, body) {
 function say(t, bad) { $("msg").textContent = t; $("msg").className = "msg" + (bad ? " err" : ""); }
 function openForm() { if (!$("form")) return; $("enroll").hidden = true; $("form").hidden = false; $("name").focus(); px("track", "InitiateCheckout"); }
 if ($("enroll")) $("enroll").onclick = openForm;
+const cur = () => document.body.dataset.cur, GST = {{ (c.gst.pct if c.gst and c.gst.enabled else 0) }}, BUMP = {{ c.bump.price if bump else 0 }};
+if ($("cur")) $("cur").onclick = () => { document.body.dataset.cur = cur() === "USD" ? "INR" : "USD"; total(); };
+function total() {
+  // A preview of the total for Indian buyers; the server works out the exact amount (coupons included).
+  if (!$("tot")) return;
+  const base = {{ price }}{% if pwyw %} * 0 + (+($("amount") || {}).value || 0){% endif %}, gst = Math.round(base * GST / 100), b = $("bump") && $("bump").checked ? BUMP : 0;
+  $("tot").hidden = cur() === "USD" || !base;
+  $("tot").innerHTML = `<span>Total<small>₹${base.toLocaleString("en-IN")}${gst ? ` + ₹${gst.toLocaleString("en-IN")} GST` : ""}${b ? ` + ₹${b.toLocaleString("en-IN")} add-on` : ""}</small></span><span>₹${(base + gst + b).toLocaleString("en-IN")}</span>`;
+}
+document.addEventListener("input", total); total();
 $("mgo").onclick = (e) => { e.preventDefault(); $("buy").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"}); openForm(); };
 function loadCheckout() {
   return new Promise((ok, bad) => { if (window.Razorpay) return ok(); const s = document.createElement("script");
@@ -178,7 +207,9 @@ function loadCheckout() {
 if ($("form")) $("form").onsubmit = async (e) => {
   e.preventDefault();
   const b = $("go"), body = {name: $("name").value, email: $("email").value, phone: $("phone") ? $("phone").value : "",
-    amount: $("amount") ? $("amount").value : undefined, coupon: $("coupon") ? $("coupon").value : ""};
+    amount: $("amount") ? $("amount").value : undefined, coupon: $("coupon") ? $("coupon").value : "",
+    currency: cur(), bump: !!($("bump") && $("bump").checked && cur() === "INR")};
+  if (window.gtag) gtag("event", "begin_checkout", {currency: cur(), value: {{ price }}});
   b.disabled = true; say("One moment…");
   try {
     const o = await post(base + "/order", body);
@@ -189,7 +220,9 @@ if ($("form")) $("form").onsubmit = async (e) => {
       handler: async (r) => {
         say("Payment received. Opening your course…");
         try { const d = await post(base + "/paid", {order_id: r.razorpay_order_id, payment_id: r.razorpay_payment_id, signature: r.razorpay_signature});
-          px("track", "Purchase", {value: o.amount / 100, currency: "INR"}); location.href = d.next; }
+          px("track", "Purchase", {value: o.amount / 100, currency: o.currency});
+          if (window.gtag) gtag("event", "purchase", {transaction_id: o.order_id, currency: o.currency, value: o.amount / 100});
+          location.href = d.next; }
         catch (err) { say(err.message, true); }
       },
       modal: {ondismiss: () => { b.disabled = false; say(""); }}});

@@ -2423,6 +2423,117 @@ class SaasTest(unittest.TestCase):
         self.assertIn("Weekly Q&amp;A", self.c.get(f"/learn/{cid}").get_data(as_text=True))
         self.assertIn("21 live classes", saas.app.test_client().get("/creator/c/reels").get_data(as_text=True))
 
+    def test_course_gst_bump_usd_and_extras(self):
+        import courses
+        import shop
+        cid = self.course_setup()
+        other = self.c.post("/api/courses", json={"title": "Hook Vault"}).get_json()["id"]
+        self.assertIn("GSTIN", self.c.put(f"/api/courses/{cid}", json={**self.c.get(f"/api/courses/{cid}").get_json()["course"],
+                                                                      "gst": {"enabled": True, "gstin": "BAD"}}).get_json()["error"])
+        self.assertIn("Measurement", self.c.put(f"/api/courses/{cid}", json={**self.c.get(f"/api/courses/{cid}").get_json()["course"], "ga": "UA-1"}).get_json()["error"])
+        opts = self.c.get(f"/api/courses/{cid}").get_json()["bump_options"]
+        self.assertEqual([o["id"] for o in opts], [other])
+        self.course_body(cid, gst={"enabled": True, "pct": 18, "gstin": "07ABCDE1234F1Z5", "name": "Om Media"},
+                         bump={"enabled": True, "kind": "course", "id": other, "price": 199, "desc": "100 hooks"},
+                         intl={"enabled": True, "usd": 29, "usd_sale": 19}, ga="g-ab12cd34ef",
+                         community={"enabled": True, "kind": "whatsapp", "link": "https://chat.whatsapp.com/xyz"},
+                         emails=[{"days": 1, "subject": "Day 1 {name}", "body": "Hi {name}, start {course}."},
+                                 {"days": 5, "subject": "Stuck?", "body": "Finish it!", "unfinished": True}])
+        anon = saas.app.test_client()
+        page = anon.get("/creator/c/reels").get_data(as_text=True)
+        for t in ("+ 18% GST", "Yes, add Hook Vault for ₹199", "$19", "G-AB12CD34EF", "Private WhatsApp group", 'data-cur="INR"'):
+            self.assertIn(t, page)
+        self.assertNotIn("chat.whatsapp.com", page)  # the invite is for students only
+        self.assertIn('data-cur="USD"', anon.get("/creator/c/reels", headers={"x-vercel-ip-country": "US"}).get_data(as_text=True))
+        # ₹999 + 18% GST + ₹199 bump, coupon 10% on the course only
+        o = anon.post("/creator/c/reels/order", json={"name": "Fan", "email": "fan@x.co", "coupon": "OM10", "bump": True}).get_json()
+        self.assertEqual(o["amount"], (899 + 162 + 199) * 100)
+        sig = hmac.new(b"sek", f"{o['order_id']}|pay_g1".encode(), hashlib.sha256).hexdigest()
+        anon.post("/creator/c/reels/paid", json={"order_id": o["order_id"], "payment_id": "pay_g1", "signature": sig})
+        self.assertTrue(courses.enrollment(other, "fan@x.co"))  # the bump course
+        self.assertEqual((courses.get(cid)["revenue"], courses.get(other)["revenue"]), (899 + 162, 199))
+        welcome = [m[2] for m in self.mails if "Reels Mastery" in m[1]][0]
+        for t in ("GST 18%", "₹162", "Hook Vault", "₹1,260", "07ABCDE1234F1Z5", "chat.whatsapp.com/xyz"):
+            self.assertIn(t, welcome)
+        self.assertIn("Join the WhatsApp group", anon.get(f"/learn/{cid}").get_data(as_text=True))
+        # dollars: no GST, no bump, no transfer in the order; the share is transferred after capture
+        o2 = anon.post("/creator/c/reels/order", json={"name": "Amy", "email": "amy@x.co", "currency": "USD", "bump": True}).get_json()
+        self.assertEqual((o2["amount"], o2["currency"]), (1900, "USD"))
+        body = [x for x in self.rzp_calls if x[1] == "/v1/orders"][-1][2]
+        self.assertNotIn("transfers", body)
+        n = len(self.rzp_calls)
+        wb = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {"id": "pay_u1", "order_id": o2["order_id"], "status": "captured", "amount": 1900}}}}).encode()
+        anon.post("/billing/webhook", data=wb, headers={"X-Razorpay-Signature": hmac.new(b"whs", wb, hashlib.sha256).hexdigest()})
+        self.assertTrue(courses.enrollment(cid, "amy@x.co"))
+        tr = [x for x in self.rzp_calls[n:] if x[1] == "/v1/payments/pay_u1/transfers"]
+        self.assertEqual(tr[0][2]["transfers"][0]["currency"], "INR")
+        self.assertEqual(store.get_json(f"s:shoporder:{o2['order_id']}")["transfer"], "done")
+        # automatic emails: day 1 once; day 5 only while unfinished; never weeks later
+        e = courses.enrollment(cid, "fan@x.co")
+        self.mails.clear()
+        self.assertEqual(courses.send_sequences(now=e["at"] + 3600), 0)
+        self.assertEqual(courses.send_sequences(now=e["at"] + 86400 + 60), 2)  # fan and amy
+        self.assertEqual(courses.send_sequences(now=e["at"] + 86400 + 120), 0)
+        self.assertIn("Day 1 Fan", [m[1] for m in self.mails])
+        self.assertIn("Hi Fan, start Reels Mastery.", self.mails[0][2] + self.mails[1][2])
+        self.assertEqual(courses.send_sequences(now=e["at"] + 40 * 86400), 0)
+
+    def test_course_bump_product_and_video_upload(self):
+        import courses
+        import files
+        import videos
+        cid = self.course_setup()
+        self.enterContext(mock.patch.dict(os.environ, BLOB_READ_WRITE_TOKEN="vercel_blob_rw_store9_secret"))
+        blobs = {}
+
+        def put(url, params=None, data=None, headers=None, timeout=None):
+            blobs[params["pathname"]] = data
+            return Resp({"url": f"https://store9.private.blob.vercel-storage.com/{params['pathname']}", "pathname": params["pathname"]})
+
+        def get(url, headers=None, timeout=None):
+            data = blobs.get(url.split(".com/", 1)[1], b"")
+            m = re.match(r"bytes=(\d+)-(\d+)", (headers or {}).get("Range", ""))
+            r = Resp({}, 206 if m else 200)
+            r.content, r.headers = (data[int(m.group(1)):int(m.group(2)) + 1] if m else data), {"content-type": "application/octet-stream"}
+            return r
+        self.enterContext(mock.patch.object(files.requests, "put", put))
+        self.enterContext(mock.patch.object(files.requests, "get", get))
+        self.enterContext(mock.patch.object(videos.requests, "put", put))
+        self.enterContext(mock.patch.object(videos.requests, "get", get))
+        self.enterContext(mock.patch.object(videos, "CHUNK", 10))
+        # a 25-byte "video" in pieces of 10
+        self.assertIn("MP4", self.c.post("/api/courses/video", json={"name": "a.exe", "size": 5}).get_json()["error"])
+        v = self.c.post("/api/courses/video", json={"name": "Lesson 1.mp4", "size": 25}).get_json()
+        self.assertEqual(v["parts"], 3)
+        data = bytes(range(25))
+        self.assertEqual(self.c.post(f"/api/courses/video/{v['id']}/done", json={}).status_code, 400)  # pieces missing
+        for n in range(3):
+            r = self.c.put(f"/api/courses/video/{v['id']}/{n}", data=data[n * 10:(n + 1) * 10], headers={"X-Upload": "1"},
+                           content_type="application/octet-stream")
+            self.assertEqual(r.status_code, 200, r.get_json())
+        self.assertEqual(self.c.put(f"/api/courses/video/{v['id']}/0", data=b"x", content_type="application/octet-stream").status_code, 415)
+        self.assertEqual(self.c.post(f"/api/courses/video/{v['id']}/done", json={}).get_json()["name"], "Lesson-1.mp4")
+        # a file product as the bump offer
+        prod = self.c.put("/api/shop/products", json={"type": "locked", "title": "Hook list", "price": 99, "content": "Hook #1: stop scrolling"}).get_json()["product"]
+        c = self.course_body(cid, bump={"enabled": True, "kind": "product", "id": prod["id"], "price": 49})
+        c["modules"][0]["lessons"][0].update(video_file=v["id"], video_name="Lesson-1.mp4")
+        self.c.put(f"/api/courses/{cid}", json=c)
+        anon = saas.app.test_client()
+        # free preview lesson streams the uploaded video in pieces
+        self.assertIn(f"/learn/{cid}/l1/video", anon.get("/creator/c/reels/preview/l1").get_data(as_text=True))
+        r = anon.get(f"/learn/{cid}/l1/video", headers={"Range": "bytes=0-"})
+        self.assertEqual((r.status_code, r.data, r.headers["Content-Range"]), (206, data[:10], "bytes 0-9/25"))
+        r = anon.get(f"/learn/{cid}/l1/video", headers={"Range": "bytes=12-30"})
+        self.assertEqual((r.data, r.headers["Content-Range"]), (data[12:20], "bytes 12-19/25"))
+        self.assertEqual(anon.get(f"/learn/{cid}/l1/video", headers={"Range": "bytes=99-"}).status_code, 416)
+        self.assertEqual(anon.get(f"/learn/{cid}/l2/video").status_code, 404)  # paid lesson, not enrolled
+        o = anon.post("/creator/c/reels/order", json={"name": "Fan", "email": "fan@x.co", "bump": True}).get_json()
+        self.assertEqual(o["amount"], (999 + 49) * 100)
+        sig = hmac.new(b"sek", f"{o['order_id']}|pay_b1".encode(), hashlib.sha256).hexdigest()
+        anon.post("/creator/c/reels/paid", json={"order_id": o["order_id"], "payment_id": "pay_b1", "signature": sig})
+        self.assertTrue(any("Hook list" in m[1] for m in self.mails))  # the product's access email
+        self.assertEqual(self.c.get("/api/shop").get_json()["products"][0]["sales"], 1)
+
 
 
 class CarouselTest(unittest.TestCase):

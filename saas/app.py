@@ -29,6 +29,7 @@ import billing
 import referrals
 import shop
 import courses
+import videos
 import youtube
 import files
 import guides
@@ -223,7 +224,8 @@ def guard():
         if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
             return jsonify(error="Please log in again."), 401
         # file uploads are multipart; a custom header still can't be sent cross-site without CORS
-        upload = request.path in ("/api/files", "/api/shop/upload", "/api/courses/upload") and request.headers.get("X-Upload") == "1"
+        upload = (request.path in ("/api/files", "/api/shop/upload", "/api/courses/upload") or request.path.startswith("/api/courses/video/")) \
+            and request.headers.get("X-Upload") == "1"
         if request.method in ("POST", "PUT", "DELETE") and not request.is_json and not upload:
             return jsonify(error="JSON required"), 415
         blocked = role_blocks(request.path, request.method)
@@ -2160,8 +2162,10 @@ def api_course_create():
 @app.get("/api/courses/<cid>")
 def api_course_get(cid):
     acc, c = my_course(cid)
+    bump = [{"kind": "course", "id": x["id"], "title": x["title"]} for x in courses.of_account(acc["id"]) if x["id"] != cid and not x.get("deleted")]
+    bump += [{"kind": "product", "id": p["id"], "title": p["title"]} for p in shop.products(acc["id"]) if p.get("type", "file") in ("file", "locked")]
     return jsonify(course=c, url=course_public_url(acc, c), sessions=courses.sessions(c), plan_fee=plans.platform_fee(acc, 499),
-                   payouts=shop.can_sell(current_user()) if current_user() else False)
+                   payouts=shop.can_sell(current_user()) if current_user() else False, bump_options=bump, usd_inr=courses.fx())
 
 
 @app.put("/api/courses/<cid>")
@@ -2195,6 +2199,34 @@ def api_course_upload():
     except files.FileError as e:
         return jsonify(error=str(e)), 400
     return jsonify(id=item["id"], name=item["name"], size=item["size"], url=files.link(item) if cover else "")
+
+
+@app.post("/api/courses/video")
+def api_video_start():
+    d = request.get_json(force=True) or {}
+    try:
+        v = videos.start(current_account(), d.get("name"), d.get("size"))
+    except videos.VideoError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(id=v["id"], parts=v["parts"], chunk=videos.CHUNK, name=v["name"])
+
+
+@app.put("/api/courses/video/<vid>/<int:n>")
+def api_video_chunk(vid, n):
+    try:
+        got = videos.put_chunk(current_account(), vid, n, request.get_data())
+    except videos.VideoError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(received=got)
+
+
+@app.post("/api/courses/video/<vid>/done")
+def api_video_done(vid):
+    try:
+        v = videos.finish(current_account(), vid)
+    except videos.VideoError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(id=v["id"], name=v["name"], size=v["size"])
 
 
 @app.get("/api/courses/<cid>/students")
@@ -2255,7 +2287,9 @@ def course_sales_page(username, slug):
                            enrolled=len(store.redis("SMEMBERS", f"s:enrs:{c['id']}") or []), free=free,
                            price=courses.price_now(c), pay_ok=shop.ready() and bool(owner) and shop.can_sell(owner),
                            free_ok=c.get("price_mode") == "pwyw" and not c.get("min_price"),
-                           sessions=courses.sessions(c), when=shop.when_text, embed=courses.embed(c.get("cover_video", "")))
+                           sessions=courses.sessions(c), when=shop.when_text, embed=courses.embed(c.get("cover_video", "")),
+                           usd=courses.intl_price(c), abroad=request.headers.get("x-vercel-ip-country", "IN").upper() not in ("IN", ""),
+                           bump=courses.bump_target(c) if (c.get("bump") or {}).get("enabled") else None)
 
 
 @app.post("/<username>/c/<slug>/order")
@@ -2476,6 +2510,27 @@ def learn_work(cid, lid):
         return jsonify(work=courses.submit_work(c, student(), ls, d.get("text"), d.get("link")))
     except courses.CourseError as e:
         return jsonify(error=str(e)), 400
+
+
+@app.get("/learn/<cid>/<lid>/video")
+def learn_video(cid, lid):
+    """An uploaded lesson video, streamed piece by piece (Range requests) to enrolled students and free previews."""
+    acc, c, e, preview = learner(cid)
+    pair = next(((m, ls) for m, ls in courses.lessons(c) if ls["id"] == lid), None)
+    if not pair or not (e or pair[1].get("free")) or (e and e.get("expired")):
+        abort(404)
+    v = videos.get(pair[1].get("video_file"))
+    if not v or v["acc"] != c["acc"] or not v.get("done"):
+        abort(404)
+    try:
+        data, a, b = videos.read(v, request.headers.get("Range", ""))
+    except videos.VideoError as err:
+        if str(err) == "range":
+            return Response(status=416, headers={"Content-Range": f"bytes */{v['size']}"})
+        abort(502)
+    return Response(data, status=206, mimetype=v["type"], headers={
+        "Content-Range": f"bytes {a}-{b}/{v['size']}", "Accept-Ranges": "bytes", "Content-Length": str(len(data)),
+        "Cache-Control": "private, max-age=3600", "Content-Disposition": "inline"})
 
 
 @app.get("/learn/<cid>/<lid>/file/<fid>")
@@ -3178,6 +3233,10 @@ def cron_refresh_tokens():
         shop.send_reminders()  # events and bookings happening in the next 24 hours
     except Exception as e:
         print(f"shop reminders failed: {e}")
+    try:
+        courses.send_sequences()  # course emails N days after enrolling
+    except Exception as e:
+        print(f"course emails failed: {e}")
     for ig_id in store.account_ids():  # refused comment DMs get another try once a day
         acc = store.load_account(ig_id)
         if acc and not acc.get("demo") and engine.pending_retries(acc):

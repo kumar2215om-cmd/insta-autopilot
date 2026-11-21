@@ -12,6 +12,7 @@ s:mycourses:<email> = course ids. Certificates: s:cert:<id>.
 """
 import calendar
 import json
+import os
 import re
 import secrets
 import time
@@ -23,6 +24,16 @@ MAX_COURSES, MAX_MODULES, MAX_LESSONS = 50, 40, 300
 LESSON_TYPES = ("video", "text", "audio", "quiz", "assignment")
 THEMES = ("light", "dark")
 MONTH = 30 * 86400
+GSTIN_RE = r"\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]"
+COMMUNITY = ("whatsapp", "telegram", "discord", "other")
+
+
+def fx():
+    """₹ per US$ for showing dollar sales in rupees (the real rate comes from Razorpay's payment when it has one)."""
+    try:
+        return float(os.environ.get("USD_INR", "") or 85)
+    except ValueError:
+        return 85.0
 
 
 class CourseError(Exception):
@@ -159,7 +170,7 @@ def clean(acc, cid, data):
             item = {"id": _id(ls.get("id")), "type": kind, "title": _s(ls.get("title"), 150) or "Untitled lesson",
                     "live": ls.get("live", True) is not False, "free": bool(ls.get("free")),
                     "body": _s(ls.get("body"), 30000), "video": _https(ls.get("video")), "audio": _https(ls.get("audio")),
-                    "audio_file": _s(ls.get("audio_file"), 20),
+                    "audio_file": _s(ls.get("audio_file"), 20), "video_file": _s(ls.get("video_file"), 24), "video_name": _s(ls.get("video_name"), 100),
                     "files": [{"id": _s(f.get("id"), 20), "name": _s(f.get("name"), 100), "size": _int(f.get("size"), 0, 10 ** 9)}
                               for f in (ls.get("files") or [])[:10] if isinstance(f, dict) and f.get("id")]}
             if kind == "quiz":
@@ -195,6 +206,48 @@ def clean(acc, cid, data):
         coupons.append({"code": code, "kind": "flat" if cp.get("kind") == "flat" else "pct", "value": _int(cp.get("value"), 1, 100000, 10),
                         "max": _int(cp.get("max"), 0, 100000, 0), "used": (old.get(code) or {}).get("used", 0), "on": cp.get("on", True) is not False})
     out["coupons"] = coupons
+    # international price (US$, cards from outside India)
+    it = d.get("intl") or {}
+    usd, usd_sale = _int(it.get("usd"), 0, 5000, 0), _int(it.get("usd_sale"), 0, 5000, 0)
+    out["intl"] = {"enabled": bool(it.get("enabled")), "usd": usd, "usd_sale": usd_sale if 0 < usd_sale < usd else 0}
+    if out["intl"]["enabled"] and (mode != "fixed" or not (out["intl"]["usd_sale"] or usd)):
+        raise CourseError("International price: use a fixed price and enter a US$ price of at least $1.")
+    # GST added on top of the price (Indian buyers)
+    g = d.get("gst") or {}
+    gstin = re.sub(r"[^0-9A-Z]", "", str(g.get("gstin", "")).upper())[:15]
+    if gstin and not re.fullmatch(GSTIN_RE, gstin):
+        raise CourseError("That GSTIN doesn't look right (15 characters, like 07ABCDE1234F1Z5).")
+    out["gst"] = {"enabled": bool(g.get("enabled")), "pct": _int(g.get("pct"), 1, 28, 18), "gstin": gstin, "name": _s(g.get("name"), 100)}
+    # bump offer: one extra product or course ticked at checkout
+    b = d.get("bump") or {}
+    out["bump"] = {"enabled": bool(b.get("enabled")), "kind": "product" if b.get("kind") == "product" else "course",
+                   "id": _s(b.get("id"), 20), "price": _int(b.get("price"), 0, 500000, 0), "title": _s(b.get("title"), 100), "desc": _s(b.get("desc"), 300)}
+    if out["bump"]["enabled"]:
+        target = bump_target({**out, "id": cid})
+        if not target:
+            raise CourseError("Bump offer: pick one of your other courses or a file / locked-content product.")
+        if out["bump"]["price"] < 1:
+            raise CourseError("Bump offer: enter its price (₹1 or more).")
+        out["bump"]["title"] = out["bump"]["title"] or target["title"]
+    # automatic emails to students, N days after they enroll
+    emails = []
+    for x in (d.get("emails") or [])[:12]:
+        if isinstance(x, dict) and _s(x.get("subject"), 120) and _s(x.get("body"), 5000):
+            emails.append({"id": _id(x.get("id"), 8), "days": _int(x.get("days"), 1, 365, 1), "subject": _s(x.get("subject"), 120),
+                           "body": _s(x.get("body"), 5000), "unfinished": bool(x.get("unfinished"))})
+    out["emails"] = emails
+    store.redis("SADD" if emails else "SREM", "s:courseseq", cid)
+    # Google Analytics
+    ga = str(d.get("ga", "")).strip().upper()
+    if ga and not re.fullmatch(r"G-[A-Z0-9]{4,14}", ga):
+        raise CourseError("Google Analytics: paste the Measurement ID, like G-AB12CD34EF.")
+    out["ga"] = ga
+    # community for students
+    cm = d.get("community") or {}
+    out["community"] = {"enabled": bool(cm.get("enabled")), "kind": cm.get("kind") if cm.get("kind") in COMMUNITY else "whatsapp",
+                        "link": _https(cm.get("link")), "note": _s(cm.get("note"), 300)}
+    if out["community"]["enabled"] and not out["community"]["link"]:
+        raise CourseError("Community: paste the invite link (https://…).")
     # page URL
     slug = slugify(d.get("slug")) or c.get("slug") or c["id"]
     if slug != c.get("slug"):
@@ -276,29 +329,57 @@ def embed(url):
     return ""
 
 
-def apply_coupon(c, code, amount):
+def apply_coupon(c, code, amount, usd=False):
     code = re.sub(r"[^A-Z0-9]", "", str(code or "").upper())
     if not code:
         return amount, None
     cp = next((x for x in c.get("coupons") or [] if x["code"] == code and x.get("on", True)), None)
     if not cp or (cp.get("max") and cp.get("used", 0) >= cp["max"]):
         raise CourseError("That coupon isn't valid.")
-    off = round(amount * cp["value"] / 100) if cp["kind"] == "pct" else cp["value"]
+    # flat coupons are in rupees; for a dollar price they take off the same value in dollars
+    off = round(amount * cp["value"] / 100) if cp["kind"] == "pct" else (round(cp["value"] / fx()) if usd else cp["value"])
     return max(0, amount - off), cp["code"]
 
 
-def quote(c, amount=None, coupon=""):
-    """What a buyer pays: fixed (discounted) price, or their own amount (≥ minimum) for 'customer decides'."""
-    if c.get("price_mode") == "pwyw":
-        pay = _int(amount, 0, 500000, -1)
-        if pay < (c.get("min_price") or 0):
+def intl_price(c):
+    it = c.get("intl") or {}
+    return (it.get("usd_sale") or it.get("usd") or 0) if it.get("enabled") and c.get("price_mode") != "pwyw" else 0
+
+
+def quote(c, amount=None, coupon="", currency="INR", bump=False):
+    """What a buyer pays, in whole rupees (or dollars): {currency, base, course, coupon, gst, bump, total}.
+    base: fixed (discounted) price or their own amount (≥ minimum) for 'customer decides'; course: after the coupon;
+    gst: added on top for Indian buyers when switched on; bump: the ticked bump offer (rupee orders)."""
+    usd = currency == "USD" and intl_price(c) > 0
+    if usd:
+        base = intl_price(c)
+    elif c.get("price_mode") == "pwyw":
+        base = _int(amount, 0, 500000, -1)
+        if base < (c.get("min_price") or 0):
             raise CourseError(f"Enter an amount of at least ₹{c.get('min_price') or 0}.")
     else:
-        pay = price_now(c)
-    pay, used = apply_coupon(c, coupon, pay)
-    if 0 < pay < 10:
-        pay = 10
-    return pay, used
+        base = price_now(c)
+    course, used = apply_coupon(c, coupon, base, usd)
+    if not usd and 0 < course < 10:
+        course = 10
+    g = c.get("gst") or {}
+    gst = round(course * g.get("pct", 18) / 100) if g.get("enabled") and not usd else 0
+    b = c.get("bump") or {}
+    extra = b.get("price", 0) if bump and b.get("enabled") and not usd and bump_target(c) else 0
+    return {"currency": "USD" if usd else "INR", "base": base, "course": course, "coupon": used, "gst": gst, "bump": extra,
+            "total": course + gst + extra}
+
+
+def bump_target(c):
+    """The bump offer's course or product ({kind, id, title}) if it still exists and can be sold, else None."""
+    b = c.get("bump") or {}
+    if not b.get("id"):
+        return None
+    if b.get("kind") == "product":
+        p = shop.get(c["acc"], b["id"])
+        return {"kind": "product", "id": p["id"], "title": p["title"]} if p and p.get("type", "file") in ("file", "locked") and p.get("enabled", True) else None
+    o = get(b["id"])
+    return {"kind": "course", "id": o["id"], "title": o["title"]} if o and o["acc"] == c["acc"] and o["id"] != c["id"] and not o.get("deleted") else None
 
 
 # ---------- buying and enrolling ----------
@@ -316,27 +397,33 @@ def order(acc, c, buyer):
     phone = re.sub(r"\D", "", str(buyer.get("phone", "")))[-10:]
     if c.get("ask_phone") and len(phone) != 10:
         raise CourseError("Enter a 10-digit mobile number.")
-    pay, coupon = quote(c, buyer.get("amount"), buyer.get("coupon"))
-    if pay == 0:
+    q = quote(c, buyer.get("amount"), buyer.get("coupon"), buyer.get("currency") or "INR", bool(buyer.get("bump")))
+    usd = q["currency"] == "USD"
+    if q["total"] == 0:
         rec = {"id": "free_" + secrets.token_hex(6), "acc": acc["id"], "course": c["id"], "title": c["title"], "price": 0,
-               "email": email, "name": name, "phone": phone, "coupon": coupon, "type": "course", "status": "paid", "paid_at": int(time.time())}
+               "email": email, "name": name, "phone": phone, "coupon": q["coupon"], "type": "course", "status": "paid", "paid_at": int(time.time())}
         e = enroll(rec)
         return {"free": True, "link": magic_link(email, c["id"]), "enrolled": bool(e)}
     import users
     owner = users.owner_of(acc)
     if not shop.ready() or not owner or not shop.can_sell(owner):
         raise CourseError("Payments for this course aren't switched on yet. Please try again later.")
-    s = shop.split(acc, pay)
-    o = shop._rzp("POST", "/v1/orders", {
-        "amount": pay * 100, "currency": "INR", "receipt": "rc_" + secrets.token_hex(6),
-        "notes": {"kind": "course", "account": acc["id"], "course": c["id"]},
-        "transfers": [{"account": shop.payout(owner)["account_id"], "amount": int(round(s["creator"] * 100)), "currency": "INR",
-                       "notes": {"course": c["title"][:60], "buyer": email[:60]}, "linked_account_notes": ["course"], "on_hold": 0}]})
-    rec = {"id": o["id"], "acc": acc["id"], "course": c["id"], "product": c["id"], "title": c["title"], "price": pay,
-           "creator_gets": s["creator"], "fee": s["fee"], "email": email, "name": name, "phone": phone, "coupon": coupon,
-           "type": "course", "status": "created", "created": int(time.time())}
+    inr = round(q["total"] * fx()) if usd else q["total"]  # what the sale is worth in rupees
+    s = shop.split(acc, inr)
+    body = {"amount": q["total"] * 100, "currency": q["currency"], "receipt": "rc_" + secrets.token_hex(6),
+            "notes": {"kind": "course", "account": acc["id"], "course": c["id"]}}
+    if not usd:  # Route transfers are in rupees: dollar payments are transferred once captured (shop.transfer_payment)
+        body["transfers"] = [{"account": shop.payout(owner)["account_id"], "amount": int(round(s["creator"] * 100)), "currency": "INR",
+                              "notes": {"course": c["title"][:60], "buyer": email[:60]}, "linked_account_notes": ["course"], "on_hold": 0}]
+    o = shop._rzp("POST", "/v1/orders", body)
+    rec = {"id": o["id"], "acc": acc["id"], "course": c["id"], "product": c["id"], "title": c["title"], "price": inr,
+           "creator_gets": s["creator"], "fee": s["fee"], "email": email, "name": name, "phone": phone, "coupon": q["coupon"],
+           "type": "course", "status": "created", "created": int(time.time()), "currency": q["currency"], "amount_minor": q["total"] * 100,
+           "quote": q, "course_price": round((q["course"] + q["gst"]) * fx()) if usd else q["course"] + q["gst"]}
+    if q["bump"]:
+        rec["bump"] = {**bump_target(c), "price": q["bump"]}
     store.set_json(f"s:shoporder:{o['id']}", rec)
-    return {"key": shop._env("RAZORPAY_KEY_ID"), "order_id": o["id"], "amount": pay * 100, "currency": "INR",
+    return {"key": shop._env("RAZORPAY_KEY_ID"), "order_id": o["id"], "amount": q["total"] * 100, "currency": q["currency"],
             "name": c["title"], "email": email, "phone": phone}
 
 
@@ -359,11 +446,12 @@ def enroll(o):
         for cp in c.get("coupons") or []:
             if cp["code"] == o["coupon"]:
                 cp["used"] = cp.get("used", 0) + 1
-    c["sales"], c["revenue"] = int(c.get("sales") or 0) + 1, int(c.get("revenue") or 0) + int(o.get("price") or 0)
+    paid = int(o.get("course_price", o.get("price")) or 0)
+    c["sales"], c["revenue"] = int(c.get("sales") or 0) + 1, int(c.get("revenue") or 0) + paid
     store.set_json(f"s:course:{c['id']}", c)
     store.count(c["acc"], "sales")
-    store.count(c["acc"], "revenue", int(o.get("price") or 0))
-    store.log_activity(c["acc"], "", "", c["title"], "sale", "ok", f"₹{o.get('price', 0)} · course · {o.get('name') or o['email']}")
+    store.count(c["acc"], "revenue", paid)
+    store.log_activity(c["acc"], "", "", c["title"], "sale", "ok", f"₹{paid} · course · {o.get('name') or o['email']}")
     send_welcome(c, o)
     return e
 
@@ -495,13 +583,83 @@ def views(c):
 
 # ---------- emails ----------
 
+COMMUNITY_NAMES = {"whatsapp": "WhatsApp group", "telegram": "Telegram group", "discord": "Discord server", "other": "community"}
+
+
+def money(amount, currency="INR"):
+    return f"${amount:,}" if currency == "USD" else f"₹{amount:,}"
+
+
+def receipt_html(c, o):
+    """The payment lines for the welcome email: course, GST (with the creator's GSTIN), bump offer, total."""
+    q = o.get("quote")
+    if not q or not q.get("total"):
+        return ""
+    cur, g = q.get("currency", "INR"), c.get("gst") or {}
+    rows = [(c["title"], money(q["course"], cur))]
+    if q.get("gst"):
+        rows.append((f"GST {g.get('pct', 18)}%", money(q["gst"], cur)))
+    if q.get("bump") and o.get("bump"):
+        rows.append((o["bump"]["title"], money(q["bump"], cur)))
+    rows.append(("<b>Total paid</b>", f"<b>{money(q['total'], cur)}</b>"))
+    cells = "".join(f"<tr><td style=\"padding:4px 0\">{a if a.startswith('<b>') else shop._esc(a)}</td><td style=\"padding:4px 0;text-align:right\">{b}</td></tr>"
+                    for a, b in rows)
+    seller = (f"<br>Sold by {shop._esc(g.get('name') or '')} · GSTIN {g['gstin']}" if g.get("gstin") else "")
+    return (f"<table style=\"width:100%;border-collapse:collapse;font-size:14px;border-top:1px solid #DCDBD3;margin-top:14px\">{cells}</table>"
+            f"<p style=\"color:#5E6068;font-size:12px\">Order {shop._esc(o['id'])}{seller}</p>")
+
+
 def send_welcome(c, o):
     acc = store.load_account(c["acc"]) or {}
     by = f"@{acc.get('username')}" if acc.get("username") else "your creator"
     link = magic_link(o["email"], c["id"])
+    cm = c.get("community") or {}
+    community = (f"<p>👥 Join the course {COMMUNITY_NAMES.get(cm.get('kind'), 'community')}: "
+                 f"<a href=\"{shop._esc(cm['link'])}\">{shop._esc(cm['link'])}</a></p>" if cm.get("enabled") and cm.get("link") else "")
     html = (f"<h2 style=\"margin:0 0 8px\">Welcome to {shop._esc(c['title'])} 🎉</h2>"
             f"<p>Hi {shop._esc(o.get('name') or '')}, you're enrolled in <b>{shop._esc(c['title'])}</b> by {by}.</p>"
-            + shop._button(link, "Start learning") +
+            + shop._button(link, "Start learning") + community +
             f"<p style=\"color:#5E6068;font-size:13px\">This button signs you in (it works for 14 days). Later, sign in at "
-            f"{shop._site()}/learn with this email.{' Paid ₹' + format(o['price'], ',') + ' · order ' + o['id'] + '.' if o.get('price') else ''}</p>")
+            f"{shop._site()}/learn with this email.</p>" + receipt_html(c, o))
     shop._mail(o["email"], f"You're in: {c['title']}", html)
+
+
+# ---------- automatic emails (sent by the daily cron) ----------
+
+def _fill(text, e, c):
+    return (text.replace("{name}", (e.get("name") or "there").split(" ")[0]).replace("{course}", c["title"]))
+
+
+def send_sequences(now=None, limit=300):
+    """Sends each course's automatic emails that are due: email N goes `days` after the student enrolled.
+    Only within 3 days of its due date (so adding an email later doesn't mail every old student), once per student."""
+    now, sent = now or time.time(), 0
+    for cid in store.redis("SMEMBERS", "s:courseseq") or []:
+        c = get(cid)
+        if not c or c.get("deleted") or not c.get("emails"):
+            store.redis("SREM", "s:courseseq", cid)
+            continue
+        acc = store.load_account(c["acc"]) or {}
+        by = f"@{acc['username']}" if acc.get("username") else ""
+        for email in store.redis("SMEMBERS", f"s:enrs:{cid}") or []:
+            e = store.get_json(f"s:enr:{cid}:{email}")
+            if not e or (e.get("until") and e["until"] < now):
+                continue
+            done = e.setdefault("sent", [])
+            changed = False
+            for m in c["emails"]:
+                due = e.get("at", 0) + m["days"] * 86400
+                if m["id"] in done or not due <= now < due + 3 * 86400 or (m.get("unfinished") and percent(c, e) >= 100):
+                    continue
+                if sent >= limit:
+                    return sent
+                body = "".join(f"<p>{shop._esc(_fill(p, e, c))}</p>".replace("\n", "<br>") for p in m["body"].split("\n\n") if p.strip())
+                html = body + shop._button(magic_link(email, cid), "Open the course") + (
+                    f"<p style=\"color:#5E6068;font-size:12px\">You're getting this because you enrolled in {shop._esc(c['title'])}{' by ' + by if by else ''}.</p>")
+                if shop._mail(email, _fill(m["subject"], e, c), html):
+                    sent += 1
+                done.append(m["id"])
+                changed = True
+            if changed:
+                store.set_json(f"s:enr:{cid}:{email}", e)
+    return sent

@@ -43,7 +43,8 @@
   .locked { padding:13px 18px; border-top:1px solid var(--hair); font-weight:700; color:var(--mute); font-size:14px; }
   .cert { display:flex; gap:16px; align-items:center; padding:18px; background:var(--volt); color:#111318; border-color:#111318; box-shadow:5px 5px 0 #111318; }
   .cert .btn { margin-left:auto; }
-  @media (max-width:700px) { .hero { grid-template-columns:1fr; } .cert { flex-wrap:wrap; } .cert .btn { margin-left:0; } }
+  .comm { display:flex; gap:16px; align-items:center; padding:16px 18px; } .comm .btn { margin-left:auto; white-space:nowrap; }
+  @media (max-width:700px) { .hero { grid-template-columns:1fr; } .cert, .comm { flex-wrap:wrap; } .cert .btn, .comm .btn { margin-left:0; } }
 </style>
 </head>
 <body class="{{ 'dark' if c.theme == 'dark' }}">
@@ -67,6 +68,13 @@
   {% if cert %}<section class="box cert"><div style="font-size:40px" aria-hidden="true">🏅</div><div><b style="font-size:18px">You finished the course!</b>
     <div style="font-weight:600">Your certificate is ready to download and share.</div></div><a class="btn" href="/cert/{{ cert.id }}">View certificate</a></section>
   {% elif c.cert and c.cert.enabled %}<p class="muted" style="margin:-6px 0 0; font-weight:700; font-size:14px">🏅 Finish every lesson to get your certificate.</p>{% endif %}
+
+  {% if c.community and c.community.enabled and c.community.link %}
+  <section class="box comm"><div style="font-size:34px" aria-hidden="true">{{ {"whatsapp": "💬", "telegram": "✈️", "discord": "🎮"}.get(c.community.kind, "👥") }}</div>
+    <div><b style="font-size:17px">Join the {{ {"whatsapp": "WhatsApp group", "telegram": "Telegram group", "discord": "Discord server"}.get(c.community.kind, "community") }}</b>
+      <div class="muted" style="font-weight:600; font-size:14px">{{ c.community.note or "Ask doubts, share wins and meet other students." }}</div></div>
+    <a class="btn sm" href="{{ c.community.link }}" target="_blank" rel="noopener">Join →</a></section>
+  {% endif %}
 
   {% if sessions %}
   <section><h2 class="t" style="margin-bottom:12px">🔴 {{ c.live.title or "Live classes" }}</h2>
