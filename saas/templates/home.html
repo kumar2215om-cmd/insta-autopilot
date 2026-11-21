@@ -34,9 +34,50 @@
   .link-box { display:flex; gap:8px; }
   .link-box input { flex:1; min-width:0; }
   @media (max-width: 960px) { .cols { grid-template-columns:minmax(0, 1fr); } }
+  .ask { display:grid; gap:12px; }
+  .askbox { display:flex; gap:8px; align-items:flex-end; border:1.5px solid #2E3BFF; border-radius:16px; padding:8px 8px 8px 14px; background:var(--card); box-shadow:0 0 0 4px rgba(46,59,255,.08); }
+  .askbox textarea { flex:1; border:0; outline:none; resize:none; font:500 15px var(--text); background:transparent; padding:6px 0; min-height:24px; max-height:160px; box-shadow:none; }
+  .askbox button { flex:none; width:38px; height:38px; border-radius:12px; border:0; background:#2E3BFF; color:#fff; font-size:18px; cursor:pointer; }
+  .askbox button:disabled { opacity:.5; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip2 { border:1px solid var(--line); background:var(--card); border-radius:999px; padding:7px 12px; font:600 13px var(--text); color:var(--ink); cursor:pointer; text-decoration:none; }
+  .chip2:hover { border-color:#2E3BFF; }
+  .chip2.bad { background:#FDECEC; border-color:#F5B5B7; color:#B4232A; } .chip2.warn { background:#FFF4DC; border-color:#F2D48C; color:#7A4B00; } .chip2.ok { background:#E5F6EC; border-color:#A9DFBF; color:#16794A; }
+  .chat { display:grid; gap:10px; max-height:460px; overflow-y:auto; padding:4px 2px; }
+  .chat[hidden] { display:none; }
+  .msg2 { max-width:88%; padding:10px 13px; border-radius:14px; font-size:14.5px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .msg2.you { justify-self:end; background:#111318; color:#fff; border-bottom-right-radius:4px; }
+  .msg2.ai { justify-self:start; background:#F3F2EC; border-bottom-left-radius:4px; }
+  .msg2.action { justify-self:start; background:#E5F6EC; color:#16794A; font-weight:700; font-size:13px; }
+  .msg2.action.declined { background:#ECEBE4; color:#5E6068; } .msg2.action.error { background:#FDECEC; color:#B4232A; }
+  .approve { justify-self:start; max-width:92%; border:1.5px solid #2E3BFF; border-radius:14px; padding:12px; display:grid; gap:8px; background:#F5F6FF; }
+  .approve pre { margin:0; font:500 12px var(--mono); white-space:pre-wrap; max-height:180px; overflow:auto; background:#fff; border-radius:8px; padding:8px; }
+  .typing { justify-self:start; color:var(--mute); font-size:13px; }
+  .today { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
+  .today .t { border:1px solid var(--line2); border-radius:14px; padding:12px 14px; }
+  .today .k { font:700 11px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
+  .today .n { font:800 26px var(--display); letter-spacing:-.02em; margin-top:2px; }
+  .today .d { font-size:12px; color:var(--mute); }
+  @media (max-width: 760px) { .today { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 </style>
 {% endblock %}
 {% block content %}
+<section class="card ask" id="ask">
+  <div class="row"><h2 style="margin-right:auto">✨ What should we work on?</h2><span class="muted small" id="askLeft"></span>
+    <button class="btn ghost sm" type="button" id="askNew" hidden>New chat</button></div>
+  <div class="chips" id="alerts"></div>
+  <div class="chat" id="chat" hidden aria-live="polite"></div>
+  <form class="askbox" id="askForm"><textarea id="askText" rows="1" placeholder="Ask anything, or tell me what to set up…" aria-label="Ask the AI assistant"></textarea>
+    <button type="submit" id="askGo" aria-label="Send">↑</button></form>
+  <div class="chips" id="sugg">
+    <button class="chip2" type="button" data-q="How did my Auto-DMs do this week?">✦ How did my Auto-DMs do this week?</button>
+    <button class="chip2" type="button" data-q="Which reel got me the most followers, and why?">✦ Best reel for followers</button>
+    <button class="chip2" type="button" data-q="Any brand deals or hot leads in my DMs?">✦ Any brand deals?</button>
+    <button class="chip2" type="button" data-q="Draft my content plan for next week.">✦ Plan my next week</button>
+  </div>
+  <p class="muted small" style="margin:0">The AI can make mistakes. Nothing is changed, sent or published until you tap Approve.</p>
+  <div class="today" id="today"></div>
+</section>
 <section class="card" id="onb" hidden>
   <div class="row"><h2 style="margin-right:auto">Get set up</h2><span class="badge accent" id="onbCount"></span>
     <button class="btn ghost sm" type="button" id="onbHide">Hide</button></div>
@@ -191,6 +232,46 @@ document.addEventListener("click", async (e) => {
 $("copyUrl")?.addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("pageUrl").value); toast("Link copied"); } catch (e) { $("pageUrl").select(); }
 });
+// ---------- AI assistant, alerts, today so far ----------
+const vs = (n, y) => n === y ? `same as yesterday` : `vs ${fmt(y)} same time yesterday`;
+async function loadHome() {
+  const h = await api("/api/home");
+  $("alerts").innerHTML = h.alerts.map(a => `<a class="chip2 ${esc(a.tone)}" href="${esc(a.href)}">● ${esc(a.text)}</a>`).join("");
+  const t = h.today;
+  $("today").innerHTML = [["Orders today", fmt(t.orders), vs(t.orders, t.orders_y)], ["Earned today", "₹" + t.revenue.toLocaleString("en-IN"), "Store + Courses"],
+    ["New leads", fmt(t.leads), vs(t.leads, t.leads_y)], ["Auto-DMs today", fmt(t.dms), `vs ${fmt(t.dms_y)} yesterday`]]
+    .map(([k, n, d]) => `<div class="t"><div class="k">${k}</div><div class="n">${n}</div><div class="d">${esc(d)}</div></div>`).join("");
+  if (!h.ai) { $("askForm").hidden = true; $("sugg").hidden = true; $("askLeft").textContent = "AI not set up on the server"; }
+}
+function drawChat(c) {
+  const box = $("chat");
+  box.hidden = !c.shown.length && !c.pending; $("askNew").hidden = box.hidden; $("sugg").hidden = !box.hidden;
+  $("askLeft").textContent = `${c.left} AI message${c.left === 1 ? "" : "s"} left today`;
+  box.innerHTML = c.shown.map(m => m.role === "action"
+      ? `<div class="msg2 action ${esc(m.status)}">${m.status === "done" ? "✓ Done" : m.status === "declined" ? "✕ Skipped" : "⚠ Failed"}: ${esc(m.text)}${m.detail ? " · " + esc(m.detail) : ""}</div>`
+      : `<div class="msg2 ${m.role === "you" ? "you" : "ai"}">${esc(m.text)}</div>`).join("")
+    + (c.pending ? `<div class="approve"><b>${c.pending.destructive ? "⚠️ " : ""}Approve: ${esc(c.pending.title)}?</b>
+        <pre>${esc(Object.entries(c.pending.args || {}).map(([k, v]) => `${k.replace(/_/g, " ")}: ${typeof v === "string" ? v : JSON.stringify(v)}`).join("\n"))}</pre>
+        <div class="row" style="gap:8px"><button class="btn sm" type="button" data-decide="1">Approve</button><button class="btn ghost sm" type="button" data-decide="0">No, skip</button></div></div>` : "");
+  box.scrollTop = box.scrollHeight;
+}
+async function send(body, path) {
+  $("askGo").disabled = true; $("chat").hidden = false; $("sugg").hidden = true;
+  $("chat").insertAdjacentHTML("beforeend", (body.text ? `<div class="msg2 you">${esc(body.text)}</div>` : "") + `<div class="typing">Thinking…</div>`);
+  $("chat").scrollTop = $("chat").scrollHeight;
+  try { drawChat(await api(path || "/api/assistant", {method: "POST", body: JSON.stringify(body)})); loadHome(); }
+  catch (err) { toast(err.message); drawChat(await api("/api/assistant")); }
+  $("askGo").disabled = false;
+}
+$("askForm").addEventListener("submit", (e) => { e.preventDefault(); const t = $("askText").value.trim(); if (!t) return; $("askText").value = ""; $("askText").style.height = ""; send({text: t}); });
+$("askText").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("askForm").requestSubmit(); } });
+$("askText").addEventListener("input", () => { const t = $("askText"); t.style.height = "auto"; t.style.height = Math.min(160, t.scrollHeight) + "px"; });
+document.addEventListener("click", async (e) => {
+  const q = e.target.closest("[data-q]"); if (q) { send({text: q.dataset.q}); return; }
+  const d = e.target.closest("[data-decide]"); if (d) { send({approve: d.dataset.decide === "1"}, "/api/assistant/decide"); return; }
+  if (e.target.closest("#askNew")) drawChat(await api("/api/assistant/reset", {method: "POST", body: "{}"}));
+});
+{% if not acc.demo %}loadHome().catch(() => {}); api("/api/assistant").then(drawChat).catch(() => {});{% else %}$("ask").hidden = true;{% endif %}
 loadTiles(); loadAutos(); loadBest(); loadFeed(); loadWeek(); loadOnboarding();
 setInterval(() => { if (!document.hidden) { loadFeed(); loadTiles(); } }, 15000);
 </script>

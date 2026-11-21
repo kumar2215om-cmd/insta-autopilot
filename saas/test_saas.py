@@ -165,6 +165,10 @@ class SaasTest(unittest.TestCase):
         for p in patches:
             p.start()
             self.addCleanup(p.stop)
+        # webhooks run in a thread locally; in tests (as on Vercel) they finish before the response, so checks don't race
+        p = mock.patch.object(saas, "run_task", lambda fn, *args: fn(*args))
+        p.start()
+        self.addCleanup(p.stop)
         self.c = saas.app.test_client()
         self.codes = {}
         p = mock.patch.object(users, "deliver", lambda email, code: self.codes.__setitem__(email, code))
@@ -2654,6 +2658,79 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(store.get_json(f"s:shoporder:{o['order_id']}")["payout_status"], "completed")
         self.assertIn("Payments", self.c.get("/app/payments").get_data(as_text=True))
         self.assertIn("Abandoned carts", self.c.get("/app/leads").get_data(as_text=True))
+
+    def test_batch_c_agents_assistant_home(self):
+        import agents
+        import assistant
+        self.login()
+
+        def block(**kw):
+            b = mock.Mock(**{k: v for k, v in kw.items() if k != "name"})
+            if "name" in kw:
+                b.name = kw["name"]
+            return b
+
+        class Seq:
+            """Fake Claude: returns queued responses (text JSON for agents, tool calls for the assistant)."""
+            def __init__(self):
+                self.queue, self.requests = [], []
+                self.messages, self.beta = self, self
+
+            def create(self, **kw):
+                self.requests.append(kw)
+                item = self.queue.pop(0)
+                if isinstance(item, dict):
+                    return mock.Mock(stop_reason="end_turn", content=[block(type="text", text=json.dumps(item))])
+                return mock.Mock(stop_reason="tool_use" if any(getattr(b, "type", "") == "tool_use" for b in item) else "end_turn", content=item)
+        fake = Seq()
+        self.enterContext(mock.patch.object(ai_agent, "client", lambda: fake))
+        # agents run on DMs even with the AI DM agent off
+        self.assertEqual(self.c.put("/api/agents", json={"lead": {"enabled": True, "hot": "asks price"},
+                                                          "brand": {"enabled": True, "min_budget": 5000, "auto_ask": True}}).status_code, 200)
+        fake.queue += [{"is_brand_offer": True, "brand": "Boat", "offer": "2 reels for earbuds", "budget": "", "deliverables": "2 reels",
+                        "timeline": "Dec", "fit": "good", "why": "Tech audience", "missing": ["budget"]},
+                       {"temperature": "warm", "interest": "collab", "reason": "brand", "name": "Riya", "next_step": "Check rates"}]
+        self.hook(dm("Hi, we are Boat and want a paid collab with you"))
+        reqs = self.c.get("/api/agents").get_json()
+        self.assertEqual((reqs["brands"][0]["brand"], reqs["brands"][0]["fit"], reqs["brands"][0]["asked"]), ("Boat", "good", True))
+        self.assertIn("budget", self.ig.messages()[-1]["message"]["text"])  # the automatic ask
+        self.assertEqual(reqs["leads"][0]["temperature"], "warm")
+        self.assertEqual(ai_agent.get_thread("1789", "88")["status"], "you")  # the AI DM agent stays out
+        self.assertEqual(self.c.put("/api/agents/brands/88", json={"status": "interested"}).get_json()["request"]["status"], "interested")
+        # a normal DM without brand words: only the lead qualifier (at most every 10 minutes per chat)
+        n = len(fake.requests)
+        self.hook(dm("price kya hai?"))
+        self.assertEqual(len(fake.requests), n)
+        # home: alerts and today
+        h = self.c.get("/api/home").get_json()
+        self.assertIn("today", h)
+        self.assertTrue(isinstance(h["alerts"], list))
+        # assistant: looks things up on its own, asks before changing anything
+        self.put_rule("555")
+        fake.queue += [[block(type="tool_use", id="t1", name="list_automations", input={})],
+                       [block(type="text", text="You have 1 automation. Pausing it:"), block(type="tool_use", id="t2", name="set_automation_enabled",
+                                                                                              input={"automation_id": "555", "enabled": False})]]
+        r = self.c.post("/api/assistant", json={"text": "pause my reel automation"}).get_json()
+        self.assertEqual(r["pending"]["name"], "set_automation_enabled")
+        self.assertTrue(store.load_rules("1789")["reels"]["555"].get("enabled", True))  # not yet
+        sent = fake.requests[-1]["messages"]
+        self.assertTrue(any(isinstance(m["content"], list) and m["content"][0].get("type") == "tool_result" for m in sent))  # the lookup ran
+        fake.queue += [[block(type="text", text="Done, it's paused.")]]
+        r = self.c.post("/api/assistant/decide", json={"approve": True}).get_json()
+        self.assertIsNone(r["pending"])
+        self.assertFalse(store.load_rules("1789")["reels"]["555"]["enabled"])
+        self.assertEqual([m["role"] for m in r["shown"]], ["you", "ai", "action", "ai"])
+        # declining by writing something new
+        fake.queue += [[block(type="tool_use", id="t3", name="delete_automation", input={"automation_id": "555"})], [block(type="text", text="OK")]]
+        self.assertTrue(self.c.post("/api/assistant", json={"text": "delete it"}).get_json()["pending"]["destructive"])
+        self.c.post("/api/assistant", json={"text": "actually no"})
+        self.assertIn("555", store.load_rules("1789")["reels"])
+        # daily limit
+        store.redis("SET", f"s:asstuse:1789:{assistant._day()}", 999)
+        self.assertIn("today", self.c.post("/api/assistant", json={"text": "hi"}).get_json()["error"])
+        self.assertEqual(self.c.post("/api/assistant/reset", json={}).get_json()["shown"], [])
+        self.assertIn("Lead Qualifier", self.c.get("/app/agents").get_data(as_text=True))
+        self.assertIn("What should we work on", self.c.get("/app").get_data(as_text=True))
 
 
 

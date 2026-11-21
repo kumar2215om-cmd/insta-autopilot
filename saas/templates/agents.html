@@ -1,0 +1,133 @@
+{% extends "_base.html" %}
+{% block title %}AI agents{% endblock %}
+{% block heading %}AI agents{% endblock %}
+{% block head %}
+<style>
+  .ag { display:grid; gap:14px; }
+  .ag .hd { display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; }
+  .ag .ic { width:46px; height:46px; border-radius:14px; display:grid; place-items:center; font-size:24px; flex:none; background:var(--accent-soft); }
+  .ag .tt { flex:1; min-width:220px; } .ag .tt b { font-size:17px; } .ag .tt p { margin:4px 0 0; color:var(--mute); font-size:14px; }
+  .ag .acts { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .meter { display:flex; gap:10px; align-items:center; font-size:13px; color:var(--mute); }
+  .meter .bar { width:160px; margin:0; }
+  .prefs { display:grid; gap:10px; padding:14px; border:1px dashed var(--line); border-radius:14px; }
+  .prefs[hidden] { display:none; }
+  .prefs label.f { font-weight:700; font-size:13px; display:block; margin-bottom:4px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tabs3 { display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs3 button { border:1.5px solid #CFCEC6; background:var(--card); border-radius:999px; padding:6px 13px; font:700 13px var(--text); cursor:pointer; color:var(--ink); }
+  .tabs3 button[aria-pressed="true"] { background:#111318; color:#fff; border-color:#111318; }
+  .item { border-top:1px solid var(--line2); padding:12px 0; display:grid; gap:6px; }
+  .item:first-child { border-top:0; }
+  .item .top2 { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .temp { font:800 11px var(--mono); text-transform:uppercase; padding:3px 9px; border-radius:99px; }
+  .temp.hot { background:#FFE3DA; color:#C2410C; } .temp.warm { background:#FFF4DC; color:#7A4B00; } .temp.cold { background:#E6F0FF; color:#1D4ED8; }
+  .fit { font:800 11px var(--mono); text-transform:uppercase; padding:3px 9px; border-radius:99px; }
+  .fit.good { background:#E5F6EC; color:#16794A; } .fit.maybe { background:#FFF4DC; color:#7A4B00; } .fit.poor { background:#FDECEC; color:#B4232A; }
+  .kv2 { display:flex; gap:6px 16px; flex-wrap:wrap; font-size:13.5px; } .kv2 span b { color:var(--mute); font-weight:600; }
+  .link2 { font-size:13px; }
+  @media (max-width:700px) { .row2 { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+{% block content %}
+<p class="muted" style="margin:0">AI agents that work your DMs for you, by your rules. They read new DMs that aren't keyword triggers.</p>
+<div class="banner info" id="noai" hidden>AI isn't set up on the server yet (ANTHROPIC_API_KEY), so agents can't run.</div>
+
+<section class="card ag" id="leads">
+  <div class="hd"><span class="ic" aria-hidden="true">🎯</span>
+    <div class="tt"><b>Lead Qualifier</b> <span class="badge" id="leadOn">off</span><p>Reads people's DMs and sorts them into 🔥 hot, warm and cold leads, with what they want and what to do next. Hot leads ping your phone.</p></div>
+    <div class="acts"><button class="btn ghost sm" type="button" data-edit="lead">Settings</button><button class="btn sm" type="button" id="leadToggle">Turn on</button></div></div>
+  <div class="meter"><div class="bar"><i id="leadBar" style="width:0"></i></div><span id="leadUse"></span></div>
+  <div class="prefs" id="leadPrefs" hidden>
+    <div><label class="f" for="leadHot">What makes a hot lead for you? <span class="muted">(optional)</span></label>
+      <textarea id="leadHot" rows="2" placeholder="e.g. asks for the course price, wants 1:1 coaching, has a budget above ₹5,000"></textarea></div>
+    <div class="row" style="gap:8px"><button class="btn sm" type="button" data-save="lead">Save</button><button class="btn ghost sm" type="button" id="leadRun">Sort my recent chats now</button></div>
+  </div>
+  <div class="row" style="gap:8px"><div class="tabs3" id="tTabs"><button type="button" data-t="" aria-pressed="true">All</button><button type="button" data-t="hot" aria-pressed="false">🔥 Hot</button>
+    <button type="button" data-t="warm" aria-pressed="false">Warm</button><button type="button" data-t="cold" aria-pressed="false">Cold</button></div></div>
+  <div id="leadList"></div>
+</section>
+
+<section class="card ag" id="brands">
+  <div class="hd"><span class="ic" aria-hidden="true">🤝</span>
+    <div class="tt"><b>Brand Collab</b> <span class="badge" id="brandOn">off</span><p>Your receptionist for brand DMs. It spots collab and sponsorship offers, notes the brand, offer, budget and deliverables, and rates the fit, so you decide from one list.</p></div>
+    <div class="acts"><button class="btn ghost sm" type="button" data-edit="brand">Settings</button><button class="btn sm" type="button" id="brandToggle">Turn on</button></div></div>
+  <div class="meter"><div class="bar"><i id="brandBar" style="width:0"></i></div><span id="brandUse"></span></div>
+  <div class="prefs" id="brandPrefs" hidden>
+    <div class="row2"><div><label class="f" for="bMin">Your minimum budget (₹)</label><input id="bMin" type="number" min="0" step="500" placeholder="e.g. 5000"></div>
+      <div><label class="f" for="bNiche">Niches you like</label><input id="bNiche" type="text" placeholder="e.g. AI tools, tech, education"></div></div>
+    <div><label class="f" for="bAvoid">Brands or categories you avoid</label><input id="bAvoid" type="text" placeholder="e.g. betting, crypto, alcohol"></div>
+    <label class="small"><input type="checkbox" id="bAsk"> Ask brands for the missing details automatically (one DM per brand)</label>
+    <div><label class="f" for="bAskText">That message</label><textarea id="bAskText" rows="3"></textarea></div>
+    <div><button class="btn sm" type="button" data-save="brand">Save</button></div>
+  </div>
+  <div class="row" style="gap:8px"><div class="tabs3" id="bTabs"><button type="button" data-b="new" aria-pressed="true">New</button><button type="button" data-b="interested" aria-pressed="false">Interested</button>
+    <button type="button" data-b="declined" aria-pressed="false">Declined</button><button type="button" data-b="done" aria-pressed="false">Done</button></div></div>
+  <div id="brandList"></div>
+</section>
+
+<section class="card ag">
+  <div class="hd"><span class="ic" aria-hidden="true">💬</span><div class="tt"><b>AI DM agent</b> <span class="badge" id="aiOn">off</span><p>Answers fans in their own language from your FAQ and products, and hands tricky chats to you.</p></div>
+    <div class="acts"><a class="btn ghost sm" href="/app/inbox">Open AI Inbox</a></div></div>
+</section>
+<section class="card ag">
+  <div class="hd"><span class="ic" aria-hidden="true">🛡️</span><div class="tt"><b>Comment Moderator</b> <span class="badge" id="guardOn">off</span><p>Hides spam links and words you block on your posts and reels.</p></div>
+    <div class="acts"><a class="btn ghost sm" href="/app/settings">Set up in Settings</a></div></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let A = null, tf = "", bf = "new";
+const BS_LABEL = {interested: "👍 Interested", declined: "👎 Decline", done: "✓ Done", new: "↩ Back to new"};
+const day = (t) => new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short"});
+function badge(el, on) { el.className = "badge" + (on ? " on" : ""); el.textContent = on ? "on" : "off"; }
+function draw() {
+  const s = A.settings;
+  $("noai").hidden = A.ai;
+  badge($("leadOn"), s.lead.enabled); badge($("brandOn"), s.brand.enabled); badge($("aiOn"), A.ai_inbox); badge($("guardOn"), A.guard);
+  $("leadToggle").textContent = s.lead.enabled ? "Turn off" : "Turn on"; $("brandToggle").textContent = s.brand.enabled ? "Turn off" : "Turn on";
+  $("leadToggle").className = "btn sm" + (s.lead.enabled ? " ghost" : ""); $("brandToggle").className = "btn sm" + (s.brand.enabled ? " ghost" : "");
+  $("leadBar").style.width = Math.min(100, 100 * A.used.lead / A.limits.lead) + "%"; $("leadUse").textContent = `${A.used.lead} of ${A.limits.lead} chats sorted this month`;
+  $("brandBar").style.width = Math.min(100, 100 * A.used.brand / A.limits.brand) + "%"; $("brandUse").textContent = `${A.used.brand} of ${A.limits.brand} brand DMs read this month`;
+  $("leadHot").value = s.lead.hot; $("bMin").value = s.brand.min_budget || ""; $("bNiche").value = s.brand.niches; $("bAvoid").value = s.brand.avoid;
+  $("bAsk").checked = s.brand.auto_ask; $("bAskText").value = s.brand.ask_text;
+  document.querySelectorAll("[data-t]").forEach(b => { b.setAttribute("aria-pressed", b.dataset.t === tf);
+    const n = b.dataset.t ? A.leads.filter(x => x.temperature === b.dataset.t).length : A.leads.length; b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${n})`; });
+  const L = A.leads.filter(x => !tf || x.temperature === tf);
+  $("leadList").innerHTML = L.length ? L.map(x => `<div class="item"><div class="top2"><span class="temp ${esc(x.temperature)}">${esc(x.temperature)}</span>
+      <b>@${esc(x.username || "someone")}</b>${x.name ? `<span class="muted small">${esc(x.name)}</span>` : ""}<span class="muted small" style="margin-left:auto">${esc(day(x.last_at))}</span></div>
+      <div class="kv2"><span><b>Wants:</b> ${esc(x.interest || "–")}</span><span><b>Why:</b> ${esc(x.reason)}</span></div>
+      <div class="kv2"><span><b>Next:</b> ${esc(x.next_step)}</span><a class="link2" href="/app/inbox#${esc(x.chat_id)}">Open chat →</a></div></div>`).join("")
+    : `<div class="empty">${s.lead.enabled ? "No sorted leads yet. New DMs are sorted as they arrive, or tap Settings → Sort my recent chats now." : "Turn it on to sort your DM leads."}</div>`;
+  document.querySelectorAll("[data-b]").forEach(b => { b.setAttribute("aria-pressed", b.dataset.b === bf);
+    b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${A.brands.filter(x => x.status === b.dataset.b).length})`; });
+  const B = A.brands.filter(x => x.status === bf);
+  $("brandList").innerHTML = B.length ? B.map(x => `<div class="item"><div class="top2"><span class="fit ${esc(x.fit)}">${esc(x.fit)} fit</span><b>${esc(x.brand || "Unknown brand")}</b>
+      <span class="muted small">@${esc(x.username || "")}</span><span class="muted small" style="margin-left:auto">${esc(day(x.updated))}</span></div>
+      <div>${esc(x.offer)}</div>
+      <div class="kv2"><span><b>Budget:</b> ${esc(x.budget || "not said")}</span><span><b>Deliverables:</b> ${esc(x.deliverables || "not said")}</span><span><b>When:</b> ${esc(x.timeline || "not said")}</span></div>
+      <div class="kv2"><span><b>Fit:</b> ${esc(x.why)}</span>${x.missing && x.missing.length ? `<span><b>Missing:</b> ${esc(x.missing.join(", "))}${x.asked ? " (asked ✓)" : ""}</span>` : ""}</div>
+      <div class="row" style="gap:6px"><a class="btn ghost sm" href="/app/inbox#${esc(x.chat_id)}">Reply in inbox</a>
+        ${["interested", "declined", "done", "new"].filter(s2 => s2 !== x.status).map(s2 => `<button class="btn ghost sm" type="button" data-bs="${esc(x.chat_id)}" data-to="${s2}">${BS_LABEL[s2]}</button>`).join("")}</div></div>`).join("")
+    : `<div class="empty">${s.brand.enabled ? "No brand requests here yet." : "Turn it on to catch brand offers in your DMs."}</div>`;
+}
+async function load() { A = await api("/api/agents"); draw(); }
+function body() {
+  return {lead: {enabled: A.settings.lead.enabled, hot: $("leadHot").value},
+    brand: {enabled: A.settings.brand.enabled, min_budget: $("bMin").value, niches: $("bNiche").value, avoid: $("bAvoid").value, auto_ask: $("bAsk").checked, ask_text: $("bAskText").value}};
+}
+async function save(b, msg) { try { A = await api("/api/agents", {method: "PUT", body: JSON.stringify(b)}); draw(); toast(msg || "Saved ✓"); } catch (err) { toast(err.message); } }
+$("leadToggle").onclick = () => { const b = body(); b.lead.enabled = !A.settings.lead.enabled; save(b, b.lead.enabled ? "Lead Qualifier is on ✓" : "Lead Qualifier is off"); };
+$("brandToggle").onclick = () => { const b = body(); b.brand.enabled = !A.settings.brand.enabled; save(b, b.brand.enabled ? "Brand Collab is on ✓" : "Brand Collab is off"); };
+$("leadRun").onclick = async () => { $("leadRun").disabled = true; try { const r = await api("/api/agents/leads/run", {method: "POST", body: "{}"}); toast(`Sorted ${r.scored} chat${r.scored === 1 ? "" : "s"} ✓`); load(); } catch (err) { toast(err.message); } $("leadRun").disabled = false; };
+document.addEventListener("click", async (e) => {
+  const ed = e.target.closest("[data-edit]"); if (ed) { const p = $(ed.dataset.edit + "Prefs"); p.hidden = !p.hidden; return; }
+  const sv = e.target.closest("[data-save]"); if (sv) { save(body()); return; }
+  const t = e.target.closest("[data-t]"); if (t) { tf = t.dataset.t; draw(); return; }
+  const b = e.target.closest("[data-b]"); if (b) { bf = b.dataset.b; draw(); return; }
+  const bs = e.target.closest("[data-bs]");
+  if (bs) { try { await api(`/api/agents/brands/${encodeURIComponent(bs.dataset.bs)}`, {method: "PUT", body: JSON.stringify({status: bs.dataset.to})}); load(); } catch (err) { toast(err.message); } }
+});
+load().catch(err => toast(err.message)); loadBanners();
+</script>
+{% endblock %}

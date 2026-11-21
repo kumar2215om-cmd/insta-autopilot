@@ -63,7 +63,7 @@ const HELP = {all: "Everyone: Instagram contacts, link-page signups, buyers, stu
   customers: "Bought something or enrolled in a course.", instagram: "Commented, DMed or tapped a button on Instagram.",
   followers: "Followed you through a follow-to-unlock DM.", subscribers: "Gave an email or phone (DMs or link page) but haven't bought yet.",
   carts: "Started a checkout in the last 30 days but didn't pay. Send a reminder email or WhatsApp them: these are your warmest buyers."};
-let seg = "all", D = null, timer = null;
+let seg = ["all", "customers", "instagram", "followers", "subscribers", "carts"].includes(new URLSearchParams(location.search).get("segment")) ? new URLSearchParams(location.search).get("segment") : "all", D = null, timer = null;
 const day = (t) => t ? new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"}) : "";
 const ago = (t) => { const d = Math.round((Date.now() / 1000 - t) / 3600); return d < 1 ? "just now" : d < 24 ? `${d} h ago` : `${Math.round(d / 24)} d ago`; };
 const params = () => new URLSearchParams({segment: seg, q: $("q").value.trim(), sort: $("sort").value, item: $("item").value, min_spent: $("min").value || "", expiry: $("expiry").value});
