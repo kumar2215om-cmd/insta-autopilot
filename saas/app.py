@@ -3311,7 +3311,7 @@ def home_alerts(acc):
         out.append({"text": f"{review} assignment{'s' if review != 1 else ''} to review", "href": "/app/courses/assessments", "tone": "warn"})
     user = current_user()
     if user and shop.products(acc["id"]) and not shop.can_sell(user):
-        out.append({"text": "Add your bank account so your products can sell", "href": "/app/products", "tone": "bad"})
+        out.append({"text": "Add your bank account so your products can sell", "href": "/app/payments#bank", "tone": "bad"})
     return out
 
 

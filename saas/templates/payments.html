@@ -28,10 +28,45 @@
   .st.completed { background:#E5F6EC; color:#16794A; } .st.processing { background:#FFF1D6; color:#9A5B00; } .st.on_hold { background:#ECEBE4; } .st.failed { background:#FDECEC; color:#E5484D; }
   .scroll { overflow-x:auto; }
   .bank { display:flex; gap:12px; align-items:center; padding:12px 14px; border:1px solid var(--line2); border-radius:14px; flex-wrap:wrap; }
+  .bankcard { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .bankcard .ic { width:48px; height:48px; border-radius:14px; display:grid; place-items:center; font-size:24px; background:var(--accent-soft); flex:none; }
+  .bankcard .tt { flex:1; min-width:220px; } .bankcard .tt b { font-size:17px; }
+  .bankcard.need { border:2px solid #2E3BFF; box-shadow:0 0 0 4px rgba(46,59,255,.08); }
+  #bankDlg { border:0; border-radius:20px; padding:0; width:min(680px, calc(100vw - 24px)); max-height:calc(100vh - 32px); box-shadow:0 30px 80px rgba(17,19,24,.35); }
+  #bankDlg::backdrop { background:rgba(17,19,24,.5); }
+  #bankDlg form { padding:22px; display:grid; gap:12px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; } .grid2 .full { grid-column:1 / -1; }
+  .grid2 input { width:100%; }
+  @media (max-width:640px) { .grid2 { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 {% block content %}
 {% if acc.demo %}<div class="banner info">Demo: your Store and Course payments show here. Not available in the demo.</div>{% else %}
+<section class="card bankcard" id="bankCard">
+  <span class="ic" aria-hidden="true">🏦</span>
+  <div class="tt"><b>Bank account</b> <span class="badge" id="bStatus">…</span><div class="muted small" id="bText" style="margin-top:4px">Loading…</div></div>
+  <button class="btn" type="button" id="bBtn" hidden>＋ Add bank account</button>
+</section>
+
+<dialog id="bankDlg"><form id="pForm" novalidate>
+  <div class="row"><h2 style="margin:0 auto 0 0">🏦 Add your bank account</h2><button class="btn ghost sm" type="button" id="bClose" aria-label="Close">✕</button></div>
+  <p class="muted small" style="margin:0">Buyers pay with UPI or card, and your share goes straight to this account (usually the next working day). You do this once.</p>
+    <div class="grid2">
+      <div><label class="f" for="pName">Account holder name</label><input type="text" id="pName" name="name" autocomplete="name" placeholder="As on your bank account"></div>
+      <div><label class="f" for="pPan">PAN</label><input type="text" id="pPan" name="pan" maxlength="10" placeholder="ABCDE1234F" style="text-transform:uppercase"></div>
+      <div><label class="f" for="pAcct">Bank account number</label><input type="text" id="pAcct" name="account_number" inputmode="numeric" autocomplete="off"></div>
+      <div><label class="f" for="pIfsc">IFSC code</label><input type="text" id="pIfsc" name="ifsc" maxlength="11" placeholder="HDFC0001234" style="text-transform:uppercase"></div>
+      <div><label class="f" for="pEmail">Email</label><input id="pEmail" name="email" type="email" autocomplete="email"></div>
+      <div><label class="f" for="pPhone">Mobile</label><input type="text" id="pPhone" name="phone" inputmode="tel" placeholder="98765 43210"></div>
+      <div class="full"><label class="f" for="pStreet">Address</label><input type="text" id="pStreet" name="street" autocomplete="street-address" placeholder="House, street, area"></div>
+      <div><label class="f" for="pCity">City</label><input type="text" id="pCity" name="city" autocomplete="address-level2"></div>
+      <div><label class="f" for="pState">State</label><input type="text" id="pState" name="state" autocomplete="address-level1"></div>
+      <div><label class="f" for="pPin">PIN code</label><input type="text" id="pPin" name="pincode" inputmode="numeric" maxlength="6"></div>
+    </div>
+  <p class="muted small" style="margin:0">🔒 Razorpay checks these details (KYC), usually within a day. We keep only the last 4 digits of your account number.</p>
+  <div class="row" style="gap:10px"><button class="btn" type="submit" id="pSave">Save bank account</button><button class="btn ghost" type="button" id="bCancel">Cancel</button><span class="small" id="pMsg"></span></div>
+</form></dialog>
+
 <section class="card earn">
   <div class="top2">
     <div style="margin-right:auto"><div class="k" id="kLabel">Earnings · last 30 days</div><div class="big" id="kEarn">–</div>
@@ -118,12 +153,49 @@ function draw() {
       : `<tbody><tr><td class="muted">No abandoned checkouts in this period.</td></tr></tbody>`;
   } else drawPayouts();
 }
+const BSTATUS = {activated: ["on", "Active"], under_review: ["", "Under review by Razorpay"], requested: ["", "Under review by Razorpay"],
+                 needs_clarification: ["bad", "Razorpay needs more details"], suspended: ["bad", "Payouts paused"]};
+let BANK = null;
+async function loadBank() {
+  BANK = await api("/api/shop");
+  const p = BANK.payout || {}, st = BSTATUS[p.status] || ["", "Not added"];
+  $("bStatus").className = `badge ${st[0]}`; $("bStatus").textContent = st[1];
+  $("bankCard").classList.toggle("need", p.status !== "activated");
+  $("bBtn").hidden = false;
+  if (!BANK.ready) { $("bText").textContent = "Online payments aren't switched on yet."; $("bBtn").hidden = true; return; }
+  if (p.status === "activated") {
+    $("bText").innerHTML = `Money from every sale goes to <b>${esc(p.name)}</b> · ${esc(p.bank)} (${esc(p.ifsc)}), usually the next working day.`;
+    $("bBtn").textContent = "Change bank account"; $("bBtn").className = "btn ghost";
+  } else if (p.status) {
+    $("bText").innerHTML = `Bank ${esc(p.bank)} · ${esc(p.ifsc)}. ${(p.requirements || []).length ? "Razorpay asks for: <b>" + esc(p.requirements.join(", ")) + "</b>." : "Razorpay is checking your details, usually within a day."}`;
+    $("bBtn").textContent = "Update bank details"; $("bBtn").className = "btn";
+  } else {
+    $("bText").textContent = "Add it once to start selling products and courses. Buyers pay with UPI or card, and your share reaches your bank automatically.";
+    $("bBtn").textContent = "＋ Add bank account"; $("bBtn").className = "btn";
+  }
+  if (location.hash === "#bank" && p.status !== "activated") openBank();
+}
+function openBank() {
+  const p = (BANK && BANK.payout) || {};
+  if (p.name && !$("pName").value) $("pName").value = p.name;
+  $("pMsg").textContent = ""; $("bankDlg").showModal(); $("pName").focus();
+}
+$("bBtn").onclick = openBank;
+$("bClose").onclick = $("bCancel").onclick = () => $("bankDlg").close();
+$("pForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const body = Object.fromEntries(new FormData($("pForm")).entries());
+  $("pSave").disabled = true; $("pMsg").textContent = "Sending to Razorpay…";
+  try { await api("/api/shop/payout", {method: "PUT", body: JSON.stringify(body)}); $("bankDlg").close(); toast("Bank account sent to Razorpay ✓"); loadBank(); load(); }
+  catch (err) { $("pMsg").textContent = err.message; }
+  $("pSave").disabled = false;
+};
 async function drawPayouts() {
   const p = D.payout;
   $("bank").innerHTML = p.status === "activated"
     ? `<span style="font-size:22px" aria-hidden="true">🏦</span><div style="flex:1"><b>${esc(p.name || "Your bank")}</b> <span class="muted">${esc([p.bank, p.ifsc].filter(Boolean).join(" · "))}</span>
-       <div class="muted small">Razorpay sends your share of each sale straight to this account, usually within 2 working days (T+2).</div></div><a class="btn ghost sm" href="/app/products">Change bank</a>`
-    : `<span style="font-size:22px" aria-hidden="true">🏦</span><div style="flex:1"><b>Add your bank account</b><div class="muted small">Needed before you can sell. Money from each sale goes straight to it.</div></div><a class="btn sm" href="/app/products">Set up payouts</a>`;
+       <div class="muted small">Razorpay sends your share of each sale straight to this account, usually within 2 working days (T+2).</div></div><button class="btn ghost sm" type="button" onclick="openBank()">Change bank</button>`
+    : `<span style="font-size:22px" aria-hidden="true">🏦</span><div style="flex:1"><b>Add your bank account</b><div class="muted small">Needed before you can sell. Money from each sale goes straight to it.</div></div><button class="btn sm" type="button" onclick="openBank()">＋ Add bank account</button>`;
   if (!PO) { $("tbl").innerHTML = `<tbody><tr><td class="muted">Checking with Razorpay…</td></tr></tbody>`; try { PO = (await api("/api/payments/payouts")).payouts; } catch (err) { PO = []; } }
   const rows = PO.filter(x => !$("q").value.trim() || [x.email, x.title].join(" ").toLowerCase().includes($("q").value.trim().toLowerCase()));
   if (tab !== "po") return;
@@ -142,6 +214,7 @@ $("period").onchange = () => { $("custom").hidden = $("period").value !== "custo
 $("apply").onclick = () => { if ($("from").value && $("to").value) load(); else toast("Pick both dates."); };
 $("item").onchange = load;
 $("q").oninput = () => draw();
+loadBank().catch(err => { $("bText").textContent = err.message; });
 load().catch(err => $("tbl").innerHTML = `<tbody><tr><td class="muted">${esc(err.message)}</td></tr></tbody>`); loadBanners();
 </script>
 {% endif %}
