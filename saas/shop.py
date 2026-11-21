@@ -336,6 +336,27 @@ def create_order(acc, prod, buyer):
             "name": prod["title"], "email": email}
 
 
+def transfer_payment(o, payment_id):
+    """Sends the creator's share of a dollar payment (Route transfers are in rupees, so they happen after capture)."""
+    key = f"s:shoporder:{o['id']}"
+    try:
+        acc = store.load_account(o["acc"]) or {"id": o["acc"]}
+        owner = users.owner_of(acc)
+        p = _rzp("GET", f"/v1/payments/{payment_id}")
+        inr = p.get("base_amount") if p.get("base_currency", "INR") == "INR" and p.get("base_amount") else o["price"] * 100
+        f = plans.platform_fee(acc, inr / 100, gateway_fee=(p.get("fee") or 0) / 100 if p.get("fee") else None)
+        amount = int(round(max(0, f["creator_gets"]) * 100))
+        _rzp("POST", f"/v1/payments/{payment_id}/transfers", {"transfers": [{
+            "account": payout(owner)["account_id"], "amount": amount, "currency": "INR",
+            "notes": {"course": o["title"][:60], "buyer": o["email"][:60]}, "on_hold": 0}]})
+        o.update(transfer="done", price=int(inr // 100), creator_gets=f["creator_gets"], fee=f["total_fee"])
+    except Exception as e:
+        print(f"transfer for {o['id']} failed: {e}")
+        o["transfer"] = "pending"
+    store.set_json(key, o)
+    return o
+
+
 def _sign(message, secret):
     return hmac.new(secret.encode(), message.encode() if isinstance(message, str) else message, hashlib.sha256).hexdigest()
 
@@ -360,18 +381,37 @@ def fulfil(order_id, payment_id, paid_amount=None):
     if not o:
         raise ShopError("Unknown order.")
     if o["status"] == "paid":
+        if o.get("transfer") == "pending":  # a dollar payment whose transfer failed before capture: try again
+            transfer_payment(o, payment_id or o.get("payment_id", ""))
         return o
-    if paid_amount is not None and int(paid_amount) != o["price"] * 100:
+    if paid_amount is not None and int(paid_amount) != o.get("amount_minor", o["price"] * 100):
         raise ShopError("The amount paid doesn't match the price.")
     if o.get("type") == "course":  # a course purchase (see courses.py)
         import courses
         o.update(status="paid", payment_id=payment_id, paid_at=int(time.time()))
         store.set_json(key, o)
+        if o.get("currency") == "USD":
+            transfer_payment(o, payment_id)
         courses.enroll(o)
         sales = store.account_key(o["acc"], "shopsales")
-        store.redis("LPUSH", sales, json.dumps({**{k: o[k] for k in ("id", "title", "price", "creator_gets", "email", "paid_at")},
-                                                "name": o.get("name", ""), "type": "course"}))
+        store.redis("LPUSH", sales, json.dumps({**{k: o[k] for k in ("id", "title", "creator_gets", "email", "paid_at")},
+                                                "price": o.get("course_price", o["price"]), "name": o.get("name", ""), "type": "course"}))
         store.redis("LTRIM", sales, 0, 499)
+        b = o.get("bump")
+        if b:  # the bump offer ticked at checkout
+            try:
+                if b["kind"] == "course":
+                    courses.enroll({**o, "id": o["id"] + "_b", "course": b["id"], "price": b["price"], "course_price": b["price"],
+                                    "coupon": None, "bump": None})
+                else:
+                    store.set_json(f"s:shoporder:{o['id']}_b", {
+                        "id": o["id"] + "_b", "acc": o["acc"], "product": b["id"], "title": b["title"], "price": b["price"],
+                        "creator_gets": split(store.load_account(o["acc"]) or {"id": o["acc"]}, b["price"])["creator"], "fee": 0,
+                        "email": o["email"], "name": o.get("name", ""), "type": (get(o["acc"], b["id"]) or {}).get("type", "file"),
+                        "status": "created", "created": int(time.time())})
+                    fulfil(o["id"] + "_b", payment_id)
+            except Exception as e:
+                print(f"bump delivery failed for {o['id']}: {e}")
         return o
     token = secrets.token_urlsafe(16)
     prod = get(o["acc"], o["product"]) or {}

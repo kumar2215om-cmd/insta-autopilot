@@ -138,7 +138,7 @@ function drawCourse() {
         <button class="mini" type="button" data-lmove="${mi}:${li}:-1" aria-label="Up">↑</button><button class="mini" type="button" data-lmove="${mi}:${li}:1" aria-label="Down">↓</button>
         <button class="mini" type="button" data-edit="${mi}:${li}">Edit</button></div>`).join("")}
       <div class="addrow"><button class="link" type="button" data-addles="${mi}">＋ Add a lesson</button></div></div>`).join("");
-  const v = C.validity || {kind: "life", months: 6}, lv = C.live || {}, ct = C.cert || {};
+  const v = C.validity || {kind: "life", months: 6}, lv = C.live || {}, ct = C.cert || {}, it = C.intl || {}, gs = C.gst || {pct: 18};
   const pct = C.discount_on && C.price && C.sale_price ? Math.round(100 - 100 * C.sale_price / C.price) : 0;
   return `<div class="panel">
     <div class="row"><h3 style="margin:0 auto 0 0">Course syllabus</h3><button class="btn ghost sm" type="button" id="addMod">＋ Add module</button></div>
@@ -152,6 +152,13 @@ function drawCourse() {
         ${pct > 0 ? `<p class="small" style="margin:6px 0 0">₹${fmt(C.sale_price)} <s>₹${fmt(C.price)}</s> <b style="color:#16A34A">(${pct}% off)</b></p>` : ""}</div>` : ""}`
       : `<div><label class="f" for="fMin">Minimum price (₹, 0 = free)</label><input type="number" id="fMin" data-f="min_price" min="0" value="${val(C.min_price)}"></div>`}
     <p class="muted small" id="feeNote" style="margin:0"></p>
+    ${(C.price_mode || "fixed") === "fixed" ? `<label class="opt ${it.enabled ? "on" : ""}"><input type="checkbox" data-o="intl.enabled" ${it.enabled ? "checked" : ""}><div><b>International pricing</b><span>Buyers outside India see a US$ price and pay by card. Needs international payments switched on in Razorpay.</span></div></label>
+    ${it.enabled ? `<div class="row2"><div><label class="f">Price (US$)</label><input type="number" min="1" data-o="intl.usd" value="${val(it.usd)}" placeholder="e.g. 29"></div>
+      <div><label class="f">Discounted (US$, optional)</label><input type="number" min="0" data-o="intl.usd_sale" value="${val(it.usd_sale || "")}" placeholder="e.g. 19"></div></div>` : ""}` : ""}
+    <label class="opt ${gs.enabled ? "on" : ""}"><input type="checkbox" data-o="gst.enabled" ${gs.enabled ? "checked" : ""}><div><b>Add GST on top of the price</b><span>Indian buyers pay the price + GST, and the receipt email shows it. You file and pay this GST yourself.</span></div></label>
+    ${gs.enabled ? `<div class="row2" style="grid-template-columns:.6fr 1.4fr"><div><label class="f">GST %</label><select data-o="gst.pct">${[5, 12, 18, 28].map(x => `<option value="${x}" ${+gs.pct === x ? "selected" : ""}>${x}%</option>`).join("")}</select></div>
+      <div><label class="f">Your GSTIN (optional)</label><input type="text" data-o="gst.gstin" value="${esc(val(gs.gstin))}" placeholder="07ABCDE1234F1Z5" style="text-transform:uppercase"></div></div>
+      <div><label class="f">Business name on the receipt (optional)</label><input type="text" data-o="gst.name" value="${esc(val(gs.name))}"></div>` : ""}
     <h3>Course validity</h3>
     ${opt("valid", "life", v.kind, "Lifetime access", "Students have access forever")}
     ${opt("valid", "limited", v.kind, "Limited access", "Access is removed after a set time")}
@@ -171,6 +178,7 @@ function drawCourse() {
   </div>`;
 }
 function drawSettings() {
+  const bp = C.bump || {}, cm = C.community || {};
   return `<div class="panel">
     <h3>Theme</h3>
     ${opt("theme", "light", C.theme || "light", "Light", "Paper background, ink text, cobalt buttons")}
@@ -190,8 +198,30 @@ function drawSettings() {
     <label class="small"><input type="checkbox" data-c="terms" ${C.terms !== false ? "checked" : ""}> Show Terms, Refund and Privacy links on the page</label>
     <h3>Page URL</h3>
     <div><input type="text" data-f="slug" value="${esc(val(C.slug))}"><p class="muted small" style="margin:6px 0 0">${esc(URL_)}</p></div>
+    <h3>Bump offer</h3>
+    <label class="opt ${bp.enabled ? "on" : ""}"><input type="checkbox" data-o="bump.enabled" ${bp.enabled ? "checked" : ""}><div><b>Offer an add-on at checkout</b><span>A one-tick extra (another course, or a file / locked-content product from your Store) at a special price.</span></div></label>
+    ${bp.enabled ? (BUMPS.length ? `<div><label class="f">Add-on</label><select data-o="bump.pick">${BUMPS.map(x => `<option value="${x.kind}:${x.id}" ${bp.kind === x.kind && bp.id === x.id ? "selected" : ""}>${x.kind === "course" ? "🎓" : "📦"} ${esc(x.title)}</option>`).join("")}</select></div>
+      <div class="row2"><div><label class="f">Add-on price (₹)</label><input type="number" min="1" data-o="bump.price" value="${val(bp.price || "")}" placeholder="e.g. 199"></div>
+        <div><label class="f">Checkbox title</label><input type="text" data-o="bump.title" value="${esc(val(bp.title))}" placeholder="Leave empty to use its name"></div></div>
+      <div><label class="f">One line to sell it</label><input type="text" data-o="bump.desc" value="${esc(val(bp.desc))}" placeholder="e.g. 100 ready hooks. Only at checkout."></div>`
+      : `<p class="muted small" style="margin:0">Create another course, or a file product in <a href="/app/products">Store</a>, first.</p>`) : ""}
+    <h3>Automatic emails</h3>
+    <p class="muted small" style="margin:0">Sent to each student a set number of days after they enroll (every morning). Use {name} and {course}; a button to open the course is added.</p>
+    <div class="lst">${(C.emails || []).map((m, i) => `<div class="li"><div style="display:grid; gap:6px">
+        <label class="small">Day <input type="number" min="1" max="365" data-em="${i}" data-k="days" value="${m.days || 1}" style="width:76px; display:inline-block"> after enrolling</label>
+        <input type="text" data-em="${i}" data-k="subject" value="${esc(val(m.subject))}" placeholder="Subject">
+        <textarea rows="4" data-em="${i}" data-k="body" placeholder="Hi {name}, …">${esc(val(m.body))}</textarea>
+        <label class="small"><input type="checkbox" data-em="${i}" data-k="unfinished" ${m.unfinished ? "checked" : ""}> Only if they haven't finished the course</label></div>
+      <button class="x" type="button" data-del="emails" data-i="${i}" aria-label="Remove">✕</button></div>`).join("")}
+      ${(C.emails || []).length < 12 ? `<button class="link" type="button" id="addEmail">＋ Add email</button>` : ""}</div>
+    <h3>Community</h3>
+    <label class="opt ${cm.enabled ? "on" : ""}"><input type="checkbox" data-o="community.enabled" ${cm.enabled ? "checked" : ""}><div><b>Give students a community</b><span>The invite link shows only to enrolled students (dashboard + welcome email).</span></div></label>
+    ${cm.enabled ? `<div class="row2" style="grid-template-columns:.8fr 1.2fr"><div><label class="f">Where</label><select data-o="community.kind">${[["whatsapp", "WhatsApp"], ["telegram", "Telegram"], ["discord", "Discord"], ["other", "Other"]].map(([k, n]) => `<option value="${k}" ${cm.kind === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+      <div><label class="f">Invite link</label><input type="url" data-o="community.link" value="${esc(val(cm.link))}" placeholder="https://chat.whatsapp.com/…"></div></div>
+      <div><label class="f">Note (optional)</label><input type="text" data-o="community.note" value="${esc(val(cm.note))}" placeholder="Ask doubts, share wins…"></div>` : ""}
     <h3>Tracking</h3>
     <div><label class="f" for="fPix">Meta Pixel ID</label><input type="text" id="fPix" data-f="pixel" inputmode="numeric" value="${esc(val(C.pixel))}" placeholder="e.g. 1667034868290085"></div>
+    <div><label class="f" for="fGa">Google Analytics Measurement ID</label><input type="text" id="fGa" data-f="ga" value="${esc(val(C.ga))}" placeholder="e.g. G-AB12CD34EF"></div>
     <h3>Students</h3>
     <div class="row" style="gap:8px"><button class="btn ghost sm" type="button" id="showStu">View students &amp; assignments</button><a class="btn ghost sm" href="/api/courses/${CID}/students.csv">Export CSV</a></div>
     <h3 style="color:var(--bad)">Danger zone</h3>
@@ -239,7 +269,15 @@ async function save() {
     setC(r); dirty = false; draw(); refreshPreview(); toast("Saved ✓");
   } catch (err) { toast(err.message); }
 }
-function setC(r) { C = r.course; C.discount_on = !!C.sale_price; URL_ = r.url; SESS = r.sessions || []; if (r.plan_fee) window.FEE = r.plan_fee; }
+function setC(r) { C = r.course; C.discount_on = !!C.sale_price; URL_ = r.url; SESS = r.sessions || []; if (r.plan_fee) window.FEE = r.plan_fee; if (r.bump_options) BUMPS = r.bump_options; }
+let BUMPS = [];
+function setO(t) {
+  // data-o="obj.key" inputs: international price, GST, bump offer, community
+  const [o, k] = t.dataset.o.split("."); C[o] = C[o] || {};
+  if (k === "pick") { const [kind, id] = t.value.split(":"); C[o].kind = kind; C[o].id = id; return; }
+  C[o][k] = t.type === "checkbox" ? t.checked : t.type === "number" || k === "pct" ? (t.value === "" ? 0 : +t.value) : t.value;
+  if (t.type === "checkbox") { if (o === "bump" && t.checked && !C.bump.id && BUMPS[0]) { C.bump.kind = BUMPS[0].kind; C.bump.id = BUMPS[0].id; } draw(); }
+}
 // ---------- inputs ----------
 $("body").addEventListener("input", (e) => {
   const t = e.target; dirty = true;
@@ -250,6 +288,8 @@ $("body").addEventListener("input", (e) => {
   if (t.dataset.live) { C.live = C.live || {}; if (t.type !== "checkbox") C.live[t.dataset.live] = t.value; }
   if (t.dataset.cert && t.type !== "checkbox") { C.cert = C.cert || {}; C.cert[t.dataset.cert] = t.value; }
   if (t.id === "fMonths") C.validity = {kind: "limited", months: +t.value};
+  if (t.dataset.o && t.type !== "checkbox" && t.tagName !== "SELECT") setO(t);
+  if (t.dataset.em != null && t.type !== "checkbox") C.emails[+t.dataset.em][t.dataset.k] = t.type === "number" ? +t.value : t.value;
 });
 $("body").addEventListener("change", async (e) => {
   const t = e.target; dirty = true;
@@ -262,6 +302,8 @@ $("body").addEventListener("change", async (e) => {
   if (t.dataset.live === "enabled") { C.live = {...(C.live || {}), enabled: t.checked}; draw(); }
   if (t.dataset.liveday) { const d = +t.dataset.liveday, days = new Set(C.live.days || []); t.checked ? days.add(d) : days.delete(d); C.live.days = [...days].sort(); }
   if (t.dataset.cert === "enabled") { C.cert = {...(C.cert || {}), enabled: t.checked}; draw(); }
+  if (t.dataset.o && (t.type === "checkbox" || t.tagName === "SELECT")) setO(t);
+  if (t.dataset.em != null && t.type === "checkbox") C.emails[+t.dataset.em].unfinished = t.checked;
   if (t.dataset.list === "coupons" && t.tagName === "SELECT") C.coupons[+t.dataset.i].kind = t.value;
   if (t.id === "coverFile" && t.files[0]) {
     const up = await upload(t.files[0], "cover"); if (up) { C.cover = up.url; draw(); }
@@ -285,6 +327,8 @@ document.addEventListener("click", async (e) => {
   if (ad) { const k = ad.dataset.add; C[k] = C[k] || [];
     C[k].push(k === "faqs" ? {q: "", a: ""} : k === "coupons" ? {code: "", kind: "pct", value: 10, max: 0, on: true} : ""); draw(); return; }
   const dl = t.closest("[data-del]"); if (dl) { C[dl.dataset.del].splice(+dl.dataset.i, 1); draw(); return; }
+  if (t.id === "addEmail") { C.emails = C.emails || []; const d = C.emails.length ? Math.max(...C.emails.map(m => m.days || 1)) + 2 : 1;
+    C.emails.push({id: rid().slice(0, 8), days: d, subject: d === 1 ? "Day 1: start here 🚀" : "", body: d === 1 ? "Hi {name},\n\nWelcome to {course}! Watch the first lesson today, it takes 10 minutes." : "", unfinished: d > 1}); draw(); return; }
   if (t.id === "addMod") { C.modules.push({id: rid(), title: `Module ${C.modules.length + 1}`, live: true, unlock: "now", delay: 0, lessons: []}); draw(); return; }
   const md = t.closest("[data-mod]");
   if (md) { const i = +md.dataset.mod, a = md.dataset.act;
@@ -316,7 +360,10 @@ function openLesson(mi, li) {
   $("lesBody").innerHTML = `<div class="row"><h2 style="margin-right:auto">${ICON[l.type]} Edit lesson</h2><button class="mini" type="button" data-close>✕</button></div>
     <div><label class="f">Title</label><input type="text" data-l="title" value="${esc(l.title)}"></div>
     ${l.type === "video" ? `<div><label class="f">Video link</label><input type="url" data-l="video" value="${esc(val(l.video))}" placeholder="YouTube (unlisted), Vimeo, Loom or Google Drive link">
-      <p class="muted small" style="margin:6px 0 0">Tip: upload to YouTube as <b>Unlisted</b> and paste the link.</p></div>` : ""}
+      <p class="muted small" style="margin:6px 0 0">Tip: upload to YouTube as <b>Unlisted</b> and paste the link, or upload the video file here.</p>
+      <div style="margin-top:10px; display:grid; gap:6px">${l.video_file ? `<div class="o"><span style="flex:1">🎞 ${esc(l.video_name || "Uploaded video")} <span class="muted small">(plays instead of the link)</span></span><button class="mini" type="button" id="vidDel">Remove</button></div>` : ""}
+        <label class="btn ghost sm" style="cursor:pointer; justify-self:start">⬆ ${l.video_file ? "Replace" : "Upload"} video file (MP4, up to 1 GB)<input type="file" id="vidFile" accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.m4v,.webm" hidden></label>
+        <div id="vidProg" hidden><div class="bar" style="height:10px; border-radius:99px; background:#ECEBE4; overflow:hidden"><i id="vidBar" style="display:block; height:100%; width:0; background:#2E3BFF"></i></div><span class="muted small" id="vidTxt"></span></div></div></div>` : ""}
     ${l.type === "audio" ? `<div><label class="f">Audio</label><div class="row2"><label class="btn ghost sm" style="cursor:pointer">⬆ Upload audio<input type="file" id="audFile" accept="audio/*" hidden></label>
       <input type="url" data-l="audio" value="${esc(val(l.audio))}" placeholder="or an audio link (https://)"></div>${l.audio_file ? `<p class="small" style="margin:6px 0 0">🎙 Uploaded file attached</p>` : ""}</div>` : ""}
     ${l.type === "quiz" ? `<div><label class="f">Questions <span class="muted">(tick the right answer)</span></label><div style="display:grid; gap:10px">${(l.questions || []).map((q, qi) => `<div class="q">
@@ -347,10 +394,12 @@ $("lesBody").addEventListener("change", async (e) => {
   if (t.dataset.lc) l[t.dataset.lc] = t.checked;
   if (t.dataset.ans != null) l.questions[+t.dataset.ans].answer = +t.value;
   if (t.id === "resFile" && t.files[0]) { const up = await upload(t.files[0], "file"); if (up) { l.files = [...(l.files || []), {id: up.id, name: up.name, size: up.size}]; openLesson(...editing); } }
+  if (t.id === "vidFile" && t.files[0]) { await uploadVideo(t.files[0], l); return; }
   if (t.id === "audFile" && t.files[0]) { const up = await upload(t.files[0], "file"); if (up) { l.audio_file = up.id; openLesson(...editing); } }
 });
 $("lesBody").addEventListener("click", (e) => {
   const t = e.target, l = curL();
+  if (t.id === "vidDel") { l.video_file = ""; l.video_name = ""; openLesson(...editing); }
   if (t.id === "addQ") { l.questions.push({q: "", options: ["", ""], answer: 0}); openLesson(...editing); }
   if (t.dataset.qopt != null) { l.questions[+t.dataset.qopt].options.push(""); openLesson(...editing); }
   if (t.dataset.qdel != null) { l.questions.splice(+t.dataset.qdel, 1); openLesson(...editing); }
@@ -359,6 +408,27 @@ $("lesBody").addEventListener("click", (e) => {
   if (t.id === "lesDel" && confirm("Delete this lesson?")) { C.modules[editing[0]].lessons.splice(editing[1], 1); $("lesDlg").close(); draw(); }
 });
 $("lesDlg").addEventListener("close", () => draw());
+async function uploadVideo(file, l) {
+  // Sent in pieces (Vercel takes 4.5 MB per request); a piece that fails is retried a few times.
+  $("vidProg").hidden = false; $("vidTxt").textContent = "Starting…";
+  try {
+    const v = await api("/api/courses/video", {method: "POST", body: JSON.stringify({name: file.name, size: file.size})});
+    for (let n = 0; n < v.parts; n++) {
+      const blob = file.slice(n * v.chunk, Math.min(file.size, (n + 1) * v.chunk));
+      for (let tries = 0; ; tries++) {
+        const r = await fetch(`/api/courses/video/${v.id}/${n}`, {method: "PUT", headers: {"X-Upload": "1", "Content-Type": "application/octet-stream"}, body: blob}).catch(() => null);
+        if (r && r.ok) break;
+        if (tries >= 4) throw new Error(((r && (await r.json().catch(() => ({}))).error) || "Upload stopped. Check your internet and try again."));
+        await new Promise(ok => setTimeout(ok, 1500 * (tries + 1)));
+      }
+      const pct = Math.round(100 * (n + 1) / v.parts);
+      $("vidBar").style.width = pct + "%"; $("vidTxt").textContent = `Uploading ${pct}% · ${(file.size / 1048576).toFixed(0)} MB · keep this tab open`;
+    }
+    const d = await api(`/api/courses/video/${v.id}/done`, {method: "POST", body: "{}"});
+    l.video_file = d.id; l.video_name = d.name; dirty = true; toast("Video uploaded ✓ Publish changes to save it.");
+    openLesson(...editing);
+  } catch (err) { $("vidTxt").textContent = err.message; toast(err.message); }
+}
 // ---------- students ----------
 async function showStudents() {
   $("stuBody").innerHTML = `<div class="row"><h2 style="margin-right:auto">Students</h2><button class="mini" type="button" data-close>✕</button></div><div class="empty">Loading…</div>`;
