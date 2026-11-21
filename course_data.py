@@ -90,9 +90,9 @@ PROOF_ASOF = "21 Nov 2026"
 PROOF_STATS = [("{F}", "followers on @aiwith.om"), ("1.8M+", "views from just my top 3 reels"), ("914K", "views on one reel")]
 # Top reels of all time (views from Instagram, 21 Nov 2026). Images: the reel covers in freebies/videos/.
 PROOF_REELS = [
-    {"img": "/free/videos/top-ootto.jpg", "views": "914K", "what": "Connect Claude to Instagram", "note": "Comment → DM machine: OOTTO", "url": "https://www.instagram.com/aiwith.om/reels/"},
-    {"img": "/free/videos/top-launch.jpg", "views": "535K", "what": "5 places to launch your app", "note": "Comment → DM machine: LAUNCH", "url": "https://www.instagram.com/aiwith.om/reels/"},
-    {"img": "/free/videos/top-youtube.jpg", "views": "379K", "what": "Claude as your YouTube manager", "note": "Comment → DM machine: YOUTUBE", "url": "https://www.instagram.com/aiwith.om/reels/"},
+    {"img": "/free/videos/top-ootto.jpg", "views": "914K", "what": "Connect Claude to Instagram", "note": "Comment → DM machine: OOTTO", "url": "https://www.instagram.com/reel/De1b4eETKjy/"},
+    {"img": "/free/videos/top-launch.jpg", "views": "535K", "what": "5 places to launch your app", "note": "Comment → DM machine: LAUNCH", "url": "https://www.instagram.com/reel/DfB3RKmJbCJ/"},
+    {"img": "/free/videos/top-youtube.jpg", "views": "379K", "what": "Claude as your YouTube manager", "note": "Comment → DM machine: YOUTUBE", "url": "https://www.instagram.com/reel/DfKVYcxzBTT/"},
 ]
 
 TIMING = [("Now", "Early", "Very few creators use Claude properly. Huge reach for whoever shows up."),
