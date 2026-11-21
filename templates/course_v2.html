@@ -310,11 +310,11 @@
 
   {% if videos %}
   <section class="rv">
-    <div class="kicker center">Watch the real thing</div>
-    <h2 class="center">See Claude <span>edit a reel.</span></h2>
-    <p class="sub center">No editor, no timeline. These are real screen recordings of the workflow you learn in the course.</p>
+    <div class="kicker center">Made with Claude</div>
+    <h2 class="center">Reels like these. <span>No editor.</span></h2>
+    <p class="sub center">Script, voiceover, motion and captions: these reels were made with Claude, using the workflow you learn in the course. Tap to play with sound.</p>
     <div class="vids n{{ videos|length }}">{% for v in videos %}<figure class="vid {{ v.ratio }}">
-      {% if v.kind == "video" %}<video src="{{ v.src }}" controls playsinline preload="metadata"></video>
+      {% if v.kind == "video" %}<video src="{{ v.src }}"{% if v.poster %} poster="{{ v.poster }}"{% endif %} controls playsinline preload="none"></video>
       {% else %}<iframe src="{{ v.src }}" title="{{ v.title or 'Claude editing a reel' }}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen scrolling="no"></iframe>{% endif %}
       {% if v.title %}<figcaption>▶ {{ v.title }}</figcaption>{% endif %}</figure>{% endfor %}</div>
     <div style="max-width:440px;margin:22px auto 0">{{ buybtn() }}{{ micro() }}</div>

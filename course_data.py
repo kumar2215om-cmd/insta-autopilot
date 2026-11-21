@@ -113,6 +113,12 @@ STEPS = [("Join", "Pay ₹499 on SuperProfile. The course opens instantly: video
          ("Post and grow", "Post with a plan, let the DM machine work every comment, and fix one thing a week with the growth loop.", "Every week")]
 
 FINAL_PUNCH = "Soch lo: ek aur mahina guesswork, ya ek system jo kaam karta hai?"
+# Default "made with Claude" demo reels (720p, under 4 MB each, in freebies/videos/). The editor's video links replace these.
+DEMO_VIDEOS = [
+    {"url": "/free/videos/docu-code.mp4", "title": "One line in, a finished reel out"},
+    {"url": "/free/videos/claude-instagram.mp4", "title": "Connect Claude to Instagram in 2 minutes"},
+    {"url": "/free/videos/sales-plugin.mp4", "title": "A fully animated explainer, made with Claude"},
+]
 TESTIMONIALS = []  # (quote, name, role) — only real student messages, added with permission
 
 FAQ = FAQ + [("Can I do this on my phone?", "Mostly yes: Claude, Instagram and CapCut all work on a phone. Path B reels (Claude Code + Remotion) need a laptop, and they're optional."),

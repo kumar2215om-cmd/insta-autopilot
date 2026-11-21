@@ -363,8 +363,9 @@ def video_embed(url):
     m = re.match(r"https?://(?:www\.)?(?:youtube\.com/(?:watch\?v=|shorts/|embed/)|youtu\.be/)([A-Za-z0-9_-]{6,20})", url)
     if m:
         return {"kind": "iframe", "src": f"https://www.youtube-nocookie.com/embed/{m.group(1)}?rel=0", "ratio": "short" if "/shorts/" in url else "wide"}
-    if re.match(r"(https://[^\s\"'<>]+|/free/f/[^\s\"'<>]+)\.(mp4|webm)(\?[^\s\"'<>]*)?$", url, re.I):
-        return {"kind": "video", "src": url, "ratio": "short"}
+    if re.match(r"(https://[^\s\"'<>]+|/free/(?:f|videos)/[^\s\"'<>]+)\.(mp4|webm)(\?[^\s\"'<>]*)?$", url, re.I):
+        poster = re.sub(r"\.(mp4|webm)(\?.*)?$", ".jpg", url, flags=re.I) if url.startswith("/free/videos/") else ""
+        return {"kind": "video", "src": url, "ratio": "short", "poster": poster}
     return None
 
 
@@ -1532,7 +1533,9 @@ def course_page():
                 sessions.append((when.strip(), topic.strip()) if topic.strip() else ("", when.strip()))
         else:
             sessions = [("", t) for t in course_data.LIVE_SESSIONS]
-    videos = [{**v, **video_embed(v["url"])} for v in course.get("videos", []) if video_embed(v.get("url"))]
+    # Editor videos, else the default demo reels in course_data (served from freebies/videos/)
+    videos = [{**v, **video_embed(v["url"])} for v in (course.get("videos") or getattr(course_data, "DEMO_VIDEOS", []))
+              if video_embed(v.get("url"))]
     return render_template("course_v2.html", page=page, course=course, c=course_data, live=live, sessions=sessions, videos=videos,
                            tab=1, c2=course2_data if course2.get("enabled", True) else None, course2=course2,
                            starts=(lambda t: t.isoformat() if t and t > datetime.now(IST) and batch_state(live) == "open" else "")(batch_start(live)),
