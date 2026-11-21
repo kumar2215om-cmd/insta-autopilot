@@ -29,6 +29,8 @@ import billing
 import referrals
 import shop
 import courses
+import agents
+import assistant
 import leads
 import devices
 import videos
@@ -146,14 +148,14 @@ def public_account(acc):
 # Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.
 SECTIONS = [
     ("home", "/app", "Home", True), ("automations", "/app/automations", "Auto DM", True),
-    ("inbox", "/app/inbox", "AI Inbox", False), ("activity", "/app/activity", "Activity", True),
+    ("inbox", "/app/inbox", "AI Inbox", False), ("agents", "/app/agents", "AI agents", False), ("activity", "/app/activity", "Activity", True),
     ("sales", "/app/sales", "Sales", True), ("payments", "/app/payments", "Payments", False), ("shop", "/app/products", "Store", False), ("courses", "/app/courses", "Courses", False), ("plan", "/app/plan", "Content plan", False), ("youtube", "/app/youtube", "YouTube", False),
     ("report", "/app/report", "Reel report", False), ("links", "/app/links", "Link in bio", False), ("files", "/app/files", "Files", False),
     ("contacts", "/app/leads", "Leads", False), ("giveaway", "/app/giveaway", "Giveaway", False), ("apps", "/app/apps", "Apps", True),
     ("billing", "/app/billing", "Plan & billing", True), ("refer", "/app/refer", "Refer & earn", True),
     ("settings", "/app/settings", "Settings", True),
 ]
-DEFAULT_APPS = {"payments": True, "shop": True, "courses": True, "plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
+DEFAULT_APPS = {"agents": True, "payments": True, "shop": True, "courses": True, "plan": True, "youtube": True, "inbox": True, "report": True, "links": True, "files": True, "contacts": True, "giveaway": True}
 
 
 def apps_of(acc):
@@ -3182,6 +3184,182 @@ def api_put_page():
     page = clean_page(request.get_json(force=True), acc)
     store.save_page(acc["id"], page)
     return jsonify(page=page)
+
+
+# ---------- Home: alerts, today so far, the AI assistant (assistant.py), agents (agents.py) ----------
+
+def home_alerts(acc):
+    """Things that need the creator now, each {text, href, tone}."""
+    out, now = [], time.time()
+    if acc.get("paused"):
+        out.append({"text": "All automations are paused", "href": "/app/settings", "tone": "bad"})
+    refused = len(engine.pending_retries(acc))
+    if refused:
+        out.append({"text": f"{refused} DM{'s' if refused != 1 else ''} Instagram refused: retry them", "href": "/app/activity", "tone": "bad"})
+    waiting = sum(1 for t in ai_agent.threads(acc["id"]) if t.get("status") == "needs_you")
+    if waiting:
+        out.append({"text": f"{waiting} chat{'s' if waiting != 1 else ''} waiting for your reply", "href": "/app/inbox", "tone": "warn"})
+    brands = len(agents.requests(acc, "new"))
+    if brands:
+        out.append({"text": f"{brands} brand request{'s' if brands != 1 else ''} waiting on you", "href": "/app/agents#brands", "tone": "warn"})
+    hot = sum(1 for x in agents.leads(acc, "hot") if x["last_at"] > now - 7 * 86400)
+    if hot:
+        out.append({"text": f"🔥 {hot} hot lead{'s' if hot != 1 else ''} this week", "href": "/app/agents#leads", "tone": "ok"})
+    carts = sum(1 for c in leads.carts(acc["id"]) if c["at"] > now - 7 * 86400 and not c.get("reminded"))
+    if carts:
+        out.append({"text": f"🛒 {carts} abandoned checkout{'s' if carts != 1 else ''}: send a reminder", "href": "/app/leads?segment=carts", "tone": "warn"})
+    review = 0
+    for c in courses.of_account(acc["id"]):
+        for e in courses.students(c["id"]):
+            review += sum(1 for w in (e.get("work") or {}).values() if not w.get("grade"))
+    if review:
+        out.append({"text": f"{review} assignment{'s' if review != 1 else ''} to review", "href": "/app/courses/assessments", "tone": "warn"})
+    user = current_user()
+    if user and shop.products(acc["id"]) and not shop.can_sell(user):
+        out.append({"text": "Add your bank account so your products can sell", "href": "/app/products", "tone": "bad"})
+    return out
+
+
+def today_so_far(acc):
+    """Orders, new leads and DMs today (IST) vs the same time yesterday."""
+    now = time.time()
+    day0 = now - (now + shop.IST) % 86400
+    since = now - day0
+    sales = shop.sales(acc["id"], 500)
+    in_ = lambda t, a, b: a <= (t or 0) < b
+    orders = sum(1 for s in sales if in_(s.get("paid_at"), day0, now))
+    orders_y = sum(1 for s in sales if in_(s.get("paid_at"), day0 - 86400, day0 - 86400 + since))
+    people = store.contacts(acc["id"])
+    new = sum(1 for c in people if in_(c.get("first_at"), day0, now))
+    new_y = sum(1 for c in people if in_(c.get("first_at"), day0 - 86400, day0 - 86400 + since))
+    days = store.days(acc["id"], 2)
+    dms = int(days[-1][1].get("dms", 0)) if days else 0
+    dms_y = int(days[0][1].get("dms", 0)) if len(days) > 1 else 0
+    revenue = round(sum(float(s.get("creator_gets") or 0) for s in sales if in_(s.get("paid_at"), day0, now)), 2)
+    return {"orders": orders, "orders_y": orders_y, "revenue": revenue, "leads": new, "leads_y": new_y, "dms": dms, "dms_y": dms_y}
+
+
+@app.get("/api/home")
+def api_home():
+    acc = current_account()
+    if acc.get("demo"):
+        return jsonify(alerts=[], today={"orders": 0, "orders_y": 0, "revenue": 0, "leads": 0, "leads_y": 0, "dms": 0, "dms_y": 0}, ai=False)
+    return jsonify(alerts=home_alerts(acc), today=today_so_far(acc), ai=ai_agent.client() is not None)
+
+
+def assistant_tools(acc):
+    """The Connect Claude tools plus a few only the in-app assistant has. Viewers get read-only tools."""
+    tools = mcp_tools.tools_for(acc, mcp_services(), read_only=current_role() == "viewer")
+    tools += [
+        {"name": "list_brand_requests", "title": "Brand requests", "read_only": True,
+         "fn": lambda a: {"requests": agents.requests(acc, a.get("status", ""))},
+         "description": "Brand and collaboration offers found in DMs by the Brand Collab agent: brand, offer, budget, deliverables, fit, status.",
+         "input_schema": {"type": "object", "properties": {"status": {"type": "string", "enum": ["new", "interested", "declined", "done"]}}}},
+        {"name": "list_qualified_leads", "title": "Qualified leads", "read_only": True,
+         "fn": lambda a: {"leads": agents.leads(acc, a.get("temperature", ""))[:50]},
+         "description": "DM leads sorted into hot / warm / cold by the Lead Qualifier agent, with what they want and the next step.",
+         "input_schema": {"type": "object", "properties": {"temperature": {"type": "string", "enum": ["hot", "warm", "cold"]}}}},
+        {"name": "get_alerts", "title": "What needs attention", "read_only": True,
+         "fn": lambda a: {"alerts": home_alerts(acc), "today": today_so_far(acc)},
+         "description": "Problems and to-dos right now (refused DMs, chats waiting, brand requests, carts, assignments) and today's numbers.",
+         "input_schema": {"type": "object", "properties": {}}},
+    ]
+    return tools
+
+
+def assistant_extra(acc):
+    alerts = home_alerts(acc)
+    return ("Right now: " + "; ".join(a["text"] for a in alerts) + ".") if alerts else ""
+
+
+@app.get("/api/assistant")
+def api_assistant():
+    acc = current_account()
+    return jsonify(assistant.view(acc, assistant.load(acc["id"])))
+
+
+@app.post("/api/assistant")
+def api_assistant_ask():
+    acc = current_account()
+    if acc.get("demo"):
+        return jsonify(error="The AI assistant isn't available in the demo."), 403
+    try:
+        chat = assistant.ask(acc, assistant_tools(acc), (request.get_json(force=True) or {}).get("text"), BRAND, assistant_extra(acc))
+    except assistant.AssistantError as e:
+        return jsonify(error=str(e)), 400
+    except Exception as e:
+        print(f"assistant failed: {e}")
+        return jsonify(error="The AI couldn't answer right now. Try again in a minute."), 502
+    return jsonify(assistant.view(acc, chat))
+
+
+@app.post("/api/assistant/decide")
+def api_assistant_decide():
+    acc = current_account()
+    try:
+        chat = assistant.decide(acc, assistant_tools(acc), bool((request.get_json(force=True) or {}).get("approve")), BRAND, assistant_extra(acc))
+    except assistant.AssistantError as e:
+        return jsonify(error=str(e)), 400
+    except Exception as e:
+        print(f"assistant failed: {e}")
+        return jsonify(error="The AI couldn't continue right now. Try again in a minute."), 502
+    return jsonify(assistant.view(acc, chat))
+
+
+@app.post("/api/assistant/reset")
+def api_assistant_reset():
+    acc = current_account()
+    assistant.reset(acc["id"])
+    return jsonify(assistant.view(acc, assistant.load(acc["id"])))
+
+
+@app.get("/app/agents")
+def agents_page():
+    return render_app("agents.html", "agents")
+
+
+@app.get("/api/agents")
+def api_agents():
+    acc = current_account()
+    return jsonify(settings=agents.settings(acc), used={"lead": agents.used(acc, "lead"), "brand": agents.used(acc, "brand")},
+                   limits={"lead": agents.LEAD_LIMIT, "brand": agents.BRAND_LIMIT}, ai=ai_agent.client() is not None,
+                   leads=agents.leads(acc)[:300], brands=agents.requests(acc), ai_inbox=ai_agent.settings(acc)["enabled"],
+                   guard=bool((acc.get("guard") or {}).get("enabled")))
+
+
+@app.put("/api/agents")
+def api_agents_save():
+    acc = current_account()
+    if acc.get("demo"):
+        return jsonify(error="Not available in the demo."), 403
+    data = agents.clean(request.get_json(force=True))
+    if (data["lead"]["enabled"] or data["brand"]["enabled"]) and ai_agent.client() is None:
+        return jsonify(error="The AI isn't set up on the server yet (ANTHROPIC_API_KEY)."), 400
+    acc["agents"] = data
+    store.save_account(acc)
+    return api_agents()
+
+
+@app.put("/api/agents/brands/<chat_id>")
+def api_brand_status(chat_id):
+    r = agents.set_status(current_account(), chat_id, (request.get_json(force=True) or {}).get("status"))
+    return (jsonify(request=r), 200) if r else (jsonify(error="Not found."), 404)
+
+
+@app.post("/api/agents/leads/run")
+def api_leads_run():
+    """Sorts recent chats that haven't been scored yet (up to 10 per tap)."""
+    acc = current_account()
+    if not agents.settings(acc)["lead"]["enabled"]:
+        return jsonify(error="Turn the Lead Qualifier on first."), 400
+    n, week = 0, time.time() - 7 * 86400
+    for t in ai_agent.threads(acc["id"]):
+        if n >= 10:
+            break
+        if t.get("last_fan_at", 0) > week and not t.get("lead"):
+            if agents.qualify(acc, t["igsid"], t.get("username", "")):
+                n += 1
+    return jsonify(scored=n)
 
 
 @app.get("/app/leads")

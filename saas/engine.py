@@ -706,7 +706,8 @@ def handle_story_mention(acc, igsid):
 def handle_ai_dm(acc, igsid, text, mid=""):
     """The AI DM agent: answers from the creator's products, links and FAQ, or hands the chat to them."""
     s = ai_agent.settings(acc)
-    if not s["enabled"]:
+    import agents
+    if not s["enabled"] and not agents.wants_messages(acc):
         return
     once = mid or hashlib.sha1(f"{igsid}|{text}".encode()).hexdigest()[:16] + f":{int(time.time() // 300)}"
     if not store.claim(f"s:seen:{acc['id']}:ai:{once}", 86400):
@@ -717,7 +718,10 @@ def handle_ai_dm(acc, igsid, text, mid=""):
     except Exception:
         username = ""
     store.touch_contact(acc["id"], username, igsid, source="dm")
-    thread = ai_agent.add_message(acc["id"], igsid, "fan", text, username, unread=True)
+    thread = ai_agent.add_message(acc["id"], igsid, "fan", text, username, unread=True, **({} if s["enabled"] else {"status": "you"}))
+    agents.on_fan_message(acc, igsid, username, text, send=lambda t: ig.send_dm({"id": igsid}, {"text": t}))
+    if not s["enabled"]:
+        return  # only the agents (lead qualifier, brand collab) read this chat
     if thread.get("status") == "you":
         return  # the creator took over this chat
     who = username or igsid
