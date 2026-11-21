@@ -111,6 +111,13 @@ OWNER_ONLY = ("/api/disconnect", "/api/team", "/api/mcp-key", "/api/integrations
 MAX_TEAM = 5
 
 
+def locked(acc, feature):
+    """None when the plan has the feature, else a 403 that says which plan it needs (the dashboard shows the message)."""
+    if plans.has(acc, feature):
+        return None
+    return jsonify(error=plans.upgrade_msg(feature), upgrade=plans.needs(feature), feature=feature), 403
+
+
 def team_member(acc, member_id):
     return next((m for m in acc.get("team") or [] if m["id"] == member_id), None)
 
@@ -143,7 +150,7 @@ def public_account(acc):
     """What the dashboard may see: never the token."""
     return {**{k: acc.get(k) for k in ("id", "username", "name", "followers", "created", "paused", "demo", "plan",
                                         "pro_until")}, "pic": avatar_url(acc), "pro": store.is_pro(acc), "plan_name": plans.PLANS[plans.plan_of(acc)]["name"],
-            "follow_gate": plans.has(acc, "follow_gate"), "locks_on": plans.LOCKS_ON}
+            "follow_gate": plans.has(acc, "follow_gate"), "locks_on": plans.LOCKS_ON, "plan_view": plans.view(acc)}
 
 
 # Sections of the creator app. Core ones are always on; the rest can be switched off on the Apps page.
@@ -494,11 +501,11 @@ def llms_txt():
            "no Instagram password needed.", "",
            "## Pricing (monthly)",
            f"- Free: ₹0 / $0, {p['free']['monthly_dms']:,} DMs a month, 25 AI replies to try",
-           f"- Starter: ₹{p['starter']['price']} / ${plans.USD['starter'][0]}, 3,000 DMs, follow to unlock",
-           f"- Creator: ₹{p['creator']['price']} / ${plans.USD['creator'][0]}, unlimited DMs, 300 AI replies included, follow-ups, menus, broadcast, sales tracking",
-           f"- Pro: ₹{p['pro']['price']} / ${plans.USD['pro'][0]}, 3 Instagram accounts, 2,000 AI replies, Claude (MCP), Google Sheets and webhooks, team",
-           f"- Agency: ₹{p['agency']['price']:,} / ${plans.USD['agency'][0]}, 10 accounts, 10,000 AI replies",
-           "- During the beta every feature is free.", "",
+           f"- Starter: ₹{p['starter']['price']} / ${plans.USD['starter'][0]}, 3,000 DMs, follow to unlock, email and WhatsApp capture, story replies",
+           f"- Creator: ₹{p['creator']['price']} / ${plans.USD['creator'][0]}, unlimited DMs, 300 AI replies, Lead Qualifier agent, course extras (US$ price, GST, bump offers), course emails",
+           f"- Pro: ₹{p['pro']['price']} / ${plans.USD['pro'][0]}, 3 Instagram accounts, 2,000 AI replies, Connect Claude (MCP), Brand Collab agent, course video upload, no ReplyInbox branding",
+           f"- Agency: ₹{p['agency']['price']:,} / ${plans.USD['agency'][0]}, 10 accounts, 10,000 AI replies, one Claude link for every account",
+           "- Selling through ReplyInbox: 5% + GST per sale on Free, Starter and Creator; 2% + GST (plus the payment gateway's charge) on Pro and Agency.", "",
            "## Topics"]
     for k, pil in seo.PILLARS.items():
         out += ["", f"### [{fill(pil['title'])}]({u}/{k})", fill(pil["answer"])]
@@ -912,8 +919,11 @@ def api_team_invite():
     if not name or role not in ROLES:
         return jsonify(error="Add their name and pick a role."), 400
     team = acc.setdefault("team", [])
-    if len(team) >= MAX_TEAM:
-        return jsonify(error=f"A team can have up to {MAX_TEAM} people."), 400
+    cap = min(MAX_TEAM, plans.limit(acc, "team"))
+    if not cap:
+        return locked(acc, "team")
+    if len(team) >= cap:
+        return jsonify(error=f"Your plan allows {cap} team member{'s' if cap != 1 else ''}. Upgrade in Plan & billing for more."), 400
     member = {"id": secrets.token_hex(6), "name": name, "role": role, "invited": int(time.time()), "joined": 0}
     token = secrets.token_urlsafe(24)
     store.redis("SET", f"s:join:{hashlib.sha256(token.encode()).hexdigest()}",
@@ -2290,8 +2300,10 @@ def api_course_upload():
 @app.post("/api/courses/video")
 def api_video_start():
     d = request.get_json(force=True) or {}
+    if locked(current_account(), "video_upload"):
+        return locked(current_account(), "video_upload")
     try:
-        v = videos.start(current_account(), d.get("name"), d.get("size"))
+        v = videos.start(current_account(), d.get("name"), d.get("size"), plans.limit(current_account(), "video_gb"))
     except videos.VideoError as e:
         return jsonify(error=str(e)), 400
     return jsonify(id=v["id"], parts=v["parts"], chunk=videos.CHUNK, name=v["name"])
@@ -3132,8 +3144,10 @@ def clean_page(data, acc):
     seo = data.get("seo") or {}
     seo_img = str(seo.get("image", "")).strip()
     accent = str(data.get("accent", "")).strip()
-    look = {"accent": accent if re.fullmatch(r"#[0-9a-fA-F]{6}", accent) else "", "layout": "two" if data.get("layout") == "two" else "single",
-            "seo": {"title": str(seo.get("title", "")).strip()[:70], "description": str(seo.get("description", "")).strip()[:160],
+    pro = plans.has(acc, "page_pro")
+    look = {"accent": accent if pro and re.fullmatch(r"#[0-9a-fA-F]{6}", accent) else "", "layout": "two" if pro and data.get("layout") == "two" else "single",
+            "hide_brand": bool(data.get("hide_brand")) and plans.has(acc, "remove_branding"),
+            "seo": {} if not pro else {"title": str(seo.get("title", "")).strip()[:70], "description": str(seo.get("description", "")).strip()[:160],
                     "image": seo_img if seo_img.startswith("https://") or re.fullmatch(r"/f/[\w-]{6,20}/[\w.-]{1,100}", seo_img) else ""}}
     return {**look, "signup": signup, "freebies": freebies,
             "name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
@@ -3344,7 +3358,9 @@ def agents_page():
 def api_agents():
     acc = current_account()
     return jsonify(settings=agents.settings(acc), used={"lead": agents.used(acc, "lead"), "brand": agents.used(acc, "brand")},
-                   limits={"lead": agents.LEAD_LIMIT, "brand": agents.BRAND_LIMIT}, ai=ai_agent.client() is not None,
+                   limits={"lead": agents.cap(acc, "lead"), "brand": agents.cap(acc, "brand")}, ai=ai_agent.client() is not None,
+                   allowed={"lead": plans.has(acc, "lead_agent"), "brand": plans.has(acc, "brand_agent")},
+                   needs={"lead": plans.needs("lead_agent"), "brand": plans.needs("brand_agent")},
                    leads=agents.leads(acc)[:300], brands=agents.requests(acc), ai_inbox=ai_agent.settings(acc)["enabled"],
                    guard=bool((acc.get("guard") or {}).get("enabled")))
 
@@ -3355,6 +3371,9 @@ def api_agents_save():
     if acc.get("demo"):
         return jsonify(error="Not available in the demo."), 403
     data = agents.clean(request.get_json(force=True))
+    for kind, feature in (("lead", "lead_agent"), ("brand", "brand_agent")):
+        if data[kind]["enabled"] and not plans.has(acc, feature):
+            return locked(acc, feature)
     if (data["lead"]["enabled"] or data["brand"]["enabled"]) and ai_agent.client() is None:
         return jsonify(error="The AI isn't set up on the server yet (ANTHROPIC_API_KEY)."), 400
     acc["agents"] = data
@@ -3438,6 +3457,8 @@ def api_leads():
 
 @app.get("/api/leads.csv")
 def api_leads_csv():
+    if locked(current_account(), "cart_tools"):
+        return locked(current_account(), "cart_tools")
     _, out = leads_filtered(current_account(), request.args)
     buf = io.StringIO()
     w = csv.writer(buf)
@@ -3448,6 +3469,8 @@ def api_leads_csv():
 
 @app.post("/api/leads/carts/<oid>/remind")
 def api_cart_remind(oid):
+    if locked(current_account(), "cart_tools"):
+        return locked(current_account(), "cart_tools")
     try:
         leads.remind(current_account(), oid)
     except shop.ShopError as e:
@@ -3527,6 +3550,8 @@ def api_payouts():
 @app.get("/api/payments.csv")
 def api_payments_csv():
     acc = current_account()
+    if locked(acc, "cart_tools"):
+        return locked(acc, "cart_tools")
     start, end = payments_window(request.args)
     item = str(request.args.get("item", ""))
     buf = io.StringIO()
@@ -3562,6 +3587,8 @@ def api_contact_tags():
 @app.get("/api/contacts.csv")
 def api_contacts_csv():
     acc = current_account()
+    if locked(acc, "cart_tools"):
+        return locked(acc, "cart_tools")
     out = io.StringIO()
     w = csv.writer(out)
     w.writerow(["username", "email", "phone", "followed", "keyword", "tags", "interactions", "first_seen", "last_seen"])
@@ -3607,6 +3634,8 @@ def mcp_endpoint():
     acc, read_only = mcp_account()
     if not acc:
         return jsonify(error=f"Missing or wrong key. Create a new Claude link in your {BRAND} dashboard."), 401
+    if not plans.has(acc, "mcp"):
+        return jsonify(error=f"Connect Claude is on the {plans.needs('mcp')} plan and up. Upgrade in your {BRAND} dashboard → Plan & billing."), 403
     if request.method != "POST":
         return "", 405, {"Allow": "POST"}
     tools = mcp_tools.tools_for(acc, mcp_services(), read_only=read_only)
@@ -3619,7 +3648,10 @@ def mcp_endpoint():
 def api_mcp_key():
     acc = current_account()
     if request.method == "GET":
-        return jsonify(active=bool(acc.get("mcp_key_hash")), read_only=acc.get("mcp_mode") == "read")
+        return jsonify(active=bool(acc.get("mcp_key_hash")) and plans.has(acc, "mcp"), read_only=acc.get("mcp_mode") == "read",
+                       allowed=plans.has(acc, "mcp"), needs=plans.needs("mcp"))
+    if request.method == "POST" and not plans.has(acc, "mcp"):
+        return locked(acc, "mcp")
     if acc.get("mcp_key_hash"):  # a new link (or disconnect) turns off the old one
         store.redis("DEL", f"s:mcpkey:{acc['mcp_key_hash']}")
         acc["mcp_key_hash"] = ""
@@ -3956,6 +3988,9 @@ def bio_page(username):
     if not any(k == "instagram" for k, _ in social_links):
         social_links.insert(0, ("instagram", f"https://www.instagram.com/{acc.get('username', '')}/"))
     page = {**page, "theme": theme_of(page)}
+    if not plans.has(acc, "page_pro"):  # a plan that ended: back to the theme's own look
+        page.update(accent="", layout="single", seo={})
+    page["hide_brand"] = bool(page.get("hide_brand")) and plans.has(acc, "remove_branding")
     if (current_account() or {}).get("id") != acc["id"]:  # the owner's own visits don't count
         ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
         from urllib.parse import unquote

@@ -124,7 +124,7 @@
     {% endfor %}
   </main>
 
-  <footer>Follow <a href="https://www.instagram.com/{{ ig }}/" target="_blank" rel="noopener">@{{ ig }}</a> for more<br><span class="made">Made with <a href="/">{{ brand }}</a></span></footer>
+  <footer>Follow <a href="https://www.instagram.com/{{ ig }}/" target="_blank" rel="noopener">@{{ ig }}</a> for more{% if not page.hide_brand %}<br><span class="made">Made with <a href="/">{{ brand }}</a></span>{% endif %}</footer>
 </div>
 <div class="toast" id="toast">Link copied ✓</div>
 <script>

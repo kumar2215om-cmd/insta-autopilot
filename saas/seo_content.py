@@ -53,7 +53,7 @@ FEATURES = {
         ],
         "faq": [
             ("Can Instagram see that I use a follow gate?", "It runs on the official API with normal DMs and buttons, so it is within Instagram's rules."),
-            ("Which plan includes follow to unlock?", "Starter and above. During the beta every feature is free."),
+            ("Which plan includes follow to unlock?", "Starter and above."),
         ],
     },
     "ai-dm-agent": {
@@ -1040,7 +1040,7 @@ GUIDES.update({
             ("Ready-made prompts", "<p>Weekly review, Plan a launch, Set up a reel, Health check and Catch up on DMs appear in Claude's menu once connected.</p>"),
             ("Stay in control", "<p>Choose full access or read-only. Every change Claude makes is logged in Activity, and messages are only sent after you confirm.</p>"),
         ],
-        "faq": [("Which plan includes the Claude connection?", "Pro (and during the beta, every plan)."),
+        "faq": [("Which plan includes the Claude connection?", "Pro and Agency. Agency connects all its Instagram accounts with one Claude link."),
                 ("Does Claude see my Instagram password?", "No. It uses a separate key you create in {brand}, which you can turn off any time.")],
     },
     "ai-dm-agent-examples": {

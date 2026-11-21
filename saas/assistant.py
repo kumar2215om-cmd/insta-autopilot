@@ -14,7 +14,6 @@ import store
 
 MODEL = os.environ.get("ASSISTANT_MODEL", "claude-haiku-5-5")  # the low-cost model; set ASSISTANT_MODEL to upgrade later
 MAX_STEPS = 5
-DAILY = {"free": 10, "paid": 50}
 KEEP = 40
 
 
@@ -55,7 +54,8 @@ def _day():
 
 
 def left(acc):
-    limit = DAILY["paid" if store.is_pro(acc) else "free"]
+    import plans
+    limit = plans.limit(acc, "assistant_day")
     used = int(store.redis("GET", f"s:asstuse:{acc['id']}:{_day()}") or 0)
     return max(0, limit - used)
 
@@ -96,7 +96,7 @@ def _run(tool, args):
 
 
 def _call(c, acc, chat, tools, system):
-    req = dict(model=MODEL, max_tokens=1200, system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+    req = dict(model=MODEL, max_tokens=1200, output_config={"effort": "low"}, system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                tools=_tool_defs(tools), messages=chat["messages"])
     if MODEL.startswith(ai_agent.FALLBACK_MODELS):
         return c.beta.messages.create(**req, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
@@ -152,7 +152,7 @@ def ask(acc, tools, text, brand, extra=""):
     if not text:
         raise AssistantError("Type a question first.")
     if left(acc) <= 0:
-        raise AssistantError("You've used today's AI messages. They refill tomorrow" + ("." if store.is_pro(acc) else ", or upgrade for more."))
+        raise AssistantError("You've used today's AI questions. They refill tomorrow, or upgrade in Plan & billing for more.")
     chat = load(acc["id"])
     _use(acc)
     if chat.get("pending"):  # a new message means "no" to the waiting change (and skips the calls after it)

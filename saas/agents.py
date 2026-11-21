@@ -13,9 +13,9 @@ import re
 import time
 
 import ai_agent
+import plans
 import store
 
-LEAD_LIMIT, BRAND_LIMIT = 100, 50
 BRAND_RE = re.compile(r"collab|sponsor|brand|paid promo|promotion|partnership|partner|barter|campaign|rate ?card|"
                       r"commercials?|deliverables|influencer|ugc|promote (our|my)|budget|agency|endorse", re.I)
 DEFAULT_ASK = ("Hi! Thanks for reaching out 🙌 To check fit, could you share: the brand/product, what you'd like "
@@ -66,6 +66,11 @@ def wants_messages(acc):
     return s["lead"]["enabled"] or s["brand"]["enabled"]
 
 
+def cap(acc, kind):
+    """Chats an agent may read this month on the account's plan."""
+    return plans.limit(acc, "lead_agent" if kind == "lead" else "brand_agent")
+
+
 def _month():
     return time.strftime("%Y-%m", time.gmtime())
 
@@ -97,7 +102,7 @@ def _ask(acc, system, history, schema):
 def qualify(acc, igsid, username=""):
     """Scores one chat (at most every 10 minutes). Returns the lead dict, or None."""
     s = settings(acc)["lead"]
-    if not s["enabled"] or used(acc, "lead") >= LEAD_LIMIT:
+    if not s["enabled"] or not plans.has(acc, "lead_agent") or used(acc, "lead") >= cap(acc, "lead"):
         return None
     thread = ai_agent.get_thread(acc["id"], igsid) or {}
     if (thread.get("lead") or {}).get("at", 0) > time.time() - 600:
@@ -174,7 +179,7 @@ def check_brand(acc, igsid, username, text, send=None):
         return None
     if existing and not hit and json.loads(existing).get("updated", 0) > time.time() - 600:
         return None  # a follow-up in a brand chat is re-read at most every 10 minutes
-    if used(acc, "brand") >= BRAND_LIMIT:
+    if not plans.has(acc, "brand_agent") or used(acc, "brand") >= cap(acc, "brand"):
         return None
     system = (f"You are the brand-deal receptionist for the Instagram creator @{acc.get('username', '')}. Decide if this DM chat is a "
               f"brand / business collaboration offer (paid or barter promotion, sponsorship, UGC, affiliate). Extract the details "

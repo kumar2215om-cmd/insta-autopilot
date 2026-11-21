@@ -675,7 +675,7 @@ def handle_story_reply(acc, igsid, text, story_id="", mid=""):
     rules = store.load_rules(acc["id"]).get("reels", {})
     if dm_keyword_match(rules, text)[1]:
         return handle_dm_text(acc, igsid, text, mid)
-    rule = rules.get("story:reply")
+    rule = rules.get("story:reply") if plans.has(acc, "story_replies") else None
     words = keywords_of(rule or {})
     if not rule or not is_live(rule) or excluded(rule, text) or (words and not any(keyword_matches(w, text) for w in words)):
         return handle_ai_dm(acc, igsid, text, mid)
@@ -692,7 +692,7 @@ def handle_story_reply(acc, igsid, text, story_id="", mid=""):
 def handle_story_mention(acc, igsid):
     """Someone mentioned the creator in their story: one thank-you DM per person per day."""
     rule = store.load_rules(acc["id"]).get("reels", {}).get("story:mention")
-    if not rule or not is_live(rule) or is_blocked(acc):
+    if not rule or not is_live(rule) or is_blocked(acc) or not plans.has(acc, "story_replies"):
         return
     if not store.claim(f"s:seen:{acc['id']}:mention:{igsid}:{int(time.time() // 86400)}", 2 * 86400):
         return
@@ -1182,6 +1182,8 @@ def pending_key(acc, igsid):
 
 def ask_next(acc, ig, igsid, key, rule, media_id, username, after=None):
     """Asks for the next detail the rule wants and the person hasn't given yet. False when nothing is left to ask."""
+    if not plans.has(acc, "capture"):
+        return False  # email / WhatsApp capture is on Starter and up: the link goes out straight away
     contact = store.get_contact(acc["id"], username, igsid) or {}
     for field in FIELDS[FIELDS.index(after) + 1 if after else 0:]:
         if rule.get(f"ask_{field}") and not contact.get(field):

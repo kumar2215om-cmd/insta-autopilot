@@ -12,7 +12,7 @@ from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 os.environ.update(IG_APP_ID="123", IG_APP_SECRET="shh", CRON_SECRET="cron", OWNER_PASSWORD="boss",
-                  SECRET_KEY="test", FREE_MONTHLY_DMS="3")
+                  SECRET_KEY="test", FREE_MONTHLY_DMS="3", PLAN_LOCKS="off")
 for k in ("UPSTASH_REDIS_REST_URL", "KV_REST_API_URL", "VERCEL"):
     os.environ.pop(k, None)
 
@@ -368,13 +368,13 @@ class SaasTest(unittest.TestCase):
         again = self.c.post("/api/billing/verify", json={"order_id": o["order_id"], "payment_id": "pay_1", "signature": sign(o["order_id"], "pay_1")}).get_json()
         self.assertEqual(again["until"], r["until"])
         self.assertEqual(len(users.get(uid)["payments"]), 1)
-        # upgrading to Pro turns ~30 Creator days (₹199) into ~12 Pro days (₹499), on top of the new month
+        # upgrading to Pro turns ~30 Creator days (₹199) into ~10 Pro days (₹599), on top of the new month
         q = self.c.get("/api/billing").get_json()["quotes"]["pro"]["month"]
-        self.assertAlmostEqual(q["credit_days"], 30 * 199 / 499, delta=0.2)
+        self.assertAlmostEqual(q["credit_days"], 30 * 199 / 599, delta=0.2)
         # the webhook activates too (when the browser closed early); bad signatures are refused
         o2 = self.c.post("/api/billing/order", json={"plan": "pro", "period": "year"}).get_json()
         body = json.dumps({"event": "payment.captured", "payload": {"payment": {"entity": {
-            "id": "pay_2", "order_id": o2["order_id"], "status": "captured", "amount": 499900}}}}).encode()
+            "id": "pay_2", "order_id": o2["order_id"], "status": "captured", "amount": 599900}}}}).encode()
         self.assertEqual(self.c.post("/billing/webhook", data=body, headers={"X-Razorpay-Signature": "x"}).status_code, 400)
         wsig = hmac.new(b"wh", body, hashlib.sha256).hexdigest()
         self.assertEqual(self.c.post("/billing/webhook", data=body, headers={"X-Razorpay-Signature": wsig}).status_code, 200)
@@ -382,7 +382,7 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(u["plan"], "pro")
         self.assertGreater(u["plan_until"], time.time() + 365 * 86400)  # a year plus the Creator credit
         rid = u["payments"][0]["id"]
-        self.assertIn("₹4,999", self.c.get(f"/app/billing/receipt/{rid}").get_data(as_text=True))
+        self.assertIn("₹5,999", self.c.get(f"/app/billing/receipt/{rid}").get_data(as_text=True))
         self.assertEqual(self.c.get("/app/billing/receipt/order_999").status_code, 404)
         h = {"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}
         self.assertIn("pay_2", self.c.get("/owner", headers=h).get_data(as_text=True))
@@ -708,7 +708,9 @@ class SaasTest(unittest.TestCase):
         f = plans.platform_fee(free, 499)
         self.assertEqual((f["fee"], f["gst"], f["total_fee"], f["creator_gets"]), (24.95, 4.49, 29.44, 469.56))
         self.assertEqual(f["gateway"], 0)  # Free's 5% is all-in
-        c = plans.platform_fee(creator, 499)  # 2% + GST, plus the gateway's charge passed through
+        c = plans.platform_fee(creator, 499)  # Creator (like Starter) pays Free's 5% all-in
+        self.assertEqual((c["fee"], c["gst"], c["gateway"], c["total_fee"], c["creator_gets"]), (24.95, 4.49, 0.0, 29.44, 469.56))
+        c = plans.platform_fee(pro, 499)  # Pro: 2% + GST, plus the gateway's charge passed through
         self.assertEqual((c["fee"], c["gst"], c["gateway"], c["total_fee"], c["creator_gets"]), (9.98, 1.8, 11.78, 23.56, 475.44))
         self.assertEqual(plans.platform_fee(pro, 499, gateway_fee=5.0)["total_fee"], 16.78)  # real gateway charge when known
         self.assertEqual(plans.platform_fee({"plan": "agency"}, 499)["total_fee"], 23.56)
@@ -716,10 +718,10 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(plans.plan_of({"plan": "free", "pro_until": _t.time() + 99}), "pro")
         self.assertEqual(plans.plan_of({"plan": "gold"}), "free")
         self.assertTrue(store.is_pro(creator))
-        # Starter (the decoy): paid, 3,000 DMs, no monthly AI, 2% fee
+        # Starter (the decoy): paid, 3,000 DMs, no monthly AI, 5% fee
         self.assertEqual(engine.monthly_limit({"plan": "starter"}), 3000)
         self.assertEqual(ai_agent.allowance({"plan": "starter"}), ("trial", 25))
-        self.assertEqual(plans.platform_fee({"plan": "starter"}, 499)["total_fee"], 23.56)
+        self.assertEqual(plans.platform_fee({"plan": "starter"}, 499)["total_fee"], 29.44)
         self.assertFalse(store.is_pro(free))
         # limits follow the plan
         self.assertEqual(ai_agent.allowance({"plan": "creator"}), ("month", 300))
@@ -1278,7 +1280,8 @@ class SaasTest(unittest.TestCase):
         html = self.c.get("/").get_data(as_text=True)
         self.assertIn('property="og:image" content="http://localhost/static/og.png"', html)
         self.assertEqual(self.c.get("/static/og.png").status_code, 200)
-        for text in ("₹149", "₹199", "₹499", "₹1,499", 'data-usd="$9"', 'data-usd-m="$19"', "MOST POPULAR", "1,000 DMs every month", "25 AI replies", "AI DM agent", "Giveaway picker", "Team access"):
+        for text in ("₹149", "₹199", "₹599", "₹2,000", "₹5,999", 'data-usd="$9"', 'data-usd-m="$19"', "MOST POPULAR", "1,000 DMs every month", "25 AI replies", "AI DM agent",
+                     "Giveaway picker", "Connect Claude (MCP)", "5% + GST"):
             self.assertIn(text, html)
 
     def test_referrals(self):
@@ -2762,6 +2765,45 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(r["links"], [["Guide", 2]])
         self.assertEqual(len(r["series"]), 7)
         self.assertIn("Analytics", self.c.get("/app/links").get_data(as_text=True))
+
+    def test_plan_locks_by_plan(self):
+        import assistant
+        import plans
+        cid = self.course_setup()
+        self.enterContext(mock.patch.object(plans, "LOCKS_ON", True))
+        acc = store.load_account("1789")
+        self.assertEqual(plans.plan_of(acc), "free")
+        # Free: locked features answer 403 with the plan they need
+        r = self.c.post("/api/mcp-key", json={})
+        self.assertEqual((r.status_code, r.get_json()["upgrade"]), (403, "Pro"))
+        self.assertEqual(self.c.get("/api/leads.csv").get_json()["upgrade"], "Starter")
+        self.assertEqual(self.c.post("/api/courses/video", json={"name": "a.mp4", "size": 10}).get_json()["upgrade"], "Pro")
+        self.assertEqual(self.c.put("/api/agents", json={"lead": {"enabled": True}}).get_json()["upgrade"], "Creator")
+        self.assertEqual(self.c.post("/api/team", json={"name": "A", "role": "manager"}).status_code, 403)
+        page = self.c.put("/api/page", json={"name": "x", "items": [], "accent": "#ff0000", "layout": "two", "hide_brand": True,
+                                             "seo": {"title": "T"}}).get_json()["page"]
+        self.assertEqual((page["accent"], page["layout"], page["hide_brand"], page["seo"]), ("", "single", False, {}))
+        c = self.course_body(cid, intl={"enabled": True, "usd": 9}, ga="G-AB12CD34EF")
+        self.assertEqual((c["intl"]["enabled"], c["ga"]), (False, ""))
+        self.assertEqual(assistant.left(acc), 2)
+        self.assertEqual(self.c.get("/api/me").get_json()["account"]["plan_view"]["needs"]["mcp"], "Pro")
+        self.assertFalse(self.c.get("/api/me").get_json()["account"]["plan_view"]["has"]["mcp"])
+        # the MCP endpoint itself refuses Free accounts that still hold an old key
+        self.enterContext(mock.patch.object(plans, "LOCKS_ON", False))
+        key = self.c.post("/api/mcp-key", json={}).get_json()["key"]
+        plans.LOCKS_ON = True
+        self.assertEqual(saas.app.test_client().post("/mcp", json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+                                                     headers={"Authorization": f"Bearer {key}"}).status_code, 403)
+        # Pro: all of it, with Pro's limits
+        acc["plan"] = "pro"
+        store.save_account(acc)
+        self.assertEqual(self.c.post("/api/mcp-key", json={}).status_code, 200)
+        self.assertEqual(self.c.get("/api/leads.csv").status_code, 200)
+        page = self.c.put("/api/page", json={"name": "x", "items": [], "accent": "#ff0000", "hide_brand": True}).get_json()["page"]
+        self.assertEqual((page["accent"], page["hide_brand"]), ("#ff0000", True))
+        self.assertNotIn("Made with", saas.app.test_client().get("/creator").get_data(as_text=True))
+        self.assertEqual(assistant.left(store.load_account("1789")), 25)
+        self.assertEqual(plans.platform_fee({"plan": "pro"}, 100)["fee_pct"], 2.0)
 
 
 
