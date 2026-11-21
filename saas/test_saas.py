@@ -2374,7 +2374,10 @@ class SaasTest(unittest.TestCase):
         self.assertIn("Fan", page)
         self.assertIn("Reels Mastery", page)
         self.assertEqual(saas.app.test_client().get("/cert/000000000000").status_code, 404)
-        # my courses list
+        # "My courses" needs a real sign-in (the emailed link), not just a purchase in this browser
+        self.assertIn("Send code", anon.get("/learn").get_data(as_text=True))
+        tok = courses.magic_link("fan@x.co", cid).rsplit("/", 1)[1]
+        anon.get(f"/learn/in/{tok}")
         self.assertIn("100% complete", anon.get("/learn").get_data(as_text=True))
 
     def test_course_free_signin_and_validity(self):
@@ -2804,6 +2807,54 @@ class SaasTest(unittest.TestCase):
         self.assertNotIn("Made with", saas.app.test_client().get("/creator").get_data(as_text=True))
         self.assertEqual(assistant.left(store.load_account("1789")), 25)
         self.assertEqual(plans.platform_fee({"plan": "pro"}, 100)["fee_pct"], 2.0)
+
+    def test_security_hardening(self):
+        import courses
+        import files
+        cid = self.course_setup()
+        self.course_body(cid)
+        free = self.c.post("/api/courses", json={"title": "Free mini course"}).get_json()["id"]
+        c2 = self.c.get(f"/api/courses/{free}").get_json()["course"]
+        self.c.put(f"/api/courses/{free}", json={**c2, "status": "published", "price_mode": "pwyw", "min_price": 0, "slug": "mini"})
+        courses.enroll({"id": "o_v", "course": cid, "email": "victim@x.co", "name": "Victim", "price": 999})
+        # enrolling in a free course with someone else's email opens only that course, never their paid ones
+        attacker = saas.app.test_client()
+        r = attacker.post("/creator/c/mini/order", json={"name": "A", "email": "victim@x.co", "amount": 0}).get_json()
+        self.assertEqual(attacker.get(r["next"]).status_code, 200)
+        self.assertEqual(attacker.get(f"/learn/{cid}").status_code, 302)
+        self.assertNotIn("Reels Mastery", attacker.get("/learn").get_data(as_text=True))
+        # a payment for one course can't unlock another
+        o = attacker.post("/creator/c/reels/order", json={"name": "A", "email": "a@x.co"}).get_json()
+        sig = hmac.new(b"sek", f"{o['order_id']}|pay_s1".encode(), hashlib.sha256).hexdigest()
+        self.assertIn("something else", attacker.post("/creator/c/mini/paid", json={"order_id": o["order_id"], "payment_id": "pay_s1",
+                                                                                      "signature": sig}).get_json()["error"])
+        # uploaded files are served by their extension's type, never the uploader's claimed type
+        self.assertEqual(files.type_for("x.png"), ("image/png", "inline"))
+        self.assertEqual(files.type_for("x.json")[1], "attachment")
+        self.assertEqual(files.type_for("evil.html"), ("application/octet-stream", "attachment"))
+        # security headers on pages
+        h = saas.app.test_client().get("/creator").headers
+        for k in ("Content-Security-Policy", "X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy", "Permissions-Policy"):
+            self.assertIn(k, h)
+        self.assertIn("frame-ancestors 'self'", h["Content-Security-Policy"])
+        self.assertEqual(self.c.get("/api/me").headers["Cache-Control"], "private, no-store")
+        # the owner page locks an IP after 10 wrong passwords
+        bad = {"Authorization": "Basic " + base64.b64encode(b"o:wrong").decode()}
+        good = {"Authorization": "Basic " + base64.b64encode(b"o:boss").decode()}
+        guest = saas.app.test_client()
+        for _ in range(10):
+            guest.get("/owner", headers=bad)
+        self.assertEqual(guest.get("/owner", headers=good).status_code, 401)
+        # switching to an account the login doesn't own is refused
+        self.assertEqual(self.c.post("/api/switch", json={"id": "999999"}).status_code, 403)
+        # the Instagram login callback needs the state it started with (no state at all is refused too)
+        fresh = saas.app.test_client()
+        self.signin(fresh, "other@example.com")
+        self.assertNotIn("/app", fresh.get("/auth/callback?code=abc").location or "")
+        # image links can't break out of src="" or CSS url('')
+        p = self.c.put("/api/page", json={"name": "x", "photo": "https://x.com/a.png');background:url('//evil", "items": [
+            {"type": "product", "title": "P", "url": "https://x.com/p\"onmouseover=alert(1)", "image": "https://x.com/i.png\" onerror=x"}]}).get_json()["page"]
+        self.assertEqual((p["photo"], p["items"]), ("", []))
 
 
 

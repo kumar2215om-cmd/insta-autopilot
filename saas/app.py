@@ -72,8 +72,18 @@ REPORT_REELS = 12
 
 app = Flask(__name__)
 app.secret_key = env("SECRET_KEY") or secrets.token_hex(32)  # set SECRET_KEY in production, or logins reset
-app.config.update(SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=SERVERLESS,
+app.config.update(MAX_CONTENT_LENGTH=5 * 1024 * 1024,  # Vercel refuses bigger bodies anyway
+                  SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=SERVERLESS,
                   SESSION_COOKIE_HTTPONLY=True, PERMANENT_SESSION_LIFETIME=30 * 86400)
+
+
+def client_ip():
+    """The visitor's IP for rate limits. On Vercel the edge sets x-real-ip itself, so a client can't fake it."""
+    for h in ("x-real-ip", "x-vercel-forwarded-for"):
+        v = request.headers.get(h, "").split(",")[0].strip()
+        if v and SERVERLESS:
+            return v
+    return request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip() if not SERVERLESS else (request.remote_addr or "")
 
 
 def base_url():
@@ -221,11 +231,30 @@ def is_private_path(path):
     return any(path == p or path.startswith(p + "/") for p in PRIVATE_PREFIXES)
 
 
+CSP = ("default-src 'self' https:; "
+       "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://www.googletagmanager.com https://connect.facebook.net "
+       "https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; "
+       "img-src 'self' data: blob: https:; media-src 'self' blob: https:; frame-src 'self' https:; connect-src 'self' https:; worker-src 'self'; "
+       "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'")
+
+
 @app.after_request
 def no_index_private(resp):
-    """Keep the dashboard, demo and redirect links out of search results."""
+    """Keep the dashboard, demo and redirect links out of search results, and send the security headers on every page."""
     if is_private_path(request.path):
         resp.headers["X-Robots-Tag"] = "noindex, nofollow"
+    h = resp.headers
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    h.setdefault("X-Frame-Options", "SAMEORIGIN")
+    h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self \"https://checkout.razorpay.com\" \"https://api.razorpay.com\")")
+    h.setdefault("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+    if resp.mimetype == "text/html":
+        h.setdefault("Content-Security-Policy", CSP)
+    if SERVERLESS:
+        h.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    if request.path.startswith(("/api/", "/learn", "/owner", "/app")) and "Cache-Control" not in h:
+        h["Cache-Control"] = "private, no-store"  # personal data never sits in a shared cache
     return resp
 
 
@@ -241,6 +270,9 @@ def guard():
                 return jsonify(error="You were signed out. Please log in again."), 401
             return redirect("/signin")
     # Logged-in API calls that change data must be JSON: a cross-site form can't send that without CORS.
+    if request.path.startswith(("/api/", "/owner")) and request.method in ("POST", "PUT", "DELETE") \
+            and request.headers.get("Sec-Fetch-Site") == "cross-site":
+        return jsonify(error="Cross-site request refused."), 403  # a second lock on top of the JSON rule
     if request.path.startswith("/api/"):
         if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
             return jsonify(error="Please log in again."), 401
@@ -664,7 +696,7 @@ def start_session(user):
 def client_info():
     """(user agent, ip, city, country) of this request, for Settings → Security."""
     from urllib.parse import unquote
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    ip = client_ip()
     return (request.headers.get("User-Agent", ""), ip, unquote(request.headers.get("x-vercel-ip-city", "")),
             request.headers.get("x-vercel-ip-country", ""))
 
@@ -700,7 +732,7 @@ def auth_email_start():
         email = users.clean_email(data.get("email"))
         if not new_user_allowed(email):
             return jsonify(error="Sign-ups are invite-only right now. Enter your invite code."), 403
-        users.start_email(email, request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip())
+        users.start_email(email, client_ip())
     except users.LoginError as e:
         return jsonify(error=str(e)), 400
     return jsonify(ok=True, email=email)
@@ -729,7 +761,7 @@ def auth_password():
     d = request.get_json(force=True)
     try:
         user = users.review_login(d.get("email"), d.get("password"),
-                                  request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip())
+                                  client_ip())
     except users.LoginError as e:
         return jsonify(error=str(e)), 400
     session["next"] = "/app/billing"  # reviewers come to see the checkout
@@ -814,7 +846,8 @@ def auth_callback():
         return redirect(url_for("signin_page"))
     if request.args.get("error") or not request.args.get("code"):
         return redirect(url_for("connect_page", error="Instagram login was cancelled. Try again whenever you're ready."))
-    if request.args.get("state") != session.pop("oauth_state", None):
+    expected = session.pop("oauth_state", None)
+    if not expected or not hmac.compare_digest(str(expected), request.args.get("state", "")):
         return redirect(url_for("connect_page", error="That Instagram login expired. Try again."))
     try:
         token = exchange_code(request.args["code"])
@@ -2021,8 +2054,10 @@ def file_download(fid, name):
         page = store.load_page(acc["id"]) or default_page(acc)
         return Response(guides.render(data.decode("utf-8", errors="replace"), name, acc, page, f"/f/{fid}/{name}?raw=1", BRAND),
                         mimetype="text/html", headers={"Cache-Control": "public, max-age=300"})
-    return Response(data, mimetype=ctype, headers={"Cache-Control": "public, max-age=3600",
-                                                   "Content-Disposition": f'inline; filename="{name}"'})
+    ctype, disp = files.type_for(name)
+    return Response(data, content_type=ctype, headers={"Cache-Control": "public, max-age=3600", "X-Content-Type-Options": "nosniff",
+                                                       "Content-Security-Policy": "default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; sandbox",
+                                                       "Content-Disposition": f'{disp}; filename="{name}"'})
 
 
 # ---------- digital products (see shop.py) ----------
@@ -2140,7 +2175,7 @@ def product_order(username, pid):
     acc, prod = shop_product(username, pid)
     if not request.is_json:
         return jsonify(error="JSON required"), 415
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    ip = client_ip()
     k = f"s:shopip:{ip}:{int(time.time() // 60)}"
     if (store.redis("INCR", k) or 0) > 10:  # at most 10 order attempts a minute per IP
         return jsonify(error="Too many tries. Wait a minute, then try again."), 429
@@ -2461,7 +2496,7 @@ def course_order(username, slug):
     acc, c, _ = public_course(username, slug)
     if not request.is_json:
         return jsonify(error="JSON required"), 415
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    ip = client_ip()
     k = f"s:shopip:{ip}:{int(time.time() // 60)}"
     if (store.redis("INCR", k) or 0) > 10:
         return jsonify(error="Too many tries. Wait a minute, then try again."), 429
@@ -2471,7 +2506,7 @@ def course_order(username, slug):
     except (courses.CourseError, shop.ShopError) as e:
         return jsonify(error=str(e)), 400
     if r.get("free"):
-        session["student"] = str((request.get_json(force=True) or {}).get("email", "")).strip().lower()
+        grant_course(c["id"], str((request.get_json(force=True) or {}).get("email", "")).strip().lower())
         r["next"] = f"/learn/{c['id']}"
     return jsonify(r)
 
@@ -2486,7 +2521,9 @@ def course_paid(username, slug):
         o = shop.verify_checkout(str(d.get("order_id", "")), str(d.get("payment_id", "")), d.get("signature"))
     except shop.ShopError as e:
         return jsonify(error=str(e)), 400
-    session["student"] = o["email"]
+    if o.get("course") != c["id"]:
+        return jsonify(error="That payment is for something else."), 400
+    grant_course(c["id"], o["email"])
     return jsonify(next=f"/learn/{c['id']}")
 
 
@@ -2502,7 +2539,20 @@ def course_free_lesson(username, slug, lid):
 # ---------- students ----------
 
 def student():
+    """The email signed in to /learn (by email code or the link in their email)."""
     return session.get("student") or ""
+
+
+def student_for(cid):
+    """The student for one course: the signed-in email, or the email that just enrolled in or bought this course here.
+    Enrolling only opens that course: typing someone else's email at checkout never shows their other courses."""
+    return student() or (session.get("access") or {}).get(cid, "")
+
+
+def grant_course(cid, email):
+    acc_map = dict(session.get("access") or {})
+    acc_map[cid] = email
+    session["access"] = dict(list(acc_map.items())[-20:])
 
 
 @app.get("/learn")
@@ -2523,7 +2573,7 @@ def learn_home():
 def learn_start():
     if not request.is_json:
         return jsonify(error="JSON required"), 415
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+    ip = client_ip()
     try:
         email = users.start_email((request.get_json(force=True) or {}).get("email"), ip)
     except users.LoginError as e:
@@ -2556,6 +2606,7 @@ def learn_magic(tok):
 @app.post("/learn/logout")
 def learn_logout():
     session.pop("student", None)
+    session.pop("access", None)
     return redirect("/learn")
 
 
@@ -2565,9 +2616,9 @@ def learner(cid):
     if not c:
         abort(404)
     acc = store.load_account(c["acc"]) or {"id": c["acc"]}
-    if (current_account() or {}).get("id") == c["acc"] and not courses.enrollment(cid, student()):
+    if (current_account() or {}).get("id") == c["acc"] and not courses.enrollment(cid, student_for(cid)):
         return acc, c, {"email": "", "name": "Preview", "progress": {}, "quiz": {}, "work": {}, "at": 0}, True
-    email = student()
+    email = student_for(cid)
     e = courses.enrollment(cid, email) if email else None
     if not e:
         return acc, c, None, False
@@ -2649,7 +2700,7 @@ def learn_done(cid, lid):
     c, ls, err = learn_json(cid, lid)
     if err:
         return jsonify(error=err), 400
-    e = courses.mark(c, student(), lid, (request.get_json(force=True) or {}).get("done", True) is not False)
+    e = courses.mark(c, student_for(cid), lid, (request.get_json(force=True) or {}).get("done", True) is not False)
     return jsonify(pct=courses.percent(c, e))
 
 
@@ -2659,7 +2710,7 @@ def learn_quiz(cid, lid):
     if err or ls.get("type") != "quiz":
         return jsonify(error=err or "Not a quiz."), 400
     try:
-        return jsonify(result=courses.grade_quiz(c, student(), ls, (request.get_json(force=True) or {}).get("answers") or []))
+        return jsonify(result=courses.grade_quiz(c, student_for(cid), ls, (request.get_json(force=True) or {}).get("answers") or []))
     except courses.CourseError as e:
         return jsonify(error=str(e)), 400
 
@@ -2671,7 +2722,7 @@ def learn_work(cid, lid):
         return jsonify(error=err or "Not an assignment."), 400
     d = request.get_json(force=True) or {}
     try:
-        return jsonify(work=courses.submit_work(c, student(), ls, d.get("text"), d.get("link")))
+        return jsonify(work=courses.submit_work(c, student_for(cid), ls, d.get("text"), d.get("link")))
     except courses.CourseError as e:
         return jsonify(error=str(e)), 400
 
@@ -2710,9 +2761,11 @@ def learn_file(cid, lid, fid):
     if not got:
         abort(404)
     data, ctype, rec = got
-    inline = request.args.get("inline") == "1"
-    return Response(data, mimetype=ctype, headers={"Content-Disposition": f'{"inline" if inline else "attachment"}; filename="{rec["name"]}"',
-                                                   "Cache-Control": "private, no-store"})
+    ctype, disp = files.type_for(rec["name"])
+    inline = request.args.get("inline") == "1" and disp == "inline"
+    return Response(data, content_type=ctype, headers={"Content-Disposition": f'{"inline" if inline else "attachment"}; filename="{rec["name"]}"',
+                                                       "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+                                                       "Content-Security-Policy": "default-src 'none'; sandbox"})
 
 
 @app.get("/cert/<cert_id>")
@@ -3108,7 +3161,13 @@ SOCIALS = ["instagram", "youtube", "whatsapp", "email", "x", "website"]
 
 def safe_url(url):
     url = str(url or "").strip()
-    return url if url.startswith(("https://", "http://", "mailto:", "tel:")) else ""
+    return url if url.startswith(("https://", "http://", "mailto:", "tel:")) and not re.search(r"[\s<>\"'`\\]", url) else ""
+
+
+def safe_img(url):
+    """An image link that is safe inside src="" and CSS url(''): https only, no quotes, brackets or spaces."""
+    url = str(url or "").strip()
+    return url if re.fullmatch(r"https://[^\s<>\"'`()\\]+", url) else ""
 
 
 def clean_page(data, acc):
@@ -3121,7 +3180,7 @@ def clean_page(data, acc):
         items.append({"id": re.sub(r"[^a-z0-9]", "", str(it.get("id", "")).lower())[:12] or f"i{i}{secrets.token_hex(3)}",
                       "type": "product" if it.get("type") == "product" else "link", "title": title, "url": url,
                       "subtitle": str(it.get("subtitle", "")).strip()[:120], "price": str(it.get("price", "")).strip()[:20],
-                      "image": image if image.startswith("https://") else "",
+                      "image": safe_img(image),
                       "featured": bool(it.get("featured")), "enabled": it.get("enabled", True) is not False})
     socials = data.get("socials") or {}
     sign = data.get("signup") or {}
@@ -3148,12 +3207,12 @@ def clean_page(data, acc):
     look = {"accent": accent if pro and re.fullmatch(r"#[0-9a-fA-F]{6}", accent) else "", "layout": "two" if pro and data.get("layout") == "two" else "single",
             "hide_brand": bool(data.get("hide_brand")) and plans.has(acc, "remove_branding"),
             "seo": {} if not pro else {"title": str(seo.get("title", "")).strip()[:70], "description": str(seo.get("description", "")).strip()[:160],
-                    "image": seo_img if seo_img.startswith("https://") or re.fullmatch(r"/f/[\w-]{6,20}/[\w.-]{1,100}", seo_img) else ""}}
+                    "image": safe_img(seo_img) or (seo_img if re.fullmatch(r"/f/[\w-]{6,20}/[\w.-]{1,100}", seo_img) else "")}}
     return {**look, "signup": signup, "freebies": freebies,
             "name": str(data.get("name", "")).strip()[:60] or acc.get("name") or acc.get("username", ""),
             "bio": str(data.get("bio", "")).strip()[:300],
             "theme": theme_of(data),
-            "photo": safe_url(data.get("photo")) if str(data.get("photo", "")).startswith("https://") else "",
+            "photo": safe_img(data.get("photo")),
             "socials": {k: str(socials.get(k, "")).strip()[:200] for k in SOCIALS}, "items": items}
 
 
@@ -3634,6 +3693,10 @@ def mcp_endpoint():
     acc, read_only = mcp_account()
     if not acc:
         return jsonify(error=f"Missing or wrong key. Create a new Claude link in your {BRAND} dashboard."), 401
+    k = f"s:mcprate:{acc['id']}:{int(time.time() // 60)}"
+    if (store.redis("INCR", k) or 0) > 240:
+        return jsonify(error="Too many requests. Wait a minute."), 429
+    store.redis("EXPIRE", k, 120)
     if not plans.has(acc, "mcp"):
         return jsonify(error=f"Connect Claude is on the {plans.needs('mcp')} plan and up. Upgrade in your {BRAND} dashboard → Plan & billing."), 403
     if request.method != "POST":
@@ -3805,8 +3868,18 @@ def cron_refresh_tokens():
 # ---------- owner view ----------
 
 def owner_ok():
+    """The owner's password (HTTP basic auth). 10 wrong tries from one IP lock it for 15 minutes."""
     auth = request.authorization
-    return bool(OWNER_PASSWORD and auth and hmac.compare_digest(auth.password or "", OWNER_PASSWORD))
+    if not OWNER_PASSWORD or not auth:
+        return False
+    k = f"s:ownerfail:{client_ip()}"
+    if int(store.redis("GET", k) or 0) >= 10:
+        return False
+    if hmac.compare_digest(auth.password or "", OWNER_PASSWORD):
+        return True
+    store.redis("INCR", k)
+    store.redis("EXPIRE", k, 900)
+    return False
 
 
 @app.post("/owner/plan")
@@ -3992,7 +4065,7 @@ def bio_page(username):
         page.update(accent="", layout="single", seo={})
     page["hide_brand"] = bool(page.get("hide_brand")) and plans.has(acc, "remove_branding")
     if (current_account() or {}).get("id") != acc["id"]:  # the owner's own visits don't count
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+        ip = client_ip()
         from urllib.parse import unquote
         try:
             pagestats.visit(acc["id"], ip, request.headers.get("User-Agent", ""), request.headers.get("x-vercel-ip-country", ""),
@@ -4017,7 +4090,7 @@ def bio_signup(username):
     phone = engine.parse_phone(request.form.get("phone", "")) if ask in ("phone", "both") else ""
     if (ask in ("email", "both") and not email) or (ask in ("phone", "both") and not phone):
         return redirect(f"/{username}?error=invalid#join")
-    ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    ip = client_ip()
     if not store.claim(f"s:seen:signup:{acc['id']}:{ip}:{int(time.time() // 60)}", 120):
         return redirect(f"/{username}?error=slow#join")  # one signup per minute from the same place
     handle = clean_ref(request.form.get("instagram", ""))

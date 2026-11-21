@@ -476,6 +476,13 @@ def from_ad():
 
 @app.after_request
 def remember_ad_visit(resp):
+    h = resp.headers  # security headers on every response
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("X-Frame-Options", "SAMEORIGIN")
+    h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if SERVERLESS:
+        h.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     # Ad landing on / or /course: keep ad mode for this browser visit (session cookie), e.g. home → course.
     if request.method == "GET" and any(request.args.get(k) for k in AD_KEYS) and request.path in ("/", "/home", "/course", "/course/"):
         resp.set_cookie("adv", "1", samesite="Lax", secure=request.is_secure, httponly=True)
@@ -1294,9 +1301,42 @@ def check_password():
               or request.path.startswith(("/webhook", "/cron/", "/go/", "/free/")) or request.path == "/mcp")
     if not DASHBOARD_PASSWORD or public:
         return
+    # Another website can't make your logged-in browser change anything here (the browser sends the password for it).
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        site = request.headers.get("Sec-Fetch-Site", "")
+        origin = request.headers.get("Origin", "")
+        if site == "cross-site" or (origin and origin.rstrip("/") != request.host_url.rstrip("/")):
+            return ("Cross-site request refused", 403)
+    ip = (request.headers.get("x-real-ip") if SERVERLESS else None) or request.remote_addr or ""
+    fails = _login_fails(ip)
+    if fails >= 10:
+        return ("Too many wrong passwords. Try again in 15 minutes.", 429)
     auth = request.authorization
-    if not auth or (auth.password or "").strip() != DASHBOARD_PASSWORD:
+    if not auth or not hmac.compare_digest((auth.password or "").strip().encode(), DASHBOARD_PASSWORD.encode()):
+        if auth:
+            _login_fails(ip, add=True)
         return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="autopilot"'})
+
+
+_FAILS = {}
+
+
+def _login_fails(ip, add=False):
+    """Wrong dashboard passwords from one IP in the last 15 minutes (Redis on Vercel, memory locally)."""
+    key = f"loginfail:{ip}"
+    if REDIS_URL:
+        if add:
+            n = redis("INCR", key)
+            redis("EXPIRE", key, 900)
+            return int(n or 0)
+        return int(redis("GET", key) or 0)
+    n, until = _FAILS.get(key, (0, 0))
+    if until < time.time():
+        n = 0
+    if add:
+        n += 1
+        _FAILS[key] = (n, time.time() + 900)
+    return n
 
 
 RESUME_HOLD_SECONDS = 20 * 60
