@@ -621,7 +621,8 @@ class SaasTest(unittest.TestCase):
         self.assertGreaterEqual(len(rpc("tools/list")["result"]["tools"]), 30)
         # prompts
         names = [p["name"] for p in rpc("prompts/list")["result"]["prompts"]]
-        self.assertEqual(names, ["weekly_review", "launch_plan", "new_reel_automation", "plan_my_week", "fix_problems", "inbox_catchup"])
+        self.assertEqual(names, ["weekly_review", "launch_plan", "new_reel_automation", "plan_my_week", "fix_problems", "inbox_catchup",
+                                 "launch_product", "recover_carts", "brand_deals", "course_from_topic", "client_report"])
         msg = rpc("prompts/get", {"name": "launch_plan", "arguments": {"product": "Prompt pack", "price": "149"}})["result"]["messages"][0]
         self.assertIn("Prompt pack", msg["content"]["text"])
         self.assertIn("error", rpc("prompts/get", {"name": "launch_plan", "arguments": {}}))  # product is required
@@ -2855,6 +2856,70 @@ class SaasTest(unittest.TestCase):
         p = self.c.put("/api/page", json={"name": "x", "photo": "https://x.com/a.png');background:url('//evil", "items": [
             {"type": "product", "title": "P", "url": "https://x.com/p\"onmouseover=alert(1)", "image": "https://x.com/i.png\" onerror=x"}]}).get_json()["page"]
         self.assertEqual((p["photo"], p["items"]), ("", []))
+
+    def test_mcp_v2_tools_launch_undo_and_agency(self):
+        import courses
+        cid0 = self.course_setup()
+        key = self.c.post("/api/mcp-key", json={}).get_json()["key"]
+        H = {"Authorization": f"Bearer {key}"}
+        rpc = lambda method, params=None: self.c.post("/mcp", headers=H, json={"jsonrpc": "2.0", "id": 1, "method": method,
+                                                                               **({"params": params} if params is not None else {})}).get_json()
+
+        def call(name, args):
+            r = rpc("tools/call", {"name": name, "arguments": args})["result"]
+            self.assertFalse(r.get("isError"), r)
+            return r["structuredContent"]
+        names = [t["name"] for t in rpc("tools/list")["result"]["tools"]]
+        for n in ("create_course", "save_product", "search_leads", "get_payments", "update_link_page", "launch_offer", "undo_last_change"):
+            self.assertIn(n, names)
+        # a course from an outline
+        c = call("create_course", {"title": "Claude for Reels", "price_inr": 799, "description": "Make reels with AI",
+                                   "benefits": ["Hooks"], "modules": [{"title": "Start", "lessons": [{"title": "Intro", "video": "https://youtu.be/abcdefgh123", "free_preview": True}]},
+                                                                     {"title": "Check", "lessons": [{"title": "Quiz 1", "type": "quiz", "questions": [
+                                                                         {"question": "2+2?", "options": ["3", "4"], "answer": 1}]}]}]})["created"]
+        self.assertEqual((c["status"], c["modules"], c["lessons"], c["price_inr"]), ("draft", 2, 2, 799))
+        lid = c["outline"][0]["lessons"][0]["lesson_id"]
+        c2 = call("update_course", {"course_id": c["course_id"], "status": "published", "lesson_updates": [{"lesson_id": lid, "title": "Welcome"}]})["saved"]
+        self.assertEqual((c2["status"], c2["outline"][0]["lessons"][0]["title"]), ("published", "Welcome"))
+        self.assertEqual(call("add_coupon", {"course_id": c["course_id"], "code": "launch20", "value": 20})["coupons"][0]["code"], "LAUNCH20")
+        # store
+        p = call("save_product", {"type": "locked", "title": "Hook vault", "price_inr": 99, "locked_content": "Hook 1: stop"})["saved"]
+        self.assertEqual(call("list_products", {})["products"][0]["product_id"], p["product_id"])
+        self.assertTrue(rpc("tools/call", {"name": "save_product", "arguments": {"type": "file", "title": "PDF", "price_inr": 99}})["result"]["isError"])
+        # launch in one go, then undo it
+        before_rules = store.load_rules("1789").get("reels", {}).copy()
+        r = call("launch_offer", {"product_id": p["product_id"], "keyword": "hooks", "reel_id": "777"})
+        self.assertEqual((r["dm_keyword"], r["link_page"]), ("HOOKS", True))
+        rules = store.load_rules("1789")["reels"]
+        self.assertIn("777", rules)
+        self.assertIn("kw:HOOKS", rules)
+        self.assertIn(p["url"], rules["777"]["dm"])
+        self.assertEqual(call("get_link_page", {})["items"][0]["title"], "Hook vault")
+        self.assertEqual(call("list_changes", {})["changes"][0]["tool"], "launch_offer")
+        call("undo_last_change", {})
+        self.assertEqual(store.load_rules("1789").get("reels", {}), before_rules)
+        self.assertNotIn("Hook vault", json.dumps(call("get_link_page", {})["items"]))
+        # leads, payments, link page
+        self.assertIn("segment_counts", call("search_leads", {"segment": "all"}))
+        self.assertEqual(call("get_payments", {"period": "7"})["count"], 0)
+        self.assertEqual(call("update_link_page", {"add_items": [{"title": "YouTube", "url": "https://youtube.com/@om"}]})["items"], 1)
+        # Agency: one link for every account of the login
+        self.ig.me = {"id": "asid9", "user_id": "9009", "username": "client.two", "name": "C2", "profile_picture_url": "", "followers_count": 9}
+        self.connect_ig()
+        u = users.by_email("om@example.com")
+        u["plan"] = "agency"
+        users.save(u)
+        users.sync_plan(u)
+        names = {t["name"]: t for t in rpc("tools/list")["result"]["tools"]}
+        self.assertIn("list_accounts", names)
+        self.assertIn("account", names["list_products"]["inputSchema"]["properties"])
+        accs = [a["username"] for a in call("list_accounts", {})["accounts"]]
+        self.assertEqual(sorted(accs), ["client.two", "creator"])
+        other = call("save_product", {"account": "client.two", "type": "locked", "title": "Client pack", "price_inr": 49, "locked_content": "x"})
+        self.assertEqual(other["account"], "client.two")
+        self.assertEqual([x["title"] for x in call("list_products", {"account": "client.two"})["products"]], ["Client pack"])
+        self.assertNotIn("Client pack", json.dumps(call("list_products", {})))
+        self.assertEqual(len(call("all_accounts_report", {"period": "7"})["accounts"]), 2)
 
 
 

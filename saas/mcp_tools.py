@@ -791,10 +791,16 @@ INSTRUCTIONS = """{brand} runs Instagram comment-to-DM automations, an AI DM age
 {mode}"""
 
 
-def instructions(acc, brand, read_only):
-    return INSTRUCTIONS.format(brand=brand, username=acc.get("username"),
-                               mode="- This is a read-only connection: you can look at everything but not change or send anything."
-                               if read_only else "")
+def instructions(acc, brand, read_only, multi=False):
+    extra = ("- Also: Store products (list_products, save_product), Courses (create_course from an outline, update_course, add_coupon, "
+             "students, list_assessments, grade_assignment), Leads and abandoned carts (search_leads, send_cart_reminder), money "
+             "(get_payments, get_payouts), the link in bio (get_link_page, update_link_page), AI agents (get_agents), launch_offer to "
+             "launch something in one go, and undo_last_change if a change was wrong.\n")
+    if multi:
+        extra += ("- This is an Agency link: it manages several Instagram accounts. list_accounts shows them; pass account=<username> "
+                  "to any tool (default: @" + str(acc.get("username")) + "). all_accounts_report gives every account at once.\n")
+    mode = "- This is a read-only connection: you can look at everything but not change or send anything." if read_only else ""
+    return INSTRUCTIONS.format(brand=brand, username=acc.get("username"), mode=extra + mode)
 
 
 def prompts():
