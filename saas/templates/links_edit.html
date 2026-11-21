@@ -14,7 +14,15 @@
   .sw { width:18px; height:18px; border-radius:50%; }
   .it { border:1px solid var(--line); border-radius:14px; padding:12px; display:grid; gap:10px; background:#FAFAF8; }
   .it .head { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-  .it .head b { margin-right:auto; }
+  .it .head b { margin-right:auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .it .head b small { font-weight:500; color:var(--mute); }
+  .it.shut { gap:0; padding:8px 12px; }
+  .it.shut > :not(.head), .fold.shut > :not(:first-child) { display:none !important; }
+  .fold > :first-child { cursor:pointer; }
+  .fold > :first-child h2, .fold > h2:first-child { display:flex; align-items:center; gap:8px; }
+  .chev { border:0; background:none; padding:2px 4px; font-size:13px; color:var(--mute); cursor:pointer; transition:transform .15s; }
+  .shut .chev { transform:rotate(-90deg); }
+  @media (prefers-reduced-motion: reduce) { .chev { transition:none; } }
   .phone { position:sticky; top:16px; border:10px solid var(--ink); border-radius:34px; overflow:hidden; background:var(--card); height:640px; }
   .phone iframe { width:100%; height:100%; border:0; }
   .ltabs { display:flex; gap:6px; border-bottom:1.5px solid var(--line2); margin-bottom:4px; }
@@ -153,8 +161,8 @@ function drawThemes() {
   $("themes").innerHTML = THEMES.map(([t, bg, ink]) => `<button type="button" data-theme="${t}" aria-pressed="${page.theme === t}" style="background:${bg}; color:${ink}">${t}</button>`).join("");
 }
 function itemCard(it, i) {
-  return `<div class="it" data-i="${i}">
-    <div class="head"><b>${it.type === "product" ? "Product" : "Link"} · ${fmt(clicks[it.id] || 0)} clicks</b>
+  return `<div class="it${OPEN.has(it) ? "" : " shut"}" data-i="${i}">
+    <div class="head"><button class="chev" type="button" data-tog aria-label="Show or hide" aria-expanded="${OPEN.has(it)}">▾</button><b>${it.type === "product" ? "Product" : "Link"}${it.title ? `: ${esc(it.title)}` : ""} <small>· ${fmt(clicks[it.id] || 0)} clicks</small></b>
       <label class="small"><input type="checkbox" data-k="featured" ${it.featured ? "checked" : ""}> Featured</label>
       <label class="small"><input type="checkbox" data-k="enabled" ${it.enabled !== false ? "checked" : ""}> Show</label>
       <button class="btn ghost sm" type="button" data-move="-1" aria-label="Move up">↑</button>
@@ -168,9 +176,10 @@ function itemCard(it, i) {
   </div>`;
 }
 let FILES = [];
+const OPEN = new WeakSet();  // freebies/links shown open; everything starts folded so long lists stay short
 function fbCard(f, i) {
-  return `<div class="it fbit" data-f="${i}">
-    <div class="head"><b>${esc(f.k || "Freebie")} · ${fmt(clicks["fb_" + f.id] || 0)} opens</b>
+  return `<div class="it fbit${OPEN.has(f) ? "" : " shut"}" data-f="${i}">
+    <div class="head"><button class="chev" type="button" data-tog aria-label="Show or hide" aria-expanded="${OPEN.has(f)}">▾</button><b>${esc(f.k || "New freebie")}${f.t ? ` <small>${esc(f.t)}</small>` : ""} <small>· ${fmt(clicks["fb_" + f.id] || 0)} opens</small></b>
       <label class="small"><input type="checkbox" data-fk="enabled" ${f.enabled !== false ? "checked" : ""}> Show</label>
       <button class="btn danger sm" type="button" data-fdel aria-label="Remove">Remove</button></div>
     <div class="two"><div><label class="f" for="fk${i}">Keyword <span class="hint">the comment word</span></label><input id="fk${i}" type="text" data-fk="k" value="${esc(f.k || "")}" maxlength="24" placeholder="LIVE"></div>
@@ -202,7 +211,7 @@ $("fbs").addEventListener("click", (e) => {
   const c = e.target.closest(".fbit");
   if (c && e.target.closest("[data-fdel]")) { page.freebies.splice(+c.dataset.f, 1); drawFbs(); }
 });
-$("fbAdd").onclick = () => { page.freebies.unshift({k: "", t: "", topic: "", u: "", enabled: true}); drawFbs(); $("fk0").focus(); };
+$("fbAdd").onclick = () => { const f = {k: "", t: "", topic: "", u: "", enabled: true}; OPEN.add(f); page.freebies.unshift(f); drawFbs(); $("fk0").focus(); };
 $("fbImport").onclick = async () => {
   try {
     const rules = (await api("/api/rules")).reels || {};
@@ -218,6 +227,27 @@ $("fbImport").onclick = async () => {
     drawFbs(); toast(added ? `Added ${added} freebie${added === 1 ? "" : "s"}. Check the titles, then Save page.` : "No new keyword automations with a link to import.");
   } catch (err) { toast(err.message); }
 };
+document.addEventListener("click", (e) => {
+  const sec = e.target.closest("#tab-page .fold");
+  if (sec && e.target.closest("button:not(.chev), a, input, label, select") && sec.classList.contains("shut")) {
+    sec.classList.remove("shut"); sec.querySelector(":scope > :first-child .chev").setAttribute("aria-expanded", "true");
+  }
+  const tog = e.target.closest("[data-tog]");
+  const head = e.target.closest(".it > .head, .fold > :first-child");
+  if (!tog && (!head || e.target.closest("button, a, input, label, select"))) return;
+  const box = (tog || head).closest(".it, .fold");
+  box.classList.toggle("shut");
+  box.querySelector(".chev").setAttribute("aria-expanded", String(!box.classList.contains("shut")));
+  if (box.classList.contains("it")) {
+    const obj = box.classList.contains("fbit") ? page.freebies[+box.dataset.f] : page.items[+box.dataset.i];
+    if (box.classList.contains("shut")) OPEN.delete(obj); else OPEN.add(obj);
+  }
+}, true);
+document.querySelectorAll("#tab-page section.card.fields").forEach(sec => {
+  sec.classList.add("fold", "shut");
+  const h = sec.firstElementChild.matches("h2") ? sec.firstElementChild : sec.firstElementChild.querySelector("h2");
+  h.insertAdjacentHTML("afterbegin", `<button class="chev" type="button" data-tog aria-label="Show or hide ${h.textContent}" aria-expanded="false">▾</button>`);
+});
 function draw() {
   drawFbs();
   $("name").value = page.name || ""; $("bio").value = page.bio || ""; $("photo").value = page.photo || "";
@@ -243,7 +273,7 @@ document.addEventListener("click", (e) => {
   const th = e.target.closest("[data-theme]");
   if (th) { page.theme = th.dataset.theme; drawThemes(); return; }
   const add = e.target.closest("[data-add]");
-  if (add) { collect(); page.items.push({type: add.dataset.add, title: "", url: "", subtitle: "", price: "", enabled: true, featured: false}); draw(); return; }
+  if (add) { collect(); const it = {type: add.dataset.add, title: "", url: "", subtitle: "", price: "", enabled: true, featured: false}; OPEN.add(it); page.items.push(it); draw(); return; }
   const card = e.target.closest(".it");
   if (!card) return;
   const i = +card.dataset.i;

@@ -32,12 +32,6 @@
 {% if role != "owner" and not acc.demo %}
 <section class="card"><p class="muted" style="margin:0">Only the account owner can manage products and payouts.</p></section>
 {% else %}
-<section class="card" id="payoutCard">
-  <div class="row" style="gap:12px"><span style="font-size:24px" aria-hidden="true">🏦</span>
-    <div style="flex:1; min-width:220px"><b>Get paid to your bank</b> <span class="badge" id="pStatus">…</span><p class="muted small" id="pText" style="margin:4px 0 0"></p></div>
-    <a class="btn" id="pBtn" href="/app/payments#bank">＋ Add bank account</a></div>
-</section>
-
 <section class="card" id="editCard" hidden>
   <h2 id="eTitle">New product</h2>
   <form class="edit fields" id="eForm">
@@ -97,21 +91,6 @@ const pad = (n) => String(n).padStart(2, "0");
 function toLocal(ts) { const d = new Date((ts + 19800) * 1000); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; }
 const hm = (m) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 const day = (t) => new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"});
-const STATUS = {activated: ["on", "Payouts active"], under_review: ["", "Under review by Razorpay"], needs_clarification: ["bad", "Razorpay needs more details"],
-                suspended: ["bad", "Payouts paused"], requested: ["", "Under review by Razorpay"]};
-function drawPayout() {
-  const p = S.payout || {}, st = STATUS[p.status] || ["", p.status ? p.status.replace(/_/g, " ") : "Not set up"];
-  $("pStatus").className = `badge ${st[0]}`; $("pStatus").textContent = st[1];
-  $("pBtn").hidden = !!S.demo || (!S.ready && !S.demo);
-  if (!S.ready && !S.demo) { $("pText").textContent = "Payments aren't switched on yet."; return; }
-  if (p.status === "activated") {
-    $("pText").innerHTML = `Money from every sale goes to <b>${esc(p.name)}</b> · ${esc(p.bank)}, usually the next working day.`;
-    $("pBtn").textContent = "Manage in Payments"; $("pBtn").className = "btn ghost"; $("pBtn").href = "/app/payments";
-  } else {
-    $("pText").textContent = p.status ? "Razorpay is checking your bank details." : "Add your bank account once in Payments, then your products can sell.";
-    $("pBtn").textContent = p.status ? "Check in Payments" : "＋ Add bank account"; $("pBtn").className = "btn"; $("pBtn").href = "/app/payments#bank";
-  }
-}
 function drawProds() {
   const fee = S.plan_fee;
   $("prods").innerHTML = S.products.length ? S.products.map(p => `<div class="prod">
@@ -146,7 +125,7 @@ function openEdit(p) {
   $("eOn").checked = p ? p.enabled !== false : true; $("eFileName").textContent = p ? `📎 ${p.file_name} · choose to replace` : "Choose a file"; $("eMsg").textContent = "";
   splitText(); $("editCard").scrollIntoView({behavior: "smooth", block: "start"});
 }
-async function load() { S = await api("/api/shop"); drawPayout(); drawProds(); }
+async function load() { S = await api("/api/shop"); drawProds(); }
 $("addProd").onclick = () => S && !S.demo ? openEdit(null) : toast("Not available in the demo");
 $("eCancel").onclick = () => { $("editCard").hidden = true; };
 document.querySelectorAll("[data-type]").forEach(b => b.onclick = () => setType(b.dataset.type));
