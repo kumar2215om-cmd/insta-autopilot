@@ -17,6 +17,22 @@ MAX_MB = 4  # Vercel functions reject request bodies over 4.5 MB
 MAX_FILES = 200
 TYPES = {"pdf", "zip", "png", "jpg", "jpeg", "webp", "gif", "mp4", "mp3", "m4a", "wav", "ogg", "txt", "md", "csv", "json", "epub", "docx", "xlsx", "pptx"}
 API = "https://vercel.com/api/blob"
+# The type a file is served with comes from its extension, never from the uploader's browser (an "image" that is really
+# HTML would otherwise run scripts on our domain). Only these open in the browser; everything else downloads.
+MIME = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp",
+        "gif": "image/gif", "mp4": "video/mp4", "mp3": "audio/mpeg", "m4a": "audio/mp4", "wav": "audio/wav", "ogg": "audio/ogg",
+        "txt": "text/plain; charset=utf-8", "md": "text/plain; charset=utf-8", "csv": "text/csv; charset=utf-8", "json": "application/json",
+        "zip": "application/zip", "epub": "application/epub+zip",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation"}
+INLINE = {"pdf", "png", "jpg", "jpeg", "webp", "gif", "mp4", "mp3", "m4a", "wav", "ogg", "txt", "md"}
+
+
+def type_for(name):
+    """(content type, "inline" or "attachment") for a file name."""
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    return MIME.get(ext, "application/octet-stream"), "inline" if ext in INLINE else "attachment"
 
 
 class FileError(Exception):
@@ -99,7 +115,7 @@ def upload(acc, filename, data, mimetype, paid=False, listed=True):
             r = requests.put(f"{API}/", params={"pathname": f"replyinbox/{acc['id']}/{fid}-{name}"}, data=data, timeout=60,
                              headers={"authorization": f"Bearer {_token()}", "x-api-version": "13",
                                       "x-vercel-blob-store-id": _store_id(), "x-vercel-blob-access": access,
-                                      "x-content-type": mimetype or "application/octet-stream"})
+                                      "x-content-type": type_for(name)[0]})
         except requests.RequestException:
             raise FileError("Storage didn't answer. Try again in a minute.")
         if r.ok:
@@ -108,7 +124,7 @@ def upload(acc, filename, data, mimetype, paid=False, listed=True):
         print(f"Blob upload refused: HTTP {r.status_code} {r.text[:200]}")
         raise FileError(f"Upload failed ({r.status_code}). Try again.")
     blob = r.json()
-    f = {"id": fid, "acc": acc["id"], "name": name, "size": len(data), "type": mimetype or "", "created": int(time.time()),
+    f = {"id": fid, "acc": acc["id"], "name": name, "size": len(data), "type": type_for(name)[0], "created": int(time.time()),
          "blob": blob["url"], "pathname": blob["pathname"], "paid": bool(paid)}
     store.set_json(f"s:file:{fid}", f)
     if listed:  # product files (paid) aren't listed in Files
@@ -148,4 +164,4 @@ def fetch(fid, name=None, paid_ok=False):
         r = requests.get(f["blob"], timeout=30)
     if not r.ok:
         return None
-    return r.content, r.headers.get("content-type") or f["type"] or "application/octet-stream", f
+    return r.content, type_for(f["name"])[0], f

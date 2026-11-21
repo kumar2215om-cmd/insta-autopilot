@@ -46,13 +46,13 @@ def _s(v, n):
 
 def _https(v):
     v = str(v or "").strip()
-    return v if v.startswith("https://") else ""
+    return v if v.startswith("https://") and not re.search(r"[\s<>\"'`\\]", v) else ""
 
 
 def _img(v):
     """A cover image: an https link or one uploaded here (/f/<id>/<name>)."""
     v = str(v or "").strip()
-    return v if v.startswith("https://") or re.fullmatch(r"/f/[\w-]{6,20}/[\w.-]{1,100}", v) else ""
+    return v if re.fullmatch(r"https://[^\s<>\"'`()\\]+", v) or re.fullmatch(r"/f/[\w-]{6,20}/[\w.-]{1,100}", v) else ""
 
 
 def _int(v, lo, hi, default=0):
