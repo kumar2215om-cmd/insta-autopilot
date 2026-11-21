@@ -1,0 +1,129 @@
+{% extends "_base.html" %}
+{% block title %}Leads{% endblock %}
+{% block heading %}Leads{% endblock %}
+{% block actions %}<a class="btn ghost" href="/app/contacts">Tags &amp; Instagram contacts</a><a class="btn ghost" id="csv" href="/api/leads.csv">Export CSV</a>{% endblock %}
+{% block head %}
+<style>
+  .segs { display:flex; gap:8px; flex-wrap:wrap; }
+  .segs button { border:1.5px solid #CFCEC6; background:var(--card); border-radius:999px; padding:8px 14px; font:700 13.5px var(--text); cursor:pointer; color:var(--ink); }
+  .segs button[aria-pressed="true"] { background:#111318; color:#fff; border-color:#111318; }
+  .segs button.cart[aria-pressed="false"] { border-color:#F3B4A5; }
+  .fbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .fbar input[type=search] { flex:1; min-width:200px; }
+  .fbar select, .fbar input[type=number] { width:auto; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:12px; border:1px dashed var(--line); border-radius:14px; }
+  .filters[hidden] { display:none; }
+  .filters label { display:flex; gap:6px; align-items:center; font-size:13px; font-weight:600; }
+  .tbl { width:100%; border-collapse:collapse; font-size:14px; }
+  .tbl th { text-align:left; font:600 11px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); padding:0 8px 8px; white-space:nowrap; }
+  .tbl td { padding:11px 8px; border-top:1px solid var(--line2); vertical-align:middle; }
+  .tbl td.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:700; }
+  .who2 b { display:block; } .who2 span { font-size:12.5px; color:var(--mute); }
+  .src { display:inline-block; font:600 11px var(--mono); text-transform:uppercase; letter-spacing:.05em; padding:2px 7px; border-radius:99px; background:#ECEBE4; color:#3A3C44; margin:2px 2px 0 0; }
+  .src.buyer, .src.student { background:#E5F6EC; color:#16794A; } .src.cart { background:#FFE8E1; color:#B23A1C; } .src.signup { background:#E8EAFF; color:#2E3BFF; }
+  .open { border:1px solid var(--line); background:var(--card); border-radius:9px; width:32px; height:32px; cursor:pointer; font-size:14px; }
+  .scroll { overflow-x:auto; }
+  dialog { border:0; border-radius:20px; padding:0; width:min(560px, calc(100vw - 24px)); max-height:calc(100vh - 40px); box-shadow:0 30px 80px rgba(17,19,24,.35); }
+  dialog::backdrop { background:rgba(17,19,24,.5); }
+  .dlg { padding:20px; display:grid; gap:14px; }
+  .kv { display:grid; grid-template-columns:120px minmax(0, 1fr); gap:6px 12px; font-size:14px; }
+  .kv span:nth-child(odd) { color:var(--mute); }
+  .list2 { display:grid; gap:6px; } .list2 div { display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border:1px solid var(--line2); border-radius:10px; font-size:14px; }
+  .cartbox { padding:12px; border-radius:14px; background:#FFF4F0; border:1px solid #F3B4A5; display:grid; gap:8px; }
+</style>
+{% endblock %}
+{% block content %}
+<section class="card" style="display:grid; gap:14px">
+  <div class="segs" role="group" aria-label="Segments">
+    <button type="button" data-seg="all" aria-pressed="true">All</button>
+    <button type="button" data-seg="customers" aria-pressed="false">Customers</button>
+    <button type="button" data-seg="instagram" aria-pressed="false">Instagram contacts</button>
+    <button type="button" data-seg="followers" aria-pressed="false">Followers</button>
+    <button type="button" data-seg="subscribers" aria-pressed="false">Subscribers</button>
+    <button type="button" class="cart" data-seg="carts" aria-pressed="false">🛒 Abandoned carts</button>
+  </div>
+  <p class="muted small" id="segHelp" style="margin:-4px 0 0"></p>
+  <div class="fbar"><input id="q" type="search" placeholder="Search name, email, phone or @handle" aria-label="Search">
+    <button class="btn ghost sm" type="button" id="fBtn" aria-expanded="false">⚙︎ Filters</button>
+    <select id="sort" aria-label="Sort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="az">Name A–Z</option><option value="za">Name Z–A</option><option value="spent">Top spenders</option></select></div>
+  <div class="filters" id="filters" hidden>
+    <label>Bought <select id="item"><option value="">Anything</option></select></label>
+    <label>Spent at least ₹<input id="min" type="number" min="0" step="100" placeholder="0" style="width:100px"></label>
+    <label>Course access <select id="expiry"><option value="">Any</option><option value="soon">Ends within 7 days</option><option value="ended">Ended</option></select></label>
+    <button class="btn ghost sm" type="button" id="fClear">Clear</button>
+  </div>
+  <div class="scroll"><table class="tbl" id="tbl"><tbody><tr><td class="muted">Loading…</td></tr></tbody></table></div>
+  <p class="muted small" id="foot" style="margin:0"></p>
+</section>
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+const HELP = {all: "Everyone: Instagram contacts, link-page signups, buyers, students and abandoned checkouts, merged by email.",
+  customers: "Bought something or enrolled in a course.", instagram: "Commented, DMed or tapped a button on Instagram.",
+  followers: "Followed you through a follow-to-unlock DM.", subscribers: "Gave an email or phone (DMs or link page) but haven't bought yet.",
+  carts: "Started a checkout in the last 30 days but didn't pay. Send a reminder email or WhatsApp them: these are your warmest buyers."};
+let seg = "all", D = null, timer = null;
+const day = (t) => t ? new Date(t * 1000).toLocaleDateString(undefined, {day: "numeric", month: "short", year: "numeric"}) : "";
+const ago = (t) => { const d = Math.round((Date.now() / 1000 - t) / 3600); return d < 1 ? "just now" : d < 24 ? `${d} h ago` : `${Math.round(d / 24)} d ago`; };
+const params = () => new URLSearchParams({segment: seg, q: $("q").value.trim(), sort: $("sort").value, item: $("item").value, min_spent: $("min").value || "", expiry: $("expiry").value});
+const label = (p) => p.name || (p.username ? "@" + p.username : p.email || p.phone || "Someone");
+const wa = (phone, text) => `https://wa.me/${String(phone).replace(/\D/g, "").replace(/^(\d{10})$/, "91$1")}?text=${encodeURIComponent(text)}`;
+async function load() {
+  D = await api("/api/leads?" + params());
+  document.querySelectorAll("[data-seg]").forEach(b => { b.setAttribute("aria-pressed", b.dataset.seg === seg);
+    b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${D.counts[b.dataset.seg] || 0})`; });
+  $("segHelp").textContent = HELP[seg];
+  const cur = $("item").value;
+  $("item").innerHTML = `<option value="">Anything</option>` + D.items.map(t => `<option ${t === cur ? "selected" : ""}>${esc(t)}</option>`).join("");
+  $("csv").href = "/api/leads.csv?" + params();
+  draw();
+}
+function draw() {
+  const rows = D.leads;
+  if (seg === "carts") {
+    $("tbl").innerHTML = rows.length ? `<thead><tr><th>Person</th><th>Item</th><th class="n">Amount</th><th>Left</th><th></th></tr></thead><tbody>${rows.map((p, i) => `<tr>
+        <td class="who2"><b>${esc(label(p))}</b><span>${esc(p.email)}${p.phone ? " · " + esc(p.phone) : ""}</span></td>
+        <td>${esc(p.cart.title)}</td><td class="n">₹${fmt(p.cart.price)}</td><td class="muted small">${esc(ago(p.cart.at))}</td>
+        <td style="white-space:nowrap">${p.cart.reminded ? `<span class="badge on">Reminded</span>` : `<button class="btn sm" type="button" data-remind="${esc(p.cart.id)}">✉️ Send reminder</button>`}
+          ${p.phone ? `<a class="btn ghost sm" target="_blank" rel="noopener" href="${esc(wa(p.phone, `Hi ${(p.name || "").split(" ")[0] || "there"}! I saw you were checking out ${p.cart.title}. Any questions I can help with? 😊`))}">WhatsApp</a>` : ""}
+          <button class="open" type="button" data-open="${i}" aria-label="Details">↗</button></td></tr>`).join("")}</tbody>`
+      : `<tbody><tr><td class="muted">No abandoned checkouts in the last 30 days. 🎉</td></tr></tbody>`;
+  } else {
+    $("tbl").innerHTML = rows.length ? `<thead><tr><th>Person</th><th>Email</th><th>Phone</th><th>From</th><th class="n">Spent</th><th>Last seen</th><th></th></tr></thead><tbody>${rows.map((p, i) => `<tr>
+        <td class="who2"><b>${esc(label(p))}</b>${p.username && p.name ? `<span>@${esc(p.username)}</span>` : ""}</td>
+        <td>${esc(p.email)}</td><td>${esc(p.phone)}</td><td>${p.sources.map(s => `<span class="src ${s}">${({instagram: "Instagram", signup: "Link page", buyer: "Buyer", student: "Student", cart: "Cart"})[s] || s}</span>`).join("")}</td>
+        <td class="n">${p.spent ? "₹" + fmt(p.spent) : "–"}</td><td class="muted small">${esc(day(p.last_at))}</td>
+        <td><button class="open" type="button" data-open="${i}" aria-label="Details">↗</button></td></tr>`).join("")}</tbody>`
+      : `<tbody><tr><td class="muted">${D.counts.all ? "Nobody matches." : "No leads yet. They appear when people comment, DM, sign up on your link page or buy."}</td></tr></tbody>`;
+  }
+  $("foot").textContent = D.total > rows.length ? `Showing ${rows.length} of ${fmt(D.total)}. Export CSV for everyone.` : `${fmt(D.total)} ${D.total === 1 ? "person" : "people"}`;
+}
+function openLead(p) {
+  $("dlgBody").innerHTML = `<div class="row"><h2 style="margin:0 auto 0 0">${esc(label(p))}</h2><button class="open" type="button" data-close aria-label="Close">✕</button></div>
+    <div class="kv"><span>Email</span><span>${p.email ? `<a href="mailto:${esc(p.email)}">${esc(p.email)}</a>` : "–"}</span>
+      <span>Phone</span><span>${p.phone ? `<a target="_blank" rel="noopener" href="${esc(wa(p.phone, "Hi!"))}">${esc(p.phone)} (WhatsApp)</a>` : "–"}</span>
+      <span>Instagram</span><span>${p.username ? `<a target="_blank" rel="noopener" href="https://instagram.com/${esc(p.username)}">@${esc(p.username)}</a>${p.followed ? " · follows you" : ""}` : "–"}</span>
+      <span>Keyword</span><span>${esc(p.keyword || "–")}</span><span>First seen</span><span>${esc(day(p.first_at))}</span><span>Spent</span><span><b>₹${fmt(p.spent)}</b></span></div>
+    ${p.items.length ? `<b>Bought</b><div class="list2">${p.items.map(i => `<div><span>${esc(i.title)}</span><span class="muted">${i.price ? "₹" + fmt(i.price) : "free"} · ${esc(day(i.at))}</span></div>`).join("")}</div>` : ""}
+    ${p.access.length ? `<b>Course access</b><div class="list2">${p.access.map(a => `<div><span>${esc(a.title)} · ${a.percent}% done</span><span class="muted">${a.until ? (a.until < Date.now() / 1000 ? "ended " : "until ") + esc(day(a.until)) : "lifetime"}</span></div>`).join("")}</div>` : ""}
+    ${p.cart ? `<div class="cartbox"><b>🛒 Left ${esc(p.cart.title)} (₹${fmt(p.cart.price)}) ${esc(ago(p.cart.at))}</b>
+      <div class="row" style="gap:8px">${p.cart.reminded ? `<span class="badge on">Reminder sent</span>` : `<button class="btn sm" type="button" data-remind="${esc(p.cart.id)}">✉️ Send reminder email</button>`}</div></div>` : ""}`;
+  if (!$("dlg").open) $("dlg").showModal();
+}
+document.addEventListener("click", async (e) => {
+  const s = e.target.closest("[data-seg]"); if (s) { seg = s.dataset.seg; load(); return; }
+  const o = e.target.closest("[data-open]"); if (o) { openLead(D.leads[+o.dataset.open]); return; }
+  if (e.target.closest("[data-close]")) { $("dlg").close(); return; }
+  const r = e.target.closest("[data-remind]");
+  if (r) { r.disabled = true;
+    try { await api(`/api/leads/carts/${r.dataset.remind}/remind`, {method: "POST", body: "{}"}); toast("Reminder sent ✓"); if ($("dlg").open) $("dlg").close(); load(); }
+    catch (err) { toast(err.message); r.disabled = false; } }
+});
+$("fBtn").onclick = () => { const f = $("filters"); f.hidden = !f.hidden; $("fBtn").setAttribute("aria-expanded", !f.hidden); };
+$("fClear").onclick = () => { $("item").value = ""; $("min").value = ""; $("expiry").value = ""; load(); };
+$("q").oninput = () => { clearTimeout(timer); timer = setTimeout(load, 250); };
+["sort", "item", "min", "expiry"].forEach(id => $(id).addEventListener("change", load));
+load().catch(err => $("tbl").innerHTML = `<tbody><tr><td class="muted">${esc(err.message)}</td></tr></tbody>`); loadBanners();
+</script>
+{% endblock %}

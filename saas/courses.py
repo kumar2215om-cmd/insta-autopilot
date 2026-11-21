@@ -440,6 +440,7 @@ def order(acc, c, buyer):
     if q["bump"]:
         rec["bump"] = {**bump_target(c), "price": q["bump"]}
     store.set_json(f"s:shoporder:{o['id']}", rec)
+    shop.track_cart(acc["id"], o["id"])
     return {"key": shop._env("RAZORPAY_KEY_ID"), "order_id": o["id"], "amount": q["total"] * 100, "currency": q["currency"],
             "name": c["title"], "email": email, "phone": phone}
 

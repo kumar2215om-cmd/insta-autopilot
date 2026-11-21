@@ -347,6 +347,7 @@ def create_order(acc, prod, buyer):
         rec.update(when=slot, minutes=prod["minutes"])
         store.redis("SET", f"s:slothold:{prod['id']}:{slot}", order["id"], "EX", 900)  # held 15 min while they pay
     store.set_json(f"s:shoporder:{order['id']}", rec)
+    track_cart(acc["id"], order["id"])
     return {"key": _env("RAZORPAY_KEY_ID"), "order_id": order["id"], "amount": prod["price"] * 100, "currency": "INR",
             "name": prod["title"], "email": email}
 
@@ -370,6 +371,44 @@ def transfer_payment(o, payment_id):
         o["transfer"] = "pending"
     store.set_json(key, o)
     return o
+
+
+def track_cart(acc_id, order_id):
+    """Every checkout is remembered for Leads → Abandoned carts (leads.py)."""
+    key = store.account_key(acc_id, "carts")
+    store.redis("LPUSH", key, order_id)
+    store.redis("LTRIM", key, 0, 499)
+
+
+SETTLED = "completed"
+
+
+def transfer_status(o):
+    """Where the creator's share of a paid order is: completed (in their bank), processing, on_hold or failed.
+    Asks Razorpay at most every 30 minutes per order; a completed answer is kept on the order."""
+    if o.get("payout_status") == SETTLED or not o.get("payment_id") or str(o.get("id", "")).startswith("free_"):
+        return o.get("payout_status") or (SETTLED if o.get("payment_id") else "")
+    cache = f"s:trcache:{o['id']}"
+    hit = store.redis("GET", cache)
+    if hit:
+        return hit
+    status = "processing"
+    try:
+        items = (_rzp("GET", f"/v1/payments/{o['payment_id']}/transfers") or {}).get("items") or []
+        t = items[0] if items else {}
+        if t.get("status") in ("failed", "reversed"):
+            status = "failed"
+        elif t.get("settlement_status") == "settled" or t.get("recipient_settlement_id"):
+            status = SETTLED
+        elif t.get("on_hold") or t.get("settlement_status") == "on_hold":
+            status = "on_hold"
+    except ShopError:
+        pass
+    if status == SETTLED:
+        o["payout_status"] = SETTLED
+        store.set_json(f"s:shoporder:{o['id']}", o)
+    store.redis("SET", cache, status, "EX", 1800)
+    return status
 
 
 def _sign(message, secret):
@@ -410,7 +449,8 @@ def fulfil(order_id, payment_id, paid_amount=None):
         courses.enroll(o)
         sales = store.account_key(o["acc"], "shopsales")
         store.redis("LPUSH", sales, json.dumps({**{k: o[k] for k in ("id", "title", "creator_gets", "email", "paid_at")},
-                                                "price": o.get("course_price", o["price"]), "name": o.get("name", ""), "type": "course"}))
+                                                "price": o.get("course_price", o["price"]), "name": o.get("name", ""), "type": "course",
+                                                "phone": o.get("phone", ""), "currency": o.get("currency", "INR")}))
         store.redis("LTRIM", sales, 0, 499)
         b = o.get("bump")
         if b:  # the bump offer ticked at checkout
