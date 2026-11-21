@@ -87,11 +87,12 @@ FREE_PREVIEW = True  # Module 0 is a free preview on SuperProfile: shows "Watch 
 
 # Real numbers from @aiwith.om (Instagram API, checked 21 Nov 2026). Update when they grow.
 PROOF_ASOF = "21 Nov 2026"
-PROOF_STATS = [("{F}", "followers on @aiwith.om"), ("135K", "views on one reel"), ("92", "follows from auto-DMs alone")]
+PROOF_STATS = [("{F}", "followers on @aiwith.om"), ("1.8M+", "views from just my top 3 reels"), ("914K", "views on one reel")]
+# Top reels of all time (views from Instagram, 21 Nov 2026). Images: the reel covers in freebies/videos/.
 PROOF_REELS = [
-    {"views": "135,215", "comments": "2,946", "what": "GTA 6 money reel", "note": "Planned & scripted with Claude", "url": "https://www.instagram.com/reel/DfzJCigpq6j/"},
-    {"views": "29,456", "comments": "614", "what": "GTA 5 creators reel", "note": "Hook written with Claude", "url": "https://www.instagram.com/reel/Df3lZh0uRXk/"},
-    {"views": "7,360", "comments": "207", "what": "GTA 6 pre-orders reel", "note": "Same system, same week", "url": "https://www.instagram.com/reel/Df7ZRy9T3XI/"},
+    {"img": "/free/videos/top-ootto.jpg", "views": "914K", "what": "Connect Claude to Instagram", "note": "Comment → DM machine: OOTTO", "url": "https://www.instagram.com/aiwith.om/reels/"},
+    {"img": "/free/videos/top-launch.jpg", "views": "535K", "what": "5 places to launch your app", "note": "Comment → DM machine: LAUNCH", "url": "https://www.instagram.com/aiwith.om/reels/"},
+    {"img": "/free/videos/top-youtube.jpg", "views": "379K", "what": "Claude as your YouTube manager", "note": "Comment → DM machine: YOUTUBE", "url": "https://www.instagram.com/aiwith.om/reels/"},
 ]
 
 TIMING = [("Now", "Early", "Very few creators use Claude properly. Huge reach for whoever shows up."),
