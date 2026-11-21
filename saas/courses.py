@@ -221,6 +221,10 @@ def clean(acc, cid, data):
         coupons.append({"code": code, "kind": "flat" if cp.get("kind") == "flat" else "pct", "value": _int(cp.get("value"), 1, 100000, 10),
                         "max": _int(cp.get("max"), 0, 100000, 0), "used": (old.get(code) or {}).get("used", 0), "on": cp.get("on", True) is not False})
     out["coupons"] = coupons
+    # US$ price, GST, bump offer and Google Analytics are on Creator and up
+    import plans
+    if not plans.has(acc, "sell_extras"):
+        d = {**d, "intl": {}, "gst": {}, "bump": {}, "ga": ""}
     # international price (US$, cards from outside India)
     it = d.get("intl") or {}
     usd, usd_sale = _int(it.get("usd"), 0, 5000, 0), _int(it.get("usd_sale"), 0, 5000, 0)
@@ -659,6 +663,11 @@ def send_sequences(now=None, limit=300):
             continue
         acc = store.load_account(c["acc"]) or {}
         by = f"@{acc['username']}" if acc.get("username") else ""
+        import plans
+        cap = plans.limit(acc, "course_emails")
+        month_key = f"course_emails:{time.strftime('%Y-%m', time.gmtime())}"
+        if int(store.counts(c["acc"]).get(month_key, 0)) >= cap:
+            continue  # this plan's automatic course emails for the month are used up (or not included)
         for email in store.redis("SMEMBERS", f"s:enrs:{cid}") or []:
             e = store.get_json(f"s:enr:{cid}:{email}")
             if not e or (e.get("until") and e["until"] < now):
@@ -674,8 +683,11 @@ def send_sequences(now=None, limit=300):
                 body = "".join(f"<p>{shop._esc(_fill(p, e, c))}</p>".replace("\n", "<br>") for p in m["body"].split("\n\n") if p.strip())
                 html = body + shop._button(magic_link(email, cid), "Open the course") + (
                     f"<p style=\"color:#5E6068;font-size:12px\">You're getting this because you enrolled in {shop._esc(c['title'])}{' by ' + by if by else ''}.</p>")
+                if int(store.counts(c["acc"]).get(month_key, 0)) >= cap:
+                    break
                 if shop._mail(email, _fill(m["subject"], e, c), html):
                     sent += 1
+                    store.count(c["acc"], month_key)
                 done.append(m["id"])
                 changed = True
             if changed:

@@ -1,7 +1,7 @@
 {% extends "_base.html" %}
 {% block title %}Leads{% endblock %}
 {% block heading %}Leads{% endblock %}
-{% block actions %}<a class="btn ghost" href="/app/contacts">Tags &amp; Instagram contacts</a><a class="btn ghost" id="csv" href="/api/leads.csv">Export CSV</a>{% endblock %}
+{% block actions %}<a class="btn ghost" href="/app/contacts">Tags &amp; Instagram contacts</a><a class="btn ghost" id="csv" href="/api/leads.csv">Export CSV</a><span id="csvLock" style="align-self:center"></span>{% endblock %}
 {% block head %}
 <style>
   .segs { display:flex; gap:8px; flex-wrap:wrap; }
@@ -73,7 +73,7 @@ async function load() {
   D = await api("/api/leads?" + params());
   document.querySelectorAll("[data-seg]").forEach(b => { b.setAttribute("aria-pressed", b.dataset.seg === seg);
     b.textContent = b.textContent.replace(/ \(\d+\)$/, "") + ` (${D.counts[b.dataset.seg] || 0})`; });
-  $("segHelp").textContent = HELP[seg];
+  $("segHelp").textContent = HELP[seg]; $("csvLock").innerHTML = lockBadge("cart_tools");
   const cur = $("item").value;
   $("item").innerHTML = `<option value="">Anything</option>` + D.items.map(t => `<option ${t === cur ? "selected" : ""}>${esc(t)}</option>`).join("");
   $("csv").href = "/api/leads.csv?" + params();

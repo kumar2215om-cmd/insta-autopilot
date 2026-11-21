@@ -47,6 +47,8 @@
   .promo b { display:block; font-size:14px; } .promo span { display:block; font-size:12.5px; color:#D9D4E6; margin-top:2px; }
   .promo + .who, .promo + .switcher, .switcher + .who { margin-top:0; }
   .switcher { margin-top:auto; }
+  .lockb { display:inline-flex; align-items:center; gap:4px; font:700 11.5px var(--text); padding:3px 9px; border-radius:99px; background:#FFF1D6; color:#7A4B00; border:1px solid #F2D48C; text-decoration:none; white-space:nowrap; vertical-align:middle; }
+  .lockb:hover { background:#FFE7B3; }
   .promo + .switcher.help, .help + .switcher, .help + .who { margin-top:0; }
   .side > * { flex-shrink:0; }
   .switcher summary { list-style:none; display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:10px; color:#A9A5B5; font-size:13px; font-weight:500; }
@@ -248,6 +250,12 @@
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<dialog id="upDlg" style="border:0; border-radius:18px; padding:0; width:min(420px, calc(100vw - 32px)); box-shadow:0 30px 80px rgba(17,19,24,.35)">
+  <div style="padding:22px; display:grid; gap:12px; text-align:center"><div style="font-size:34px" aria-hidden="true">🔒</div>
+    <b style="font-size:18px">Available on <span id="upPlan"></span></b><p class="muted" id="upMsg" style="margin:0"></p>
+    <div class="row" style="gap:8px; justify-content:center"><button class="btn ghost sm" type="button" onclick="this.closest('dialog').close()">Not now</button>
+      <a class="btn sm" href="/app/billing">See plans</a></div></div>
+</dialog>
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -256,8 +264,19 @@ async function api(path, opts = {}) {
   const r = await fetch(path, {...opts, headers: {"Content-Type": "application/json"}});
   if (r.status === 401) { location.href = "/"; throw new Error("logged out"); }
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || `Error ${r.status}`);
+  if (!r.ok) {
+    if (data.upgrade) upgradeBox(data.error, data.upgrade);
+    throw new Error(data.error || `Error ${r.status}`);
+  }
   return data;
+}
+// plan locks: PLAN.has[feature], PLAN.needs[feature] ("Pro"), PLAN.limits
+const PLAN = {{ (acc.plan_view if acc and acc.plan_view else {"has": {}, "needs": {}, "limits": {}, "locks": false})|tojson }};
+const can = (f) => PLAN.has[f] !== false;
+const lockBadge = (f) => can(f) ? "" : `<a class="lockb" href="/app/billing" title="Upgrade to use this">🔒 ${esc(PLAN.needs[f] || "Paid")}</a>`;
+function upgradeBox(msg, planName) {
+  const d = $("upDlg"); if (!d) return;
+  $("upMsg").textContent = msg; $("upPlan").textContent = planName; if (!d.open) d.showModal();
 }
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 2200); }
 document.addEventListener("click", async (e) => {

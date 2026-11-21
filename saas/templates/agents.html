@@ -35,7 +35,7 @@
 
 <section class="card ag" id="leads">
   <div class="hd"><span class="ic" aria-hidden="true">🎯</span>
-    <div class="tt"><b>Lead Qualifier</b> <span class="badge" id="leadOn">off</span><p>Reads people's DMs and sorts them into 🔥 hot, warm and cold leads, with what they want and what to do next. Hot leads ping your phone.</p></div>
+    <div class="tt"><b>Lead Qualifier</b> <span class="badge" id="leadOn">off</span> <span id="leadLock"></span><p>Reads people's DMs and sorts them into 🔥 hot, warm and cold leads, with what they want and what to do next. Hot leads ping your phone.</p></div>
     <div class="acts"><button class="btn ghost sm" type="button" data-edit="lead">Settings</button><button class="btn sm" type="button" id="leadToggle">Turn on</button></div></div>
   <div class="meter"><div class="bar"><i id="leadBar" style="width:0"></i></div><span id="leadUse"></span></div>
   <div class="prefs" id="leadPrefs" hidden>
@@ -50,7 +50,7 @@
 
 <section class="card ag" id="brands">
   <div class="hd"><span class="ic" aria-hidden="true">🤝</span>
-    <div class="tt"><b>Brand Collab</b> <span class="badge" id="brandOn">off</span><p>Your receptionist for brand DMs. It spots collab and sponsorship offers, notes the brand, offer, budget and deliverables, and rates the fit, so you decide from one list.</p></div>
+    <div class="tt"><b>Brand Collab</b> <span class="badge" id="brandOn">off</span> <span id="brandLock"></span><p>Your receptionist for brand DMs. It spots collab and sponsorship offers, notes the brand, offer, budget and deliverables, and rates the fit, so you decide from one list.</p></div>
     <div class="acts"><button class="btn ghost sm" type="button" data-edit="brand">Settings</button><button class="btn sm" type="button" id="brandToggle">Turn on</button></div></div>
   <div class="meter"><div class="bar"><i id="brandBar" style="width:0"></i></div><span id="brandUse"></span></div>
   <div class="prefs" id="brandPrefs" hidden>
@@ -84,6 +84,7 @@ function badge(el, on) { el.className = "badge" + (on ? " on" : ""); el.textCont
 function draw() {
   const s = A.settings;
   $("noai").hidden = A.ai;
+  $("leadLock").innerHTML = lockBadge("lead_agent"); $("brandLock").innerHTML = lockBadge("brand_agent");
   badge($("leadOn"), s.lead.enabled); badge($("brandOn"), s.brand.enabled); badge($("aiOn"), A.ai_inbox); badge($("guardOn"), A.guard);
   $("leadToggle").textContent = s.lead.enabled ? "Turn off" : "Turn on"; $("brandToggle").textContent = s.brand.enabled ? "Turn off" : "Turn on";
   $("leadToggle").className = "btn sm" + (s.lead.enabled ? " ghost" : ""); $("brandToggle").className = "btn sm" + (s.brand.enabled ? " ghost" : "");

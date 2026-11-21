@@ -27,7 +27,11 @@ def get(vid):
     return store.get_json(f"s:video:{vid}") if vid and len(vid) <= 24 else None
 
 
-def start(acc, name, size):
+def used_bytes(acc):
+    return int(store.counts(acc["id"]).get("video_bytes", 0))
+
+
+def start(acc, name, size, cap_gb=None):
     """Begins an upload; returns the video record. The browser then sends pieces 0..n-1 and calls finish()."""
     name = files._clean(name)
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
@@ -39,6 +43,9 @@ def start(acc, name, size):
         size = 0
     if not 0 < size <= MAX_MB * 1024 * 1024:
         raise VideoError(f"Videos can be up to {MAX_MB // 1024} GB. Compress it (HandBrake, or export at 1080p) and try again.")
+    if cap_gb is not None and used_bytes(acc) + size > cap_gb * 1024 ** 3:
+        left = max(0, cap_gb * 1024 ** 3 - used_bytes(acc)) / 1024 ** 3
+        raise VideoError(f"Your plan includes {cap_gb} GB of course videos and {left:.1f} GB is left. Upgrade for more, or use a YouTube (unlisted) link.")
     if not files.configured():
         raise VideoError("File storage isn't connected yet.")
     v = {"id": secrets.token_urlsafe(12), "acc": acc["id"], "name": name, "size": size, "type": TYPES[ext],
@@ -85,6 +92,7 @@ def finish(acc, vid):
         raise VideoError(f"{len(missing)} pieces are missing. Upload again.")
     v["done"] = True
     store.set_json(f"s:video:{vid}", v)
+    store.count(acc["id"], "video_bytes", v["size"])
     return v
 
 

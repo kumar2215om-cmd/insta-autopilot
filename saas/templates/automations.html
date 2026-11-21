@@ -435,7 +435,7 @@ function drawWizard() {
          ["dm", "✈️", "Sends you a DM", "When someone messages you a keyword"],
          ["story", "◎", "Replies to your story", "A story saying \"Reply LINK\""],
          ["mention", "@", "Mentions you in their story", "Send a thank-you DM"]].map(([k, ic, t, d]) =>
-      `<button class="opt" type="button" data-trigger="${k}"><span class="ic" style="background:var(--accent-soft)">${ic}</span><span>${t}<span class="d">${d}</span></span></button>`).join("")
+      `<button class="opt" type="button" data-trigger="${k}"><span class="ic" style="background:var(--accent-soft)">${ic}</span><span>${t} ${["story", "mention"].includes(k) ? lockBadge("story_replies") : ""}<span class="d">${d}</span></span></button>`).join("")
       + `<button class="opt" type="button" data-trigger="live"><span class="ic" style="background:var(--warn-soft)">🔴</span><span>Comments on your Live <span class="chip" style="margin-left:4px">beta</span><span class="d">Keyword in a Live comment → link in DM</span></span></button>`;
   }
   if (s === "post") {
@@ -486,10 +486,10 @@ function drawWizard() {
         : R.require_follow ? `<textarea rows="3" data-f="follow_dm" maxlength="640" aria-label="Follow check message">${esc(R.follow_dm)}</textarea>
         <div class="two2"><input type="text" value="Visit Profile" disabled aria-label="Visit profile button"><input type="text" data-f="followed_button_text" maxlength="20" value="${esc(R.followed_button_text)}" aria-label="I'm following button"></div>
         <p class="hint">The link is sent only after Instagram confirms they follow you.</p>` : ""}</div>`;
-    h += `<div class="blk"><div class="hd"><b>A DM asking for their email</b>${toggle("ask_email", R.ask_email)}</div>
+    h += `<div class="blk"><div class="hd"><b>A DM asking for their email ${lockBadge("capture")}</b>${toggle("ask_email", R.ask_email)}</div>
       ${R.ask_email ? `<textarea rows="2" data-f="email_dm" maxlength="640" aria-label="Email message">${esc(R.email_dm)}</textarea>
         <label class="small"><input type="checkbox" data-c="email_required" ${R.email_required ? "checked" : ""}> Required (no "Skip" button)</label>` : ""}</div>`;
-    h += `<div class="blk"><div class="hd"><b>A DM asking for their WhatsApp number</b>${toggle("ask_phone", R.ask_phone)}</div>
+    h += `<div class="blk"><div class="hd"><b>A DM asking for their WhatsApp number ${lockBadge("capture")}</b>${toggle("ask_phone", R.ask_phone)}</div>
       ${R.ask_phone ? `<textarea rows="2" data-f="phone_dm" maxlength="640" aria-label="Phone message">${esc(R.phone_dm)}</textarea>
         <label class="small"><input type="checkbox" data-c="phone_required" ${R.phone_required ? "checked" : ""}> Required (no "Skip" button)</label>` : ""}</div>`;
     h += `<p class="lbl" style="margin:4px 0 -4px">Then send the primary DM…</p>

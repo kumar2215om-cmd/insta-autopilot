@@ -62,7 +62,7 @@
 </section>
 
 <section class="card" {% if role != "owner" %}hidden{% endif %}>
-  <div class="row"><h2 style="margin-right:auto">Connect Claude</h2><span class="badge" id="mcpStatus">not connected</span></div>
+  <div class="row"><h2 style="margin-right:auto">Connect Claude <span id="mcpLock"></span></h2><span class="badge" id="mcpStatus">not connected</span></div>
   <p class="muted small" style="margin:6px 0 10px">Run {{ brand }} by chatting with Claude: <i>"Which reel made the most money this week?"</i>,
     <i>"Set up my next reel: keyword PROMPTS, ask for WhatsApp, follow-up with the ₹149 pack"</i>, <i>"Draft replies for the chats waiting for me"</i>,
     <i>"Plan my launch on Friday"</i>. Claude can see your numbers, sales, contacts and inbox, and every change it makes shows up in Activity.</p>
@@ -120,7 +120,7 @@
 </section>
 
 <section class="card" {% if role != "owner" %}hidden{% endif %}>
-  <div class="row"><h2 style="margin-right:auto">Team</h2><span class="badge" id="teamCount"></span></div>
+  <div class="row"><h2 style="margin-right:auto">Team <span id="teamLock"></span></h2><span class="badge" id="teamCount"></span></div>
   <p class="muted small" style="margin:6px 0 12px">Let your manager or editor log in to this account without your Instagram password.
     <b>Manager</b>: everything except team, Claude and disconnecting. <b>Viewer</b>: can look, can't change anything.</p>
   <div id="teamList"></div>
@@ -195,11 +195,12 @@ $("devAll").onclick = async () => {
 };
 if (!$("security").hidden) loadDevices().catch(() => { $("devList").innerHTML = `<div class="empty">Couldn't load devices.</div>`; });
 
+$("mcpLock").innerHTML = lockBadge("mcp"); $("teamLock").innerHTML = lockBadge("team");
 api("/api/mcp-key").then(d => setBadge($("mcpStatus"), d.active, d.read_only ? "read-only link" : "link active", "not connected")).catch(() => {});
 $("mcpNew").onclick = async () => {
   if ($("mcpNew").dataset.sure !== "1") { $("mcpNew").dataset.sure = "1"; $("mcpNew").textContent = "Click again: old link stops working"; return; }
   $("mcpNew").dataset.sure = ""; $("mcpNew").textContent = "Create Claude link";
-  const d = await api("/api/mcp-key", {method: "POST", body: JSON.stringify({read_only: document.querySelector("[name=mcpMode]:checked").value === "read"})});
+  let d; try { d = await api("/api/mcp-key", {method: "POST", body: JSON.stringify({read_only: document.querySelector("[name=mcpMode]:checked").value === "read"})}); } catch (err) { return; }
   $("mcpUrl").value = d.endpoint; $("mcpHdr").value = "Bearer " + d.key;
   $("mcpCmd").value = `claude mcp add --transport http replyinbox ${d.endpoint} --header "Authorization: Bearer ${d.key}"`;
   $("mcpOut").hidden = false; setBadge($("mcpStatus"), true, d.read_only ? "read-only link" : "link active", "not connected");
