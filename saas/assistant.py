@@ -12,8 +12,8 @@ import time
 import ai_agent
 import store
 
-MODEL = os.environ.get("ASSISTANT_MODEL", "claude-sonnet-5-5")
-MAX_STEPS = 6
+MODEL = os.environ.get("ASSISTANT_MODEL", "claude-haiku-5-5")  # the low-cost model; set ASSISTANT_MODEL to upgrade later
+MAX_STEPS = 5
 DAILY = {"free": 10, "paid": 50}
 KEEP = 40
 
@@ -96,7 +96,7 @@ def _run(tool, args):
 
 
 def _call(c, acc, chat, tools, system):
-    req = dict(model=MODEL, max_tokens=2000, system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+    req = dict(model=MODEL, max_tokens=1200, system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                tools=_tool_defs(tools), messages=chat["messages"])
     if MODEL.startswith(ai_agent.FALLBACK_MODELS):
         return c.beta.messages.create(**req, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
