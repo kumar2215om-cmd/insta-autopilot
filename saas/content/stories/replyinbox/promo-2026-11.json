@@ -1,0 +1,19 @@
+{
+  "page": "replyinbox",
+  "slug": "promo-2026-11",
+  "source": "Live on replyinbox.in (checked in saas/plans.py and templates/landing.html on main, 21 Nov 2026)",
+  "frames": [
+    {"role": "hook", "headline": "INSTAGRAM SE [KAMAO], SAB EK JAGAH", "label": "REPLYINBOX.IN",
+     "lines": ["Auto DMs, store, courses aur **payments**: ek hi app mein 👇"],
+     "bubble": "ITNE TOOLS KYUN? 😩", "bg": "sunburst"},
+    {"role": "tool", "headline": "KYA KYA [MILTA] HAI?", "label": "LIVE NOW",
+     "steps": ["**Comment → DM** automation", "Link in bio + **freebies** page", "**Store** + courses: sales page, student dashboard, **certificates**", "**AI agents** + **MCP** (Claude)"],
+     "bubble": "SAB INCLUDED 😎", "bg": "grid"},
+    {"role": "easy", "headline": "PAISA SEEDHA [BANK] MEIN", "label": "PAYMENTS",
+     "steps": ["**Bank account** ek baar add karo", "Buyers **UPI ya card** se pay karein", "Paisa **seedha tumhare bank** mein"],
+     "bubble": "NO JHANJHAT 🙌", "bg": "dots"},
+    {"role": "cta", "headline": "PLANS ₹0 SE [SHURU]", "label": "PRICING",
+     "rows": [["Free", "5% + GST/sale"], ["Starter ₹149 · Creator ₹199", "5% + GST"], ["Pro ₹599 · Agency ₹2,000", "2% + GST"]],
+     "link": "LINK IN BIO 👆", "bubble": "ABHI TRY KARO!", "bg": "solid"}
+  ]
+}
