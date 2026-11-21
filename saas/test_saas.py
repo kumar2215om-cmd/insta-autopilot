@@ -2534,6 +2534,68 @@ class SaasTest(unittest.TestCase):
         self.assertTrue(any("Hook list" in m[1] for m in self.mails))  # the product's access email
         self.assertEqual(self.c.get("/api/shop").get_json()["products"][0]["sales"], 1)
 
+    def test_batch_a_devices_menus_assessments_feedback(self):
+        import courses
+        import shop
+        cid = self.course_setup()
+        # signed-in devices: a second sign-in shows up, can be signed out from here, and loses access at once
+        other = saas.app.test_client()
+        self.signin(other)
+        devs = self.c.get("/api/security").get_json()["devices"]
+        self.assertEqual((len(devs), sum(d["this"] for d in devs)), (2, 1))
+        mine = next(d for d in devs if d["this"])
+        self.assertEqual(self.c.post("/api/security/signout", json={"sid": mine["sid"]}).status_code, 400)
+        theirs = next(d for d in devs if not d["this"])
+        self.c.post("/api/security/signout", json={"sid": theirs["sid"]})
+        self.assertEqual(other.get("/api/me").status_code, 401)
+        self.assertEqual(self.c.get("/api/me").status_code, 200)
+        third = saas.app.test_client()
+        self.signin(third)
+        self.assertEqual(self.c.post("/api/security/signout", json={"all": True}).get_json()["ended"], 1)
+        self.assertEqual(third.get("/app/courses").status_code, 302)
+        # course menu: duplicate (draft copy), pause payments, unpublish, add to link in bio
+        self.course_body(cid, emails=[{"days": 1, "subject": "Hi", "body": "Hello"}])
+        dup = self.c.post(f"/api/courses/{cid}/duplicate", json={}).get_json()["id"]
+        d = courses.get(dup)
+        self.assertEqual((d["status"], d["title"], d.get("sales", 0), len(d["modules"])), ("draft", "Reels Mastery (copy)", 0, 3))
+        self.assertNotEqual(d["slug"], "reels")
+        self.c.put(f"/api/courses/{cid}/flags", json={"paused": True})
+        anon = saas.app.test_client()
+        self.assertIn("Enrolment is paused", anon.get("/creator/c/reels").get_data(as_text=True))
+        self.assertIn("paused", anon.post("/creator/c/reels/order", json={"name": "A", "email": "a@x.co"}).get_json()["error"])
+        self.c.put(f"/api/courses/{cid}/flags", json={"paused": False, "status": "unpublished"})
+        self.assertEqual(anon.get("/creator/c/reels").status_code, 404)
+        url = self.c.get("/api/courses").get_json()["courses"][-1]["url"]
+        self.assertTrue(self.c.post("/api/page/add", json={"title": "Reels Mastery", "url": url, "price": "₹999"}).get_json()["added"])
+        self.assertTrue(self.c.post("/api/page/add", json={"title": "x", "url": url}).get_json()["already"])
+        self.assertEqual(self.c.post("/api/page/add", json={"title": "x", "url": "https://evil.com/x"}).status_code, 400)
+        self.assertIn(url, json.dumps(self.c.get("/api/page").get_json()["page"]))
+        # product duplicate is hidden until switched on
+        prod = self.c.put("/api/shop/products", json={"type": "locked", "title": "VIP", "price": 49, "content": "secret"}).get_json()["product"]
+        cp = self.c.post(f"/api/shop/products/{prod['id']}/duplicate", json={}).get_json()["product"]
+        self.assertEqual((cp["title"], cp["enabled"], cp["sales"]), ("VIP (copy)", False, 0))
+        self.assertEqual(len(self.c.get("/api/shop").get_json()["products"]), 2)
+        # assessments across courses
+        self.c.put(f"/api/courses/{cid}/flags", json={"status": "published"})
+        courses.enroll({"id": "free_1", "course": cid, "email": "s@x.co", "name": "Sam", "price": 0})
+        c = courses.get(cid)
+        courses.mark(c, "s@x.co", "l1")
+        ls = {l["id"]: l for _, l in courses.lessons(c)}
+        courses.grade_quiz(c, "s@x.co", ls["l2"], [1, 0])
+        courses.submit_work(c, "s@x.co", ls["l3"], "My answer", "")
+        a = self.c.get("/api/courses/assessments").get_json()
+        self.assertEqual((a["work"][0]["text"], a["work"][0]["title"], a["quizzes"][0]["score"]), ("My answer", "Make a reel", 100))
+        self.assertIn("Assessments", self.c.get("/app/courses/assessments").get_data(as_text=True))
+        # feature requests reach the owner page
+        self.assertEqual(self.c.post("/api/feedback", json={"text": "hi"}).status_code, 400)
+        self.assertEqual(self.c.post("/api/feedback", json={"kind": "feature", "text": "Please add Telegram memberships"}).status_code, 200)
+        with mock.patch.object(saas, "OWNER_PASSWORD", "pw"):
+            page = self.c.get("/owner", headers={"Authorization": "Basic " + base64.b64encode(b"o:pw").decode()}).get_data(as_text=True)
+        self.assertIn("Please add Telegram memberships", page)
+        # refer & earn: windows and people
+        r = self.c.get("/api/refer").get_json()
+        self.assertEqual((r["earned_today"], r["earned_week"], r["people"]), (0, 0, []))
+
 
 
 class CarouselTest(unittest.TestCase):

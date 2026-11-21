@@ -1,0 +1,83 @@
+{% extends "_base.html" %}
+{% block title %}Assessments{% endblock %}
+{% block heading %}<a href="/app/courses" style="color:inherit; text-decoration:none">Courses</a> <span class="muted">/</span> Assessments{% endblock %}
+{% block head %}
+<style>
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .tabs button { border:1.5px solid #CFCEC6; background:var(--card); border-radius:999px; padding:8px 16px; font:700 14px var(--text); cursor:pointer; color:var(--ink); }
+  .tabs button[aria-pressed="true"] { background:#111318; color:#fff; border-color:#111318; }
+  .fbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .fbar input, .fbar select { flex:1; min-width:180px; }
+  .fbar select { flex:0 1 240px; }
+  .item { border-top:1px solid var(--line2); padding:16px 0; display:grid; gap:8px; }
+  .item:first-child { border-top:0; }
+  .item .top2 { display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+  .item .sname { font-weight:800; } .item .meta { font:500 12.5px var(--mono); color:var(--mute); }
+  .answer { white-space:pre-line; background:#F7F6F1; border:1px solid var(--line2); border-radius:12px; padding:12px; overflow-wrap:anywhere; }
+  .grade { display:grid; grid-template-columns:160px minmax(0, 1fr) auto; gap:8px; align-items:center; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:10px 8px; border-top:1px solid var(--line2); vertical-align:top; }
+  th { font:700 11.5px var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--mute); border-top:0; }
+  td.n { font-variant-numeric:tabular-nums; font-weight:700; }
+  @media (max-width:700px) { .grade { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+{% block content %}
+<section class="card" style="display:grid; gap:14px">
+  <div class="tabs" role="group" aria-label="Type"><button type="button" data-tab="work" aria-pressed="true">Assignments</button><button type="button" data-tab="quiz" aria-pressed="false">Quizzes</button></div>
+  <div class="fbar"><input id="q" type="search" placeholder="Search student or lesson" aria-label="Search">
+    <select id="course" aria-label="Course"><option value="">All courses</option></select>
+    <select id="state" aria-label="Status"><option value="">All</option><option value="todo">To review</option><option value="done">Reviewed</option></select></div>
+  <div id="list"><div class="empty">Loading…</div></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+let D = null, tab = "work";
+const when = (ts) => ts ? new Date(ts * 1000).toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"}) : "";
+function draw() {
+  document.querySelectorAll("[data-tab]").forEach(b => b.setAttribute("aria-pressed", b.dataset.tab === tab));
+  $("state").hidden = tab !== "work";
+  const q = $("q").value.trim().toLowerCase(), cid = $("course").value, stt = $("state").value;
+  const match = (x) => (!cid || x.course_id === cid) && (!q || [x.name, x.email, x.title, x.course].join(" ").toLowerCase().includes(q));
+  if (tab === "work") {
+    const rows = D.work.filter(w => match(w) && (!stt || (stt === "done") === (w.grade != null && w.grade !== "")));
+    const todo = D.work.filter(w => w.grade == null || w.grade === "").length;
+    document.querySelector("[data-tab=work]").textContent = `Assignments${todo ? ` (${todo} to review)` : ""}`;
+    $("list").innerHTML = rows.length ? rows.map((w, i) => `<div class="item">
+        <div class="top2"><span class="sname">${esc(w.name || w.email)}</span><span class="meta">${esc(w.email)}</span>
+          ${w.grade != null && w.grade !== "" ? `<span class="badge on">Reviewed · ${esc(w.grade)}</span>` : `<span class="badge">To review</span>`}</div>
+        <div class="meta">${esc(w.course)} · ✍️ ${esc(w.title)} · ${esc(when(w.at))}</div>
+        ${w.text ? `<div class="answer">${esc(w.text)}</div>` : ""}${w.link ? `<a href="${esc(w.link)}" target="_blank" rel="noopener">${esc(w.link)}</a>` : ""}
+        <div class="grade"><input type="text" placeholder="Grade (A, 8/10, Pass)" value="${esc(w.grade || "")}" id="g${i}" aria-label="Grade">
+          <input type="text" placeholder="Feedback for the student" value="${esc(w.feedback || "")}" id="f${i}" aria-label="Feedback">
+          <button class="btn sm" type="button" data-save="${i}">Save</button></div></div>`).join("")
+      : `<div class="empty">${D.work.length ? "Nothing matches." : "No assignments yet. Add an Assignment lesson to a course; submissions show up here."}</div>`;
+    $("list").dataset.rows = JSON.stringify(rows.map(w => [w.course_id, w.email, w.lesson]));
+  } else {
+    const rows = D.quizzes.filter(match);
+    $("list").innerHTML = rows.length ? `<div style="overflow-x:auto"><table><thead><tr><th>Student</th><th>Course · quiz</th><th>Score</th><th>Result</th><th>When</th></tr></thead><tbody>${rows.map(x =>
+        `<tr><td><b>${esc(x.name || x.email)}</b><div class="muted small">${esc(x.email)}</div></td><td>${esc(x.course)}<div class="muted small">🏅 ${esc(x.title)}</div></td>
+          <td class="n">${x.right}/${x.total} (${x.score}%)</td><td>${x.passed ? `<span class="badge on">Passed</span>` : `<span class="badge">Not passed</span>`}</td><td class="muted small">${esc(when(x.at))}</td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="empty">${D.quizzes.length ? "Nothing matches." : "No quiz attempts yet."}</div>`;
+  }
+}
+async function load() {
+  D = await api("/api/courses/assessments");
+  const names = {}; [...D.work, ...D.quizzes].forEach(x => names[x.course_id] = x.course);
+  $("course").innerHTML = `<option value="">All courses</option>` + Object.entries(names).map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join("");
+  draw();
+}
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-tab]"); if (t) { tab = t.dataset.tab; draw(); return; }
+  const s = e.target.closest("[data-save]");
+  if (s) {
+    const i = +s.dataset.save, [cid, email, lesson] = JSON.parse($("list").dataset.rows)[i];
+    try { await api(`/api/courses/${cid}/review`, {method: "PUT", body: JSON.stringify({email, lesson, grade: $("g" + i).value, feedback: $("f" + i).value})});
+      toast("Saved ✓ The student sees it on the lesson."); await load(); } catch (err) { toast(err.message); }
+  }
+});
+["q", "course", "state"].forEach(id => $(id).addEventListener("input", draw));
+load().catch(err => $("list").innerHTML = `<div class="empty">${esc(err.message)}</div>`); loadBanners();
+</script>
+{% endblock %}

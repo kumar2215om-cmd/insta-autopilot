@@ -117,6 +117,21 @@ def _free_slug(acc_id, slug, cid):
         slug = f"{base}-{n}"
 
 
+def duplicate(acc, c):
+    """A draft copy of a course: same page, lessons and settings; no students, sales or coupon use."""
+    if len(of_account(acc["id"])) >= MAX_COURSES:
+        raise CourseError(f"You can have up to {MAX_COURSES} courses.")
+    new = create(acc, (c["title"] + " (copy)")[:75])
+    keep = {k: v for k, v in c.items() if k not in ("id", "slug", "status", "sales", "revenue", "created", "paused")}
+    keep["coupons"] = [{**cp, "used": 0} for cp in c.get("coupons") or []]
+    keep["title"] = new["title"]
+    out = {**new, **keep}
+    store.set_json(f"s:course:{new['id']}", out)
+    if out.get("emails"):
+        store.redis("SADD", "s:courseseq", new["id"])
+    return out
+
+
 def delete(acc, cid):
     c = get(cid)
     if not c or c["acc"] != acc["id"]:
@@ -388,6 +403,8 @@ def order(acc, c, buyer):
     """Starts a purchase. Free courses enroll straight away (returns {'free': True, 'link': ...})."""
     if c.get("status") != "published" or c.get("deleted"):
         raise CourseError("This course isn't open for enrolment right now.")
+    if c.get("paused"):
+        raise CourseError("Enrolment is paused right now. Please check again soon.")
     email = str(buyer.get("email", "")).strip().lower()[:200]
     if not shop.EMAIL_RE.match(email):
         raise CourseError("Enter your email: your course access is sent there.")

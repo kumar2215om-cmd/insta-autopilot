@@ -156,7 +156,7 @@ fbq('init', '{{ c.pixel }}'); fbq('track', 'PageView'); fbq('track', 'ViewConten
       <li>⏳ {{ "Lifetime access" if (c.validity or {}).get("kind") != "limited" else ("Access for " ~ c.validity.months ~ " months") }}</li>
       <li>📱 Learn on phone or laptop</li>
     </ul>
-    {% if c.status == "published" and (pay_ok or price == 0 or free_ok) %}
+    {% if c.status == "published" and not c.paused and (pay_ok or price == 0 or free_ok) %}
     <button class="btn" type="button" id="enroll">{{ c.button or "Enroll now" }}</button>
     <form id="form" hidden novalidate>
       <input class="field" id="name" type="text" placeholder="Your name" autocomplete="name" aria-label="Your name" required>
@@ -171,7 +171,7 @@ fbq('init', '{{ c.pixel }}'); fbq('track', 'PageView'); fbq('track', 'ViewConten
     <p class="msg" id="msg" role="status" aria-live="polite"></p>
     <div class="trust"><span>⚡ Instant access</span>{% if price or pwyw %}<span class="inr">🔒 UPI, cards, netbanking via Razorpay</span><span class="usd">🔒 International cards via Razorpay</span>{% endif %}<span>✉️ Login link emailed</span></div>
     {% else %}
-    <p class="msg">{{ "Enrolment opens soon." if c.status == "published" else "This course isn't published yet." }}</p>
+    <p class="msg">{{ "Enrolment is paused right now. Please check again soon." if c.paused else ("Enrolment opens soon." if c.status == "published" else "This course isn't published yet.") }}</p>
     {% endif %}
     <p style="margin:0; font-size:13.5px; text-align:center" class="muted">Already enrolled? <a href="/learn">Sign in</a></p>
   </aside>

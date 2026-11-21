@@ -77,6 +77,13 @@
       <td>{% if p.status == "paid" %}Paid <span data-ts="{{ p.paid_at }}"></span>{% else %}<button type="button" class="rm" style="color:#067647; border-color:#a6e3c4" data-paid="{{ p.id }}" data-user="{{ p.user }}">Mark paid</button>{% endif %}</td></tr>
     {% else %}<tr><td colspan="5" class="muted">No payout requests yet.</td></tr>{% endfor %}
   </table></div>
+  <h2 style="margin:28px 0 8px">Feature requests &amp; help</h2>
+  <div style="overflow-x:auto"><table>
+    <tr><th>When</th><th>Type</th><th>From</th><th>Message</th></tr>
+    {% for f in feedback %}
+    <tr><td data-ts="{{ f.at }}"></td><td>{{ "Help" if f.kind == "help" else "Feature" }}</td><td>{{ f.email }}{% if f.username %}<br>@{{ f.username }}{% endif %}</td><td style="white-space:pre-line">{{ f.text }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">No messages yet.</td></tr>{% endfor %}
+  </table></div>
   <script>document.querySelectorAll("[data-ts]").forEach(e => e.textContent = new Date(+e.dataset.ts * 1000).toLocaleDateString());</script>
 </main>
 <script>

@@ -154,6 +154,21 @@ def get(acc_id, pid):
 
 
 TYPES = ("file", "locked", "event", "booking")
+
+
+def duplicate(acc, pid):
+    """A hidden copy of a product (same file, price and settings; no sales) to edit and switch on."""
+    items = products(acc["id"])
+    p = next((x for x in items if x["id"] == pid), None)
+    if not p:
+        raise ShopError("Product not found.")
+    if len(items) >= MAX_PRODUCTS:
+        raise ShopError(f"You can have up to {MAX_PRODUCTS} products.")
+    copy = {**p, "id": secrets.token_hex(5), "title": (p["title"] + " (copy)")[:100], "created": int(time.time()),
+            "sales": 0, "revenue": 0, "enabled": False}
+    items.insert(items.index(p) + 1, copy)
+    store.set_json(_key(acc["id"]), items)
+    return copy
 IST = 19800  # India Standard Time, UTC+5:30: creators set times in IST
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 

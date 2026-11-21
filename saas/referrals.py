@@ -161,4 +161,25 @@ def summary(user, link):
             "recent": [{"username": s.get("username", ""), "at": s["at"]} for s in signups[::-1][:50]],
             "paying": len({e["from"] for e in user.get("earnings") or [] if e["kind"] == "commission"}),
             "earnings": (user.get("earnings") or [])[:100], "payouts": (user.get("payouts") or [])[:50],
-            "upi": user.get("upi", ""), **balance(user)}
+            "upi": user.get("upi", ""), **balance(user), **_windows(user), "people": _people(signups)}
+
+
+def _windows(user):
+    """Earned today / in the last 7 days (IST days), for the stats row."""
+    now = time.time()
+    start = now - (now + 19800) % 86400
+    earn = [e for e in user.get("earnings") or [] if e.get("kind") == "commission"]
+    return {"earned_today": sum(e.get("commission", 0) for e in earn if e["at"] >= start),
+            "earned_week": sum(e.get("commission", 0) for e in earn if e["at"] >= now - 7 * 86400)}
+
+
+def _people(signups):
+    """Everyone who joined with the link: pending (not paying yet), active (on a paid plan now) or churned (paid before, not now)."""
+    out = []
+    for s in signups[::-1][:200]:
+        u = users.get(s["uid"]) or {}
+        paid_now = users.current_plan(u) != "free" if u else False
+        paid_before = bool(u.get("plan_until") or (u.get("plan") not in (None, "", "free")) or u.get("paid"))
+        out.append({"username": s.get("username", ""), "at": s["at"], "email": mask(u.get("email", "")),
+                    "status": "active" if paid_now else ("churned" if paid_before else "pending")})
+    return out
