@@ -354,6 +354,20 @@ def clean_linkpage(data):
     }
 
 
+def video_embed(url):
+    """Embed info for a demo video link: Instagram reel/post, YouTube, or a direct MP4/WebM (incl. our /free/f/ uploads)."""
+    url = str(url or "").strip()
+    m = re.match(r"https?://(?:www\.)?instagram\.com/(?:reel|reels|p)/([A-Za-z0-9_-]+)", url)
+    if m:
+        return {"kind": "iframe", "src": f"https://www.instagram.com/reel/{m.group(1)}/embed/", "ratio": "ig"}
+    m = re.match(r"https?://(?:www\.)?(?:youtube\.com/(?:watch\?v=|shorts/|embed/)|youtu\.be/)([A-Za-z0-9_-]{6,20})", url)
+    if m:
+        return {"kind": "iframe", "src": f"https://www.youtube-nocookie.com/embed/{m.group(1)}?rel=0", "ratio": "short" if "/shorts/" in url else "wide"}
+    if re.match(r"(https://[^\s\"'<>]+|/free/f/[^\s\"'<>]+)\.(mp4|webm)(\?[^\s\"'<>]*)?$", url, re.I):
+        return {"kind": "video", "src": url, "ratio": "short"}
+    return None
+
+
 def fb_verify_code(raw):
     """Accepts the bare code, content="code", or the whole <meta name="facebook-domain-verification" ...> tag."""
     raw = str(raw or "")
@@ -378,7 +392,10 @@ def clean_course(c):
             "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live,
             "pixel": pixel if 8 <= len(pixel) <= 20 else "",
             # Meta domain verification: the content="…" code from Business settings → Domains (letters + digits only)
-            "fbverify": fb_verify_code(c.get("fbverify"))}
+            "fbverify": fb_verify_code(c.get("fbverify")),
+            # "Watch Claude edit a reel" on /course: up to 3 Instagram reel / YouTube / MP4 links
+            "videos": [{"url": v["url"], "title": text(v.get("title"), 70)} for v in (c.get("videos") or [])[:3]
+                       if isinstance(v, dict) and video_embed(v.get("url"))]}
 
 
 MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
@@ -1515,7 +1532,8 @@ def course_page():
                 sessions.append((when.strip(), topic.strip()) if topic.strip() else ("", when.strip()))
         else:
             sessions = [("", t) for t in course_data.LIVE_SESSIONS]
-    return render_template("course_v2.html", page=page, course=course, c=course_data, live=live, sessions=sessions,
+    videos = [{**v, **video_embed(v["url"])} for v in course.get("videos", []) if video_embed(v.get("url"))]
+    return render_template("course_v2.html", page=page, course=course, c=course_data, live=live, sessions=sessions, videos=videos,
                            tab=1, c2=course2_data if course2.get("enabled", True) else None, course2=course2,
                            starts=(lambda t: t.isoformat() if t and t > datetime.now(IST) and batch_state(live) == "open" else "")(batch_start(live)),
                            bstate=batch_state(live),

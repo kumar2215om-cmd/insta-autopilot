@@ -30,7 +30,7 @@
   .kicker { font:800 12px Inter; letter-spacing:3px; color:var(--cer); text-transform:uppercase; }
   h2 { font-size:clamp(30px,5vw,46px); line-height:1.02; letter-spacing:-1.6px; margin:10px 0 12px; font-weight:900; } h2 span { color:var(--rose); }
   .sub { color:#6E6862; font-weight:600; font-size:16px; line-height:1.55; margin:0 0 24px; max-width:640px; }
-  section { padding:76px 0 0; } .center { text-align:center; } .center .sub { margin-left:auto; margin-right:auto; }
+  section { padding:76px 0 0; } .center { text-align:center; } .center .sub, .sub.center { margin-left:auto; margin-right:auto; }
 
   /* promo strip */
   .strip { background:var(--ink); color:#fff; text-align:center; font:800 13.5px Inter; padding:10px 14px; }
@@ -113,6 +113,14 @@
   .demo { display:grid; grid-template-columns:1fr 1fr; gap:30px; align-items:start; }
   .demo .cap { text-align:center; margin-top:16px; } .demo .cap b { display:block; font-size:18px; font-weight:900; } .demo .cap span { color:var(--mute); font-weight:600; font-size:14px; }
 
+  /* demo videos */
+  .vids { display:grid; grid-template-columns:repeat(3, minmax(0, 320px)); gap:18px; justify-content:center; margin-top:8px; }
+  .vids.n1 { grid-template-columns:minmax(0, 360px); } .vids.n2 { grid-template-columns:repeat(2, minmax(0, 340px)); }
+  .vid { margin:0; background:#111; border-radius:24px; overflow:hidden; box-shadow:var(--shadow); }
+  .vid iframe, .vid video { display:block; width:100%; border:0; background:#111; }
+  .vid.ig iframe { aspect-ratio:9/16; min-height:560px; background:#fff; } .vid.short iframe, .vid.short video { aspect-ratio:9/16; } .vid.wide iframe { aspect-ratio:16/9; }
+  .vid figcaption { color:#fff; font:800 14px Inter; padding:12px 14px; }
+  .vids:has(.vid.wide) { grid-template-columns:minmax(0, 720px); }
   /* inside: folder tree */
   .tree { background:#17151A; color:#EDE7DD; border-radius:26px; padding:22px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; box-shadow:var(--shadow); }
   .tree .bar { display:flex; gap:6px; margin-bottom:14px; } .tree .bar i { width:11px; height:11px; border-radius:50%; background:#444; }
@@ -188,7 +196,8 @@
   .rv { opacity:0; transform:translateY(20px); transition:opacity .6s, transform .6s cubic-bezier(.2,.8,.2,1); } .rv.in { opacity:1; transform:none; }
   @media (max-width:860px) {
     .hero, .demo { grid-template-columns:1fr; } .hero .ph { order:2; }
-    .stats3, .reels, .gifts, .quotes, .steps { grid-template-columns:1fr; } .timeline { grid-template-columns:1fr; }
+    .stats3, .reels, .gifts, .quotes, .steps { grid-template-columns:1fr; }
+    .vids, .vids.n1, .vids.n2 { grid-template-columns:minmax(0, 360px); } .timeline { grid-template-columns:1fr; }
     .tl { border-right:0; border-bottom:1px solid var(--line); } .live ol { grid-template-columns:1fr; }
     .math th, .math td { padding:11px 10px; font-size:13.5px; } .row { grid-template-columns:1fr; gap:2px; } .row .tg { justify-self:start; }
     .about { grid-template-columns:1fr; text-align:center; justify-items:center; }
@@ -298,6 +307,19 @@
       <div class="cap"><b>Scripts in seconds</b><span>Hooks, scripts, captions: copy-ready Claude prompts for every lesson.</span></div></div>
     </div>
   </section>
+
+  {% if videos %}
+  <section class="rv">
+    <div class="kicker center">Watch the real thing</div>
+    <h2 class="center">See Claude <span>edit a reel.</span></h2>
+    <p class="sub center">No editor, no timeline. These are real screen recordings of the workflow you learn in the course.</p>
+    <div class="vids n{{ videos|length }}">{% for v in videos %}<figure class="vid {{ v.ratio }}">
+      {% if v.kind == "video" %}<video src="{{ v.src }}" controls playsinline preload="metadata"></video>
+      {% else %}<iframe src="{{ v.src }}" title="{{ v.title or 'Claude editing a reel' }}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen scrolling="no"></iframe>{% endif %}
+      {% if v.title %}<figcaption>▶ {{ v.title }}</figcaption>{% endif %}</figure>{% endfor %}</div>
+    <div style="max-width:440px;margin:22px auto 0">{{ buybtn() }}{{ micro() }}</div>
+  </section>
+  {% endif %}
 
   <section class="rv">
     <div class="kicker">What's inside</div>
