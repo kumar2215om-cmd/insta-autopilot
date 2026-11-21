@@ -1425,9 +1425,21 @@ def featured_freebies(page, n=6):
     return uniq[:n]
 
 
+DEFAULT_WHATSAPP = "919900893430"  # Advoc Media business WhatsApp (used when the editor's Socials field is empty)
+
+
+def whatsapp_link(page, text=""):
+    """wa.me link from the editor's WhatsApp field (10-digit Indian numbers get 91), else the default number."""
+    digits = "".join(ch for ch in str((page.get("socials") or {}).get("whatsapp") or "") if ch.isdigit())
+    if len(digits) == 10:
+        digits = "91" + digits
+    from urllib.parse import quote
+    return f"https://wa.me/{digits or DEFAULT_WHATSAPP}" + (f"?text={quote(text)}" if text else "")
+
+
 @app.get("/home")
 def home_page():
-    """Public home page (advocmedia.in/): all courses, live batch, free guides, about Om."""
+    """Public home page (advocmedia.in/): Advoc Media agency (video editing, paid ads, SEO), our products, the course, about Om."""
     import legal_data
     page = load_linkpage()
     ig = instagram_profile()
@@ -1437,7 +1449,8 @@ def home_page():
                            freebies=featured_freebies(page), freebie_total=freebies_count(page),
                            avatar=page["avatar"] or ig.get("profile_picture_url", ""),
                            username=ig.get("username", "") or "aiwith.om", followers=ig.get("followers_count"),
-                           email=legal_data.EMAIL, pixel=c1.get("pixel", ""), ad=from_ad(), bstate=batch_state(live))
+                           email=legal_data.EMAIL, pixel=c1.get("pixel", ""), ad=from_ad(), bstate=batch_state(live),
+                           wa=whatsapp_link(page, "Hi Om, I'd like a free audit for my business."))
 
 
 @app.get("/admin")

@@ -5,7 +5,7 @@ Full handoff (routes, data shapes, env var names, Blob uploads, design system, t
 
 ## Map
 - `app.py`: everything server-side: IG webhook comment→DM automation, `/api/*`, `/links`, `/free`, guides, uploads, `/course`, policy pages, course banner/card injected into guides, PDF→guide import.
-- `course_data.py` (Course 1 page text), `legal_data.py` (terms/refund/privacy/contact), `tools/doc2md.py` (PDF/TXT → guide Markdown). `course2_data.py` (Course 2, live as "Coming soon" until its SuperProfile link is set), `/courses` hub. `templates/home.html` = advocmedia.in home page (`/` on the custom domain, `/home` anywhere): all courses (`course_cards()`), live batch, newest freebies, about.
+- `course_data.py` (Course 1 page text), `legal_data.py` (terms/refund/privacy/contact), `tools/doc2md.py` (PDF/TXT → guide Markdown). `course2_data.py` (Course 2, live as "Coming soon" until its SuperProfile link is set), `/courses` hub. `templates/home.html` = advocmedia.in home page (`/` on the custom domain, `/home` anywhere): Advoc Media agency page (video editing, paid ads, SEO, free audit via WhatsApp `whatsapp_link()` / email), our products (Likho at likholabs.in, ReplyInbox at replyinbox.in), the course card (live price + batch state), about Om. Old courses-first version: git history before 21 Nov 2026.
 - `templates/dashboard.html` (admin overview), `templates/links_edit.html` (link page editor), `templates/links.html` (public link page),
   shared admin look in `templates/_admin_style.html` + `_admin_nav.html`.
 - `freebies/index.html`: public `/free` page; its data is the one-line JSON `const D={...};` (keep it one line ending `;\n`).

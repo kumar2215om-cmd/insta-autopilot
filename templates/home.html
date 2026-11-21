@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 {% if fbverify %}<meta name="facebook-domain-verification" content="{{ fbverify }}">
 {% endif %}<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Advoc Media · Practical AI courses by @{{ username }}</title>
-<meta name="description" content="Learn to grow on Instagram with Claude and AI. Courses, live classes and {{ freebie_total }}+ free guides by Om (@{{ username }}). Step by step, no jargon.">
-<meta property="og:title" content="Advoc Media · Learn AI the practical way">
-<meta property="og:description" content="Om (@{{ username }}) ke courses, live classes aur {{ freebie_total }}+ free guides. Zero se {{ followers|kfollowers or '24K' }} followers ka real system.">
+<title>Advoc Media · AI-powered video editing, paid ads &amp; SEO</title>
+<meta name="description" content="Advoc Media: video editing, paid ads management and SEO for creators and businesses, powered by AI. Free audit. Also the makers of Likho and ReplyInbox.">
+<meta property="og:title" content="Advoc Media · We grow brands with video, ads &amp; SEO">
+<meta property="og:description" content="AI-powered video editing, paid ads and SEO. Get a free audit. Makers of Likho (likholabs.in) and ReplyInbox (replyinbox.in).">
 <meta property="og:image" content="{{ request.host_url }}free/course_en.jpg?v={{ asset_v('course_en.jpg') }}">
 <meta name="twitter:card" content="summary_large_image">
 {% if avatar %}<link rel="icon" href="{{ avatar }}">{% endif %}
@@ -16,326 +16,217 @@
 <style>
   :root { --bg:#F1EADC; --ink:#1C1A17; --mute:#8C8780; --card:#fff; --line:#E7E0D4; --rose:#FF2D95; --cer:#007BA7; --gold:#F5B83D;
           --shadow:0 18px 40px rgba(60,40,20,.14); --soft:0 8px 22px rgba(60,40,20,.08); }
-  * { box-sizing:border-box; }
-  html { scroll-behavior:smooth; scroll-padding-top:80px; }
-  html, body { margin:0; }
-  body { background:var(--bg); color:var(--ink); font-family:Inter,system-ui,sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; }
-  body { position:relative; }
+  * { box-sizing:border-box; } html,body { margin:0; }
+  body { background:var(--bg); color:var(--ink); font-family:Inter,system-ui,sans-serif; -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative; }
   body::before { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
     background:radial-gradient(900px 700px at 0% 0%, rgba(255,45,149,.14), transparent 70%),
-               radial-gradient(900px 700px at 100% 55%, rgba(0,123,167,.10), transparent 70%),
+               radial-gradient(900px 700px at 100% 40%, rgba(0,123,167,.10), transparent 70%),
                radial-gradient(800px 600px at 0% 100%, rgba(255,45,149,.08), transparent 70%); }
   a { color:inherit; }
   .wrap { max-width:1120px; margin:0 auto; padding:0 16px; }
-
-  /* nav */
-  .nav { position:sticky; top:0; z-index:20; background:rgba(241,234,220,.82); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border-bottom:1px solid transparent; transition:border-color .2s; }
-  .nav.scrolled { border-color:var(--line); }
+  .nav { position:sticky; top:0; z-index:20; background:rgba(241,234,220,.85); backdrop-filter:blur(12px); }
   .nav .wrap { display:flex; align-items:center; gap:14px; height:68px; }
   .brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
   .av { width:42px; height:42px; border-radius:50%; padding:3px; flex:none; background:conic-gradient(var(--rose),var(--gold),var(--cer),var(--rose)); }
-  .av img, .av .ini { width:100%; height:100%; border-radius:50%; border:2.5px solid #fff; display:block; object-fit:cover; background:#fff; }
-  .av .ini { display:grid; place-items:center; font:900 16px Inter; }
-  .brand b { font:900 20px Inter; letter-spacing:-.6px; }
-  .brand b span { color:var(--rose); }
+  .av img { width:100%; height:100%; border-radius:50%; border:2.5px solid #fff; display:block; object-fit:cover; }
+  .brand b { font:900 20px Inter; letter-spacing:-.6px; } .brand b span { color:var(--rose); }
   .links { display:flex; gap:4px; margin-left:auto; }
   .links a { text-decoration:none; font-weight:800; font-size:14px; padding:9px 12px; border-radius:30px; }
-  .links a:hover { background:#fff; }
-  .cta { text-decoration:none; background:var(--ink); color:#fff; font-weight:900; font-size:14px; padding:11px 18px; border-radius:30px; white-space:nowrap; }
-  .cta.rose { background:var(--rose); box-shadow:0 10px 24px rgba(255,45,149,.32); }
+  .cta { text-decoration:none; background:var(--rose); color:#fff; font-weight:900; font-size:14px; padding:11px 18px; border-radius:30px; white-space:nowrap; box-shadow:0 10px 24px rgba(255,45,149,.32); }
 
-  /* hero */
-  .hero { display:grid; grid-template-columns:1.05fr .95fr; gap:48px; align-items:center; padding:56px 0 40px; }
+  .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:48px; align-items:center; padding:60px 0 30px; }
   .kicker { font:800 12px Inter; letter-spacing:3px; color:var(--cer); text-transform:uppercase; }
-  h1 { font-size:clamp(40px, 6.2vw, 72px); line-height:.98; letter-spacing:-2.6px; margin:14px 0 18px; font-weight:900; }
-  h1 .hl { color:var(--rose); }
-  .nw { white-space:nowrap; }
-  .lead { color:#6E6862; font-weight:600; font-size:18px; line-height:1.55; margin:0; max-width:520px; }
+  h1 { font-size:clamp(40px,6vw,70px); line-height:.98; letter-spacing:-2.6px; margin:14px 0 18px; font-weight:900; }
+  h1 span { color:var(--rose); }
+  .lead { color:#6E6862; font-weight:600; font-size:18px; line-height:1.55; margin:0; max-width:540px; }
   .btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:26px; }
-  .btn { text-decoration:none; font-weight:900; font-size:16px; padding:15px 24px; border-radius:40px; display:inline-flex; align-items:center; gap:8px; transition:transform .15s; }
-  .btn:hover { transform:translateY(-2px); }
+  .btn { text-decoration:none; font-weight:900; font-size:16px; padding:15px 24px; border-radius:40px; display:inline-flex; align-items:center; gap:8px; }
   .btn.rose { background:var(--rose); color:#fff; box-shadow:0 12px 28px rgba(255,45,149,.35); }
   .btn.ghost { background:#fff; border:2px solid var(--line); }
-  .stats { display:flex; gap:26px; flex-wrap:wrap; margin-top:34px; }
-  .stat b { display:block; font:400 40px/1 Anton,Inter; letter-spacing:.5px; }
-  .stat b em { font-style:normal; color:var(--rose); }
-  .stat span { font-weight:700; font-size:13px; color:var(--mute); }
+  .trust { display:flex; gap:26px; flex-wrap:wrap; margin-top:32px; }
+  .trust div b { display:block; font:400 36px/1 Anton,Inter; } .trust div b em { font-style:normal; color:var(--rose); }
+  .trust div span { font-weight:700; font-size:13px; color:var(--mute); }
 
-  .show { position:relative; }
-  .show .cover { width:100%; display:block; border-radius:28px; box-shadow:var(--shadow); aspect-ratio:16/9; object-fit:cover; transform:rotate(1.5deg); }
-  .float { position:absolute; background:#fff; border-radius:20px; box-shadow:var(--shadow); padding:12px 16px; font-weight:800; font-size:14px; display:flex; align-items:center; gap:10px; }
-  .float.a { left:-18px; bottom:-26px; }
-  .float.b { right:-10px; top:-22px; }
-  .float .big { font:400 30px/1 Anton,Inter; color:var(--rose); }
-  .dot { width:10px; height:10px; border-radius:50%; background:#E53935; box-shadow:0 0 0 0 rgba(229,57,53,.6); animation:ping 1.6s infinite; flex:none; }
-  @keyframes ping { 70% { box-shadow:0 0 0 10px rgba(229,57,53,0); } 100% { box-shadow:0 0 0 0 rgba(229,57,53,0); } }
+  .board { position:relative; background:#fff; border-radius:30px; box-shadow:var(--shadow); padding:58px 22px 22px; display:grid; gap:12px; }
+  .board .row { display:flex; align-items:center; gap:12px; background:#FBF8F2; border-radius:18px; padding:14px 16px; }
+  .board .ic { width:44px; height:44px; border-radius:14px; display:grid; place-items:center; font-size:22px; flex:none; }
+  .board b { display:block; font-size:16px; font-weight:900; } .board small { color:var(--mute); font-weight:600; font-size:13px; }
+  .board .tag { margin-left:auto; font:800 11px Inter; border-radius:99px; padding:4px 10px; white-space:nowrap; }
+  .float { white-space:nowrap; position:absolute; left:22px; top:-18px; background:var(--ink); color:#fff; border-radius:16px; padding:10px 14px; font-weight:800; font-size:13px; box-shadow:var(--shadow); }
+  .float b { color:#FF8CC6; display:inline; font-size:13px; }
 
-  /* live strip */
-  .live { margin:44px 0 0; background:var(--ink); color:#fff; border-radius:26px; padding:20px 24px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; box-shadow:var(--shadow); }
-  .live .t { font-weight:900; font-size:18px; }
-  .live .t small { display:block; font-weight:600; font-size:14px; color:#CFC8BD; margin-top:3px; }
-  .live .cta { margin-left:auto; }
-
-  /* sections */
-  section { padding:70px 0 0; }
+  section { padding:72px 0 0; }
   .head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
-  h2 { font-size:clamp(30px, 4.4vw, 46px); line-height:1; letter-spacing:-1.6px; margin:8px 0 0; font-weight:900; }
-  h2 span { color:var(--rose); }
-  .more { text-decoration:none; font-weight:900; font-size:15px; color:var(--rose); }
+  h2 { font-size:clamp(30px,4.4vw,46px); line-height:1; letter-spacing:-1.6px; margin:8px 0 0; font-weight:900; } h2 span { color:var(--rose); }
+  .sub { color:#6E6862; font-weight:600; font-size:15.5px; line-height:1.55; max-width:440px; margin:0; }
 
-  /* course cards */
-  .courses { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:22px; }
-  .cc { display:flex; flex-direction:column; text-decoration:none; background:var(--card); border-radius:28px; overflow:hidden; box-shadow:var(--shadow); transition:transform .2s, box-shadow .2s; }
-  .cc:hover { transform:translateY(-4px); box-shadow:0 26px 50px rgba(60,40,20,.18); }
-  .cc .img { position:relative; }
-  .cc img { width:100%; display:block; aspect-ratio:16/9; object-fit:cover; }
-  .cc .no { font:800 12px Inter; letter-spacing:3px; color:var(--cer); margin-bottom:6px; }
-  .cc .bd { position:absolute; top:14px; right:14px; font:800 12px Inter; color:#fff; background:var(--rose); border-radius:20px; padding:6px 12px; }
-  .cc .bd.soon { background:var(--cer); }
-  .cc .body { padding:20px 22px 22px; display:flex; flex-direction:column; flex:1; }
-  .cc b.t { font-size:24px; font-weight:900; line-height:1.15; letter-spacing:-.5px; }
-  .cc p { margin:9px 0 0; color:var(--mute); font-weight:600; font-size:15px; line-height:1.5; }
-  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; }
-  .chip { border:2px solid var(--line); border-radius:30px; padding:4px 10px; font:800 12.5px Inter; }
-  .chip b { color:var(--rose); }
-  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:auto; padding-top:18px; }
-  .price { font:400 38px/1 Anton,Inter; }
-  .mrp { color:var(--mute); font-weight:700; text-decoration:line-through; }
-  .off { font:800 12px Inter; color:var(--rose); background:#FFE6F2; border-radius:20px; padding:4px 9px; }
-  .go { margin-left:auto; background:var(--ink); color:#fff; border-radius:30px; padding:12px 18px; font-weight:900; font-size:14.5px; }
-  .cc:hover .go { background:var(--rose); }
-  .note { flex-basis:100%; font-size:12.5px; font-weight:700; color:var(--cer); }
-  /* One course: cover and details side by side instead of one huge card. */
-  .courses.one .cc { flex-direction:row; }
-  .courses.one .cc .img { flex:0 0 52%; }
-  .courses.one .cc img { height:100%; aspect-ratio:auto; min-height:100%; }
-  .courses.one .cc .body { padding:26px 28px; }
-  @media (max-width:860px) { .courses.one .cc { flex-direction:column; } .courses.one .cc .img { flex:none; } .courses.one .cc img { aspect-ratio:16/9; height:auto; } }
-  .cc .lang { align-self:flex-start; margin-top:12px; font:800 12.5px Inter; color:#0F6E8F; background:#E6F4FA; border-radius:99px; padding:5px 11px; }
+  .svc { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .s { background:#fff; border-radius:28px; box-shadow:var(--shadow); padding:26px; display:flex; flex-direction:column; }
+  .s .ic { width:58px; height:58px; border-radius:18px; display:grid; place-items:center; font-size:28px; }
+  .s h3 { font-size:24px; font-weight:900; letter-spacing:-.6px; margin:16px 0 6px; }
+  .s p { color:var(--mute); font-weight:600; font-size:15px; line-height:1.5; margin:0; }
+  .s ul { list-style:none; padding:0; margin:16px 0 0; display:grid; gap:9px; }
+  .s li { display:flex; gap:9px; font-weight:700; font-size:14.5px; } .s li::before { content:"✓"; color:var(--rose); font-weight:900; }
+  .s .go { margin-top:auto; padding-top:20px; display:flex; align-items:center; justify-content:space-between; }
+  .s .go span { font-weight:700; font-size:13px; color:var(--mute); }
+  .s .go a { text-decoration:none; background:var(--ink); color:#fff; font-weight:900; font-size:14px; padding:11px 16px; border-radius:30px; }
 
-  /* steps */
-  .steps { display:grid; grid-template-columns:repeat(3, 1fr); gap:18px; }
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
   .step { background:#fff; border-radius:24px; padding:22px; box-shadow:var(--soft); }
-  .step .n { font:400 44px/1 Anton,Inter; color:var(--rose); }
-  .step b { display:block; font-size:19px; font-weight:900; margin-top:8px; letter-spacing:-.3px; }
+  .step .n { font:400 44px/1 Anton,Inter; color:var(--rose); } .step b { display:block; font-size:19px; font-weight:900; margin-top:8px; }
   .step p { margin:6px 0 0; color:var(--mute); font-weight:600; font-size:14.5px; line-height:1.5; }
 
-  /* freebies */
-  .frees { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
-  .fb { display:flex; gap:14px; align-items:center; text-decoration:none; background:#fff; border-radius:22px; padding:16px; box-shadow:var(--soft); transition:transform .15s; }
-  .fb:hover { transform:translateY(-3px); }
-  .fb .e { width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg,#FFF1F8,#EEF8FC); display:grid; place-items:center; font-size:26px; flex:none; }
-  .fb .k { font:800 11px Inter; letter-spacing:2px; color:var(--cer); }
-  .fb b { display:block; font-size:15px; font-weight:800; line-height:1.3; margin-top:3px; }
+  .prods { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .p { border-radius:28px; padding:28px; box-shadow:var(--shadow); color:#fff; position:relative; overflow:hidden; display:flex; flex-direction:column; min-height:270px; }
+  .p.l { background:linear-gradient(140deg,#1C1A17,#3a2340); } .p.r { background:linear-gradient(140deg,#7B5CFF,#B05CE8 55%,#FF7A59); }
+  .p .logo { width:56px; height:56px; border-radius:16px; background:rgba(255,255,255,.14); display:grid; place-items:center; font:900 22px Inter; }
+  .p .k { margin-top:18px; font:800 11px Inter; letter-spacing:2.5px; color:rgba(255,255,255,.7); text-transform:uppercase; }
+  .p h3 { font-size:26px; line-height:1.15; font-weight:900; letter-spacing:-1px; margin:6px 0 8px; }
+  .p p { color:rgba(255,255,255,.82); font-weight:600; font-size:15px; line-height:1.5; margin:0; max-width:420px; }
+  .p .chips { display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 18px; }
+  .p .chips span { font:800 12px Inter; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22); border-radius:99px; padding:5px 10px; }
+  .p a { margin-top:auto; align-self:flex-start; text-decoration:none; background:#fff; color:var(--ink); font-weight:900; font-size:14px; padding:11px 16px; border-radius:30px; }
+  .p::after { content:""; position:absolute; right:-60px; bottom:-60px; width:220px; height:220px; border-radius:50%; background:rgba(255,255,255,.07); }
 
-  /* about */
+  .learn { display:grid; grid-template-columns:.9fr 1.1fr; gap:0; background:#fff; border-radius:28px; overflow:hidden; box-shadow:var(--shadow); }
+  .learn img { width:100%; height:100%; object-fit:cover; display:block; }
+  .learn .b { padding:28px; } .learn h3 { font-size:26px; font-weight:900; letter-spacing:-.6px; margin:8px 0; }
+  .learn p { color:var(--mute); font-weight:600; font-size:15px; line-height:1.5; margin:0; }
+  .learn .row { display:flex; align-items:center; gap:12px; margin-top:18px; flex-wrap:wrap; }
+  .learn .price { font:400 38px/1 Anton,Inter; } .learn .mrp { color:var(--mute); text-decoration:line-through; font-weight:700; }
+  .learn .lang { font:800 12.5px Inter; color:#0F6E8F; background:#E6F4FA; border-radius:99px; padding:5px 11px; }
+
   .about { display:grid; grid-template-columns:auto 1fr; gap:28px; align-items:center; background:#fff; border-radius:30px; padding:30px; box-shadow:var(--shadow); }
-  .about .av { width:130px; height:130px; padding:5px; }
-  .about .av img, .about .av .ini { border-width:5px; }
-  .about h3 { font-size:30px; font-weight:900; letter-spacing:-1px; margin:6px 0 8px; }
-  .about h3 span { color:var(--rose); }
+  .about .av { width:120px; height:120px; padding:5px; } .about .av img { border-width:5px; }
+  .about h3 { font-size:30px; font-weight:900; letter-spacing:-1px; margin:6px 0 8px; } .about h3 span { color:var(--rose); }
   .about p { margin:0; color:#6E6862; font-weight:600; font-size:16px; line-height:1.6; }
-  .social { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
-  .social a { text-decoration:none; font-weight:800; font-size:14px; border:2px solid var(--line); border-radius:30px; padding:8px 14px; }
-  .social a.ig { background:var(--ink); color:#fff; border-color:var(--ink); }
 
-  /* final */
-  .final { margin:70px 0 0; background:var(--ink); color:#fff; border-radius:32px; padding:44px 30px; text-align:center; position:relative; overflow:hidden; }
+  .final { margin:72px 0 0; background:var(--ink); color:#fff; border-radius:32px; padding:46px 30px; text-align:center; position:relative; overflow:hidden; }
   .final::before { content:""; position:absolute; inset:-40%; background:radial-gradient(circle at 30% 30%, rgba(255,45,149,.35), transparent 40%), radial-gradient(circle at 75% 70%, rgba(0,123,167,.35), transparent 40%); }
-  .final > * { position:relative; }
-  .final h2 { color:#fff; }
-  .final p { color:#CFC8BD; font-weight:600; font-size:17px; margin:12px auto 24px; max-width:520px; line-height:1.5; }
-
+  .final > * { position:relative; } .final h2 { color:#fff; }
+  .final p { color:#CFC8BD; font-weight:600; font-size:17px; margin:12px auto 24px; max-width:540px; line-height:1.5; }
+  .final .btns { justify-content:center; } .final .btn.ghost { color:var(--ink); }
   footer { padding:40px 0 50px; text-align:center; font-size:13.5px; font-weight:700; color:var(--mute); line-height:2; }
   footer a { text-decoration:none; color:var(--ink); font-weight:800; white-space:nowrap; }
-  footer .sep { margin:0 6px; opacity:.5; }
 
-  /* motion */
-  .rise { animation:rise .7s cubic-bezier(.2,.8,.2,1) backwards; }
-  .d1 { animation-delay:.08s; } .d2 { animation-delay:.16s; } .d3 { animation-delay:.24s; } .d4 { animation-delay:.32s; }
+  @media (max-width:900px) {
+    .links { display:none; } .nav .cta { margin-left:auto; }
+    .hero { grid-template-columns:1fr; gap:40px; padding-top:30px; }
+    .svc, .steps, .prods { grid-template-columns:1fr; }
+    .learn { grid-template-columns:1fr; } .learn img { aspect-ratio:16/9; height:auto; }
+    .about { grid-template-columns:1fr; text-align:center; justify-items:center; }
+    .float { left:16px; }
+  }
+  @media (max-width:560px) { .btns .btn { flex:1 1 100%; justify-content:center; } .trust { display:grid; grid-template-columns:1fr 1fr; gap:18px; } }
+
+  .learn .live { display:inline-flex; align-items:center; gap:7px; font:800 12.5px Inter; color:#B4235F; background:#FFE6F2; border-radius:99px; padding:5px 11px; }
+  .learn .live i { width:8px; height:8px; border-radius:50%; background:#E53935; display:inline-block; }
+  html { scroll-behavior:smooth; scroll-padding-top:80px; }
+  .rise { animation:rise .7s cubic-bezier(.2,.8,.2,1) backwards; } .d1 { animation-delay:.08s; } .d2 { animation-delay:.16s; } .d3 { animation-delay:.24s; }
   @keyframes rise { from { opacity:0; transform:translateY(18px); } }
-  .float.a { animation:bob 4s ease-in-out infinite; } .float.b { animation:bob 4s ease-in-out 1.2s infinite; }
-  @keyframes bob { 50% { transform:translateY(-8px); } }
-  .rv { opacity:0; transform:translateY(22px); transition:opacity .6s, transform .6s cubic-bezier(.2,.8,.2,1); }
-  .rv.in, .no-js .rv { opacity:1; transform:none; }
-
-  /* phones */
-  @media (max-width:860px) {
-    .links { display:none; }
-    .nav .cta { margin-left:auto; }
-    .hero { grid-template-columns:1fr; gap:46px; padding-top:30px; }
-    .show { margin:0 8px; }
-    .steps, .frees { grid-template-columns:1fr; }
-    .about { grid-template-columns:1fr; text-align:center; justify-items:center; padding:26px 20px; }
-    .social { justify-content:center; }
-    .live .cta { margin-left:0; width:100%; text-align:center; }
-  }
-  @media (max-width:560px) {
-    .stats { display:grid; grid-template-columns:1fr 1fr; gap:18px 12px; }
-    .btns .btn { flex:1 1 100%; justify-content:center; }
-  }
-  @media (max-width:420px) {
-    .courses { grid-template-columns:1fr; }
-    .brand b { font-size:18px; }
-    .cta { padding:10px 14px; font-size:13px; }
-    .float.a { left:-6px; } .float.b { right:-4px; }
-    .stats { gap:20px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }
-    .rv { opacity:1; transform:none; }
-  }
+  @media (hover:hover) { .s, .p, .step { transition:transform .2s; } .s:hover, .p:hover, .step:hover { transform:translateY(-4px); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
 </style>
 {% include "_pixel.html" %}
 </head>
-<body class="no-js">
-<script>document.body.classList.remove("no-js")</script>
-
-<nav class="nav" id="nav"><div class="wrap">
-  <a class="brand" href="/">
-    <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% else %}<div class="ini">O</div>{% endif %}</div>
-    <b>advoc<span>media</span></b>
-  </a>
-  <div class="links"><a href="#courses">Courses</a>{% if not ad %}<a href="#free">Free guides</a>{% endif %}<a href="#about">About</a>{% if not ad %}<a href="/links">Links</a>{% endif %}</div>
-  <a class="cta rose" href="{{ cards[0].href if cards else '/courses' }}">{% if bstate in ("open", "started") %}Join {{ live.name or 'Batch 1' }}{% elif bstate == "ended" %}Join the course{% else %}See the course{% endif %}</a>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="brand" href="/"><div class="av">{% if avatar %}<img src="{{ avatar }}" alt="">{% endif %}</div><b>advoc<span>media</span></b></a>
+  <div class="links"><a href="#services">Services</a><a href="#work">How we work</a><a href="#products">Products</a><a href="#learn">Course</a><a href="#about">About</a></div>
+  <a class="cta" href="#contact">Get a free audit</a>
 </div></nav>
 
 <div class="wrap">
   <header class="hero">
     <div>
-      <div class="kicker rise">Practical AI courses · Step by step</div>
-      <h1 class="rise d1">Grow with Claude,<br><span class="hl">earn with AI</span></h1>
-      <p class="lead rise d2">Hi, I'm Om (@{{ username }}). Here you'll find my courses, live classes and free guides: the exact system I used to grow my page from zero to {{ followers|kfollowers or '24K' }} followers with Claude. Step by step, no jargon.</p>
-      <div class="btns rise d3">
-        <a class="btn rose" href="#courses">🎓 See courses</a>
-        {% if not ad %}<a class="btn ghost" href="/free/">🎁 {{ freebie_total }}+ free guides</a>{% endif %}
-      </div>
-      <div class="stats rise d4">
-        <div class="stat"><b><em>{{ followers|kfollowers or '24K' }}</em></b><span>Instagram community</span></div>
-        <div class="stat"><b>{{ cards|length }}</b><span>course{{ 's' if cards|length != 1 }}</span></div>
-        <div class="stat"><b>{{ freebie_total }}+</b><span>free guides</span></div>
-        <div class="stat"><b>₹{{ course.price or '499' }}</b><span>starting price</span></div>
+      <div class="kicker rise">AI-powered digital marketing</div>
+      <h1 class="rise d1">We grow brands with <span>video, ads &amp; SEO</span></h1>
+      <p class="lead rise d2">Advoc Media runs video editing, paid ads and SEO for creators and businesses, powered by the same AI systems that grew @{{ username }} from zero to {{ followers|kfollowers or "24K" }} followers.</p>
+      <div class="btns rise d3"><a class="btn rose" href="{{ wa }}" target="_blank" rel="noopener">💬 Get a free audit</a><a class="btn ghost" href="#services">See services</a></div>
+      <div class="trust">
+        <div><b><em>{{ followers|kfollowers or "24K" }}</em></b><span>followers grown, our own page</span></div>
+        <div><b>3</b><span>core services</span></div>
+        <div><b>2</b><span>products built</span></div>
+        <div><b>{{ freebie_total }}+</b><span>free guides shared</span></div>
       </div>
     </div>
-    <div class="show rise d2">
-      <img class="cover" src="/free/course_en.jpg?v={{ asset_v('course_en.jpg') }}" alt="Grow on Instagram with Claude: course cover">
-      <div class="float a"><span class="big">0 → {{ followers|kfollowers or '24K' }}</span><span>real result,<br>built with Claude</span></div>
-      {% if bstate %}<div class="float b">{% if bstate != "ended" %}<span class="dot"></span>{% else %}📼 {% endif %}<span>{{ live.name or 'Batch 1' }} {% if bstate == "started" %}is live now{% elif bstate == "ended" %}recordings included{% elif bstate == "full" %}is full{% else %}live{% if live.start %} · {{ live.start }}{% endif %}{% endif %}</span></div>{% endif %}
+    <div class="board rise d2">
+      <div class="float">🚀 <b>AI-first</b> marketing studio</div>
+      <div class="row"><div class="ic" style="background:#FFE6F2">🎬</div><div><b>Video editing</b><small>Reels, YouTube, ad creatives</small></div><span class="tag" style="background:#FFE6F2;color:#C2186B">Content</span></div>
+      <div class="row"><div class="ic" style="background:#E6F4FA">📈</div><div><b>Paid ads management</b><small>Meta &amp; Google ads, tracking, reports</small></div><span class="tag" style="background:#E6F4FA;color:#0F6E8F">Growth</span></div>
+      <div class="row"><div class="ic" style="background:#FFF4DA">🔎</div><div><b>SEO</b><small>Technical, content &amp; local SEO</small></div><span class="tag" style="background:#FFF4DA;color:#9A6A00">Traffic</span></div>
+      <div class="row"><div class="ic" style="background:#EFEAFB">🤖</div><div><b>Built with AI</b><small>Faster delivery, clear weekly reports</small></div><span class="tag" style="background:#EFEAFB;color:#5B3CC4">Our edge</span></div>
     </div>
   </header>
 
-  {% if bstate %}
-  <div class="live rv">
-    {% if bstate != "ended" %}<span class="dot"></span>{% endif %}
-    {% if bstate == "full" %}
-    <div class="t">{{ live.name or 'Batch 1' }} is full
-      <small>Thank you! DM me to get a seat in the next batch first.</small></div>
-    <a class="cta rose" href="https://ig.me/m/{{ username }}" target="_blank" rel="noopener">Join the waitlist →</a>
-    {% elif bstate == "ended" %}
-    <div class="t">Video course + all {{ live.name or 'Batch 1' }} class recordings
-      <small>Learn at your own pace · 6 months access · ₹{{ course.price }}{% if course.mrp %} <s>₹{{ course.mrp }}</s>{% endif %}</small></div>
-    <a class="cta rose" href="/course">Join the course →</a>
-    {% elif bstate == "started" %}
-    <div class="t">{{ live.name or 'Batch 1' }} is live now{% if live.start %}, started {{ live.start }}{% endif %}
-      <small>Join anytime: every class is recorded · {{ live.time or 'Sat & Sun · 9–10 PM IST' }} · ₹{{ course.price }}{% if course.mrp %} <s>₹{{ course.mrp }}</s>{% endif %}</small></div>
-    <a class="cta rose" href="/course">Join {{ live.name or 'Batch 1' }} →</a>
-    {% else %}
-    <div class="t">{{ live.name or 'Batch 1' }}: live classes on Zoom{% if live.start %}, from {{ live.start }}{% endif %}
-      <small>{{ live.time or 'Sat & Sun · 9–10 PM IST' }} · recordings + 6 months access · ₹{{ course.price }}{% if course.mrp %} <s>₹{{ course.mrp }}</s>{% endif %}</small></div>
-    <a class="cta rose" href="/course">Join {{ live.name or 'Batch 1' }} →</a>
-    {% endif %}
-  </div>
-  {% endif %}
-
-  <section id="courses">
-    <div class="head rv">
-      <div><div class="kicker">Courses</div><h2>My <span>courses</span></h2></div>
-      <p class="lead" style="max-width:420px;font-size:15.5px">Grow your page first, then earn from it. Every course comes with a workbook, bonuses and an honest promise: you get the system, not a guarantee.</p>
-    </div>
-    <div class="courses {{ 'one' if cards|length == 1 }}">
-      {% for k in cards %}
-      <a class="cc rv" href="{{ k.href }}">
-        <div class="img"><img src="/{{ k.cover_en or k.cover }}" alt="{{ k.title_en or k.title }}" loading="lazy"><span class="bd {% if not k.ready %}soon{% endif %}">{{ k.badge }}</span></div>
-        <div class="body">
-          <span class="no">COURSE {{ k.n }}</span>
-          <b class="t">{{ k.title_en or k.title }}</b>
-          <p>{{ k.sub_en or k.sub }}</p>
-          <span class="lang">🗣️ Taught in Hinglish (Hindi + English)</span>
-          <div class="chips">{% for n, l in k.stats %}<span class="chip"><b>{{ n }}</b> {{ l }}</span>{% endfor %}</div>
-          <div class="row"><span class="price">₹{{ k.price }}</span>{% if k.off %}<span class="mrp">₹{{ k.mrp }}</span><span class="off">{{ k.off }}% off</span>{% endif %}
-            <span class="go">{{ 'View details →' if k.ready else 'Preview →' }}</span>{% if k.note %}<span class="note">🎓 {{ k.note }}</span>{% endif %}</div>
-        </div>
-      </a>
-      {% endfor %}
+  <section id="services">
+    <div class="head"><div><div class="kicker">Services</div><h2>What we <span>do</span></h2></div>
+      <p class="sub">Pick one service or combine all three. Every project starts with a free audit, so you know exactly what we'll do before you pay.</p></div>
+    <div class="svc">
+      <div class="s"><div class="ic" style="background:#FFE6F2">🎬</div><h3>Video editing</h3>
+        <p>Scroll-stopping edits for Reels, Shorts, YouTube and ads, with captions and motion that keep people watching.</p>
+        <ul><li>Reels &amp; Shorts (9:16)</li><li>YouTube long-form edits</li><li>Ad creatives for Meta &amp; Google</li><li>Captions, motion graphics, thumbnails</li></ul>
+        <div class="go"><span>Monthly packages</span><a href="#contact">Get a quote →</a></div></div>
+      <div class="s"><div class="ic" style="background:#E6F4FA">📈</div><h3>Paid ads management</h3>
+        <p>Meta and Google campaigns set up and run properly, from tracking to creatives to weekly optimisation.</p>
+        <ul><li>Meta (Instagram/Facebook) &amp; Google Ads</li><li>Pixel, Conversions API &amp; tracking setup</li><li>Creative testing &amp; audiences</li><li>Weekly report in plain language</li></ul>
+        <div class="go"><span>Monthly management</span><a href="#contact">Get a quote →</a></div></div>
+      <div class="s"><div class="ic" style="background:#FFF4DA">🔎</div><h3>SEO</h3>
+        <p>Get found on Google: fix what's holding your site back, then grow traffic with content that ranks.</p>
+        <ul><li>Technical SEO &amp; site speed</li><li>Keyword research &amp; content plan</li><li>On-page SEO &amp; blog content</li><li>Local SEO (Google Business Profile)</li></ul>
+        <div class="go"><span>Audit + monthly plan</span><a href="#contact">Get a quote →</a></div></div>
     </div>
   </section>
 
-  <section>
-    <div class="head rv"><div><div class="kicker">How it works</div><h2>3 simple <span>steps</span></h2></div></div>
+  <section id="work">
+    <div class="head"><div><div class="kicker">How we work</div><h2>3 simple <span>steps</span></h2></div></div>
     <div class="steps">
-      <div class="step rv"><div class="n">01</div><b>Start with a free guide</b><p>Comment the keyword on any reel, or open the free guides directly. Try it free first.</p></div>
-      <div class="step rv"><div class="n">02</div><b>Join a course</b><p>Video lessons, a workbook and bonuses. Learn at your own pace, with 6 months of access.</p></div>
-      <div class="step rv"><div class="n">03</div><b>Ask in live classes</b><p>Live Zoom classes with your batch: share your page, clear your doubts and improve every week.</p></div>
+      <div class="step"><div class="n">01</div><b>Free audit</b><p>Share your page, site or ad account. We find what's working, what's not and the quickest wins.</p></div>
+      <div class="step"><div class="n">02</div><b>Clear plan &amp; price</b><p>You get a written plan, timeline and fixed monthly price. No lock-in contracts.</p></div>
+      <div class="step"><div class="n">03</div><b>We execute &amp; report</b><p>We do the work and send a simple weekly report: what we did, results, and what's next.</p></div>
     </div>
   </section>
 
-  {% if not ad %}
-  <section id="free">
-    <div class="head rv">
-      <div><div class="kicker">Free guides</div><h2>Start <span>free</span></h2></div>
-      <a class="more" href="/free/">See all {{ freebie_total }} free guides →</a>
-    </div>
-    <div class="frees">
-      {% for f in freebies %}
-      <a class="fb rv" href="{{ f.href }}"><span class="e">{{ f.e }}</span><span><span class="k">{{ f.k }}</span><b>{{ f.t }}</b></span></a>
-      {% endfor %}
+  <section id="products">
+    <div class="head"><div><div class="kicker">Built by us</div><h2>Our <span>products</span></h2></div>
+      <p class="sub">We don't just market products, we build them. Same team, same AI-first approach.</p></div>
+    <div class="prods">
+      <div class="p l"><div class="logo">L</div><div class="k">Product · likholabs.in</div><h3>Likho: your AI publisher</h3>
+        <p>Write and publish articles in Hindi, Tamil, Marathi and more with AI. Generate in bulk and publish straight to WordPress and Blogger.</p>
+        <div class="chips"><span>Indian languages</span><span>Bulk generation</span><span>WordPress &amp; Blogger</span></div>
+        <a href="https://likholabs.in/" target="_blank" rel="noopener">Visit Likholabs →</a></div>
+      <div class="p r"><div class="logo">R</div><div class="k">Product · replyinbox.in</div><h3>ReplyInbox: every comment, a customer</h3>
+        <p>Instagram DM automation for creators: comment-to-DM with follow to unlock, story replies, email &amp; WhatsApp capture, and an AI that answers DMs in your fans' language. Free to start.</p>
+        <div class="chips"><span>Comment → DM</span><span>AI inbox</span><span>Link in bio</span></div>
+        <a href="https://replyinbox.in/" target="_blank" rel="noopener">Try ReplyInbox free →</a></div>
     </div>
   </section>
-  {% endif %}
+
+  <section id="learn">
+    <div class="head"><div><div class="kicker">Learn it yourself</div><h2>Prefer to <span>DIY?</span></h2></div>
+      <p class="sub">Take the course and run the same system on your own page.</p></div>
+    <div class="learn"><img src="/free/course_en.jpg?v={{ asset_v('course_en.jpg') }}" alt="Grow on Instagram with Claude" loading="lazy">
+      <div class="b"><div class="kicker">Course</div><h3>{{ cards[0].title_en if cards else "Grow on Instagram with Claude" }}</h3>
+        <p>The exact system behind @{{ username }}: profile, content plan, reels made with Claude, a comment → DM machine and a weekly growth loop.</p>
+        {% if bstate in ("open", "started") %}<div style="margin-top:12px"><span class="live"><i></i>{{ live.name or "Batch 1" }} {{ "live now · join anytime" if bstate == "started" else "live classes" ~ (" from " ~ live.start if live.start else "") }}</span></div>{% elif bstate == "ended" %}<div style="margin-top:12px"><span class="lang">📼 {{ live.name or "Batch 1" }} recordings included</span></div>{% endif %}
+        <div class="row"><span class="price">₹{{ course.price or "499" }}</span>{% if course.mrp and (course.mrp|int) > (course.price|int) %}<span class="mrp">₹{{ course.mrp }}</span>{% endif %}<span class="lang">🗣️ Taught in Hinglish</span><a class="btn rose" style="margin-left:auto;padding:12px 18px;font-size:14.5px" href="/course">View course →</a></div></div>
+    </div>
+  </section>
 
   <section id="about">
-    <div class="about rv">
-      <div class="av">{% if avatar %}<img src="{{ avatar }}" alt="Om">{% else %}<div class="ini">O</div>{% endif %}</div>
-      <div>
-        <div class="kicker">About</div>
-        <h3>Hi, I'm <span>Om</span> 👋</h3>
-        <p>Simplifying AI for everyone. Founder of Advoc Media, building Likholabs. I share AI tools and tips on Instagram every day, so anyone can put Claude and AI to work. I grew from zero to {{ followers|kfollowers or '24K' }} followers with Claude, and that's exactly the system I teach here.</p>
-        <div class="social">
-          <a class="ig" href="https://www.instagram.com/{{ username }}/" target="_blank" rel="noopener">📸 Follow @{{ username }}</a>
-          {% if not ad %}<a href="/links">🔗 All links</a>{% endif %}
-          <a href="mailto:{{ email }}">✉️ Email</a>
-        </div>
-      </div>
-    </div>
+    <div class="about"><div class="av">{% if avatar %}<img src="{{ avatar }}" alt="Om">{% endif %}</div>
+      <div><div class="kicker">About</div><h3>Hi, I'm <span>Om</span> 👋</h3>
+        <p>Founder of Advoc Media. I build AI systems for marketing and share them daily with {{ followers|kfollowers or "24K" }} people on Instagram (@{{ username }}). At Advoc Media we use those same systems on client work, so you get faster delivery and results you can measure.</p></div></div>
   </section>
 
-  <div class="final rv">
-    <div class="kicker" style="color:#7FD3F0">Ready?</div>
-    <h2>Start <span>today</span></h2>
-    <p>One course, one clear system, and a little progress every week. Questions? DM me on Instagram.</p>
-    <div class="btns" style="justify-content:center;margin-top:0">
-      <a class="btn rose" href="{{ cards[0].href if cards else '/courses' }}">🎓 {{ (cards[0].title_en or cards[0].title) if cards else 'See courses' }} →</a>
-      {% if not ad %}<a class="btn ghost" style="color:var(--ink)" href="/free/">🎁 Free guides</a>{% endif %}
-    </div>
+  <div class="final" id="contact">
+    <div class="kicker" style="color:#7FD3F0">Let's talk</div>
+    <h2>Grow your brand with <span>Advoc Media</span></h2>
+    <p>Tell us about your business and goals. We'll reply within 24 hours with a free audit and next steps.</p>
+    <div class="btns"><a class="btn rose" href="{{ wa }}" target="_blank" rel="noopener">💬 WhatsApp us</a><a class="btn ghost" href="mailto:{{ email }}?subject=Free%20audit%20request">✉️ Email us</a><a class="btn ghost" href="https://ig.me/m/{{ username }}" target="_blank" rel="noopener">📸 DM on Instagram</a></div>
   </div>
 
-  <footer>
-    © 2026 Advoc Media · Om (@{{ username }})<br>
-    <a href="/courses">Courses</a> <span class="sep">·</span> {% if not ad %}<a href="/free/">Free guides</a> <span class="sep">·</span> <a href="/links">Links</a> <span class="sep">·</span> {% endif %}<a href="/terms">Terms</a> <span class="sep">·</span> <a href="/refund-policy">Refund</a> <span class="sep">·</span> <a href="/privacy-policy">Privacy</a> <span class="sep">·</span> <a href="/contact">Contact</a>
-  </footer>
+  <footer>© 2026 Advoc Media · Om (@{{ username }})<br><a href="#services">Services</a> · <a href="/course">Course</a> · {% if not ad %}<a href="/free/">Free guides</a> · <a href="/links">Links</a> · {% endif %}<a href="/terms">Terms</a> · <a href="/refund-policy">Refund</a> · <a href="/privacy-policy">Privacy</a> · <a href="/contact">Contact</a></footer>
 </div>
-
-<script>
-(function () {
-  var nav = document.getElementById("nav");
-  addEventListener("scroll", function () { nav.classList.toggle("scrolled", scrollY > 8); }, { passive: true });
-  var els = document.querySelectorAll(".rv");
-  if (!("IntersectionObserver" in window)) { els.forEach(function (e) { e.classList.add("in"); }); return; }
-  var io = new IntersectionObserver(function (es) {
-    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
-  }, { rootMargin: "0px 0px -8% 0px" });
-  els.forEach(function (e) { io.observe(e); });
-})();
-</script>
 </body>
 </html>
