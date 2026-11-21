@@ -203,8 +203,8 @@
         <div class="grid2">
           <div><label>SuperProfile course link <span class="muted">(empty = "Coming soon")</span></label><input type="text" id="c-url" placeholder="https://superprofile.bio/…"></div>
           <div class="grid2" style="gap:0 10px">
-            <div><label>Price (₹)</label><input type="text" id="c-price" placeholder="499" inputmode="numeric"></div>
-            <div><label>Full price (₹, shown crossed out)</label><input type="text" id="c-mrp" placeholder="999" inputmode="numeric"></div>
+            <div><label>Price (₹)</label><input type="text" id="c-price" placeholder="999" inputmode="numeric"></div>
+            <div><label>Full price (₹, shown crossed out)</label><input type="text" id="c-mrp" placeholder="2499" inputmode="numeric"></div>
           </div>
         </div>
         <div class="live-box" style="margin-top:14px;border-top:1.5px dashed var(--line, #E7E0D4);padding-top:12px">
@@ -589,7 +589,7 @@ async function save() {
   for (const k of SOCIALS) $("s-" + k).value = page.socials[k] || "";
   if (!page.socials.instagram && data.profile.username) $("s-instagram").value = data.profile.username;
   page.freebies = page.freebies || [];
-  page.course = page.course || {enabled: true, url: "", price: "499", mrp: "999"};
+  page.course = page.course || {enabled: true, url: "", price: "999", mrp: "2499"};
   $("c-url").value = page.course.url || ""; $("c-price").value = page.course.price || ""; $("c-mrp").value = page.course.mrp || "";
   $("c-enabled").checked = page.course.enabled !== false;
   $("c-pixel").value = page.course.pixel || "";
@@ -627,7 +627,7 @@ function sectionSums() {
     "sec-socials": n(Object.values(page.socials || {}).filter(v => (v || "").trim()).length, "link", "links"),
     "sec-links": n(page.items.length, "item", "items"),
     "sec-freebies": n(page.freebies.length, "freebie", "freebies"),
-    "sec-course": c.enabled === false ? "off" : `₹${c.price || "499"}${lv.enabled ? " · " + (lv.name || "Batch") + ({started: " started", ended: " ended", full: " full"}[lv.status] || " live") : ""}${c.url ? "" : " · coming soon"}`,
+    "sec-course": c.enabled === false ? "off" : `₹${c.price || "999"}${lv.enabled ? " · " + (lv.name || "Batch") + ({started: " started", ended: " ended", full: " full"}[lv.status] || " live") : ""}${c.url ? "" : " · coming soon"}`,
     "sec-course2": c2.enabled === false ? "off" : `₹${c2.price || "799"} · ${c2.url ? "live" : "coming soon"}`,
   };
   for (const [id, text] of Object.entries(sums)) { const el = document.querySelector(`#${id} .sum`); if (el) el.textContent = text; }

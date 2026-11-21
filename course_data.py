@@ -100,16 +100,16 @@ TIMING = [("Now", "Early", "Very few creators use Claude properly. Huge reach fo
           ("After that", "Saturated", "Only the best systems win. The early advantage is gone.")]
 TIMING_LINE = "Jo pehle aayega, wahi jeetega."
 
-# The "₹499 math": the real alternative is paying someone to do it (typical Indian market ranges).
+# The "price math" ({P} = the price from the editor): the real alternative is paying someone to do it (typical Indian market ranges).
 MATH_COLS = ("Hire a social media manager", "This course")
-MATH = [("Cost", "₹10,000–30,000 every month", "₹499 once"),
+MATH = [("Cost", "₹10,000–30,000 every month", "₹{P} once"),
         ("Who knows the system", "They do. It leaves with them", "You do, for good"),
         ("Content plan", "Wait for their calendar", "30 days in 10 minutes with Claude"),
         ("Reels", "Brief, wait, revise", "Script → voice → edit yourself"),
         ("Comment → DM", "Extra tool, extra fee", "Set up in the course"),
         ("Language", "Usually 1–2", "Any language Claude writes")]
 
-STEPS = [("Join", "Pay ₹499 on SuperProfile. The course opens instantly: videos, workbook and all 6 bonuses.", "Instant"),
+STEPS = [("Join", "Pay ₹{P} on SuperProfile. The course opens instantly: videos, workbook and all 6 bonuses.", "Instant"),
          ("Follow the plan", "Module by module: niche, profile, 30-day plan, reels, DM machine. Copy-ready Claude prompts for each lesson.", "1 module a day"),
          ("Post and grow", "Post with a plan, let the DM machine work every comment, and fix one thing a week with the growth loop.", "Every week")]
 

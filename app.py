@@ -390,7 +390,7 @@ def clean_course(c):
             "dated": lv.get("dated") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(lv.get("dated") or "")) else ""}
     pixel = "".join(ch for ch in str(c.get("pixel") or "") if ch.isdigit())
     return {"enabled": c.get("enabled", True) is not False, "url": safe_url(c.get("url")),
-            "price": digits(c.get("price")) or "499", "mrp": digits(c.get("mrp")) or "999", "live": live,
+            "price": digits(c.get("price")) or "999", "mrp": digits(c.get("mrp")) or "2499", "live": live,
             "pixel": pixel if 8 <= len(pixel) <= 20 else "",
             # Meta domain verification: the content="…" code from Business settings → Domains (letters + digits only)
             "fbverify": fb_verify_code(c.get("fbverify")),

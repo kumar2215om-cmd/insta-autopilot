@@ -351,7 +351,7 @@
     <div class="kicker">The ₹{{ course.price }} math</div>
     <h2>One month of a manager costs <span>more than this.</span></h2>
     <table class="math"><tr><th></th><th>{{ c.MATH_COLS[0] }}</th><th class="us">{{ c.MATH_COLS[1] }}</th></tr>
-      {% for a, b, d in c.MATH %}<tr><td>{{ a }}</td><td class="them">{{ b }}</td><td class="us">{{ d|replace("₹499", "₹" ~ course.price) }}</td></tr>{% endfor %}</table>
+      {% for a, b, d in c.MATH %}<tr><td>{{ a }}</td><td class="them">{{ b }}</td><td class="us">{{ d|replace("{P}", course.price) }}</td></tr>{% endfor %}</table>
     <div style="max-width:440px;margin:22px auto 0">{{ buybtn() }}{{ micro() }}</div>
   </section>
 
@@ -389,7 +389,7 @@
   <section class="rv">
     <div class="kicker">How it works</div>
     <h2>Start in <span>3 steps</span></h2>
-    <div class="steps">{% for t, d, tag in c.STEPS %}<div class="step"><div class="n">0{{ loop.index }}</div><b>{{ t }}</b><p>{{ d }}</p><span>{{ tag }}</span></div>{% endfor %}</div>
+    <div class="steps">{% for t, d, tag in c.STEPS %}<div class="step"><div class="n">0{{ loop.index }}</div><b>{{ t }}</b><p>{{ d|replace("{P}", course.price) }}</p><span>{{ tag }}</span></div>{% endfor %}</div>
   </section>
 
   <section class="rv">
