@@ -388,7 +388,7 @@ GUIDES.update({
         "faq": [("Is there a free ManyChat alternative?", "Yes. {brand}, LinkDM, ReplyRush and InstantDM have free plans.")],
     },
     "instagram-dm-limits": {
-        "title": "Instagram DM limits explained (24-hour window, 7-day replies, hourly caps)",
+        "title": "Instagram DM limits: 24-hour window, 7-day replies, hourly caps",
         "description": "Instagram's rules for automated DMs: the 24-hour messaging window, private replies to comments, and rate limits.",
         "answer": "Instagram lets automation tools send a private reply DM to a comment once, within 7 days of the comment; "
                   "after someone messages you, you can reply freely for 24 hours from their last message; and accounts have "
@@ -467,7 +467,7 @@ GUIDES.update({
 
 GUIDES.update({
     "instagram-comment-keyword-ideas": {
-        "title": "40 comment keyword ideas for Instagram reels (with freebie ideas)",
+        "title": "40 Instagram comment keyword ideas for reels",
         "description": "Comment keyword and freebie ideas for Instagram reels: what to ask people to comment, and what to send in the DM.",
         "answer": "Good Instagram comment keywords are one short, specific word tied to what people get, such as GUIDE, PROMPTS, "
                   "RECIPE, PLAN or LINK. Say it early in the reel and in the caption, and send the promised freebie by DM the "
@@ -691,7 +691,7 @@ GUIDES.update({
                 ("Which keyword gets the most comments?", "RECIPE works well because the promise is clear; test one keyword per reel and compare in the reel report.")],
     },
     "instagram-dm-automation-for-beauty-creators": {
-        "title": "Instagram DM automation for beauty, makeup and fashion creators",
+        "title": "DM automation for beauty, makeup and fashion creators",
         "description": "How beauty and fashion creators send product links, routines and affiliate offers by Instagram DM, and how salons take bookings.",
         "answer": "Beauty and fashion creators use Instagram DM automation to send product links and routines to everyone who "
                   "comments a keyword like LINK or SHOP, earn more from affiliate links (with click tracking turned off for them), "
@@ -968,7 +968,7 @@ GUIDES.update({
                 ("Can it reply in Hinglish even if the fan writes in English?", "Yes, choose Always Hinglish in the AI settings.")],
     },
     "ai-handoff-rules": {
-        "title": "AI hand-off rules: which Instagram DMs the AI should pass to you",
+        "title": "AI hand-off rules: which DMs the AI passes to you",
         "description": "Decide which Instagram DMs your AI agent answers and which it hands to you: refunds, collabs, complaints and more.",
         "answer": "An AI DM agent should answer routine questions from your FAQ and hand everything else to you: refunds and payment "
                   "problems, brand deals and collaborations, complaints, anything personal, medical, legal or financial, and "
@@ -1264,4 +1264,83 @@ def pillar_of():
 
 def all_paths():
     return (["/", "/features", "/compare", "/guides", "/glossary", "/privacy", "/terms", "/refund", "/shipping", "/contact"] + [f"/{k}" for k in PILLARS]
-            + [f"/features/{k}" for k in FEATURES] + [f"/vs/{k}" for k in COMPARE] + [f"/guides/{k}" for k in GUIDES])
+            + ["/pricing"] + [f"/features/{k}" for k in FEATURES] + [f"/vs/{k}" for k in COMPARE] + [f"/guides/{k}" for k in GUIDES])
+
+
+# ---------- /pricing: the plans in plain HTML (prices and limits come from plans.py when rendering) ----------
+
+PRICING = {
+    "title": "Pricing: Instagram DM automation plans in ₹ and $",
+    "h1": "{brand} pricing: Instagram DM automation from ₹0",
+    "description": "{brand} plans: Free (1,000 DMs a month), Starter ₹149, Creator ₹199, Pro ₹599 and Agency ₹2,000. Prices in ₹ and $, taxes included.",
+    "choose": [
+        ("Free", "You're testing comment-to-DM on a few reels. 1,000 DMs a month is enough for most accounts under 10k followers."),
+        ("Starter", "You want followers and leads, not just link clicks: follow to unlock, email and WhatsApp capture, and story reply automations."),
+        ("Creator", "Your reels regularly go past 1,000 comments, or you sell products and courses and want AI replies and the Lead Qualifier agent."),
+        ("Pro", "Instagram is your full-time business: 3 accounts, 2,000 AI replies, run everything from Claude (MCP), and only 2% per sale."),
+        ("Agency", "You manage 10 creator or brand accounts and want one Claude link and one bill for all of them."),
+    ],
+    "faq": [
+        ("Is there a free plan?", "Yes. The Free plan is ₹0 forever with 1,000 DMs a month, comment-to-DM on every reel and post, keyword DMs, "
+         "Live comment automation, a link in bio page and 25 AI replies to try the AI agent. No card is needed."),
+        ("Are taxes included in the price?", "Yes. Plan prices in ₹ include GST. Prices in $ are for buyers outside India."),
+        ("Can I pay yearly?", "Yes. Yearly plans cost about 10 months' price for 12 months: Starter ₹1,499, Creator ₹1,999, Pro ₹5,999 and Agency ₹19,999 a year."),
+        ("What fee do you take when I sell through {brand}?", "5% + GST per sale on Free, Starter and Creator; 2% + GST (plus the payment "
+         "gateway's charge) on Pro and Agency. Sales on your own payment page (Razorpay, Instamojo, Gumroad, SuperProfile) have no {brand} fee."),
+        ("What does \"no monthly DM limit\" mean?", "Creator, Pro and Agency have no {brand} cap on DMs (fair use). Instagram's own limits still "
+         "apply: one private reply per comment within 7 days, and hourly limits on very busy reels."),
+        ("Can I change or cancel my plan?", "Yes, any time from Plan & billing. Everything you set up stays when you upgrade or downgrade."),
+        ("How does this compare with ManyChat?", "ManyChat prices by active contacts (from about $17 a month, rising as your audience grows). "
+         "{brand} has flat plans from ₹149, with AI replies included from Creator up."),
+    ],
+}
+
+# ---------- in-body links: the first mention of these phrases on a page links to the page that explains it ----------
+# (phrase, url). Longer phrases first so "follow to unlock" wins over "follow". Max 6 per page, never the page itself.
+
+ANCHORS = [
+    ("comment-to-DM", "/features/comment-to-dm"),
+    ("comment to DM", "/features/comment-to-dm"),
+    ("follow to unlock", "/features/follow-to-unlock"),
+    ("follow gate", "/features/follow-to-unlock"),
+    ("AI DM agent", "/features/ai-dm-agent"),
+    ("AI replies", "/features/ai-dm-agent"),
+    ("story replies", "/features/story-replies"),
+    ("story reply", "/guides/instagram-story-auto-reply"),
+    ("email and WhatsApp capture", "/features/lead-capture"),
+    ("collect emails", "/guides/how-to-collect-emails-from-instagram"),
+    ("WhatsApp numbers", "/guides/collect-whatsapp-numbers-from-instagram"),
+    ("sales tracking", "/features/sales-tracking"),
+    ("follow-up offer", "/guides/instagram-follow-up-messages"),
+    ("follow-up", "/guides/instagram-follow-up-messages"),
+    ("broadcast", "/guides/instagram-broadcast-messages"),
+    ("choice menu", "/guides/instagram-dm-choice-menus"),
+    ("next post", "/guides/instagram-next-post-automation"),
+    ("Live comments", "/guides/instagram-live-comment-automation"),
+    ("welcome message", "/guides/instagram-welcome-message"),
+    ("ice breakers", "/guides/instagram-ice-breakers"),
+    ("lead magnet", "/guides/instagram-lead-magnet-ideas"),
+    ("giveaway", "/guides/run-instagram-giveaway"),
+    ("hourly limits", "/guides/instagram-dm-limits"),
+    ("24-hour window", "/guides/instagram-dm-limits"),
+    ("UTM", "/guides/track-instagram-sales-with-utm"),
+    ("professional account", "/guides/switch-to-instagram-professional-account"),
+    ("Creator account", "/guides/switch-to-instagram-professional-account"),
+    ("keyword ideas", "/guides/instagram-comment-keyword-ideas"),
+    ("Hinglish", "/guides/ai-dm-replies-in-any-language"),
+    ("hand-off", "/guides/ai-handoff-rules"),
+    ("Claude", "/guides/manage-instagram-automations-with-claude"),
+    ("digital products", "/guides/sell-digital-products-on-instagram"),
+    ("sales funnel", "/guides/instagram-dm-sales-funnel"),
+    ("official Meta API", "/guides/is-instagram-dm-automation-safe"),
+    ("official API", "/guides/is-instagram-dm-automation-safe"),
+    ("ManyChat", "/vs/manychat"),
+    ("LinkDM", "/vs/linkdm"),
+    ("SuperProfile", "/vs/superprofile"),
+    ("ReplyKaro", "/vs/replykaro"),
+    ("InstantDM", "/vs/instantdm"),
+    ("Repli", "/vs/repli"),
+    ("ReplyRush", "/vs/replyrush"),
+    ("Zorcha", "/vs/zorcha"),
+    ("pricing", "/pricing"),
+]

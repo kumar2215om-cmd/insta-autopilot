@@ -1,0 +1,402 @@
+{
+ "/": {
+  "hash": "952e4c0b2328",
+  "modified": "2026-11-22",
+  "published": "2026-11-12"
+ },
+ "/ai-instagram-dm-replies": {
+  "hash": "d22dc35e1c88",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/compare": {
+  "hash": "ab032e38b9ca",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/contact": {
+  "hash": "ba81fee0f4c6",
+  "modified": "2026-11-18",
+  "published": "2026-11-18"
+ },
+ "/features": {
+  "hash": "508af8240cfb",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/features/ai-dm-agent": {
+  "hash": "1df100af5797",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/features/comment-to-dm": {
+  "hash": "7cc1aa52b9f1",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/features/follow-to-unlock": {
+  "hash": "b40382f56b22",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/features/lead-capture": {
+  "hash": "d7fe10f465bc",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/features/sales-tracking": {
+  "hash": "500036ab1747",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/features/story-replies": {
+  "hash": "f44e446156a1",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/glossary": {
+  "hash": "c08de60d4dd8",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides": {
+  "hash": "607595bc0ea6",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/ai-dm-agent-examples": {
+  "hash": "26d6a9aa0f3e",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/ai-dm-replies-in-any-language": {
+  "hash": "e604966be320",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/ai-handoff-rules": {
+  "hash": "3fb9633b0160",
+  "modified": "2026-11-22",
+  "published": "2026-11-12"
+ },
+ "/guides/ai-inbox-daily-workflow": {
+  "hash": "c5e4a98ef663",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/ai-vs-keyword-dm-automation": {
+  "hash": "3b5342b301c8",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/auto-reply-instagram-comments": {
+  "hash": "935cd710b831",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/best-instagram-dm-automation-tools": {
+  "hash": "a34f9ee26034",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/collect-whatsapp-numbers-from-instagram": {
+  "hash": "0d6fd3e521f9",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/get-followers-from-reels": {
+  "hash": "a92add3b254e",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/how-to-auto-dm-instagram-comments": {
+  "hash": "ec757830bbbf",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/how-to-collect-emails-from-instagram": {
+  "hash": "8796e93f0b51",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-ai-chatbot": {
+  "hash": "17502c765491",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-ai-chatbot-cost": {
+  "hash": "97cb9ec4344e",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-broadcast-messages": {
+  "hash": "d00295a0c903",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-comment-keyword-ideas": {
+  "hash": "d2c402dcf5a6",
+  "modified": "2026-11-22",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-astrologers": {
+  "hash": "13bd3e0cc37b",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-beauty-creators": {
+  "hash": "84d1cedac0e7",
+  "modified": "2026-11-22",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-coaches": {
+  "hash": "eb1e15b57c9b",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-ecommerce": {
+  "hash": "9229658d45e8",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-educators": {
+  "hash": "bd8c404da9b7",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-finance-creators": {
+  "hash": "34acc120c9a3",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-fitness-coaches": {
+  "hash": "0a6e0db5e4a7",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-food-creators": {
+  "hash": "13604e0960a9",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-real-estate": {
+  "hash": "a58222bed767",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-for-travel-creators": {
+  "hash": "7df7af6c3529",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-automation-pricing": {
+  "hash": "633cc2ebd2f9",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-choice-menus": {
+  "hash": "f9af8eb337bc",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-limits": {
+  "hash": "8ce2b2e0913c",
+  "modified": "2026-11-22",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-sales-funnel": {
+  "hash": "9567e814c7eb",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-follow-up-messages": {
+  "hash": "170b87479256",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-ice-breakers": {
+  "hash": "f0bc6df43a3a",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-lead-magnet-ideas": {
+  "hash": "e32b1e9b5911",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-live-comment-automation": {
+  "hash": "88efaa8efbaf",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-next-post-automation": {
+  "hash": "e27ee4dc51c9",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-story-auto-reply": {
+  "hash": "4aecb31d129f",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/instagram-welcome-message": {
+  "hash": "094eabd7ca45",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/is-ai-safe-for-instagram-dms": {
+  "hash": "06a3e96a7d48",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/is-instagram-dm-automation-safe": {
+  "hash": "cb43e628cc9a",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/manage-instagram-automations-with-claude": {
+  "hash": "e27aceabeaaf",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/manychat-alternatives": {
+  "hash": "250fd666282a",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/run-instagram-giveaway": {
+  "hash": "c1b66d1644ff",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/sell-digital-products-on-instagram": {
+  "hash": "37b96846d2da",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/switch-to-instagram-professional-account": {
+  "hash": "2969720c9be7",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/track-instagram-sales-with-utm": {
+  "hash": "4023cc8d0021",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/why-instagram-dm-not-sent": {
+  "hash": "f25bd389d7cf",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/guides/write-faq-for-ai-dm-agent": {
+  "hash": "404666ad761e",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/instagram-automation-by-industry": {
+  "hash": "26ee2699051b",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/instagram-dm-automation": {
+  "hash": "370b7209ff7a",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/instagram-dm-automation-tools": {
+  "hash": "1fc52d275a75",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/instagram-lead-generation": {
+  "hash": "67c83771bd8a",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/pricing": {
+  "hash": "e2104de6aeca",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
+ "/privacy": {
+  "hash": "ba81fee0f4c6",
+  "modified": "2026-11-18",
+  "published": "2026-11-18"
+ },
+ "/refund": {
+  "hash": "ba81fee0f4c6",
+  "modified": "2026-11-18",
+  "published": "2026-11-18"
+ },
+ "/sell-on-instagram": {
+  "hash": "b3196cd9c0e8",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/shipping": {
+  "hash": "ba81fee0f4c6",
+  "modified": "2026-11-18",
+  "published": "2026-11-18"
+ },
+ "/terms": {
+  "hash": "ba81fee0f4c6",
+  "modified": "2026-11-18",
+  "published": "2026-11-18"
+ },
+ "/vs/creatorflow": {
+  "hash": "3883b5d246be",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/inro": {
+  "hash": "8b75d70608f8",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/instantdm": {
+  "hash": "f9d31f80ec37",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/linkdm": {
+  "hash": "188cfdb848ca",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/manychat": {
+  "hash": "317ca0197ede",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/rapiddm": {
+  "hash": "02037a3d712e",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/repli": {
+  "hash": "d9f2558828ae",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/replykaro": {
+  "hash": "e8e8acea6c49",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/replyrush": {
+  "hash": "446e079cb179",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/superprofile": {
+  "hash": "e8abf71d2833",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ },
+ "/vs/zorcha": {
+  "hash": "73d34930d6cb",
+  "modified": "2026-11-12",
+  "published": "2026-11-12"
+ }
+}

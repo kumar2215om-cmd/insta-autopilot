@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 <title>{{ brand }}: Instagram DM automation for creators</title>
-<meta name="description" content="Turn Instagram comments into followers, leads and sales. Comment-to-DM with follow to unlock, story replies, email and WhatsApp capture, follow-up offers, and an AI that answers DMs in your fans' language. Free to start.">
+<meta name="description" content="Instagram DM automation for creators: comment-to-DM, follow to unlock, email capture and AI replies in any language. Free plan with 1,000 DMs a month.">
 <meta name="theme-color" content="#111318">
 <link rel="canonical" href="{{ site_url }}/">
 <meta property="og:type" content="website">
@@ -304,6 +304,8 @@
   .inkt .tag { background:#D4FF3A; color:#111318; border-color:#D4FF3A; }
   .pill b { background:#2E3BFF; }
   .plan .name em { background:#D4FF3A; color:#111318; }
+  .hero h1 .kicker { display:block; font:700 clamp(12px, 1.6vw, 15px)/1.4 var(--mono, "JetBrains Mono", monospace); letter-spacing:.16em;
+                     text-transform:uppercase; color:#D4FF3A; margin-bottom:14px; }
 </style>
 </head>
 <body>
@@ -320,7 +322,7 @@
   <div class="wrap">
     {% if referrer %}<a class="pill rise" href="/signin"><b>INVITED</b> @{{ referrer }} invited you · start free →</a>
     {% else %}<a class="pill rise" href="#ai"><b>NEW</b> An AI that answers your DMs in any language →</a>{% endif %}
-    <h1 class="rise d1">Every comment, <span class="serif">a customer.</span></h1>
+    <h1 class="rise d1"><span class="kicker">Instagram DM automation for creators</span>Every comment, <span class="serif">a customer.</span></h1>
     <p class="lede rise d2">People comment your keyword. {{ brand }} replies, checks they follow you, collects their email or WhatsApp,
       sends the link and follows up with your offer. Automatically, 24/7.</p>
     <div class="cta rise d3" id="start">
@@ -687,7 +689,7 @@
 <footer>
   <div class="wrap">
     <div>{{ logo.wordmark(26, "foot") }}<p>Instagram DM automation for creators. Made in India.</p></div>
-    <div><h4>Product</h4><a href="/features">Features</a><a href="/features/ai-dm-agent">AI agent</a><a href="#pricing">Pricing</a><a href="/demo">Live demo</a></div>
+    <div><h4>Product</h4><a href="/features">Features</a><a href="/features/ai-dm-agent">AI agent</a><a href="/pricing">Pricing</a><a href="/demo">Live demo</a></div>
     <div><h4>Compare</h4><a href="/vs/manychat">vs ManyChat</a><a href="/vs/linkdm">vs LinkDM</a><a href="/vs/superprofile">vs SuperProfile</a><a href="/vs/repli">vs Repli</a><a href="/instagram-dm-automation-tools">All comparisons</a></div>
     <div><h4>Learn</h4><a href="/instagram-dm-automation">DM automation guide</a><a href="/instagram-lead-generation">Lead generation</a><a href="/sell-on-instagram">Selling on Instagram</a><a href="/ai-instagram-dm-replies">AI replies</a><a href="/instagram-automation-by-industry">By industry</a><a href="/glossary">Glossary</a></div>
     <div><h4>Company</h4>{% if contact_email %}<a href="mailto:{{ contact_email }}">Contact</a>{% endif %}<a href="#faq">FAQ</a></div>

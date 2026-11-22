@@ -259,6 +259,32 @@ def no_index_private(resp):
 
 
 @app.before_request
+def no_trailing_slash():
+    """/features/ → /features (one address per page; the slash version used to be a 404)."""
+    path = request.path
+    if request.method in ("GET", "HEAD") and len(path) > 1 and path.endswith("/") and not path.startswith(("/api/", "/static/")):
+        target = path.rstrip("/") or "/"
+        if request.query_string:
+            target += "?" + request.query_string.decode("latin-1")
+        return redirect(target, 301)
+
+
+@app.errorhandler(404)
+def not_found(e):
+    """A branded page with a way back for people; JSON for the API."""
+    if request.path.startswith("/api/"):
+        return jsonify(error="Not found"), 404
+    page = {"kind": "notfound", "title": "Page not found", "h1": "This page doesn't exist",
+            "description": f"The page you opened isn't on {BRAND}.",
+            "cards": [{"url": "/", "title": f"{BRAND} home", "text": "Instagram DM automation for creators."},
+                      {"url": "/pricing", "title": "Pricing", "text": "Free plan and paid plans in ₹ and $."},
+                      {"url": "/guides", "title": "Guides", "text": "How to auto DM, grow followers and sell on Instagram."},
+                      {"url": "/features", "title": "Features", "text": "Comment-to-DM, follow to unlock, AI replies and more."}]}
+    return render_template("content.html", page=page, path=request.path, crumbs=[("Not found", None)], related=[], schema=[],
+                           updated="", checked=seo.CHECKED, topic=None, noindex=True), 404
+
+
+@app.before_request
 def guard():
     # a sign-in that was signed out from another device (Settings → Security) ends here
     if session.get("user") and (request.path.startswith("/app") or request.path.startswith("/api/")):
@@ -303,6 +329,8 @@ def landing():
 # ---------- public pages for search engines and AI assistants (SEO / AEO / GEO) ----------
 
 import seo_content as seo  # noqa: E402
+import seo_dates  # noqa: E402
+from markupsafe import escape  # noqa: E402
 
 
 def fill(value):
@@ -316,9 +344,18 @@ def fill(value):
     return value
 
 
+# Public profiles of the product. ReplyInbox (Instagram DM automation, replyinbox.in) is a different company from
+# ReplyInbox the AI email tool (replyinbox.com); sameAs and disambiguatingDescription tell search engines and AI apart.
+SAME_AS = [u for u in env("BRAND_PROFILES", "https://www.instagram.com/replyinbox.in/").split() if u.startswith("https://")]
+
+
 def org_schema():
-    return {"@type": "Organization", "@id": f"{site_url()}/#org", "name": BRAND, "url": f"{site_url()}/",
-            "logo": f"{site_url()}/static/icon-512.png", **({"email": CONTACT_EMAIL} if CONTACT_EMAIL else {})}
+    return {"@type": "Organization", "@id": f"{site_url()}/#org", "name": BRAND, "alternateName": f"{BRAND} Instagram DM automation",
+            "url": f"{site_url()}/", "logo": f"{site_url()}/static/icon-512.png", "sameAs": SAME_AS,
+            "description": "Instagram DM automation for creators in India and worldwide: comment-to-DM, follow to unlock, AI DM replies and sales tracking.",
+            "disambiguatingDescription": f"{BRAND} at {site_url().split('//')[-1]} is an Instagram DM automation tool. It is not the AI email "
+                                         "reply tool of the same name at replyinbox.com.",
+            "areaServed": "IN", **({"email": CONTACT_EMAIL} if CONTACT_EMAIL else {})}
 
 
 def faq_schema(faq):
@@ -344,9 +381,9 @@ def landing_faq():
 
 
 def landing_schema():
-    offers = [{"@type": "Offer", "name": p["name"], "price": str(p["price"]), "priceCurrency": "INR", "url": f"{site_url()}/#pricing"}
+    offers = [{"@type": "Offer", "name": p["name"], "price": str(p["price"]), "priceCurrency": "INR", "url": f"{site_url()}/pricing"}
               for k, p in plans.PLANS.items()]
-    offers += [{"@type": "Offer", "name": plans.PLANS[k]["name"], "price": str(m), "priceCurrency": "USD", "url": f"{site_url()}/#pricing"}
+    offers += [{"@type": "Offer", "name": plans.PLANS[k]["name"], "price": str(m), "priceCurrency": "USD", "url": f"{site_url()}/pricing"}
                for k, (m, _) in plans.USD.items()]
     return [
         {"@context": "https://schema.org", **org_schema()},
@@ -374,16 +411,57 @@ def term_ld(key):
             "inDefinedTermSet": f"{site_url()}/glossary"}
 
 
+_ANCHOR_RE = None
+
+
+def autolink(html, path, used):
+    """Links the first mention of each known phrase (seo.ANCHORS) to the page that explains it: in-body links between
+    related pages. Skips text inside links, headings, code and tables, never links a page to itself, at most 6 per page."""
+    global _ANCHOR_RE
+    if _ANCHOR_RE is None:
+        _ANCHOR_RE = re.compile(r"(?<![\w/-])(" + "|".join(re.escape(a) for a, _ in sorted(seo.ANCHORS, key=lambda x: -len(x[0]))) + r")(?![\w-])",
+                                re.I)
+    urls = {a.lower(): u for a, u in seo.ANCHORS}
+    out, skip = [], 0
+    for part in re.split(r"(<[^>]+>)", html):
+        if part.startswith("<"):
+            tag = re.match(r"</?\s*(\w+)", part)
+            if tag and tag.group(1).lower() in ("a", "h2", "h3", "code", "table", "summary"):
+                skip += -1 if part.startswith("</") else 1
+            out.append(part)
+            continue
+        if skip > 0 or len(used) >= 6:
+            out.append(part)
+            continue
+
+        def link(m):
+            url = urls[m.group(1).lower()]
+            if url == path or url in used or len(used) >= 6:
+                return m.group(0)
+            used.add(url)
+            return f'<a href="{url}">{m.group(0)}</a>'
+        out.append(_ANCHOR_RE.sub(link, part))
+    return "".join(out)
+
+
 def content_page(page, path, crumbs, related=(), pillar=None):
     """Renders a public content page. pillar: the topic hub this page belongs to (hub-and-spoke linking + schema)."""
     page = fill(page)
+    used = {c["url"] for c in related} if page.get("kind") == "pillar" else set()
+    page["sections"] = [(h, autolink(html, path, used)) for h, html in page.get("sections") or []]
+    if page.get("kind") in ("feature", "compare", "guide"):
+        # a few related pages inside the article itself (descriptive links; the cards below are the full list)
+        more = [c for c in related if c["url"] not in used][:3]
+        if more:
+            page["sections"].append(("Keep reading", "<ul>" + "".join(
+                f'<li><a href="{c["url"]}">{escape(c["title"])}</a>: {escape(c["text"])}</li>' for c in more) + "</ul>"))
     schema = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": i + 1, "name": name, "item": f"{site_url()}{url or path}"}
         for i, (name, url) in enumerate([("Home", "/")] + list(crumbs))]}]
     kind = page.get("kind")
     if kind in ("feature", "compare", "guide"):
         art = {"@context": "https://schema.org", "@type": "Article", "headline": page.get("h1") or page["title"],
-               "description": page["description"], "dateModified": seo.UPDATED, "datePublished": seo.UPDATED,
+               "description": page["description"], "dateModified": seo_dates.modified(path), "datePublished": seo_dates.published(path),
                "mainEntityOfPage": f"{site_url()}{path}", "author": {"@id": f"{site_url()}/#org"},
                "publisher": org_schema(), "image": f"{site_url()}/static/og.png"}
         if pillar:
@@ -399,7 +477,7 @@ def content_page(page, path, crumbs, related=(), pillar=None):
     if pillar:
         topic = {"url": f"/{pillar}", "title": fill(seo.PILLARS[pillar]["title"]), "short": seo.PILLARS[pillar]["short"]}
     return render_template("content.html", page=page, path=path, crumbs=crumbs, related=fill(list(related)), schema=schema,
-                           updated=seo.UPDATED, checked=seo.CHECKED, topic=topic)
+                           updated=seo_dates.modified(path), checked=seo.CHECKED, topic=topic)
 
 
 def cluster_item(kind, slug):
@@ -450,7 +528,9 @@ def compare_hub():
 def compare_page(slug):
     item = seo.COMPARE.get(slug) or abort(404)
     page = {**item, "kind": "compare", "h1": f"{BRAND} vs {item['name']}: the {item['name']} alternative for Instagram",
-            "title": f"{item['title']} ({BRAND} vs {item['name']})",
+            "title": next(t for t in (f"{item['name']} alternative: {BRAND} vs {item['name']} (2026)",
+                                         f"{item['name']} alternative: {BRAND} vs {item['name']}",
+                                         f"{item['name']} alternative for Instagram (2026)") if len(t) <= 65),
             "faq": [(f"Is {BRAND} a good {item['name']} alternative?", f"Yes, if {item['choose_us']}"),
                     (f"How much does {BRAND} cost?", "Free for 1,000 DMs a month; Creator is ₹199 / $9 a month with unlimited DMs and AI replies included.")]}
     pillar, crumbs, related = cluster_context("compare", slug, f"vs {item['name']}")
@@ -484,7 +564,7 @@ def pillar_page(slug):
             "terms_list": [(k, seo.GLOSSARY[k][0], seo.GLOSSARY[k][1]) for k in p["terms"]],
             "extra_schema": [{"@context": "https://schema.org", "@type": "CollectionPage", "@id": f"{site_url()}/{slug}",
                               "name": fill(p["title"]), "description": fill(p["description"]), "url": f"{site_url()}/{slug}",
-                              "dateModified": seo.UPDATED, "isPartOf": {"@id": f"{site_url()}/#website", "@type": "WebSite", "name": BRAND},
+                              "dateModified": seo_dates.modified(f"/{slug}"), "isPartOf": {"@id": f"{site_url()}/#website", "@type": "WebSite", "name": BRAND},
                               "about": [entity_ld(e) for e in p["about"]], "mentions": [term_ld(t) for t in p["terms"]],
                               "hasPart": [{"@type": "WebPage", "url": f"{site_url()}{c['url']}", "name": c["title"]} for c in clusters]}]}
     return content_page(page, f"/{slug}", [(p["short"], None)], others)
@@ -492,6 +572,90 @@ def pillar_page(slug):
 
 for _slug in seo.PILLARS:
     app.add_url_rule(f"/{_slug}", f"pillar_{_slug.replace('-', '_')}", lambda _slug=_slug: pillar_page(_slug))
+
+
+def pricing_sections():
+    """The /pricing page body, built from plans.py so it always shows the live prices and limits."""
+    P, U = plans.PLANS, plans.USD
+    order = ["free", "starter", "creator", "pro", "agency"]
+    inr = lambda k: f"₹{P[k]['price']:,}"
+    usd = lambda k: f"${U[k][0]}"
+    yr = lambda k: f"₹{P[k]['yearly']:,}" if P[k]["yearly"] else "–"
+    dms = lambda k: f"{P[k]['monthly_dms']:,}" if P[k]["monthly_dms"] else "No limit*"
+    ai = lambda k: f"{P[k]['ai_replies']:,} to try" if P[k].get("ai_kind") == "trial" else f"{P[k]['ai_replies']:,} a month"
+    lim = lambda k, f: f"{P[k][f]:,}" if P[k].get(f) else "–"  # the plan's own numbers, whether or not plan locks are on
+    yes = lambda k, f: "✓" if plans.ORDER.index(k) >= plans.ORDER.index(plans.FEATURES[f]) else "–"
+    rows = [("Price a month", inr), ("Price in US$", usd), ("Price a year", yr), ("DMs a month", dms),
+            ("Instagram accounts", lambda k: {"pro": "3", "agency": "10"}.get(k, "1")), ("AI DM replies", ai),
+            ("Comment-to-DM, keyword DMs, Live comments, link in bio", lambda k: "✓"),
+            ("Follow to unlock, email and WhatsApp capture, story replies", lambda k: yes(k, "follow_gate")),
+            ("Lead Qualifier agent (chats a month)", lambda k: lim(k, "lead_agent")),
+            ("Brand Collab agent (brand DMs a month)", lambda k: lim(k, "brand_agent")),
+            ("Automatic course emails a month", lambda k: lim(k, "course_emails")),
+            ("Course video upload", lambda k: f"{P[k]['video_gb']} GB" if P[k].get("video_gb") else "–"),
+            ("Connect Claude (MCP)", lambda k: yes(k, "mcp")),
+            ("Team members", lambda k: lim(k, "team")),
+            ("Fee per sale through " + BRAND, lambda k: "2% + GST" if k in ("pro", "agency") else "5% + GST")]
+    table = ("<div class=\"scroll\"><table><thead><tr><th>Plan</th>" + "".join(f"<th>{P[k]['name']}</th>" for k in order) + "</tr></thead><tbody>"
+             + "".join(f"<tr><td>{name}</td>" + "".join(f"<td>{fn(k)}</td>" for k in order) + "</tr>" for name, fn in rows)
+             + "</tbody></table></div><p class=\"note\">* Fair use. Instagram's own limits still apply: one private reply per comment within "
+               "7 days, and hourly limits on very busy reels. ₹ prices include GST.</p>")
+    choose = "<ul>" + "".join(f"<li><b>{name}</b> ({inr(name.lower())}): {fill(text)}</li>" for name, text in seo.PRICING["choose"]) + "</ul>"
+    save = ("<p>Yearly plans cost about 10 months' price for 12 months: " + ", ".join(f"{P[k]['name']} {yr(k)}" for k in order[1:])
+            + " a year. Need one more Instagram account on Creator or Pro? It's "
+            f"₹{plans.EXTRA_ACCOUNT['price']} a month. More AI replies on any paid plan: {plans.AI_TOPUP['replies']:,} for ₹{plans.AI_TOPUP['price']}.</p>")
+    sell = ("<p>Selling products, 1:1 calls, events or courses through " + BRAND + " costs <b>5% + GST per sale</b> on Free, Starter and Creator, "
+            "and <b>2% + GST</b> (plus the payment gateway's charge) on Pro and Agency. Buyers pay with UPI or card, and your share goes "
+            "to your bank account, usually the next working day. Links to your own payment page (Razorpay, Instamojo, Gumroad, "
+            "SuperProfile) have no " + BRAND + " fee, and sales tracking still shows which reel made the sale.</p>")
+    compare = ("<p>Most Instagram DM automation tools charge $9–$40 a month, and ManyChat's price rises with the number of contacts. "
+               "Indian tools are usually ₹99–₹499 a month. See the <a href=\"/guides/instagram-dm-automation-pricing\">full price comparison</a> "
+               "or the <a href=\"/vs/manychat\">ManyChat comparison</a>.</p>")
+    return [("All plans compared", table), ("Which plan should you pick?", choose), ("Yearly plans and add-ons", save),
+            ("Selling through " + BRAND, sell), ("How this compares", compare)]
+
+
+@app.get("/pricing")
+def pricing_page():
+    P = plans.PLANS
+    page = {**seo.PRICING, "kind": "pricing",
+            "answer": f"{BRAND} has a free plan with {P['free']['monthly_dms']:,} DMs a month. Paid plans are Starter ₹{P['starter']['price']}, "
+                      f"Creator ₹{P['creator']['price']} (no monthly DM limit, 300 AI replies), Pro ₹{P['pro']['price']} (3 accounts, Claude) "
+                      f"and Agency ₹{P['agency']['price']:,} (10 accounts) a month, taxes included, or about 2 months free when paid yearly.",
+            "sections": pricing_sections(),
+            "extra_schema": [{"@context": "https://schema.org", "@type": "Product", "name": f"{BRAND} Instagram DM automation",
+                              "brand": {"@id": f"{site_url()}/#org"}, "url": f"{site_url()}/pricing",
+                              "offers": [{"@type": "Offer", "name": p["name"], "price": str(p["price"]), "priceCurrency": "INR",
+                                          "url": f"{site_url()}/pricing"} for p in P.values()]}]}
+    return content_page(page, "/pricing", [("Pricing", None)], [card("guide", g, seo.GUIDES[g]) for g in
+                        ("instagram-dm-automation-pricing", "manychat-alternatives", "how-to-auto-dm-instagram-comments")])
+
+
+@app.get("/llms-full.txt")
+def llms_full_txt():
+    """Every public page as plain text, for AI assistants that read the whole site at once."""
+    u, out = site_url(), [f"# {BRAND}: every page in full", "",
+                          f"> {BRAND} (replyinbox.in) is Instagram DM automation for creators. Not the AI email tool replyinbox.com.", ""]
+    text = lambda h: re.sub(r"[ \t]+", " ", re.sub(r"<li>", "\n- ", re.sub(r"</(p|tr|h\d)>", "\n", h))).strip()
+    strip = lambda h: re.sub(r"\n\s*\n+", "\n\n", re.sub(r"<[^>]+>", "", text(h))).strip()
+    groups = [("features", seo.FEATURES), ("vs", seo.COMPARE), ("guides", seo.GUIDES)]
+    for prefix, items in groups:
+        for slug, item in items.items():
+            item = fill(item)
+            title = item["title"] if prefix != "vs" else f"{BRAND} vs {item['name']}"
+            out += [f"## {title}", f"URL: {u}/{prefix}/{slug}", f"Updated: {seo_dates.modified(f'/{prefix}/{slug}')}", "", item["answer"], ""]
+            if prefix == "vs":
+                out += [f"{item['name']}: " + "; ".join(item["them"]), f"{BRAND}: " + "; ".join(item["us"]), ""]
+            for h, html in item.get("sections", []):
+                out += [f"### {h}", strip(html), ""]
+            for q, a in item.get("faq", []):
+                out += [f"Q: {q}", f"A: {a}", ""]
+    for slug, p in seo.PILLARS.items():
+        p = fill(p)
+        out += [f"## {p['title']}", f"URL: {u}/{slug}", "", p["answer"], ""]
+        for h, html in p.get("sections", []):
+            out += [f"### {h}", strip(html), ""]
+    return "\n".join(out) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 
 @app.get("/glossary")
@@ -516,7 +680,7 @@ def robots_txt():
 
 @app.get("/sitemap.xml")
 def sitemap_xml():
-    urls = "".join(f"<url><loc>{site_url()}{p}</loc><lastmod>{seo.UPDATED}</lastmod></url>" for p in seo.all_paths())
+    urls = "".join(f"<url><loc>{site_url()}{p}</loc><lastmod>{seo_dates.modified(p)}</lastmod></url>" for p in seo.all_paths())
     return (f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>',
             200, {"Content-Type": "application/xml; charset=utf-8"})
 
@@ -546,7 +710,7 @@ def llms_txt():
             out.append(f"- [{c['title']}]({u}{c['url']}): {fill(cluster_item(kind, s_)['answer'])}")
     out += ["", "## Glossary", f"- [{BRAND} glossary]({u}/glossary): definitions of Instagram DM automation terms"]
     out += [
-           "", "## Links", f"- Website: {u}/", f"- Pricing: {u}/#pricing", f"- Live demo: {u}/demo", f"- Privacy: {u}/privacy"]
+           "", "## Links", f"- Website: {u}/", f"- Pricing: {u}/pricing", f"- Every page in full: {u}/llms-full.txt", f"- Live demo: {u}/demo", f"- Privacy: {u}/privacy"]
     return "\n".join(out) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 

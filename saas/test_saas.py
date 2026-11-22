@@ -1554,6 +1554,44 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(len(self.ig.messages()), n)
         self.assertEqual(store.rule_stats("1789", ["kw:START"])["kw:START"].get("menu_0"), 1)
 
+    def test_seo_batch_a(self):
+        import seo_dates
+        import seo_content as seo
+        self.assertEqual(seo_dates.stale(), [], "Public page content changed: run python3 tools/seo_dates.py")
+        c = saas.app.test_client()
+        # /pricing: live prices from plans.py, Offer schema, in the sitemap with its own date
+        page = c.get("/pricing").get_data(as_text=True)
+        for x in ("₹149", "₹199", "₹599", "₹2,000", "5% + GST", "2% + GST", '"@type": "Product"', "1,000"):
+            self.assertIn(x, page)
+        sitemap = c.get("/sitemap.xml").get_data(as_text=True)
+        self.assertIn("/pricing</loc>", sitemap)
+        self.assertGreater(len(set(re.findall(r"<lastmod>([^<]+)</lastmod>", sitemap))), 1)  # not one date for every page
+        # every title fits in search results, every article links to 3+ related pages in its body
+        for path in seo.all_paths():
+            t = c.get(path).get_data(as_text=True)
+            title = re.search(r"<title>(.*?)</title>", t, re.S).group(1)
+            self.assertLessEqual(len(title.replace("&amp;", "&").replace("&#39;", "'")), 65, path)
+            art = re.search(r"<article>(.*?)</article>", t, re.S)
+            if art and path.startswith(("/features/", "/vs/", "/guides/")):
+                body = re.sub(r"<details.*", "", art.group(1), flags=re.S)
+                self.assertGreaterEqual(len(re.findall(r'<a href="/', body)), 3, path)
+                self.assertNotIn(f'<a href="{path}"', body)  # never links to itself
+        # slash URLs redirect, unknown pages get the branded 404 (noindex), the API still gets JSON
+        r = c.get("/features/")
+        self.assertEqual((r.status_code, r.location), (301, "/features"))
+        r = c.get("/no-such-page")
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("noindex", r.get_data(as_text=True))
+        self.assertEqual(c.get("/api/nope").mimetype, "application/json")
+        # the brand is told apart from replyinbox.com; AI assistants get every page in full
+        home = c.get("/").get_data(as_text=True)
+        self.assertIn("sameAs", home)
+        self.assertIn("replyinbox.com", home)
+        self.assertIn("Instagram DM automation", re.search(r"<h1.*?</h1>", home, re.S).group(0))
+        full = c.get("/llms-full.txt").get_data(as_text=True)
+        self.assertIn("/guides/instagram-dm-limits", full)
+        self.assertIn("llms-full.txt", c.get("/llms.txt").get_data(as_text=True))
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",

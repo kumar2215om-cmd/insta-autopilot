@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ page.title }} | {{ brand }}</title>
+<title>{{ page.title }}{% if page.title|length <= 50 and brand not in page.title %} | {{ brand }}{% endif %}</title>
 <meta name="description" content="{{ page.description }}">
 <meta name="theme-color" content="#111318">
-<link rel="canonical" href="{{ site_url }}{{ path }}">
+{% if noindex %}<meta name="robots" content="noindex">{% else %}<link rel="canonical" href="{{ site_url }}{{ path }}">{% endif %}
 <meta property="og:type" content="{{ 'article' if page.kind != 'hub' else 'website' }}">
 <meta property="og:site_name" content="{{ brand }}">
 <meta property="og:url" content="{{ site_url }}{{ path }}">
@@ -91,7 +91,7 @@
 <body>
 <header class="nav"><div class="wrap">
   <a href="/" aria-label="{{ brand }} home">{{ logo.wordmark(26, "nav", dark=true) }}</a>
-  <nav class="links" aria-label="Main"><a href="/features">Features</a><a href="/guides">Learn</a><a href="/instagram-dm-automation-tools">Compare</a><a href="/glossary">Glossary</a><a href="/#pricing">Pricing</a></nav>
+  <nav class="links" aria-label="Main"><a href="/features">Features</a><a href="/guides">Learn</a><a href="/instagram-dm-automation-tools">Compare</a><a href="/glossary">Glossary</a><a href="/pricing">Pricing</a></nav>
   <a class="btn" href="/signin">Start free</a>
 </div></header>
 <main><div class="wrap">
@@ -100,7 +100,10 @@
   {% if page.answer %}<p class="answer">{{ page.answer }}</p>
   <p class="meta">Updated {{ updated }}{% if topic %} · Part of <a href="{{ topic.url }}">{{ topic.title }}</a>{% endif %}</p>{% endif %}
 
-  {% if page.kind == "hub" %}
+  {% if page.kind == "notfound" %}
+    <p style="max-width:760px">The link may be old or mistyped. These pages are a good place to start:</p>
+    <div class="cards">{% for c in page.cards %}<a href="{{ c.url }}"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></a>{% endfor %}</div>
+  {% elif page.kind == "hub" %}
     <p style="max-width:760px">{{ page.intro }}</p>
     {% if page.groups %}{% for g in page.groups %}<section class="group"><h2><a href="{{ g.url }}">{{ g.title }}</a></h2><p class="note">{{ g.text }}</p>
       <div class="cards">{% for c in g.cards %}<a href="{{ c.url }}"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></a>{% endfor %}</div></section>{% endfor %}
@@ -120,7 +123,7 @@
       <p><b>Choose {{ brand }} if</b> {{ page.choose_us }}</p>
       <h2>{{ brand }} pricing</h2>
       <p>Free: 1,000 DMs a month. Starter ₹149 / $5. <b>Creator ₹199 / $9</b> (unlimited DMs, AI replies, follow-ups, broadcast, sales tracking).
-        Pro ₹599 / $19 (3 accounts, 2,000 AI replies, Connect Claude). <a href="/#pricing">See all plans</a>.</p>
+        Pro ₹599 / $19 (3 accounts, 2,000 AI replies, Connect Claude). Agency ₹2,000 / $59 (10 accounts). <a href="/pricing">See all plans</a>.</p>
       <p class="note">Information about {{ page.name }} comes from its public pages and independent reviews, checked {{ checked }}.
         Prices and features change; check {{ page.name }}'s own site before deciding. {{ page.name }} is a trademark of its owner; {{ brand }} is not affiliated with it.</p>
     {% endif %}
@@ -145,7 +148,7 @@
 <footer><div class="wrap">
   <span>© {{ brand }}</span><a href="/instagram-dm-automation">DM automation</a><a href="/instagram-lead-generation">Lead generation</a>
   <a href="/sell-on-instagram">Selling on Instagram</a><a href="/ai-instagram-dm-replies">AI replies</a><a href="/instagram-dm-automation-tools">Tools compared</a>
-  <a href="/instagram-automation-by-industry">By industry</a><a href="/glossary">Glossary</a><a href="/#pricing">Pricing</a>
+  <a href="/instagram-automation-by-industry">By industry</a><a href="/glossary">Glossary</a><a href="/pricing">Pricing</a>
   <a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refund">Refunds</a><a href="/contact">Contact</a>
 </div></footer>
 </body>
