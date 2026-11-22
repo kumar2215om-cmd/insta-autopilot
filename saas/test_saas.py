@@ -1597,6 +1597,46 @@ class SaasTest(unittest.TestCase):
         self.assertIn("/guides/instagram-dm-limits", full)
         self.assertIn("llms-full.txt", c.get("/llms.txt").get_data(as_text=True))
 
+    def test_redis_speed_keepalive_pipeline_and_request_cache(self):
+        """One kept-alive connection, pipelined reads, and the account/login read once per request (writes forget it)."""
+        sent = []
+
+        class Resp:
+            def __init__(self, body): self.body = body
+            def raise_for_status(self): pass
+            def json(self): return self.body
+
+        class Session:
+            made = 0
+            def __init__(self): Session.made += 1
+            def post(self, url, headers=None, json=None, timeout=None):
+                sent.append((url, json))
+                if url.endswith("/pipeline"):
+                    return Resp([{"result": ["dms", "3"]} for _ in json])
+                return Resp({"result": '{"id": "5", "username": "x"}' if json[0] == "GET" else "OK"})
+
+        import threading as th
+        with mock.patch.object(store, "REDIS_URL", "https://r.example"), mock.patch.object(store, "REDIS_TOKEN", "t"), \
+                mock.patch.object(store.requests, "Session", Session), mock.patch.object(store, "_http", th.local()):
+            self.assertEqual(store.pipeline([("HGETALL", "a"), ("HGETALL", "b")]), [["dms", "3"], ["dms", "3"]])
+            self.assertEqual(sent[-1], ("https://r.example/pipeline", [["HGETALL", "a"], ["HGETALL", "b"]]))
+            self.assertEqual(store.days("5", 3)[0][1], {"dms": 3})
+            with saas.app.test_request_context("/"):
+                sent.clear()
+                for _ in range(4):
+                    store.redis("GET", "s:t:5")
+                self.assertEqual(len(sent), 1)  # remembered for the rest of the request
+                store.redis("SET", "s:t:5", "{}")
+                store.redis("GET", "s:t:5")
+                self.assertEqual([j[0] for _, j in sent], ["GET", "SET", "GET"])  # a write makes the next read fresh
+                store.redis("GET", "s:t:5:counts")
+                store.redis("GET", "s:t:5:counts")
+                self.assertEqual(len(sent), 5)  # only the account and login records are remembered
+            sent.clear()
+            store.redis("GET", "s:t:5"); store.redis("GET", "s:t:5")
+            self.assertEqual(len(sent), 2)  # outside a web request (cron, webhooks in threads) nothing is remembered
+            self.assertEqual(Session.made, 1)  # one connection reused for every command
+
     def test_seo_batch_b_deep_pages(self):
         import seo_deep
         c = saas.app.test_client()

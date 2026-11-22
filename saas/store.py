@@ -5,6 +5,7 @@ Per-account keys are "s:t:<ig_user_id>:...".
 """
 import json
 import os
+import re
 import threading
 import time
 
@@ -126,13 +127,77 @@ class MemoryRedis:
 _memory = MemoryRedis()
 
 
-def redis(*command):
+_http = threading.local()  # one keep-alive HTTPS connection to Redis per thread, instead of a new TLS handshake per command
+
+# Within one web request the account and login records are read several times (auth, plan, role, the page itself).
+# They're remembered for the rest of that request; any command that writes the key forgets it again.
+_REQUEST_CACHED = re.compile(r"s:t:\d+|s:u:[0-9a-f]+")
+_READ_ONLY = {"GET", "HGET", "HGETALL", "HMGET", "LRANGE", "LLEN", "SMEMBERS", "SISMEMBER", "SCARD", "EXISTS", "TTL", "MGET",
+              "ZRANGE", "ZREVRANGE", "ZSCORE", "ZCARD", "SCAN", "KEYS", "TYPE"}
+
+
+def _request_cache():
+    try:
+        from flask import g, has_request_context
+    except ImportError:  # pragma: no cover
+        return None
+    if not has_request_context():
+        return None
+    if "_redis_cache" not in g:
+        g._redis_cache = {}
+    return g._redis_cache
+
+
+def _send(command):
     if not REDIS_URL:
         return _memory(*command)
-    r = requests.post(REDIS_URL, headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
-                      json=[str(c) for c in command], timeout=10)
+    session = getattr(_http, "session", None)
+    if session is None:
+        session = _http.session = requests.Session()
+    r = session.post(REDIS_URL, headers={"Authorization": f"Bearer {REDIS_TOKEN}"}, json=[str(c) for c in command], timeout=10)
     r.raise_for_status()
     return r.json()["result"]
+
+
+def pipeline(commands):
+    """Several read commands in one round trip (Upstash's /pipeline endpoint). Returns their results in order."""
+    commands = [[str(c) for c in cmd] for cmd in commands]
+    if not commands:
+        return []
+    if not REDIS_URL:
+        return [_memory(*cmd) for cmd in commands]
+    session = getattr(_http, "session", None)
+    if session is None:
+        session = _http.session = requests.Session()
+    r = session.post(REDIS_URL.rstrip("/") + "/pipeline", headers={"Authorization": f"Bearer {REDIS_TOKEN}"}, json=commands, timeout=10)
+    r.raise_for_status()
+    out = []
+    for item in r.json():
+        if item.get("error"):
+            raise RuntimeError(item["error"])
+        out.append(item.get("result"))
+    return out
+
+
+def _hash(flat):
+    flat = flat or []
+    return {flat[i]: int(flat[i + 1]) for i in range(0, len(flat), 2)}
+
+
+def redis(*command):
+    cache = _request_cache()
+    if cache is None:
+        return _send(command)
+    name = str(command[0]).upper()
+    if name == "GET" and len(command) == 2 and _REQUEST_CACHED.fullmatch(str(command[1])):
+        key = str(command[1])
+        if key not in cache:
+            cache[key] = _send(command)
+        return cache[key]
+    if name not in _READ_ONLY:
+        for arg in command[1:]:  # a write (SET, DEL, …) to a remembered key: read it fresh next time
+            cache.pop(str(arg), None)
+    return _send(command)
 
 
 def get_json(key, default=None):
@@ -210,7 +275,9 @@ def move_rule_stats(ig_id, old, new):
 
 
 def rule_stats(ig_id, keys):
-    return {k: hash_all(account_key(ig_id, f"rs:{k}")) for k in keys}
+    keys = list(keys)
+    flats = pipeline([("HGETALL", account_key(ig_id, f"rs:{k}")) for k in keys])
+    return {k: _hash(f) for k, f in zip(keys, flats)}
 
 
 # ---------- plans ----------
@@ -309,7 +376,9 @@ def count(ig_id, field, n=1):
 
 def days(ig_id, n=14):
     """[(date, {field: count})] for the last n days, oldest first."""
-    return [(day_str(i), hash_all(account_key(ig_id, f"day:{day_str(i)}"))) for i in range(n - 1, -1, -1)]
+    dates = [day_str(i) for i in range(n - 1, -1, -1)]
+    flats = pipeline([("HGETALL", account_key(ig_id, f"day:{d}")) for d in dates])  # one round trip, not n
+    return [(d, _hash(f)) for d, f in zip(dates, flats)]
 
 
 def counts(ig_id):
