@@ -1,6 +1,6 @@
 # ReplyInbox: Video Editing Handoff (@replyinbox.in reels)
 
-Updated 22 Nov 2026. This is for recreating **competitor SaaS reels** for ReplyInbox.
+Updated 22 Nov 2026 (after reels R01 and R02). This is for recreating **competitor SaaS reels** for ReplyInbox.
 - Keep the reference's **pacing and structure**.
 - Replace everything else with **ReplyInbox's own product, screens, copy and brand**.
 - The build pipeline is in `saas/REELS_HANDOFF.md`.
@@ -221,3 +221,73 @@ automation.json: kw:KEYWORD, 3 rotating public replies, follow gate, DM with lin
 2. The **target length**, and which feature this reel should sell (if he has a preference).
 3. After the script is approved: the **ElevenLabs MP3**.
 4. Optional: **real proof screenshots** (his own dashboard numbers), cropped.
+
+## 10. Delivered reels: shot lists (for re-edits)
+
+Times are in the final video (VO already trimmed and sped up). Captions run through the whole VO.
+
+### R01: "Claude ko Insta manager banao" · keyword SETUP · 42.7 s · VO 1.24x · `saas/content/reels/r01/`
+
+| In–Out | VO (Hinglish) | Visual | Pose |
+|---|---|---|---|
+| 0.0–2.3 | Aise mujhe apna personal Instagram manager banao | Hook card: Claude × ReplyInbox logos, "Apna **Insta manager** banao 👇" | pointing at viewer |
+| 2.3–5.3 | Pehle… ReplyInbox kholo, Instagram se login karo | STEP 1 pill; replyinbox.in window, "Continue with Instagram" click | phone smiling |
+| 5.3–7.75 | Settings mein jao… Create Claude link dabao | Settings window, sidebar highlight, "Create Claude link" click → "Copied ✓" | laptop typing |
+| 7.75–10.6 | Phir Claude kholo… Customize… Connectors | STEP 2; Claude window: Customize → Connectors highlight | pointing to side |
+| 10.6–15.4 | Add Custom Connector… naam do ReplyInbox… link paste… Add | "Add custom connector" dialog: typed name, URL pasted, Add click | laptop cross-legged |
+| 15.4–17.95 | Ho gaya! Ab tumhara Insta mujhse connected hai | Volt stamp "HO GAYA!" + connectors list "ReplyInbox ✓ Connected" | thumbs up |
+| 17.95–23.5 | profile study… followers aur sales… reels plan | Claude chat "Meri profile study karo" + reel report bars (**Illustration**) + "FOLLOWERS + SALES" stamp | hand on chin |
+| 23.5–28.1 | Hook… script… caption… comment keyword | Reel draft card, 4 ticks in sync, keyword pill SETUP | presenting |
+| 28.1–32.55 | poore hafte ka reel plan… approval ka wait | 7-day grid pops in, "1 WEEK" stamp, "Waiting for your approval" | hands behind head |
+| 32.55–33.55 | Aur sabse mast part? | Coral stamp "SABSE MAST PART?" | fists up shouting |
+| 33.55–37.8 | comment-to-DM set… har comment pe link | Comments with "DM sent" pills → auto-DM bubble "Open the guide" | peace sign |
+| 37.8–39.05 | Tumhe bas… haan bolna hai | Claude asks "set karun?" → Haan click → "Automation on"; pills "asks first" + "Pro plan" | beckoning |
+| 39.05–41.2 | SETUP comment karo… setup bhej dunga | Cobalt CTA: "Comment" + volt **SETUP** box | jumping |
+| 41.2–42.7 | — | FollowCard @replyinbox.in | — |
+
+### R02: "Claude ko Instagram se connect karo" · keyword CLAUDE · 36.2 s · VO 1.2x · `saas/content/reels/r02/`
+
+| In–Out | VO (Hinglish) | Visual | Pose |
+|---|---|---|---|
+| 0.0–3.0 | Claude ko apne Instagram se connect karo… kuch hi minute mein | Instagram ⟷ Claude tiles with a dotted line filling; title with volt "Instagram"; coral pill | pointing at viewer |
+| 3.0–7.7 | kya post karna hai… kaunsi reel chal rahi… DMs sambhale | 3 green-tick pills drop in on each phrase (title shrinks to fit) | reading phone |
+| 7.7–10.7 | Claude kholo, Connectors… Instagram wahan hai hi nahi | Claude Connectors window, search "Instagram" typed → "No results" (loss red) | scratching head |
+| 10.7–12.5 | Zyadatar log… yahin ruk jaate hain | ✋ + "Zyadatar log / **yahin ruk jaate hain.**" (coral) | stop palm |
+| 12.5–13.6 | Asli move ye hai | "ASLI" + volt "MOVE" stamp + cobalt underline | arms crossed smile |
+| 13.6–16.75 | ReplyInbox pe login… Settings mein Claude link banao | STEP 1: login window → Settings "Connect Claude" → Create Claude link → Copied ✓ | phone |
+| 16.75–21.15 | custom connector… naam do ReplyInbox… link paste… Add | STEP 2: connector dialog; then the link line lights cobalt with the ReplyInbox tile + "✓ Connected" | beanbag laptop |
+| 21.15–23.1 | top reels ka breakdown | **Real screen** `reel-report.jpg`, crop x270 y60 1000×640, slow push-in | hand on chin |
+| 23.1–24.5 | kaunsi reel se followers aur sales | **Real screen** `sales.jpg`, crop x270 y90 1000×640 | hand on chin |
+| 24.5–25.2 | poore hafte ka content plan | 7-day grid pop | presenting |
+| 25.2–26.55 | har reel ka comment-to-DM | **Real screen** `wizard-keyword.jpg`, crop y150 560×520 | presenting |
+| 26.55–28.7 | DMs ke reply draft | **Real screen** `ai-inbox.jpg`, crop x270 y180 1000×620 | laptop typing |
+| 28.7–30.55 | Sab kuch… tumhare ek haan pe | Claude "Plan ready… Kar doon?" → Haan click; pills "asks before every change" + "Pro plan · Illustration" | thumbs up |
+| 30.55–31.8 | Bilkul is reel ki tarah | Phone mock-up of this reel: comment "CLAUDE" → "DM sent: setup + prompts" | peace sign |
+| 31.8–34.76 | CLAUDE comment karo… setup aur ready prompts DM | Cobalt CTA: volt **CLAUDE** box + "DM: setup + ready prompts" | jumping |
+| 34.76–36.2 | — | FollowCard @replyinbox.in | — |
+
+Real screens carry a "REAL SCREEN · DEMO DATA" pill (they show the demo banner).
+
+## 11. Toolchain notes and gotchas (learned on R01/R02)
+
+- **Workspace:** `/home/user/replyinbox-reels/`, with one shared `node_modules` and one folder per reel (`rNN/` symlinks `node_modules`).
+  - Shared helpers live in `src/kit.tsx`: Drop, Stamp, Cursor, Typed, Window, Card, Pill, Btn, Logo, ClaudeMark, Dots.
+  - Scenes, timeline and CHARS (pose per time range) live in `src/Reel.tsx`.
+- **Browser:** `/opt/pw-browsers/chromium_headless_shell-1243/chrome-headless-shell-linux64/chrome-headless-shell`.
+  - Always pass `--public-dir=$PWD/public` to `remotion render`, and `publicDir` to `bundle()` in `stills.mjs`. Otherwise every image 404s.
+- **Hooks:** never call `useT()` / `useCurrentFrame()` inside a conditional or `&&` in JSX (React error #310). Read the frame once at the top of the scene.
+- **No speech recognition here:** huggingface.co and openaipublic are blocked by the network policy.
+  - Read the reference script from its burned-in captions: grab frames at 2–4 fps, crop the caption band, and review sheets.
+  - Time our VO by pauses: `silencedetect -38 dB / 0.1 s`, plus a second pass at `-30 dB / 0.07 s` for short pauses.
+  - Map lines to pause-separated segments using syllable counts (≈ 8 syllables/s at 1.2x) and energy-peak counts.
+  - Ask Om to watch captions once.
+- **Audio prep:**
+  1. `cut_silence.py in out 0.16 0.06` (keeps 0.16 s gaps).
+  2. `atempo` R.
+  3. `loudnorm`.
+  4. `build_audio.py` adds ticks per word, clicks + whooshes on `cuts`, kicks on `drops`, and the lo-fi bed. Edit the `cuts`/`drops` lists per reel.
+  5. Final `loudnorm I=-14` + `afade` out 0.4 s on the rendered MP4.
+- **Length:** final = VO length + 1.4 s FollowCard. Pick R so that VO ≤ limit − 1.5 s.
+- **Character PNGs:** upscale with `comic.hd(path, 1300)`, then a white (MaxFilter 15) + cobalt (MaxFilter 29) outline → `public/chars/<pose>.png`. Wide poses look small; prefer portrait/half framing on busy scenes.
+- **Covers:** `saas/tools/story.py` with a one-frame spec (`cover/cover.json`), headline + "COMMENT KEYWORD" link pill + bubble.
+- **Unverifiable claims:** e.g. "in 2 minutes" became "kuch hi minute mein". Keep a "Claude asks before every change" and "Pro plan" pill whenever Claude acts.
