@@ -10,8 +10,8 @@
   "published": "2026-11-12"
  },
  "/compare": {
-  "hash": "ab032e38b9ca",
-  "modified": "2026-11-12",
+  "hash": "b69c60152c94",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/contact": {
@@ -55,13 +55,13 @@
   "published": "2026-11-12"
  },
  "/glossary": {
-  "hash": "c08de60d4dd8",
-  "modified": "2026-11-12",
+  "hash": "7596874cc35f",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/guides": {
-  "hash": "607595bc0ea6",
-  "modified": "2026-11-12",
+  "hash": "2bc23c4f963c",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/guides/ai-dm-agent-examples": {
@@ -103,6 +103,11 @@
   "hash": "0d6fd3e521f9",
   "modified": "2026-11-12",
   "published": "2026-11-12"
+ },
+ "/guides/free-instagram-auto-dm": {
+  "hash": "3bc4c833f4b4",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
  },
  "/guides/get-followers-from-reels": {
   "hash": "a92add3b254e",
@@ -209,6 +214,11 @@
   "modified": "2026-11-12",
   "published": "2026-11-12"
  },
+ "/guides/instagram-dm-templates": {
+  "hash": "ef698e7a5975",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
  "/guides/instagram-follow-up-messages": {
   "hash": "170b87479256",
   "modified": "2026-11-12",
@@ -264,6 +274,11 @@
   "modified": "2026-11-22",
   "published": "2026-11-12"
  },
+ "/guides/manychat-pricing-india": {
+  "hash": "270386798965",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
  "/guides/run-instagram-giveaway": {
   "hash": "c1b66d1644ff",
   "modified": "2026-11-12",
@@ -295,18 +310,18 @@
   "published": "2026-11-12"
  },
  "/instagram-automation-by-industry": {
-  "hash": "26ee2699051b",
-  "modified": "2026-11-12",
+  "hash": "5ad818aa271d",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/instagram-dm-automation": {
-  "hash": "d56af4d3e451",
+  "hash": "9e8a5702b8fb",
   "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/instagram-dm-automation-tools": {
-  "hash": "1fc52d275a75",
-  "modified": "2026-11-12",
+  "hash": "b24a0e651add",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/instagram-lead-generation": {
@@ -368,6 +383,11 @@
   "hash": "08858d89b774",
   "modified": "2026-11-22",
   "published": "2026-11-12"
+ },
+ "/vs/meta-business-suite": {
+  "hash": "b11bda2505a9",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
  },
  "/vs/rapiddm": {
   "hash": "02037a3d712e",

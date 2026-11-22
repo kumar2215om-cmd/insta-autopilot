@@ -308,6 +308,7 @@ KEYWORDS = {
     "ai-inbox-daily-workflow": "ROUTINE", "manage-instagram-automations-with-claude": "CLAUDE", "ai-dm-agent-examples": "EXAMPLES",
     "is-instagram-dm-automation-safe": "SAFE", "comment-to-dm": "COMMENTDM", "follow-to-unlock": "UNLOCK", "ai-dm-agent": "AGENT",
     "story-replies": "STORIES", "lead-capture": "LEADS", "sales-tracking": "SALES",
+    "free-instagram-auto-dm": "FREEDM", "manychat-pricing-india": "MCPRICE", "instagram-dm-templates": "TEMPLATES",
 }
 STOP = set("how to the a an for and on your with of is in why what instagram dm dms automation set up get from vs messages "
            "people who best".split())

@@ -1241,7 +1241,7 @@ GLOSSARY = {
     "contact-tags": ("Contact tags", "Labels added to people automatically (for example by reel or topic) so follow-ups and exports can be targeted.", "/features/lead-capture"),
     "story-reply-automation": ("Story reply automation", "A DM sent automatically when someone replies to your Instagram story, optionally only with a keyword.", "/features/story-replies"),
     "story-mention": ("Story mention automation", "A DM sent automatically when someone mentions your account in their story, often a thank-you.", "/features/story-replies"),
-    "choice-menu": ("Choice menu", "A DM with up to three buttons, each sending its own message and link, so people pick what they want.", "/guides/instagram-dm-automation-for-coaches"),
+    "choice-menu": ("Choice menu", "A DM with up to three buttons, each sending its own message and link, so people pick what they want.", "/guides/instagram-dm-choice-menus"),
     "follow-up-message": ("Follow-up message", "A second DM sent hours after the first, inside the 24-hour window, usually with a paid offer.", "/guides/sell-digital-products-on-instagram"),
     "broadcast": ("Broadcast to recent chats", "One message sent to everyone who messaged the account in the last 24 hours, the only group Instagram allows.", "/sell-on-instagram"),
     "ai-dm-agent": ("AI DM agent", "An AI that answers DMs from the creator's own FAQ and products, in the person's language, and hands sensitive chats to a human.", "/features/ai-dm-agent"),
@@ -1356,3 +1356,17 @@ def _apply_deep():
 
 
 _apply_deep()
+
+
+def _apply_batch_c():
+    """New pages (free auto DM, ManyChat pricing in ₹, DM templates, Meta Business Suite) and a deeper by-industry topic page."""
+    import seo_new
+    PILLARS["instagram-automation-by-industry"].update(seo_new.INDUSTRY)
+    GUIDES.update(seo_new.NEW_GUIDES)
+    COMPARE.update(seo_new.NEW_COMPARE)
+    PILLARS["instagram-dm-automation-tools"]["clusters"][3:3] = [("guide", "free-instagram-auto-dm"), ("guide", "manychat-pricing-india"),
+                                                                  ("compare", "meta-business-suite")]
+    PILLARS["instagram-dm-automation"]["clusters"].insert(4, ("guide", "instagram-dm-templates"))
+
+
+_apply_batch_c()

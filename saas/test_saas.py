@@ -1596,7 +1596,10 @@ class SaasTest(unittest.TestCase):
         import seo_deep
         c = saas.app.test_client()
         paths = {"feature": "/features/", "compare": "/vs/", "guide": "/guides/", "pillar": "/"}
-        for (kind, slug) in seo_deep.DEEP:
+        import seo_new
+        pages = list(seo_deep.DEEP) + [("guide", g) for g in seo_new.NEW_GUIDES] + [("compare", v) for v in seo_new.NEW_COMPARE] \
+            + [("pillar", "instagram-automation-by-industry")]
+        for (kind, slug) in pages:
             path = paths[kind] + slug
             t = c.get(path).get_data(as_text=True)
             main = re.search(r"<main>(.*?)<section class=\"cta\">", t, re.S).group(1)
