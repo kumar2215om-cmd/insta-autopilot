@@ -1,5 +1,5 @@
 {% import "_logo.html" as logo %}<!doctype html>
-<html lang="en">
+<html lang="{{ page.lang or 'en' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -100,11 +100,11 @@
   <nav class="links" aria-label="Main"><a href="/features">Features</a><a href="/guides">Learn</a><a href="/instagram-dm-automation-tools">Compare</a><a href="/glossary">Glossary</a><a href="/pricing">Pricing</a></nav>
   <a class="btn" href="/signin">Start free</a>
 </div></header>
-<main><div class="wrap">
+{% set hi = page.lang == "hi-Latn" %}<main><div class="wrap">
   <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a>{% for name, url in crumbs %} / {% if url %}<a href="{{ url }}">{{ name }}</a>{% else %}{{ name }}{% endif %}{% endfor %}</nav>
   <h1>{{ page.h1 or page.title }}</h1>
   {% if page.answer %}<p class="answer">{{ page.answer }}</p>
-  <p class="meta">Updated {{ updated }}{% if topic %} · Part of <a href="{{ topic.url }}">{{ topic.title }}</a>{% endif %}</p>{% endif %}
+  <p class="meta">{{ "Update kiya" if hi else "Updated" }} {{ updated }}{% if topic %} · {{ "Topic" if hi else "Part of" }} <a href="{{ topic.url }}">{{ topic.title }}</a>{% endif %}</p>{% endif %}
 
   {% if page.kind == "notfound" %}
     <p style="max-width:760px">The link may be old or mistyped. These pages are a good place to start:</p>
@@ -135,21 +135,24 @@
     {% endif %}
     {% for heading, html in page.sections %}<h2>{{ heading }}</h2>{{ html|safe }}{% endfor %}
     {% if page.kind == "pillar" %}
-      <h2>Everything in this topic</h2>
+      <h2>{{ "Is topic ki saari guides" if hi else "Everything in this topic" }}</h2>
       <div class="cards">{% for c in page.cards %}<a href="{{ c.url }}"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></a>{% endfor %}</div>
-      <h2>Key terms</h2>
+      <h2>{{ "Zaroori shabd" if hi else "Key terms" }}</h2>
       <dl class="terms">{% for key, name, text in page.terms_list %}<div><dt><a href="/glossary#{{ key }}">{{ name }}</a></dt><dd>{{ text }}</dd></div>{% endfor %}</dl>
     {% endif %}
-    {% if page.faq %}<h2>Frequently asked questions</h2>
+    {% if page.faq %}<h2>{{ "Aksar pooche jaane wale sawaal" if hi else "Frequently asked questions" }}</h2>
       {% for q, a in page.faq %}<details {% if loop.first %}open{% endif %}><summary>{{ q }}</summary><p>{{ a }}</p></details>{% endfor %}{% endif %}
   </article>
   {% endif %}
 
-  <section class="cta"><h2>Try {{ brand }} free</h2>
+  {% if hi %}<section class="cta"><h2>{{ brand }} free mein try karo</h2>
+    <p>Comment-to-DM, follow to unlock, AI replies aur sales tracking. Har mahine 1,000 DMs free, official Meta API, password nahi.</p>
+    <a class="btn" href="/signin">Free mein shuru karo</a> <a class="btn line" style="color:#fff !important; border-color:#3A3548" href="/demo">Live demo dekho</a></section>
+  {% else %}<section class="cta"><h2>Try {{ brand }} free</h2>
     <p>Comment-to-DM, follow to unlock, AI replies and sales tracking. 1,000 DMs a month free, official Meta API, no password.</p>
-    <a class="btn" href="/signin">Start free</a> <a class="btn line" style="color:#fff !important; border-color:#3A3548" href="/demo">See the live demo</a></section>
+    <a class="btn" href="/signin">Start free</a> <a class="btn line" style="color:#fff !important; border-color:#3A3548" href="/demo">See the live demo</a></section>{% endif %}
 
-  {% if related %}<section class="related"><h2>{% if page.kind == "pillar" %}Other topics{% elif topic %}More in <a href="{{ topic.url }}">{{ topic.short }}</a>{% else %}Related{% endif %}</h2><div class="cards">{% for c in related %}<a href="{{ c.url }}"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></a>{% endfor %}</div></section>{% endif %}
+  {% if related %}<section class="related"><h2>{% if page.kind == "pillar" %}{{ "Baaki topics" if hi else "Other topics" }}{% elif topic %}{{ "Isi topic mein aur:" if hi else "More in" }} <a href="{{ topic.url }}">{{ topic.short }}</a>{% else %}Related{% endif %}</h2><div class="cards">{% for c in related %}<a href="{{ c.url }}"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></a>{% endfor %}</div></section>{% endif %}
 </div></main>
 <footer><div class="wrap">
   <span>© {{ brand }}</span><a href="/instagram-dm-automation">DM automation</a><a href="/instagram-lead-generation">Lead generation</a>

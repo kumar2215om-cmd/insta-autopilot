@@ -309,6 +309,10 @@ KEYWORDS = {
     "is-instagram-dm-automation-safe": "SAFE", "comment-to-dm": "COMMENTDM", "follow-to-unlock": "UNLOCK", "ai-dm-agent": "AGENT",
     "story-replies": "STORIES", "lead-capture": "LEADS", "sales-tracking": "SALES",
     "free-instagram-auto-dm": "FREEDM", "manychat-pricing-india": "MCPRICE", "instagram-dm-templates": "TEMPLATES",
+    "instagram-auto-dm-kya-hai": "KYAHAI", "instagram-auto-dm-kaise-lagaye": "LAGAO", "comment-par-automatic-dm-kaise-bheje": "BHEJO",
+    "instagram-par-followers-kaise-badhaye-dm-se": "BADHAO", "instagram-se-email-whatsapp-number-kaise-le": "LIST",
+    "instagram-dm-automation-free-mein": "FREE", "instagram-story-reply-automatic": "STORYREPLY", "instagram-ai-se-dm-reply-hindi": "HINDI",
+    "instagram-dm-se-paise-kaise-kamaye": "KAMAI", "kya-instagram-auto-dm-safe-hai": "SAFEHAI",
 }
 STOP = set("how to the a an for and on your with of is in why what instagram dm dms automation set up get from vs messages "
            "people who best".split())

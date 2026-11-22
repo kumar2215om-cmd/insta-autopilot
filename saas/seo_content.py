@@ -1370,3 +1370,13 @@ def _apply_batch_c():
 
 
 _apply_batch_c()
+
+
+def _apply_batch_d():
+    """Hinglish guides and their topic page (seo_hinglish.py)."""
+    import seo_hinglish
+    GUIDES.update(seo_hinglish.HINGLISH_GUIDES)
+    PILLARS[seo_hinglish.PILLAR_SLUG] = seo_hinglish.HINGLISH_PILLAR
+
+
+_apply_batch_d()

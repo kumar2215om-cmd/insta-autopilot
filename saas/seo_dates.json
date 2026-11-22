@@ -60,7 +60,7 @@
   "published": "2026-11-12"
  },
  "/guides": {
-  "hash": "2bc23c4f963c",
+  "hash": "e7a69b14d116",
   "modified": "2026-11-22",
   "published": "2026-11-12"
  },
@@ -104,6 +104,11 @@
   "modified": "2026-11-12",
   "published": "2026-11-12"
  },
+ "/guides/comment-par-automatic-dm-kaise-bheje": {
+  "hash": "cfe1384cf4ba",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
  "/guides/free-instagram-auto-dm": {
   "hash": "3bc4c833f4b4",
   "modified": "2026-11-22",
@@ -133,6 +138,21 @@
   "hash": "97cb9ec4344e",
   "modified": "2026-11-12",
   "published": "2026-11-12"
+ },
+ "/guides/instagram-ai-se-dm-reply-hindi": {
+  "hash": "c15701344dfb",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
+ "/guides/instagram-auto-dm-kaise-lagaye": {
+  "hash": "00e6b62f2a7b",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
+ "/guides/instagram-auto-dm-kya-hai": {
+  "hash": "b020c4c075db",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
  },
  "/guides/instagram-broadcast-messages": {
   "hash": "d00295a0c903",
@@ -194,6 +214,11 @@
   "modified": "2026-11-12",
   "published": "2026-11-12"
  },
+ "/guides/instagram-dm-automation-free-mein": {
+  "hash": "d8df3764acf6",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
  "/guides/instagram-dm-automation-pricing": {
   "hash": "c425f5c0addf",
   "modified": "2026-11-22",
@@ -213,6 +238,11 @@
   "hash": "9567e814c7eb",
   "modified": "2026-11-12",
   "published": "2026-11-12"
+ },
+ "/guides/instagram-dm-se-paise-kaise-kamaye": {
+  "hash": "9f1a7dbfe8f4",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
  },
  "/guides/instagram-dm-templates": {
   "hash": "ef698e7a5975",
@@ -244,10 +274,25 @@
   "modified": "2026-11-12",
   "published": "2026-11-12"
  },
+ "/guides/instagram-par-followers-kaise-badhaye-dm-se": {
+  "hash": "ffcb6c84d39a",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
+ "/guides/instagram-se-email-whatsapp-number-kaise-le": {
+  "hash": "aa655f395670",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
+ },
  "/guides/instagram-story-auto-reply": {
   "hash": "4aff4e20ec6a",
   "modified": "2026-11-22",
   "published": "2026-11-12"
+ },
+ "/guides/instagram-story-reply-automatic": {
+  "hash": "296fbabcf844",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
  },
  "/guides/instagram-welcome-message": {
   "hash": "094eabd7ca45",
@@ -263,6 +308,11 @@
   "hash": "cb43e628cc9a",
   "modified": "2026-11-12",
   "published": "2026-11-12"
+ },
+ "/guides/kya-instagram-auto-dm-safe-hai": {
+  "hash": "0d405003a140",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
  },
  "/guides/manage-instagram-automations-with-claude": {
   "hash": "e27aceabeaaf",
@@ -308,6 +358,11 @@
   "hash": "404666ad761e",
   "modified": "2026-11-12",
   "published": "2026-11-12"
+ },
+ "/instagram-auto-dm-hindi": {
+  "hash": "9c411e9ebf26",
+  "modified": "2026-11-22",
+  "published": "2026-11-22"
  },
  "/instagram-automation-by-industry": {
   "hash": "5ad818aa271d",

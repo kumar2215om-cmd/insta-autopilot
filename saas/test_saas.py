@@ -1597,13 +1597,18 @@ class SaasTest(unittest.TestCase):
         c = saas.app.test_client()
         paths = {"feature": "/features/", "compare": "/vs/", "guide": "/guides/", "pillar": "/"}
         import seo_new
+        import seo_hinglish
         pages = list(seo_deep.DEEP) + [("guide", g) for g in seo_new.NEW_GUIDES] + [("compare", v) for v in seo_new.NEW_COMPARE] \
             + [("pillar", "instagram-automation-by-industry")]
-        for (kind, slug) in pages:
+        hinglish = [("guide", g) for g in seo_hinglish.HINGLISH_GUIDES]
+        for (kind, slug) in pages + hinglish:
             path = paths[kind] + slug
             t = c.get(path).get_data(as_text=True)
             main = re.search(r"<main>(.*?)<section class=\"cta\">", t, re.S).group(1)
-            self.assertGreaterEqual(len(re.sub(r"<[^>]+>", " ", main).split()), 800, path)
+            self.assertGreaterEqual(len(re.sub(r"<[^>]+>", " ", main).split()), 600 if (kind, slug) in hinglish else 800, path)
+            if (kind, slug) in hinglish:  # Hindi in Latin script, labelled for search engines and screen readers
+                self.assertIn('<html lang="hi-Latn">', t)
+                self.assertIn("Aksar pooche jaane wale sawaal", t)
             for src, alt in re.findall(r'<img src="([^"]+)" alt="([^"]*)"', main):
                 self.assertTrue(alt, path)  # every screenshot describes itself
                 self.assertEqual(c.get(src).status_code, 200, src)

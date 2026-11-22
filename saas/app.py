@@ -453,7 +453,7 @@ def content_page(page, path, crumbs, related=(), pillar=None):
         # a few related pages inside the article itself (descriptive links; the cards below are the full list)
         more = [c for c in related if c["url"] not in used][:3]
         if more:
-            page["sections"].append(("Keep reading", "<ul>" + "".join(
+            page["sections"].append(("Aur padho" if page.get("lang") == "hi-Latn" else "Keep reading", "<ul>" + "".join(
                 f'<li><a href="{c["url"]}">{escape(c["title"])}</a>: {escape(c["text"])}</li>' for c in more) + "</ul>"))
     schema = [{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": i + 1, "name": name, "item": f"{site_url()}{url or path}"}
