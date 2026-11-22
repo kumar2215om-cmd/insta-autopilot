@@ -1,0 +1,15 @@
+Claude ko apne Instagram se connect karo 🤖📲 (Connectors mein Instagram milta hi nahi? Ye hai asli move 👇)
+
+→ ReplyInbox pe Instagram se login → Settings → Create Claude link
+→ Claude: custom connector add karo, naam "ReplyInbox", link paste, Add
+→ Top reels ka breakdown: kaunsi reel se followers aur sales aaye
+→ Poore hafte ka content plan + har reel ka comment-to-DM
+→ DM replies draft, sab kuch tumhare ek "haan" pe
+
+Note: Connect Claude is on the Pro plan, and Claude asks before every change. Dashboard screens are from the ReplyInbox demo account (sample data); the Claude chat is an illustration.
+
+Comment CLAUDE aur main setup + ready prompts DM kar dunga 📩
+
+Idea credit: @jayantcreates.ai
+
+#claude #claudeai #instagramautomation #aitools #instagramtips #dmautomation #creatortips #replyinbox

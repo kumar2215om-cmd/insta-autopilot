@@ -1,0 +1,23 @@
+{
+  "key": "kw:CLAUDE",
+  "rule": {
+    "enabled": true,
+    "keywords": [
+      "CLAUDE"
+    ],
+    "comment_reply": "@{username} Sent! Check your DMs 📩\nDone ✅ check your inbox\n@{username} DM bhej diya! Requests bhi check kar lena 🙌",
+    "replies_on": true,
+    "opening_dm": "Hey {username}! 👋 Neeche tap karo, Claude setup + ready prompts bhej raha hoon.",
+    "button_text": "Send it",
+    "require_follow": true,
+    "follow_dm": "Almost there! 👀 Pehle follow karo, phir \"I followed\" tap karo.",
+    "followed_button_text": "I followed ✅",
+    "dm": "Ye raha setup 👇\nhttps://replyinbox.in/guides/manage-instagram-automations-with-claude\n\n1) replyinbox.in pe Instagram se login → Settings → Create Claude link\n2) Claude → custom connector → naam ReplyInbox → link paste → Add\n\nReady prompts Claude ke menu mein: Weekly review, Plan a launch, Set up a reel, Catch up on DMs.\nConnect Claude Pro plan pe hai 🙌",
+    "dm_button_text": "Open the guide",
+    "dm_button_url": "https://replyinbox.in/guides/manage-instagram-automations-with-claude",
+    "once_per_person": true,
+    "track_links": true,
+    "tags": "reel",
+    "label": "Reel R02: Claude connect (+ carousel CLAUDE)"
+  }
+}
