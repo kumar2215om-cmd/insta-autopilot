@@ -532,7 +532,8 @@ def compare_page(slug):
                                          f"{item['name']} alternative: {BRAND} vs {item['name']}",
                                          f"{item['name']} alternative for Instagram (2026)") if len(t) <= 65),
             "faq": [(f"Is {BRAND} a good {item['name']} alternative?", f"Yes, if {item['choose_us']}"),
-                    (f"How much does {BRAND} cost?", "Free for 1,000 DMs a month; Creator is ₹199 / $9 a month with unlimited DMs and AI replies included.")]}
+                    (f"How much does {BRAND} cost?", "Free for 1,000 DMs a month; Starter is ₹149 / $5, and Creator ₹199 / $9 a month "
+                                                     "with no monthly DM limit and AI replies included.")] + list(item.get("faq_extra", []))}
     pillar, crumbs, related = cluster_context("compare", slug, f"vs {item['name']}")
     return content_page(page, f"/vs/{slug}", crumbs, related, pillar)
 

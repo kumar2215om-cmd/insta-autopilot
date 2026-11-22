@@ -1592,6 +1592,19 @@ class SaasTest(unittest.TestCase):
         self.assertIn("/guides/instagram-dm-limits", full)
         self.assertIn("llms-full.txt", c.get("/llms.txt").get_data(as_text=True))
 
+    def test_seo_batch_b_deep_pages(self):
+        import seo_deep
+        c = saas.app.test_client()
+        paths = {"feature": "/features/", "compare": "/vs/", "guide": "/guides/", "pillar": "/"}
+        for (kind, slug) in seo_deep.DEEP:
+            path = paths[kind] + slug
+            t = c.get(path).get_data(as_text=True)
+            main = re.search(r"<main>(.*?)<section class=\"cta\">", t, re.S).group(1)
+            self.assertGreaterEqual(len(re.sub(r"<[^>]+>", " ", main).split()), 800, path)
+            for src, alt in re.findall(r'<img src="([^"]+)" alt="([^"]*)"', main):
+                self.assertTrue(alt, path)  # every screenshot describes itself
+                self.assertEqual(c.get(src).status_code, 200, src)
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",

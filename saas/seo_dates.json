@@ -25,18 +25,18 @@
   "published": "2026-11-12"
  },
  "/features/ai-dm-agent": {
-  "hash": "1df100af5797",
-  "modified": "2026-11-12",
+  "hash": "6288a42f9965",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/features/comment-to-dm": {
-  "hash": "7cc1aa52b9f1",
-  "modified": "2026-11-12",
+  "hash": "114bde314dfe",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/features/follow-to-unlock": {
-  "hash": "b40382f56b22",
-  "modified": "2026-11-12",
+  "hash": "072d8d0a1b43",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/features/lead-capture": {
@@ -50,8 +50,8 @@
   "published": "2026-11-12"
  },
  "/features/story-replies": {
-  "hash": "f44e446156a1",
-  "modified": "2026-11-12",
+  "hash": "6e56f61b9481",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/glossary": {
@@ -110,13 +110,13 @@
   "published": "2026-11-12"
  },
  "/guides/how-to-auto-dm-instagram-comments": {
-  "hash": "ec757830bbbf",
-  "modified": "2026-11-12",
+  "hash": "bc2fa1dc785d",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/guides/how-to-collect-emails-from-instagram": {
-  "hash": "8796e93f0b51",
-  "modified": "2026-11-12",
+  "hash": "6bf117f7ce98",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/guides/instagram-ai-chatbot": {
@@ -135,7 +135,7 @@
   "published": "2026-11-12"
  },
  "/guides/instagram-comment-keyword-ideas": {
-  "hash": "d2c402dcf5a6",
+  "hash": "d1c2adf74d19",
   "modified": "2026-11-22",
   "published": "2026-11-12"
  },
@@ -190,8 +190,8 @@
   "published": "2026-11-12"
  },
  "/guides/instagram-dm-automation-pricing": {
-  "hash": "633cc2ebd2f9",
-  "modified": "2026-11-12",
+  "hash": "c425f5c0addf",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/guides/instagram-dm-choice-menus": {
@@ -200,7 +200,7 @@
   "published": "2026-11-12"
  },
  "/guides/instagram-dm-limits": {
-  "hash": "8ce2b2e0913c",
+  "hash": "a993c2c0ff7e",
   "modified": "2026-11-22",
   "published": "2026-11-12"
  },
@@ -235,8 +235,8 @@
   "published": "2026-11-12"
  },
  "/guides/instagram-story-auto-reply": {
-  "hash": "4aecb31d129f",
-  "modified": "2026-11-12",
+  "hash": "4aff4e20ec6a",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/guides/instagram-welcome-message": {
@@ -260,8 +260,8 @@
   "published": "2026-11-12"
  },
  "/guides/manychat-alternatives": {
-  "hash": "250fd666282a",
-  "modified": "2026-11-12",
+  "hash": "260c46139f05",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/guides/run-instagram-giveaway": {
@@ -300,8 +300,8 @@
   "published": "2026-11-12"
  },
  "/instagram-dm-automation": {
-  "hash": "370b7209ff7a",
-  "modified": "2026-11-12",
+  "hash": "d56af4d3e451",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/instagram-dm-automation-tools": {
@@ -365,8 +365,8 @@
   "published": "2026-11-12"
  },
  "/vs/manychat": {
-  "hash": "317ca0197ede",
-  "modified": "2026-11-12",
+  "hash": "08858d89b774",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/vs/rapiddm": {
@@ -380,8 +380,8 @@
   "published": "2026-11-12"
  },
  "/vs/replykaro": {
-  "hash": "e8e8acea6c49",
-  "modified": "2026-11-12",
+  "hash": "5c5a5ca654c6",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/vs/replyrush": {
@@ -390,8 +390,8 @@
   "published": "2026-11-12"
  },
  "/vs/superprofile": {
-  "hash": "e8abf71d2833",
-  "modified": "2026-11-12",
+  "hash": "a1b4c7af79e3",
+  "modified": "2026-11-22",
   "published": "2026-11-12"
  },
  "/vs/zorcha": {

@@ -1344,3 +1344,15 @@ ANCHORS = [
     ("Zorcha", "/vs/zorcha"),
     ("pricing", "/pricing"),
 ]
+
+
+# ---------- long-form versions of the key pages (seo_deep.py) replace their short sections ----------
+
+def _apply_deep():
+    import seo_deep
+    groups = {"feature": FEATURES, "compare": COMPARE, "guide": GUIDES, "pillar": PILLARS}
+    for (kind, slug), deep in seo_deep.DEEP.items():
+        groups[kind][slug].update(deep)
+
+
+_apply_deep()
