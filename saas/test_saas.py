@@ -1402,6 +1402,11 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.c.post("/api/switch", json={"id": "1789"}).status_code, 200)
         self.assertEqual(self.c.get("/api/me").get_json()["account"]["username"], "creator")
         self.assertEqual(self.c.post("/api/switch", json={"id": "9999"}).status_code, 403)  # not connected to this login
+        # the Auto DM page offers the switch inside the editor too, and its row-menu cleanup can't remove the sidebar switcher
+        page = self.c.get("/app/automations").get_data(as_text=True)
+        self.assertIn('"username": "second.page"', page)  # LINKED, for the editor's Switch account
+        self.assertIn('class="swmenu"', page)
+        self.assertNotIn('querySelectorAll(".menu")', page)
         # disconnecting one keeps you in the other
         self.assertTrue(self.c.post("/api/disconnect", json={}).get_json()["switched"])
         self.assertEqual(self.c.get("/api/me").get_json()["account"]["username"], "second.page")

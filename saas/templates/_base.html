@@ -54,11 +54,11 @@
   .switcher summary { list-style:none; display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:10px; color:#A9A5B5; font-size:13px; font-weight:500; }
   .switcher summary::-webkit-details-marker { display:none; }
   .switcher summary:hover { background:rgba(255,255,255,.05); color:#fff; }
-  .switcher .menu { display:grid; gap:2px; padding:6px; margin-top:4px; border-radius:12px; background:#17151F; border:1px solid rgba(255,255,255,.08); }
-  .switcher .menu button, .switcher .menu a { display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px; border:0; border-radius:8px; background:none;
+  .switcher .swmenu { display:grid; gap:2px; padding:6px; margin-top:4px; border-radius:12px; background:#17151F; border:1px solid rgba(255,255,255,.08); }
+  .switcher .swmenu button, .switcher .swmenu a { display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px; border:0; border-radius:8px; background:none;
     color:#E9E6F0; font:500 13.5px var(--text); text-align:left; text-decoration:none; cursor:pointer; }
-  .switcher .menu button:hover, .switcher .menu a:hover { background:rgba(255,255,255,.06); }
-  .switcher .menu a { color:var(--lav); }
+  .switcher .swmenu button:hover, .switcher .swmenu a:hover { background:rgba(255,255,255,.06); }
+  .switcher .swmenu a { color:var(--lav); }
   .switcher img, .switcher .av { width:24px; height:24px; border-radius:50%; object-fit:cover; flex:none; background:linear-gradient(135deg, #FFB199, #FF5B3A); }
   .who { margin-top:auto; display:flex; align-items:center; gap:10px; padding:10px; border-radius:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
   .who .av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #FFB199, #FF5B3A); object-fit:cover; flex:none; }
@@ -151,7 +151,7 @@
     .who .meta { display:none; }
     .promo { display:none; }
     .switcher { order:2; margin:0; } .switcher summary span { display:none; }
-    .switcher[open] .menu { position:absolute; z-index:40; right:16px; min-width:240px; }
+    .switcher[open] .swmenu { position:absolute; z-index:40; right:16px; min-width:240px; }
     .top, .content { padding-left:16px; padding-right:16px; }
     .top { padding-top:22px; }
   }
@@ -212,7 +212,7 @@
     {% if role == "owner" and not acc.demo %}
     <details class="switcher">
       <summary aria-label="Switch Instagram account"><span>Switch account</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg></summary>
-      <div class="menu">
+      <div class="swmenu">
         {% for a in linked %}
           <button type="button" data-switch="{{ a.id }}">{% if a.pic %}<img src="{{ a.pic }}" alt="">{% else %}<span class="av" aria-hidden="true"></span>{% endif %}@{{ a.username }}</button>
         {% endfor %}
@@ -224,7 +224,7 @@
     {% if not acc.demo %}
     <details class="switcher help">
       <summary aria-label="Help and feedback"><span>Help &amp; feedback</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"></path></svg></summary>
-      <div class="menu">
+      <div class="swmenu">
         <a href="/guides" target="_blank" rel="noopener">📚 Help &amp; guides</a>
         <button type="button" data-fb="feature">💡 Request a feature</button>
         <button type="button" data-fb="help">💬 Contact support</button>

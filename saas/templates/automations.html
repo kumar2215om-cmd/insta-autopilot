@@ -80,6 +80,14 @@
   .wf { display:flex; align-items:center; gap:10px; padding:14px 22px; border-top:1px solid var(--line2); }
   .wf .stp { margin-right:auto; font:500 12.5px var(--mono); color:var(--mute); }
   .acct { text-align:center; display:grid; justify-items:center; gap:6px; }
+  .acct .swlink { border:0; background:none; padding:0; font:500 13px var(--text); color:var(--mute); text-decoration:underline; cursor:pointer; }
+  .acct .swlink:hover { color:var(--ink); }
+  .swdlg { max-width:420px; }
+  .swdlg .wb { display:grid; gap:6px; }
+  .swdlg .wb button { display:flex; align-items:center; gap:12px; width:100%; padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--card);
+                      font:600 15px var(--text); color:var(--ink); cursor:pointer; text-align:left; }
+  .swdlg .wb button:hover { border-color:#2E3BFF; }
+  .swdlg .wb img, .swdlg .wb .av { width:40px; height:40px; border-radius:50%; object-fit:cover; flex:none; background:linear-gradient(135deg, #FFB199, #FF5B3A); }
   .acct .ring { width:64px; height:64px; border-radius:50%; padding:3px; background:var(--grad); }
   .acct .ring img, .acct .ring span { width:100%; height:100%; border-radius:50%; object-fit:cover; display:block; border:3px solid #fff; background:linear-gradient(135deg, #FFB199, #FF5B3A); }
   .opt { display:flex; gap:12px; align-items:center; width:100%; padding:14px 16px; border:1px solid var(--line); border-radius:14px; background:var(--card); text-align:left;
@@ -207,9 +215,15 @@
   <div class="wf"><span class="stp" id="wizStep"></span><span class="err small" id="wizErr"></span>
     <button class="btn ghost" type="button" id="wizBack">Back</button><button class="btn" type="button" id="wizNext">Next</button></div>
 </dialog>
+
+<dialog class="wiz swdlg" id="swDlg" aria-labelledby="swTitle">
+  <div class="wh"><b id="swTitle">Switch account</b><button class="x" type="button" id="swClose" aria-label="Close">×</button></div>
+  <div class="wb" id="swList"></div>
+</dialog>
 {% endblock %}
 {% block scripts %}
 <script>
+const LINKED = {{ (linked if role == "owner" and not acc.demo else [])|tojson }};  // the login's other Instagram accounts
 const ME = {username: "{{ acc.username }}", pic: "{{ acc.pic or '' }}", followGate: {{ "true" if acc.follow_gate else "false" }}, locksOn: {{ "true" if acc.locks_on else "false" }}};
 /* Link picker: fills a link box with the link page, the referral link, a product from the link page or an uploaded file */
 const QUICK = {page: location.origin + "/" + ME.username, ref: {{ "true" if role == "owner" and not acc.demo else "false" }} ? location.origin + "/r/" + ME.username : "", items: [], files: []};
@@ -333,7 +347,7 @@ function menuHtml(key) {
     ${m && m.permalink ? `<a href="${esc(m.permalink)}" target="_blank" rel="noopener">↗️ View on Instagram</a>` : ""}
     <button type="button" data-act="del" class="danger">🗑️ Delete automation</button></div>`;
 }
-function closeMenu() { document.querySelectorAll(".menu").forEach(x => x.remove()); openMenu = null; }
+function closeMenu() { document.querySelectorAll(".arow .menu").forEach(x => x.remove()); openMenu = null; }  // only the row menus, never the sidebar's
 
 async function saveRule(key, body) {
   const res = await api(`/api/rules/${encodeURIComponent(key)}`, {method: "PUT", body: JSON.stringify(body)});
@@ -417,7 +431,8 @@ $("wiz").addEventListener("click", (e) => { if (e.target === $("wiz")) $("wiz").
 
 function toggle(name, on) { return `<button class="tg" type="button" role="switch" aria-checked="${!!on}" data-tg="${name}" aria-label="${name}"><span></span></button>`; }
 function acctHtml() {
-  return `<div class="acct"><span class="ring">${ME.pic ? `<img src="${esc(ME.pic)}" alt="">` : `<span></span>`}</span><b>${esc(ME.username)}</b></div>`;
+  return `<div class="acct"><span class="ring">${ME.pic ? `<img src="${esc(ME.pic)}" alt="">` : `<span></span>`}</span><b>${esc(ME.username)}</b>`
+    + (LINKED.length ? `<button class="swlink" type="button" data-wswitch>Switch account</button>` : "") + `</div>`;
 }
 function stepsFor() { return STEPS[wiz.trigger] || ["trigger"]; }
 
@@ -603,7 +618,25 @@ function addKw(v) {
   if (w && !wiz.r.keywords.includes(w)) wiz.r.keywords.push(w);
   drawWizard(); $("kwIn")?.focus();
 }
+/* switch Instagram account from inside the editor (like the sidebar switcher), then reopen the editor on the same trigger */
+$("swClose").onclick = () => $("swDlg").close();
+$("swDlg").addEventListener("click", async (e) => {
+  if (e.target === $("swDlg")) return $("swDlg").close();
+  const b = e.target.closest("[data-to]");
+  if (!b) return;
+  b.disabled = true;
+  try {
+    await api("/api/switch", {method: "POST", body: JSON.stringify({id: b.dataset.to})});
+    location.hash = "new:" + (wiz && wiz.origKey ? "" : wiz.trigger || "");
+    location.reload();
+  } catch (err) { toast(err.message); b.disabled = false; }
+});
 $("wizBody").addEventListener("click", (e) => {
+  if (e.target.closest("[data-wswitch]")) {
+    $("swList").innerHTML = LINKED.map(a => `<button type="button" data-to="${esc(a.id)}">${a.pic ? `<img src="${esc(a.pic)}" alt="">` : `<span class="av" aria-hidden="true"></span>`}@${esc(a.username)}</button>`).join("")
+      + `<a class="small" href="/connect" style="padding:6px 4px">＋ Add another Instagram account</a>`;
+    return $("swDlg").showModal();
+  }
   const t = e.target.closest("[data-trigger]");
   if (t) { wiz.trigger = t.dataset.trigger; wiz.step = 1; if (wiz.trigger === "mention") Object.assign(wiz.r, {opening_on: false, require_follow: false, dm: "Thank you so much for the shoutout {username}! 🙏❤️"});
            if (wiz.trigger === "story") Object.assign(wiz.r, {opening_on: false, require_follow: false}); return drawWizard(); }
@@ -885,7 +918,12 @@ $("refresh").onclick = () => loadMedia(true);
   welcome = await api("/api/welcome").catch(() => welcome); drawWelcome(); loadBc();
   await loadMedia(false);
   const want = decodeURIComponent(location.hash.slice(1));
-  if (want) openWizard(rules.reels[want] ? {key: want} : /^\d+$/.test(want) ? {mediaId: want} : {});
+  if (want.startsWith("new:")) {  // just switched account from the editor: carry on creating, on the same trigger
+    history.replaceState(null, "", location.pathname);
+    openWizard({});
+    const trig = want.slice(4), btn = trig && $("wizBody").querySelector(`[data-trigger="${CSS.escape(trig)}"]`);
+    if (btn) btn.click();
+  } else if (want) openWizard(rules.reels[want] ? {key: want} : /^\d+$/.test(want) ? {mediaId: want} : {});
 })();
 </script>
 {% endblock %}
