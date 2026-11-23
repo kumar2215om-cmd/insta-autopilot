@@ -191,7 +191,7 @@
     Instagram only allows messages inside that 24-hour window, so older chats can't be reached.</p>
   <form id="bcForm" style="display:grid; gap:12px">
     <textarea name="text" rows="3" maxlength="640" aria-label="Message" placeholder="{Hey|Hi} {username}! The workshop starts in 1 hour 🔴 Join here 👇"></textarea>
-    <div class="two2"><input name="button" type="text" maxlength="20" placeholder="Button text (optional)" aria-label="Button text">
+    <div class="two2"><input name="button" type="text" maxlength="60" placeholder="Button text (optional)" aria-label="Button text">
       <input name="url" type="url" placeholder="https://link (optional)" aria-label="Button link"></div>
     <div class="row"><button class="btn sm" type="submit" id="bcSend">Send now</button><span class="small" id="bcMsg"></span></div>
   </form>
@@ -490,7 +490,7 @@ function drawWizard() {
     if (wiz.trigger !== "mention") h += `<div class="blk"><div class="hd"><b>Opening message with a button</b>${toggle("opening_on", R.opening_on)}</div>
       ${R.opening_on ? `<p class="hint">The tap opens the chat, which Instagram needs before it lets us check follows or ask for details.</p>
         <textarea rows="3" data-f="opening_dm" maxlength="640" aria-label="Opening message">${esc(R.opening_dm)}</textarea>
-        <input type="text" data-f="button_text" maxlength="20" value="${esc(R.button_text)}" aria-label="Button text">
+        <input type="text" data-f="button_text" maxlength="60" value="${esc(R.button_text)}" aria-label="Button text">
         <details ${R.opening_dm_b ? "open" : ""}><summary class="small"><b>A/B test this message</b></summary>
           <textarea rows="2" data-f="opening_dm_b" maxlength="640" placeholder="Version B: half your audience gets this one" style="margin-top:8px" aria-label="Version B">${esc(R.opening_dm_b || "")}</textarea>${abBox(wiz.origKey)}</details>` : ""}</div>`;
     h += `<p class="lbl" style="margin:4px 0 -4px">Before the primary DM, send them…</p>`;
@@ -499,7 +499,7 @@ function drawWizard() {
         : `<a class="btn sm" href="/#pricing">Upgrade</a>`}</div>
       ${!ME.followGate ? `<p class="hint" style="margin:0">Only send the link to people who follow you. Available on Starter and up.</p>`
         : R.require_follow ? `<textarea rows="3" data-f="follow_dm" maxlength="640" aria-label="Follow check message">${esc(R.follow_dm)}</textarea>
-        <div class="two2"><input type="text" value="Visit Profile" disabled aria-label="Visit profile button"><input type="text" data-f="followed_button_text" maxlength="20" value="${esc(R.followed_button_text)}" aria-label="I'm following button"></div>
+        <div class="two2"><input type="text" value="Visit Profile" disabled aria-label="Visit profile button"><input type="text" data-f="followed_button_text" maxlength="60" value="${esc(R.followed_button_text)}" aria-label="I'm following button"></div>
         <p class="hint">The link is sent only after Instagram confirms they follow you.</p>` : ""}</div>`;
     h += `<div class="blk"><div class="hd"><b>A DM asking for their email ${lockBadge("capture")}</b>${toggle("ask_email", R.ask_email)}</div>
       ${R.ask_email ? `<textarea rows="2" data-f="email_dm" maxlength="640" aria-label="Email message">${esc(R.email_dm)}</textarea>
@@ -510,17 +510,17 @@ function drawWizard() {
     h += `<p class="lbl" style="margin:4px 0 -4px">Then send the primary DM…</p>
       <div class="blk"><textarea rows="4" data-f="dm" maxlength="1000" aria-label="Primary DM">${esc(R.dm)}</textarea>
         ${R.btn_on ? `<div class="blk" style="background:var(--bg)"><div class="hd"><b>Button 1</b><button class="dmbtn" type="button" data-btnoff style="color:var(--bad); width:auto">Remove</button></div>
-          <div class="two2"><input type="text" data-f="dm_button_text" maxlength="20" placeholder="Button text" value="${esc(R.dm_button_text || "")}" aria-label="Button 1 text">
+          <div class="two2"><input type="text" data-f="dm_button_text" maxlength="60" placeholder="Button text" value="${esc(R.dm_button_text || "")}" aria-label="Button 1 text">
           <input type="url" data-f="dm_button_url" placeholder="https://your-link" value="${esc(R.dm_button_url || "")}" aria-label="Button 1 link"></div>${linkPicker("dm_button_url", "dm_button_text")}</div>
           ${R.more.map((b, i) => `<div class="blk" style="background:var(--bg)"><div class="hd"><b>Button ${i + 2}</b><button class="dmbtn" type="button" data-bdel="${i}" style="color:var(--bad); width:auto">Remove</button></div>
-            <div class="two2"><input type="text" data-bi="${i}" data-bk="text" maxlength="20" placeholder="Button text" value="${esc(b.text || "")}" aria-label="Button ${i + 2} text">
+            <div class="two2"><input type="text" data-bi="${i}" data-bk="text" maxlength="60" placeholder="Button text" value="${esc(b.text || "")}" aria-label="Button ${i + 2} text">
             <input type="url" data-bi="${i}" data-bk="url" placeholder="https://your-link" value="${esc(b.url || "")}" aria-label="Button ${i + 2} link"></div>${linkPicker("url", "text", "b" + i)}</div>`).join("")}
           ${R.more.length < 2 ? `<button class="dmbtn" type="button" data-badd>＋ Add another button</button>` : ""}
           <p class="hint">Up to 3 buttons, each opening its own link.</p>`
           : R.menu.length ? R.menu.map((m, i) => `<div class="blk" style="background:var(--bg)"><div class="hd"><b>Option ${i + 1}</b><button class="dmbtn" type="button" data-mdel="${i}" style="color:var(--bad); width:auto">Remove</button></div>
               <input type="text" data-mi="${i}" data-mk="title" maxlength="20" placeholder="Button, e.g. Free guide" value="${esc(m.title || "")}" aria-label="Option ${i + 1} button">
               <textarea rows="2" data-mi="${i}" data-mk="text" maxlength="640" placeholder="What they get when they tap it" aria-label="Option ${i + 1} message">${esc(m.text || "")}</textarea>
-              <div class="two2"><input type="text" data-mi="${i}" data-mk="button" maxlength="20" placeholder="Link button text" value="${esc(m.button || "")}" aria-label="Option ${i + 1} link button">
+              <div class="two2"><input type="text" data-mi="${i}" data-mk="button" maxlength="60" placeholder="Link button text" value="${esc(m.button || "")}" aria-label="Option ${i + 1} link button">
                 <input type="url" data-mi="${i}" data-mk="url" placeholder="https://link (optional)" value="${esc(m.url || "")}" aria-label="Option ${i + 1} link"></div>${linkPicker("url", "button", i)}</div>`).join("")
               + (R.menu.length < 3 ? `<button class="dmbtn" type="button" data-madd>＋ Another option</button>` : "")
               + `<p class="hint">They tap one and get that message. Up to 3 options.</p>`
@@ -532,7 +532,7 @@ function drawWizard() {
     h += `<div class="blk"><div class="hd"><b>Follow-up message</b>${toggle("followup_on", R.followup_on)}</div>
       ${R.followup_on ? `<textarea rows="2" data-f="followup_dm" maxlength="640" placeholder="Did you try it {username}? The full pack is just ₹149 today 🙌" aria-label="Follow-up message">${esc(R.followup_dm || "")}</textarea>
         <div class="two2"><select data-f="followup_hours" aria-label="Send after">${[1, 3, 6, 12, 20].map(x => `<option value="${x}" ${(+R.followup_hours || 3) === x ? "selected" : ""}>after ${x} hour${x > 1 ? "s" : ""}</option>`).join("")}</select>
-          <input type="text" data-f="followup_button" maxlength="20" placeholder="Button text" value="${esc(R.followup_button || "")}" aria-label="Follow-up button text"></div>
+          <input type="text" data-f="followup_button" maxlength="60" placeholder="Button text" value="${esc(R.followup_button || "")}" aria-label="Follow-up button text"></div>
         <input type="url" data-f="followup_url" placeholder="https://your-paid-product" value="${esc(R.followup_url || "")}" aria-label="Follow-up button link">
         ${linkPicker("followup_url", "followup_button")}
         <p class="hint">Sent once per person, within Instagram's 24-hour window.</p>` : ""}</div>`;
@@ -550,8 +550,9 @@ function drawWizard() {
         <label class="small"><input type="checkbox" data-c="track_links" ${R.track_links !== false ? "checked" : ""}> <b>Count link clicks</b> (links go through a short replyinbox link; turn off for affiliate links)</label></div></details>`;
   }
   if (s === "review") h = reviewHtml();
+  const keep = wiz.drawnStep === wiz.step ? $("wizBody").scrollTop : 0;  // same step (e.g. a button added): stay where you were
   $("wizBody").innerHTML = h;
-  $("wizBody").scrollTop = 0;
+  $("wizBody").scrollTop = keep; wiz.drawnStep = wiz.step;
 }
 
 function reviewHtml() {
@@ -661,7 +662,12 @@ $("wizBody").addEventListener("click", (e) => {
     Object.assign(wiz.r, nx ? {dm_button_url: nx.url || "", dm_button_text: nx.text || ""} : {btn_on: false, dm_button_url: "", dm_button_text: ""});
     return drawWizard();
   }
-  if (e.target.closest("[data-badd]")) { wiz.r.more.push({text: "", url: ""}); return drawWizard(); }
+  if (e.target.closest("[data-badd]")) {
+    wiz.r.more.push({text: "", url: ""}); drawWizard();
+    const n = $("wizBody").querySelector(`[data-bi="${wiz.r.more.length - 1}"][data-bk="text"]`);
+    if (n) { n.focus({preventScroll: true}); n.scrollIntoView({block: "center"}); }
+    return;
+  }
   const bdel = e.target.closest("[data-bdel]"); if (bdel) { wiz.r.more.splice(+bdel.dataset.bdel, 1); return drawWizard(); }
 });
 
@@ -829,7 +835,7 @@ function drawWelcome(fields = true) {
   if (fields) { f.enabled.checked = welcome.enabled; f.text.value = welcome.text; }
   const kws = Object.keys(rules.reels).filter(k => k.startsWith("kw:"));
   $("wBtns").innerHTML = welcome.buttons.map((b, i) => `<div class="blk wb2" data-i="${i}"><div class="two2">
-      <input type="text" data-k="title" maxlength="20" placeholder="Button text" value="${esc(b.title || "")}" aria-label="Button ${i + 1} text">
+      <input type="text" data-k="title" maxlength="60" placeholder="Button text" value="${esc(b.title || "")}" aria-label="Button ${i + 1} text">
       <select data-k="type" aria-label="Button ${i + 1} action"><option value="url" ${b.type !== "kw" ? "selected" : ""}>Opens a link</option>
         ${kws.length ? `<option value="kw" ${b.type === "kw" ? "selected" : ""}>Starts an automation</option>` : ""}</select></div>
       ${b.type === "kw" ? `<select data-k="value" aria-label="Automation">${kws.map(k => `<option value="${esc(k)}" ${b.value === k ? "selected" : ""}>${esc(k.slice(3))}</option>`).join("")}</select>`

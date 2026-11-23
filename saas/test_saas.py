@@ -41,6 +41,10 @@ class Resp:
             raise RuntimeError(self.text)
 
 
+def test_saas_resp(body, status):
+    return Resp(body, status)
+
+
 class FakeInstagram:
     """Records every call; answers like the Instagram API."""
 
@@ -1709,6 +1713,23 @@ class SaasTest(unittest.TestCase):
         btns = self.ig.messages()[-1]["message"]["attachment"]["payload"]["buttons"]
         self.assertEqual([(b["title"], b["url"]) for b in btns],
                          [("Course", "https://c.com"), ("CLIP", "https://l.com"), ("Prompt", "https://p.com")])
+        # labels up to 60 characters are sent whole; if Instagram refuses a long one, the DM goes again with 20
+        long = "🔥 Claude se Instagram grow karo"
+        self.put_rule("kw:B5", keywords=["B5"], require_follow=False, comment_reply="", dm="Pick", track_links=False,
+                      dm_button_text=long, dm_button_url="https://c.com")
+        self.assertEqual(store.load_rules("1789")["reels"]["kw:B5"]["dm_button_text"], long)
+        self.hook(dm("b5", sender="72"))
+        self.assertEqual(self.ig.messages()[-1]["message"]["attachment"]["payload"]["buttons"][0]["title"], long)
+        orig = self.ig.post
+        def refuse_long(url, json=None, **kw):
+            btns = (((json or {}).get("message") or {}).get("attachment") or {}).get("payload", {}).get("buttons", [])
+            if any(len(b["title"]) > 20 for b in btns):
+                self.ig.calls.append(("POST", url, json))
+                return test_saas_resp({"error": {"code": 100, "message": "(#100) Param title must be at most 20 characters"}}, 400)
+            return orig(url, json=json, **kw)
+        with mock.patch.object(engine.requests, "post", refuse_long):
+            self.hook(dm("b5", sender="73", mid="m73"))
+        self.assertEqual(self.ig.messages()[-1]["message"]["attachment"]["payload"]["buttons"][0]["title"], long[:20])
         self.put_rule("kw:B4", keywords=["B4"], require_follow=False, dm="No main button",
                       dm_buttons_more=[{"text": "CLIP", "url": "https://l.com"}])
         self.assertEqual(store.load_rules("1789")["reels"]["kw:B4"]["dm_buttons_more"], [])

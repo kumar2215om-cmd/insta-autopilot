@@ -1394,10 +1394,10 @@ def api_put_auto_setup():
     template = {
         "comment_reply": str(t.get("comment_reply", ""))[:1000].strip(),
         "opening_dm": str(t.get("opening_dm", ""))[:640].strip(),
-        "button_text": str(t.get("button_text", ""))[:20].strip(),
+        "button_text": str(t.get("button_text", ""))[:engine.BUTTON_MAX].strip(),
         "require_follow": bool(t.get("require_follow")),
         "follow_dm": str(t.get("follow_dm", ""))[:640].strip(),
-        "followed_button_text": str(t.get("followed_button_text", ""))[:20].strip(),
+        "followed_button_text": str(t.get("followed_button_text", ""))[:engine.BUTTON_MAX].strip(),
         "dm": str(t.get("dm", ""))[:1000].strip(),
     }
     enabled = bool(data.get("enabled"))
@@ -1550,19 +1550,19 @@ def save_rule(acc, key, data):
         "comment_reply": str(data.get("comment_reply", ""))[:1000].strip(),
         "opening_dm": str(data.get("opening_dm", ""))[:640].strip(),
         "opening_dm_b": str(data.get("opening_dm_b", ""))[:640].strip(),
-        "button_text": str(data.get("button_text", ""))[:20].strip(),
+        "button_text": str(data.get("button_text", ""))[:engine.BUTTON_MAX].strip(),
         "require_follow": bool(data.get("require_follow")),
         "follow_dm": str(data.get("follow_dm", ""))[:640].strip(),
-        "followed_button_text": str(data.get("followed_button_text", ""))[:20].strip(),
+        "followed_button_text": str(data.get("followed_button_text", ""))[:engine.BUTTON_MAX].strip(),
         "dm": str(data.get("dm", ""))[:1000].strip(),
-        "dm_button_text": str(data.get("dm_button_text", ""))[:20].strip(),
+        "dm_button_text": str(data.get("dm_button_text", ""))[:engine.BUTTON_MAX].strip(),
         "dm_button_url": safe_url(data.get("dm_button_url")),
-        "dm_buttons_more": [{"text": str(b.get("text", "")).strip()[:20], "url": safe_url(b.get("url"))}
+        "dm_buttons_more": [{"text": str(b.get("text", "")).strip()[:engine.BUTTON_MAX], "url": safe_url(b.get("url"))}
                             for b in (data.get("dm_buttons_more") or [])[:2] if isinstance(b, dict) and str(b.get("url", "")).strip()],
         "replies_on": data.get("replies_on", True) is not False,
         "exclude": [k.strip()[:40] for k in data.get("exclude", []) if str(k).strip()][:20],
         "menu": [{"title": str(m.get("title", "")).strip()[:20], "text": str(m.get("text", "")).strip()[:640],
-                  "url": safe_url(m.get("url")), "button": str(m.get("button", "")).strip()[:20]}
+                  "url": safe_url(m.get("url")), "button": str(m.get("button", "")).strip()[:engine.BUTTON_MAX]}
                  for m in [m for m in (data.get("menu") or []) if isinstance(m, dict) and str(m.get("title", "")).strip()][:3]],
         "track_links": data.get("track_links", True) is not False,
         "once_per_person": bool(data.get("once_per_person")),
@@ -1573,7 +1573,7 @@ def save_rule(acc, key, data):
         "followup_on": bool(data.get("followup_on")),
         "followup_hours": int(data.get("followup_hours") or 3) if str(data.get("followup_hours") or 3).isdigit() else 3,
         "followup_dm": str(data.get("followup_dm", ""))[:640].strip(),
-        "followup_button": str(data.get("followup_button", ""))[:20].strip(),
+        "followup_button": str(data.get("followup_button", ""))[:engine.BUTTON_MAX].strip(),
         "followup_url": safe_url(data.get("followup_url")),
         "email_dm": str(data.get("email_dm", ""))[:640].strip(),
         "email_required": bool(data.get("email_required")),
@@ -2019,7 +2019,7 @@ def set_welcome(acc, data):
     rules = store.load_rules(acc["id"]).get("reels", {})
     buttons = []
     for b in (data.get("buttons") or [])[:3]:
-        title = str(b.get("title", "")).strip()[:20]
+        title = str(b.get("title", "")).strip()[:engine.BUTTON_MAX]
         if b.get("type") == "url" and title and safe_url(b.get("value")):
             buttons.append({"type": "url", "title": title, "value": safe_url(b.get("value"))})
         elif b.get("type") == "kw" and title and str(b.get("value")) in rules:
@@ -2055,7 +2055,7 @@ def broadcast_batch(acc, data):
     """One batch of a broadcast; raises ValueError for bad input or when the account can't send."""
     text = str(data.get("text", "")).strip()[:640]
     bid = re.sub(r"[^a-z0-9]", "", str(data.get("id", "")).lower())[:16]
-    url, button = safe_url(data.get("url")), str(data.get("button", "")).strip()[:20] or "Open"
+    url, button = safe_url(data.get("url")), str(data.get("button", "")).strip()[:engine.BUTTON_MAX] or "Open"
     if not text or not bid:
         raise ValueError("Write the message first.")
     if data.get("url") and not url:

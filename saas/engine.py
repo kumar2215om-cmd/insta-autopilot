@@ -54,6 +54,9 @@ def vary(text):
     return SPIN.sub(lambda m: random.choice(m.group(1).split("|")), text or "")
 
 
+BUTTON_MAX = 60  # longest button label we let creators write (SuperProfile allows 60 too)
+
+
 class Instagram:
     def __init__(self, acc):
         self.acc = acc
@@ -101,11 +104,20 @@ class Instagram:
     def send_buttons(self, recipient, text, postbacks=(), links=()):
         """Text with buttons (button template); falls back to quick replies if Instagram rejects it."""
         text = vary(text)
-        buttons = ([{"type": "web_url", "title": t[:20], "url": u} for t, u in links]
-                   + [{"type": "postback", "title": t[:20], "payload": p} for t, p in postbacks])
+
+        def template(n):  # button labels up to n characters
+            buttons = ([{"type": "web_url", "title": t[:n], "url": u} for t, u in links]
+                       + [{"type": "postback", "title": t[:n], "payload": p} for t, p in postbacks])
+            return {"attachment": {"type": "template", "payload": {"template_type": "button", "text": text[:640], "buttons": buttons[:3]}}}
+        long_label = any(len(t) > 20 for t, _ in list(links) + list(postbacks))
         try:
-            return self.send_dm(recipient, {"attachment": {"type": "template", "payload": {
-                "template_type": "button", "text": text[:640], "buttons": buttons[:3]}}})
+            try:
+                return self.send_dm(recipient, template(BUTTON_MAX))
+            except RuntimeError as err:
+                # Instagram documents 20 characters for a button label; if a longer one is refused, send it shortened
+                if not long_label or CANT_OPEN_THREAD in str(err) or is_blocked(self.acc):
+                    raise
+                return self.send_dm(recipient, template(20))
         except RuntimeError as first:
             if CANT_OPEN_THREAD in str(first) or is_blocked(self.acc):
                 raise  # another message style can't help when the thread, login or rate limit is the problem
