@@ -1252,8 +1252,10 @@ def run_task(fn, *args):
         threading.Thread(target=fn, args=args).start()
 
 
-# The same Meta app serves other creators through saas/ (LikhoDM). Instagram sends every account's
-# events here, so events for other accounts are passed on, signature included, to the SaaS webhook.
+# The same Meta app serves other creators through saas/ (ReplyInbox). Instagram sends every account's events here, so
+# they are passed on, signature included, to the SaaS webhook. That includes this account's own events: @aiwith.om is
+# also connected to ReplyInbox, and automations made there only run if ReplyInbox hears about the comment. This app
+# still answers its own keywords below; give each keyword to one dashboard only, or a comment gets two replies.
 SAAS_WEBHOOK_URL = os.environ.get("SAAS_WEBHOOK_URL", "").strip()
 
 
@@ -1288,7 +1290,7 @@ def receive_webhook():
             abort(403)
     body = request.get_json(silent=True) or {}
     own = my_ig_id()
-    if SAAS_WEBHOOK_URL and any(str(e.get("id")) != own for e in body.get("entry", [])):
+    if SAAS_WEBHOOK_URL:
         forward_to_saas()
     for entry in body.get("entry", []):
         # Other creators' accounts (connected through the multi-account app in saas/) aren't ours to answer.
