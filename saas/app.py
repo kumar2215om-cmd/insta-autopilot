@@ -193,12 +193,13 @@ def render_app(template, active, **extra):
                 stub = {"id": "", "username": "", "pic": user.get("pic", ""), "pro": False, "demo": False,
                         "plan_name": plans.PLANS[users.current_plan(user)]["name"]}
                 return render_template(template, acc=stub, active=active, role="owner", user=user, no_account=True,
-                                       nav=[("billing", "/app/billing", "Plan & billing")], apps={}, linked=[], page_url="", **extra)
+                                       nav=[("billing", "/app/billing", "Plan & billing", True)], apps={}, linked=[], page_url="", **extra)
             return redirect(url_for("connect_page"))
         return redirect(url_for("signin_page"))
     on = apps_of(acc)
-    nav = [(key, href, label) for key, href, label, core in SECTIONS
-           if (core or on.get(key)) and (key != "youtube" or youtube.available(acc)) and (key != "files" or files.available(acc))]
+    # every section the account could have, with whether it's on: the Apps page shows and hides them without a reload
+    nav = [(key, href, label, bool(core or on.get(key))) for key, href, label, core in SECTIONS
+           if (key != "youtube" or youtube.available(acc)) and (key != "files" or files.available(acc))]
     return render_template(template, acc=public_account(acc), active=active, nav=nav, apps=on, role=current_role(),
                            linked=[a for a in linked_accounts() if a["id"] != acc["id"]], user=current_user(),
                            page_url=f"{request.host_url.rstrip('/')}/{acc.get('username', '')}", **extra)

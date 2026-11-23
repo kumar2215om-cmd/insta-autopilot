@@ -46,14 +46,18 @@
 {% block scripts %}
 <script>
 let apps = {};
+function menu() {  // show or hide the app's link in the sidebar (core sections are always shown)
+  for (const [k, v] of Object.entries(apps)) { const l = document.querySelector(`nav [data-nav="${CSS.escape(k)}"]`); if (l) l.hidden = !v; }
+}
 function draw() { document.querySelectorAll("[data-app]").forEach(b => b.setAttribute("aria-checked", String(!!apps[b.dataset.app]))); }
 document.addEventListener("click", async (e) => {
   const b = e.target.closest("[data-app]");
   if (!b) return;
-  apps[b.dataset.app] = !apps[b.dataset.app];
-  draw();
-  apps = await api("/api/apps", {method: "PUT", body: JSON.stringify(apps)});
-  toast("Saved. Reload to update the menu.");
+  const key = b.dataset.app, before = {...apps};
+  apps[key] = !apps[key];
+  draw(); menu();  // the switch and the sidebar change at once; the save happens in the background
+  try { apps = await api("/api/apps", {method: "PUT", body: JSON.stringify(apps)}); draw(); menu(); }
+  catch (err) { apps = before; draw(); menu(); toast(err.message || "Couldn't save. Try again."); }
 });
 (async () => { loadBanners(); apps = await api("/api/apps"); draw(); })();
 </script>

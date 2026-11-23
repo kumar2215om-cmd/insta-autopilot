@@ -852,7 +852,11 @@ class SaasTest(unittest.TestCase):
         self.assertIn("fan,", self.c.get("/api/contacts.csv").get_data(as_text=True))
         # apps switch sections off
         self.c.put("/api/apps", json={"contacts": False})
-        self.assertNotIn('href="/app/contacts"', self.c.get("/app").get_data(as_text=True))
+        page = self.c.get("/app").get_data(as_text=True)
+        self.assertRegex(page, r'href="/app/leads" data-nav="contacts" hidden')  # hidden, so the Apps page can show it again without a reload
+        self.c.put("/api/apps", json={"contacts": True})
+        self.assertRegex(self.c.get("/app").get_data(as_text=True), r'href="/app/leads" data-nav="contacts"\s+(aria-current|>)')
+        self.assertNotIn("Reload to update the menu", self.c.get("/app/apps").get_data(as_text=True))
 
     def test_ai_agent_replies_and_hands_over(self):
         self.login()
