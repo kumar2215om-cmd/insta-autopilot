@@ -35,6 +35,28 @@
   .up { color:#16A34A; } .down { color:#E5484D; }
   .an2 { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
   .toplist { display:grid; gap:8px; } .toplist .r { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:4px 10px; font-size:14px; }
+  .fbtools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .gbox { border:1px solid var(--line); border-radius:14px; background:#fff; padding:10px 12px; }
+  .gbox > summary { cursor:pointer; font-weight:700; display:flex; flex-wrap:wrap; align-items:center; gap:8px; list-style:none; }
+  .gbox > summary::-webkit-details-marker { display:none; }
+  .gbox > summary::before { content:"▸"; color:var(--mute); }
+  .gbox[open] > summary::before { content:"▾"; }
+  .gbox .live { font:600 12px var(--text); background:#E8F7EE; color:#16A34A; border-radius:99px; padding:2px 9px; text-decoration:none; }
+  .gtools { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 8px; }
+  .gtools button { border:1px solid var(--line); background:#FAFAF8; border-radius:10px; padding:6px 10px; font:600 13px var(--text); cursor:pointer; }
+  .gtools button:hover { border-color:#2E3BFF; }
+  .gtools .gprev { margin-left:auto; background:#2E3BFF; color:#fff; border-color:#2E3BFF; }
+  .gbox textarea { width:100%; min-height:260px; font:13.5px/1.55 var(--mono); }
+  .ghelp { font-size:12px; color:var(--mute); margin:6px 0 0; line-height:1.7; }
+  .ghelp code { font-size:11.5px; }
+  .savebar { position:sticky; bottom:12px; z-index:20; display:flex; align-items:center; gap:12px; margin-top:20px; background:#111318; color:#fff;
+             border-radius:16px; padding:10px 12px 10px 18px; box-shadow:0 14px 30px rgba(17,19,24,.25); }
+  .savebar span { font-size:14px; color:#C9C7D1; } .savebar span.dirty { color:#D4FF3A; font-weight:700; }
+  .savebar .btn { margin-left:auto; }
+  #gDlg { width:min(460px, 96vw); height:min(820px, 92vh); padding:0; border:0; border-radius:22px; overflow:hidden; }
+  #gDlg iframe { width:100%; height:calc(100% - 46px); border:0; display:block; background:#F5F4EF; }
+  #gDlg .gh { display:flex; align-items:center; gap:8px; height:46px; padding:0 12px 0 16px; border-bottom:1px solid var(--line); font-weight:700; }
+  #gDlg .gh button { margin-left:auto; border:0; background:none; font-size:20px; cursor:pointer; }
   .toplist .r i { grid-column:1 / -1; display:block; height:6px; border-radius:99px; background:#2E3BFF; opacity:.8; }
   .bars svg { width:100%; height:180px; display:block; }
   .legend { display:flex; gap:14px; font-size:12.5px; color:var(--mute); } .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; background:var(--c); }
@@ -145,6 +167,10 @@
   <div><div class="phone"><iframe id="preview" title="Preview of your link page" src="{{ page_url }}"></iframe></div>
     <p class="muted small" style="text-align:center">Preview updates when you save.</p></div>
 </div>
+<div class="savebar" id="saveBar"><span id="saveState">Changes are saved when you press Save</span><button class="btn" type="button" id="saveB">Save page</button></div>
+<input type="file" id="gFile" accept=".pdf,.txt,.md" hidden><input type="file" id="gImg" accept="image/*" hidden>
+<dialog id="gDlg" aria-label="Guide preview"><div class="gh">👀 Guide preview <span class="muted small">not saved yet</span><button type="button" id="gClose" aria-label="Close">×</button></div>
+  <iframe id="gFrame" title="Guide preview"></iframe></dialog>
 {% endblock %}
 {% block scripts %}
 <script>
@@ -187,7 +213,110 @@ function fbCard(f, i) {
     <div class="two"><div><label class="f" for="fp${i}">Topic <span class="hint">optional, for the filter chips</span></label><input id="fp${i}" type="text" data-fk="topic" value="${esc(f.topic || "")}" maxlength="30" placeholder="AI video"></div>
       <div><label class="f" for="fu${i}">Link</label><input id="fu${i}" type="url" data-fk="u" value="${esc(f.u || "")}" placeholder="https://">
         ${FILES.length ? `<select data-fpick aria-label="Use one of my files" style="margin-top:6px"><option value="">📁 Use one of my files…</option>${FILES.map(x => `<option value="${esc(location.origin + x.url)}">${esc(x.name)}</option>`).join("")}</select>` : ""}</div></div>
+    ${guideBox(f)}
   </div>`;
+}
+/* ---------- freebie guides: write the guide here, upload a PDF/TXT, preview; live at /<you>/free/g/KEYWORD ---------- */
+const G = new WeakMap();  // freebie → {md, saved, kw0, loaded, open}
+const DEL_GUIDES = new Set();  // keywords whose guide goes away on the next save
+const KW = (k) => String(k || "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 24);
+const guideUrl = (k) => $("pageUrl").value.replace(/\/$/, "") + "/free/g/" + KW(k);
+function gstate(f) { if (!G.has(f)) G.set(f, {md: "", saved: "", kw0: KW(f.k), loaded: false, open: false}); return G.get(f); }
+function guideBox(f) {
+  const g = gstate(f), live = KW(f.k) && (g.saved || (f.u || "").includes("/free/g/" + KW(f.k)));
+  return `<div class="fbtools"><button class="btn ghost sm" type="button" data-gup>⬆ Upload file</button>
+      <span class="hint">PDF / TXT / MD → the text lands in the guide box below</span></div>
+    <details class="gbox" data-gbox ${g.open ? "open" : ""}><summary>📝 Write the guide here <span class="hint" style="font-weight:500">(no Notion needed)</span>
+      ${live ? `<a class="live" href="${esc(guideUrl(f.k))}" target="_blank" rel="noopener">live at /free/g/${esc(KW(f.k))}</a>` : ""}</summary>
+      <div class="gtools">${[["section", "＋ Section"], ["tip", "💡 Tip"], ["warn", "⚠️ Warning"], ["prompt", "💗 Prompt box"], ["code", "⌨ Code box"],
+          ["steps", "1. Steps"], ["table", "▦ Table"], ["image", "🖼 Image"]].map(([k, l]) => `<button type="button" data-ins="${k}">${l}</button>`).join("")}
+        <button type="button" class="gprev" data-gprev>👀 Preview</button></div>
+      <textarea data-gmd aria-label="Guide text" placeholder="${g.loaded || !f.k ? "# Title of your guide\nOne-line intro.\n\n## First section\nWrite here…" : "Loading…"}">${esc(g.md)}</textarea>
+      <p class="ghelp"><code># Title</code> first line · <code>## Heading</code> = new card · <code>&gt; 💡 text</code> = tip · <code>&gt; ⚠️ text</code> = warning ·
+        <code>\`\`\`prompt</code> = pink copy box · <code>\`\`\`terminal</code> = code box · <code>**bold**</code> · <code>[text](https://link)</code> ·
+        <code>| a | b |</code> = table. Press <b>Save page</b> and the guide goes live; this freebie's link becomes <b>/free/g/KEYWORD</b>.</p>
+    </details>`;
+}
+async function loadGuide(f, box) {
+  const g = gstate(f);
+  if (g.loaded || !KW(f.k)) { g.loaded = true; return; }
+  try { const r = await api("/api/guides/" + encodeURIComponent(KW(f.k))); g.md = g.md || r.md; g.saved = r.md; g.kw0 = KW(f.k); }
+  catch (err) { toast(err.message); }
+  g.loaded = true;
+  const ta = box && box.querySelector("[data-gmd]"); if (ta) { ta.value = g.md; ta.placeholder = "# Title of your guide"; }
+}
+const SNIP = {section: "\n## New section\nWrite here.\n", tip: "\n> 💡 Tip text\n", warn: "\n> ⚠️ Warning text\n",
+  prompt: "\n```prompt\nYour prompt here\n```\n", code: "\n```terminal\nyour command\n```\n", steps: "\n1. First step\n2. Second step\n3. Third step\n",
+  table: "\n| Column | Column |\n|---|---|\n| Cell | Cell |\n"};
+function insertAt(ta, text) {
+  const a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a;
+  ta.value = ta.value.slice(0, a) + text + ta.value.slice(b); ta.focus(); ta.selectionStart = ta.selectionEnd = a + text.length;
+  ta.dispatchEvent(new Event("input", {bubbles: true}));
+}
+let gTarget = null;  // the freebie card an upload is for
+$("fbs").addEventListener("toggle", (e) => {
+  const box = e.target.closest && e.target.closest("[data-gbox]"); if (!box) return;
+  const f = page.freebies[+box.closest(".fbit").dataset.f], g = gstate(f); g.open = box.open;
+  if (box.open) loadGuide(f, box);
+}, true);
+$("fbs").addEventListener("click", async (e) => {
+  const c = e.target.closest(".fbit"); if (!c) return;
+  const f = page.freebies[+c.dataset.f], ta = c.querySelector("[data-gmd]");
+  const ins = e.target.closest("[data-ins]");
+  if (ins) {
+    if (ins.dataset.ins === "image") { gTarget = {f, ta}; return $("gImg").click(); }
+    return insertAt(ta, SNIP[ins.dataset.ins]);
+  }
+  if (e.target.closest("[data-gup]")) { gTarget = {f, ta}; return $("gFile").click(); }
+  if (e.target.closest("[data-gprev]")) {
+    try {
+      const r = await fetch("/api/guides/preview", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({md: ta.value, kw: f.k})});
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Preview failed");
+      $("gFrame").srcdoc = await r.text(); $("gDlg").showModal();
+    } catch (err) { toast(err.message); }
+  }
+});
+$("gClose").onclick = () => $("gDlg").close();
+$("gDlg").addEventListener("click", (e) => { if (e.target === $("gDlg")) $("gDlg").close(); });
+async function upload(url, file) {
+  const fd = new FormData(); fd.append("file", file);
+  const r = await fetch(url, {method: "POST", headers: {"X-Upload": "1"}, body: fd});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "Upload failed");
+  return j;
+}
+$("gFile").onchange = async () => {
+  const file = $("gFile").files[0]; $("gFile").value = ""; if (!file || !gTarget) return;
+  try {
+    toast("Reading the file…");
+    const {md} = await upload("/api/guides/import", file), {f} = gTarget, g = gstate(f);
+    g.md = md; g.loaded = true; g.open = true; markDirty();
+    if (!f.t) { const t = (md.match(/^#\s+(.+)$/m) || [])[1]; if (t) f.t = t.slice(0, 100); }
+    drawFbs(); toast("Guide text added. Check it, then Save page.");
+  } catch (err) { toast(err.message); }
+};
+$("gImg").onchange = async () => {
+  const file = $("gImg").files[0]; $("gImg").value = ""; if (!file || !gTarget) return;
+  try {
+    toast("Uploading the image…");
+    const {file: up} = await upload("/api/files", file);
+    insertAt(gTarget.ta, `\n![${file.name.replace(/\.[a-z0-9]+$/i, "")}](${up.url})\n`); FILES.unshift(up);
+  } catch (err) { toast(err.message); }
+};
+async function saveGuides() {
+  for (const k of DEL_GUIDES) await api("/api/guides/" + encodeURIComponent(k), {method: "DELETE"}).catch(() => {});
+  DEL_GUIDES.clear();
+  for (const f of page.freebies) {
+    const g = G.get(f), k = KW(f.k);
+    if (!g || !g.loaded || !k) continue;
+    if (g.md.trim() !== g.saved.trim() || (g.kw0 && g.kw0 !== k && g.md.trim())) {
+      await api("/api/guides/" + encodeURIComponent(k), {method: "PUT", body: JSON.stringify({md: g.md})});
+      if (g.kw0 && g.kw0 !== k) await api("/api/guides/" + encodeURIComponent(g.kw0), {method: "DELETE"}).catch(() => {});
+      g.saved = g.md; g.kw0 = k;
+    }
+    // the freebie opens its guide when it has one and no other link (or still points at the old keyword's guide)
+    if (g.md.trim() && (!(f.u || "").trim() || /\/free\/g\/[A-Z0-9]*$/.test(f.u || ""))) f.u = guideUrl(k);
+  }
 }
 function drawFbs() {
   page.freebies = page.freebies || [];
@@ -196,6 +325,7 @@ function drawFbs() {
   $("fbOpen").href = $("pageUrl").value + "/free";
 }
 $("fbs").addEventListener("input", (e) => {
+  if (e.target.dataset.gmd !== undefined) { const g = gstate(page.freebies[+e.target.closest(".fbit").dataset.f]); g.md = e.target.value; g.loaded = true; }
   const c = e.target.closest(".fbit"), k = e.target.dataset.fk;
   if (c && k) page.freebies[+c.dataset.f][k] = e.target.type === "checkbox" ? e.target.checked : e.target.value;
 });
@@ -209,7 +339,11 @@ $("fbs").addEventListener("change", (e) => {
 });
 $("fbs").addEventListener("click", (e) => {
   const c = e.target.closest(".fbit");
-  if (c && e.target.closest("[data-fdel]")) { page.freebies.splice(+c.dataset.f, 1); drawFbs(); }
+  if (c && e.target.closest("[data-fdel]")) {
+    const f = page.freebies[+c.dataset.f], g = G.get(f);
+    if (g && g.saved && g.kw0) DEL_GUIDES.add(g.kw0);
+    page.freebies.splice(+c.dataset.f, 1); drawFbs();
+  }
 });
 $("fbAdd").onclick = () => { const f = {k: "", t: "", topic: "", u: "", enabled: true}; OPEN.add(f); page.freebies.unshift(f); drawFbs(); $("fk0").focus(); };
 $("fbImport").onclick = async () => {
@@ -281,14 +415,24 @@ document.addEventListener("click", (e) => {
   const mv = e.target.closest("[data-move]");
   if (mv) { collect(); const j = i + +mv.dataset.move; if (j >= 0 && j < page.items.length) { [page.items[i], page.items[j]] = [page.items[j], page.items[i]]; draw(); } }
 });
+function markDirty() { $("saveState").textContent = "You have unsaved changes"; $("saveState").className = "dirty"; }
+$("tab-page").addEventListener("input", markDirty);
+$("saveB").onclick = () => $("save").click();
 $("save").onclick = async () => {
   collect();
   const skipped = page.items.filter(it => !it.title.trim() || !/^(https?:|mailto:|tel:)/.test(it.url.trim())).length;
+  $("save").disabled = $("saveB").disabled = true;
   try {
+    await saveGuides();
+    const keep = page.freebies.map(f => G.get(f));  // guide state survives the round trip (matched by keyword)
+    const byKw = new Map(page.freebies.map((f, i) => [KW(f.k), keep[i]]));
     page = (await api("/api/page", {method: "PUT", body: JSON.stringify(page)})).page;
+    (page.freebies || []).forEach(f => { const g = byKw.get(KW(f.k)); if (g) G.set(f, g); });
     draw(); $("preview").src = $("pageUrl").value + "?t=" + Date.now();
+    $("saveState").textContent = "All changes saved"; $("saveState").className = "";
     toast(skipped ? `Saved. ${skipped} item(s) without a title or link were left out.` : "Page saved");
   } catch (err) { toast(err.message); }
+  $("save").disabled = $("saveB").disabled = false;
 };
 // ---------- tabs: Page / Analytics / Settings ----------
 let tab = "page", AN = null, loc = "countries";
@@ -297,7 +441,7 @@ const SRC = {instagram: "Instagram", whatsapp: "WhatsApp", facebook: "Facebook",
 function showTab() {
   document.querySelectorAll("[data-ltab]").forEach(b => b.setAttribute("aria-selected", b.dataset.ltab === tab));
   $("tab-page").hidden = tab !== "page"; $("tab-an").hidden = tab !== "an"; $("tab-set").hidden = tab !== "set";
-  $("save").hidden = tab !== "page";
+  $("save").hidden = tab !== "page"; $("saveBar").hidden = tab !== "page";
   if (tab === "an") loadAn(); if (tab === "set") drawSet();
 }
 function toplist(rows, label) {

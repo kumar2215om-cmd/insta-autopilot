@@ -1662,6 +1662,38 @@ class SaasTest(unittest.TestCase):
                 self.assertTrue(alt, path)  # every screenshot describes itself
                 self.assertEqual(c.get(src).status_code, 200, src)
 
+    def test_freebie_guides_written_in_the_editor(self):
+        self.login()
+        md = ("# DOC: Map documentaries\nOne topic in.\n\n## Setup\n> 💡 a tip\n> ⚠️ careful\n```prompt\nmake a map\n```\n"
+              "```terminal\nnpm i\n```\n| A | B |\n|---|---|\n| 1 | 2 |\n![Map](https://x.com/a.png)\n1. one\n2. two\n"
+              "<script>alert(1)</script> ![x](javascript:alert(1))")
+        self.assertEqual(self.c.put("/api/guides/doc-1", json={"md": md}).get_json()["url"], "/creator/free/g/DOC1")
+        self.assertIn("make a map", self.c.get("/api/guides/DOC1").get_json()["md"])
+        self.c.put("/api/page", json={"freebies": [{"k": "DOC1", "t": "Map guide", "u": "https://replyinbox.in/creator/free/g/DOC1"}]})
+        live = self.c.get("/creator/free/g/doc1")
+        self.assertEqual(live.status_code, 200)
+        html = live.get_data(as_text=True)
+        for x in ('class="tip warn"', 'class="code prompt"', "<th>A</th>", 'src="https://x.com/a.png"', "<ol"):
+            self.assertIn(x, html)
+        self.assertNotIn("<script>alert(1)</script>", html)  # guide text is escaped
+        self.assertNotIn('src="javascript:', html)
+        # preview renders without saving; import turns a TXT into guide text
+        prev = self.c.post("/api/guides/preview", json={"md": "# Hi there\n\n## One\ntext", "kw": "X"})
+        self.assertIn("Hi there", prev.get_data(as_text=True))
+        imp = self.c.post("/api/guides/import", data={"file": (io.BytesIO(b"MY TITLE\n\nIntro.\n\nSTEP ONE\nDo it."), "g.txt")},
+                          headers={"X-Upload": "1"}, content_type="multipart/form-data").get_json()
+        self.assertIn("## STEP ONE", imp["md"])
+        self.assertEqual(self.c.post("/api/guides/import", data={"file": (io.BytesIO(b"x"), "g.exe")}, headers={"X-Upload": "1"},
+                                     content_type="multipart/form-data").status_code, 400)
+        # empty text removes the guide; a guide that doesn't exist is a 404
+        self.c.put("/api/guides/DOC1", json={"md": ""})
+        self.assertEqual(self.c.get("/creator/free/g/DOC1").status_code, 404)
+        self.assertEqual(self.c.put("/api/guides/---", json={"md": "x"}).status_code, 400)
+        # the link editor has the guide box and the bottom save bar
+        ed = self.c.get("/app/links").get_data(as_text=True)
+        self.assertIn('id="saveBar"', ed)
+        self.assertIn("Write the guide here", ed)
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",

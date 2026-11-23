@@ -91,9 +91,23 @@ def inline(t):
     return t
 
 
-def copy_box(text, label="Copy"):
-    return (f'<div class="code prompt"><button class="cp" type="button" onclick="cp(this)">copy</button>'
+def copy_box(text, label="Copy", prompt=True):
+    """A copyable box: light "prompt" style for prompts, dark terminal style for code."""
+    return (f'<div class="code{" prompt" if prompt else ""}"><button class="cp" type="button" onclick="cp(this)">copy</button>'
             f'<div class="lbl">{e(label)}</div><pre>{e(text)}</pre></div>')
+
+
+IMAGE = re.compile(r"^!\[([^\]]*)\]\(((?:https?://|/)[^)\s]+)\)$")
+
+
+def table_html(rows):
+    cells = [[c.strip() for c in r.strip().strip("|").split("|")] for r in rows]
+    cells = [r for r in cells if not all(re.fullmatch(r":?-{2,}:?", c) for c in r)]  # drop the |---|---| line
+    if not cells:
+        return ""
+    head, body = cells[0], cells[1:]
+    return ('<div class="tbl"><table><thead><tr>' + "".join(f"<th>{inline(c)}</th>" for c in head) + "</tr></thead><tbody>"
+            + "".join("<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r) + "</tr>" for r in body) + "</tbody></table></div>")
 
 
 def blocks_html(md, prompts=False):
@@ -108,7 +122,10 @@ def blocks_html(md, prompts=False):
             j = i + 1
             while j < len(lines) and not lines[j].strip().startswith("```"):
                 j += 1
-            out.append(copy_box("\n".join(lines[i + 1:j]), s.strip("`") or "Copy"))
+            label = s.strip("`").strip()
+            kind = label.lower()
+            out.append(copy_box("\n".join(lines[i + 1:j]), {"prompt": "Prompt · copy karo", "terminal": "Terminal", "": "Copy"}.get(kind, label),
+                                prompt=kind not in ("terminal", "code", "bash", "sh", "shell")))
             i = j + 1
             continue
         if s.startswith(("- ", "* ")):
@@ -126,12 +143,29 @@ def blocks_html(md, prompts=False):
             out.append('<ol class="num">' + "".join(f"<li>{inline(x)}</li>" for x in items) + "</ol>")
             continue
         if s.startswith(">"):
-            out.append(f'<div class="tip">💡 {inline(s.lstrip("> "))}</div>')
+            body = s.lstrip("> ").strip()
+            if body.startswith(("⚠️", "⚠")):
+                out.append(f'<div class="tip warn">⚠️ {inline(body.lstrip("⚠️ ").strip())}</div>')
+            else:
+                out.append(f'<div class="tip">💡 {inline(body.lstrip("💡 ").strip())}</div>')
+            i += 1
+            continue
+        if s.startswith("|"):
+            rows = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                rows.append(lines[i])
+                i += 1
+            out.append(table_html(rows))
+            continue
+        m = IMAGE.match(s)
+        if m:
+            out.append(f'<figure class="img"><img src="{e(m.group(2))}" alt="{e(m.group(1))}" loading="lazy">'
+                       + (f"<figcaption>{e(m.group(1))}</figcaption>" if m.group(1) else "") + "</figure>")
             i += 1
             continue
         para = []
-        while i < len(lines) and lines[i].strip() and not lines[i].strip().startswith(("```", "- ", "* ", ">")) \
-                and not NUMBERED.match(lines[i].strip()):
+        while i < len(lines) and lines[i].strip() and not lines[i].strip().startswith(("```", "- ", "* ", ">", "|")) \
+                and not NUMBERED.match(lines[i].strip()) and not IMAGE.match(lines[i].strip()):
             para.append(lines[i].strip())
             i += 1
         out.append(copy_box("\n".join(para), "Prompt · copy karo") if prompts else f"<p>{inline(' '.join(para))}</p>")
@@ -198,10 +232,14 @@ THEMES = ("studio", "sunset", "midnight", "ocean", "candy", "mono")
 
 def render(text, filename, acc, page, raw_url, brand="ReplyInbox"):
     """A text file → full guide page HTML."""
-    username = acc.get("username", "")
-    md = text_to_md(text)
     base = re.sub(r"[-_]+", " ", filename.rsplit(".", 1)[0]).strip()
-    title, intro, sections = parse(md, base or "Guide")
+    return page_html(text_to_md(text), base or "Guide", acc, page, raw_url, brand)
+
+
+def page_html(md, fallback_title, acc, page, raw_url=None, brand="ReplyInbox"):
+    """Guide Markdown (written in the link editor, or converted from a file) → full guide page HTML."""
+    username = acc.get("username", "")
+    title, intro, sections = parse(md, fallback_title)
     t1, t2 = split_title(title)
     theme = (page or {}).get("theme")
     theme = {"violet": "studio", "mint": "ocean"}.get(theme, theme)
@@ -234,16 +272,47 @@ code{{font:500 .9em 'JetBrains Mono',monospace;background:#F6F2EC;border-radius:
 .code .lbl{{font:800 10px Inter;letter-spacing:1px;text-transform:uppercase;color:#B5A893}}.cp{{position:absolute;right:10px;top:10px;border:0;background:var(--rose);color:#fff;font:800 11px Inter;border-radius:8px;padding:4px 10px;cursor:pointer}}
 .prompt{{background:#E6E5DE;border:2px solid #111318}}.prompt pre{{color:var(--ink);padding-right:56px}}.prompt .lbl{{color:var(--rose)}}
 .tip{{border-radius:12px;padding:10px 13px;margin:12px 0;font-weight:600;font-size:14px;background:#EAF6FB;border-left:4px solid var(--cer)}}
+.tip.warn{{background:#FFF1EC;border-left-color:#E5484D}}
+.tbl{{overflow-x:auto;margin:12px 0}}.tbl table{{border-collapse:collapse;width:100%;font-size:14px}}.tbl th,.tbl td{{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}}.tbl th{{background:#F6F2EC;font-weight:800}}
+figure.img{{margin:14px 0}}figure.img img{{max-width:100%;border-radius:14px;display:block}}figure.img figcaption{{font-size:12.5px;color:var(--mute);margin-top:6px}}
 ol.num{{padding-left:20px}}ol.num li,ul li{{margin:5px 0}}
 .end{{text-align:center;background:var(--ink);color:#fff;border-radius:20px;padding:20px;margin-top:20px}}.end a{{display:inline-block;margin-top:10px;background:var(--rose);color:#fff;text-decoration:none;font-weight:900;border-radius:12px;padding:10px 18px}}
 .dl{{display:block;text-align:center;font-size:13px;font-weight:700;margin-top:14px;color:var(--mute)}}
 .made{{text-align:center;font-size:12px;color:var(--mute);margin-top:18px}}.made a{{color:inherit;font-weight:800}}
-</style><link rel="stylesheet" href="/static/guide-theme.css"></head><body class="t-{theme}">{bar}<main>
+</style><link rel="stylesheet" href="/static/guide-theme.css">
+<style>body[class^="t-"] .tip.warn{{border-left-color:#E5484D;background:color-mix(in srgb,#E5484D 9%,var(--card,#fff))}}body.t-studio .tip.warn{{border-left:6px solid #E5484D;background:#FFF4F1}}</style></head><body class="t-{theme}">{bar}<main>
 <a class="back" href="/{e(username)}">← More from @{e(username)}</a>
 <div class="top" style="margin-top:12px">{avatar}<b>@{e(username)}</b><span class="pill">free guide</span></div>
 <h1>{e(t1)} <span>{e(t2)}</span></h1>{f'<p class="intro">{inline(intro)}</p>' if intro else ""}
 <div class="nav">{nav}</div>{"".join(secs)}
 <div class="end"><b style="font-size:18px">Found this useful? 🙌</b><br>Follow for more free guides<br><a href="https://www.instagram.com/{e(username)}/" target="_blank" rel="noopener">Follow @{e(username)}</a></div>
-<a class="dl" href="{e(raw_url)}" download>Download the text file</a>
+{f'<a class="dl" href="{e(raw_url)}" download>Download the text file</a>' if raw_url else ""}
 <p class="made">Made with <a href="/">{e(brand)}</a></p>
 </main><script>function cp(b){{const t=b.parentElement.querySelector('pre').innerText;navigator.clipboard.writeText(t).then(()=>{{b.textContent='copied ✓';setTimeout(()=>b.textContent='copy',1500)}})}}</script></body></html>'''
+
+
+# ---------- freebie guides written in the link editor (stored per keyword) ----------
+
+MAX_MD = 60000
+
+
+def pdf_text(data):
+    from pypdf import PdfReader
+    import io
+    reader = PdfReader(io.BytesIO(data))
+    return "\n\n".join((p.extract_text() or "") for p in reader.pages[:80])
+
+
+def import_file(name, data):
+    """An uploaded .txt / .md / .pdf → guide Markdown for the editor box."""
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    if ext == "pdf":
+        text = pdf_text(data)
+    elif ext in GUIDE_EXTS:
+        text = data.decode("utf-8", errors="replace")
+    else:
+        raise ValueError("Upload a PDF, TXT or MD file.")
+    if not text.strip():
+        raise ValueError("No text found in that file (scanned PDFs have no text).")
+    md = text if ext == "md" else text_to_md(text)
+    return md[:MAX_MD]

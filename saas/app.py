@@ -304,7 +304,7 @@ def guard():
         if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
             return jsonify(error="Please log in again."), 401
         # file uploads are multipart; a custom header still can't be sent cross-site without CORS
-        upload = (request.path in ("/api/files", "/api/shop/upload", "/api/courses/upload") or request.path.startswith("/api/courses/video/")) \
+        upload = (request.path in ("/api/files", "/api/shop/upload", "/api/courses/upload", "/api/guides/import") or request.path.startswith("/api/courses/video/")) \
             and request.headers.get("X-Upload") == "1"
         if request.method in ("POST", "PUT", "DELETE") and not request.is_json and not upload:
             return jsonify(error="JSON required"), 415
@@ -4309,6 +4309,87 @@ def bio_freebies(username):
     page = {**page, "theme": theme_of(page)}
     return render_template("free.html", acc=public_account(acc), page=page, freebies=freebies, topics=topics,
                            socials_map=page.get("socials") or {})
+
+
+# ---------- freebie guides: written in the link editor, live at /<username>/free/g/<KEYWORD> ----------
+
+def guide_kw(kw):
+    return re.sub(r"[^A-Za-z0-9]", "", str(kw or "")).upper()[:24]
+
+
+def guide_key(acc_id, kw):
+    return store.account_key(acc_id, f"guide:{kw}")
+
+
+@app.get("/api/guides/<kw>")
+def api_guide_get(kw):
+    acc, kw = current_account(), guide_kw(kw)
+    g = store.get_json(guide_key(acc["id"], kw)) or {}
+    return jsonify(kw=kw, md=g.get("md", ""), url=f"/{acc.get('username', '')}/free/g/{kw}" if g.get("md") else "")
+
+
+@app.put("/api/guides/<kw>")
+def api_guide_put(kw):
+    acc, kw = current_account(), guide_kw(kw)
+    if acc.get("demo"):
+        return jsonify(error="Not available in the demo."), 403
+    if not kw:
+        return jsonify(error="Give the freebie a keyword first."), 400
+    md = str((request.get_json(force=True) or {}).get("md", ""))[:guides.MAX_MD].strip()
+    if not md:
+        store.redis("DEL", guide_key(acc["id"], kw))
+        return jsonify(kw=kw, url="")
+    store.set_json(guide_key(acc["id"], kw), {"md": md, "updated": int(time.time())})
+    return jsonify(kw=kw, url=f"/{acc.get('username', '')}/free/g/{kw}")
+
+
+@app.delete("/api/guides/<kw>")
+def api_guide_delete(kw):
+    acc = current_account()
+    store.redis("DEL", guide_key(acc["id"], guide_kw(kw)))
+    return jsonify(ok=True)
+
+
+@app.post("/api/guides/preview")
+def api_guide_preview():
+    """The guide as it will look, from the text in the editor (nothing is saved)."""
+    acc = current_account()
+    data = request.get_json(force=True) or {}
+    md = str(data.get("md", ""))[:guides.MAX_MD]
+    html = guides.page_html(md or "# Your guide\n\nWrite something in the box to see it here.", guide_kw(data.get("kw")) or "Guide",
+                            acc, store.load_page(acc["id"]) or {}, None, BRAND)
+    return Response(html, mimetype="text/html")
+
+
+@app.post("/api/guides/import")
+def api_guide_import():
+    """An uploaded PDF / TXT / MD → guide text for the editor box (the file itself isn't kept)."""
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify(error="No file chosen."), 400
+    data = f.read(4_500_001)
+    if len(data) > 4_500_000:
+        return jsonify(error="That file is over 4.5 MB."), 400
+    try:
+        return jsonify(md=guides.import_file(f.filename, data))
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    except Exception as err:  # a damaged PDF
+        print(f"guide import failed: {err}")
+        return jsonify(error="Couldn't read that file. Try a TXT version."), 400
+
+
+@app.get("/<username>/free/g/<kw>")
+def bio_freebie_guide(username, kw):
+    acc, page = public_page(username)
+    kw = guide_kw(kw)
+    g = store.get_json(guide_key(acc["id"], kw)) or {}
+    if not g.get("md"):
+        abort(404)
+    fb = next((f for f in page.get("freebies", []) if f.get("k") == kw), None)
+    if fb and not fb.get("enabled", True):
+        abort(404)
+    return Response(guides.page_html(g["md"], (fb or {}).get("t") or kw, acc, page, None, BRAND), mimetype="text/html")
 
 
 @app.get("/<username>/free/<fid>")
