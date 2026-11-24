@@ -21,7 +21,7 @@
 <meta name="twitter:title" content="{{ brand }}: every comment, a customer">
 <meta name="twitter:description" content="Instagram DM automation for creators: comment-to-DM, follow to unlock, lead capture and an AI that replies in any language.">
 <meta name="twitter:image" content="{{ request.host_url.rstrip('/') }}/static/og.png">
-<link rel="icon" href="{{ logo.favicon }}">
+{{ logo.icon_links() }}
 {% for block in schema %}<script type="application/ld+json">{{ block|tojson }}</script>
 {% endfor %}
 <link rel="preconnect" href="https://fonts.googleapis.com">

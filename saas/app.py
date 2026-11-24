@@ -672,6 +672,17 @@ def glossary_page():
     return content_page(page, "/glossary", [("Glossary", None)])
 
 
+@app.get("/favicon.ico")
+def favicon():
+    """Google and browsers ask for /favicon.ico at the root; it's the ReplyInbox app icon (16, 32 and 48 px)."""
+    return app.send_static_file("favicon.ico"), 200, {"Cache-Control": "public, max-age=604800"}
+
+
+@app.get("/apple-touch-icon.png")
+def apple_touch_icon():
+    return app.send_static_file("apple-touch-icon.png"), 200, {"Cache-Control": "public, max-age=604800"}
+
+
 @app.get("/robots.txt")
 def robots_txt():
     lines = ["# Search engines and AI assistants are welcome on the public pages.", "User-agent: *", "Allow: /"]

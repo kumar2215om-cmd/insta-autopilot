@@ -1711,6 +1711,20 @@ class SaasTest(unittest.TestCase):
         self.assertEqual((reels["kw:OLD"]["created"], reels["kw:NEW"]["created"]), (1000, 2000))
         self.assertIn("ageOf(b) - ageOf(a)", self.c.get("/app/automations").get_data(as_text=True))  # newest first
 
+    def test_favicon_is_a_real_file_google_can_fetch(self):
+        c = saas.app.test_client()
+        r = c.get("/favicon.ico")
+        self.assertEqual((r.status_code, r.mimetype), (200, "image/vnd.microsoft.icon"))
+        r.close()
+        for path in ("/", "/pricing", "/guides/instagram-auto-dm-kya-hai", "/signin"):
+            page = c.get(path).get_data(as_text=True)
+            self.assertIn('<link rel="icon" href="/favicon.ico" sizes="48x48">', page, path)
+            self.assertNotIn('rel="icon" href="data:image/svg', page, path)
+        for f in ("favicon-96.png", "favicon-144.png", "icon-192.png"):
+            r = c.get("/static/" + f)
+            self.assertEqual(r.status_code, 200, f)
+            r.close()
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",
