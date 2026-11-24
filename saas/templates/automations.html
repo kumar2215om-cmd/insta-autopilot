@@ -319,6 +319,18 @@ function rowHtml(key) {
     <button class="dots" type="button" data-menu="${esc(key)}" aria-label="More actions" aria-haspopup="true">⋮</button>
   </div>`;
 }
+/* newest automation first: when it was made; for older ones (made before that was saved) the post's publish date */
+function ageOf(k) {
+  const r = rules.reels[k] || {};
+  if (r.created) return r.created;
+  const m = mediaById(k), t = m && m.timestamp ? Date.parse(String(m.timestamp).replace(/([+-]\d\d)(\d\d)$/, "$1:$2")) : NaN;
+  return isNaN(t) ? 0 : t / 1000;
+}
+function idOrder(a, b) {  // Instagram post IDs grow over time: a bigger ID is a newer post
+  const na = /^\d+$/.test(a), nb = /^\d+$/.test(b);
+  if (na && nb) return a.length - b.length || (a > b ? 1 : a < b ? -1 : 0);
+  return na - nb;
+}
 function drawList() {
   const q = $("q").value.trim().toLowerCase(), f = $("fType").value;
   const keys = Object.keys(rules.reels).filter(k => {
@@ -327,7 +339,7 @@ function drawList() {
     if (f === "post" && t.trigger !== "comment") return false; if (f === "dm" && t.trigger !== "dm") return false;
     if (f === "story" && !["story", "mention", "live"].includes(t.trigger)) return false;
     return !q || [r.label, r.opening_dm, r.dm, ...(r.keywords || []), mediaById(k)?.caption].join(" ").toLowerCase().includes(q);
-  }).sort((a, b) => (stats[b]?.runs || 0) - (stats[a]?.runs || 0));
+  }).sort((a, b) => ageOf(b) - ageOf(a) || idOrder(b, a));
   $("tabList").textContent = `Automations (${Object.keys(rules.reels).length})`;
   $("list").innerHTML = keys.map(rowHtml).join("") || (Object.keys(rules.reels).length
     ? `<div class="card empty">No automations match.</div>`

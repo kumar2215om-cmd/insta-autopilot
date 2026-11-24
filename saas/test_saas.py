@@ -1698,6 +1698,19 @@ class SaasTest(unittest.TestCase):
         self.assertIn('id="saveBar"', ed)
         self.assertIn("Write the guide here", ed)
 
+    def test_automations_remember_when_they_were_made(self):
+        self.login()
+        acc = store.load_account("1789")
+        rule = lambda **kw: {"enabled": True, "keywords": ["X"], "dm": "Here https://x.com", **kw}
+        with mock.patch.object(saas.time, "time", return_value=1000):
+            saas.save_rule(acc, "kw:OLD", rule())
+        with mock.patch.object(saas.time, "time", return_value=2000):
+            saas.save_rule(acc, "kw:NEW", rule())
+            saas.save_rule(acc, "kw:OLD", rule(dm="Edited https://x.com"))  # editing keeps the date
+        reels = store.load_rules("1789")["reels"]
+        self.assertEqual((reels["kw:OLD"]["created"], reels["kw:NEW"]["created"]), (1000, 2000))
+        self.assertIn("ageOf(b) - ageOf(a)", self.c.get("/app/automations").get_data(as_text=True))  # newest first
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",

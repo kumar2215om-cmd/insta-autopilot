@@ -1607,6 +1607,7 @@ def save_rule(acc, key, data):
     before = rules.get("reels", {}).get(key) or {}
     if (before.get("opening_dm"), before.get("opening_dm_b")) != (rule["opening_dm"], rule["opening_dm_b"]):
         store.redis("DEL", engine.ab_key(acc, key))  # new messages: a fresh test
+    rule["created"] = before.get("created") or int(time.time())  # when it was first made (the list shows newest first)
     rules.setdefault("reels", {})[key] = rule
     store.save_rules(acc["id"], rules)
     return rules
