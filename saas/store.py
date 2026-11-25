@@ -3,6 +3,7 @@
 Every key starts with "s:" so this app can share an Upstash database with the single-account app.
 Per-account keys are "s:t:<ig_user_id>:...".
 """
+import contextlib
 import json
 import os
 import re
@@ -184,7 +185,35 @@ def _hash(flat):
     return {flat[i]: int(flat[i + 1]) for i in range(0, len(flat), 2)}
 
 
+_batch = threading.local()
+
+
+@contextlib.contextmanager
+def batch(size=200):
+    """Collects writes and sends them in a few pipelined requests (e.g. building the demo account: ~950 writes would
+    otherwise be ~950 round trips). A read flushes what's pending first, so it always sees the writes before it.
+    Writes inside a batch return None, so only use it for code that doesn't need a write's reply."""
+    _batch.cmds, _batch.size = [], size
+    try:
+        yield
+    finally:
+        _flush_batch()
+        _batch.cmds = None
+
+
+def _flush_batch():
+    cmds = getattr(_batch, "cmds", None)
+    while cmds:
+        chunk, cmds[:] = cmds[:_batch.size], cmds[_batch.size:]
+        pipeline(chunk)
+
+
 def redis(*command):
+    if getattr(_batch, "cmds", None) is not None:
+        if str(command[0]).upper() not in _READ_ONLY:
+            _batch.cmds.append(command)
+            return None
+        _flush_batch()
     cache = _request_cache()
     if cache is None:
         return _send(command)

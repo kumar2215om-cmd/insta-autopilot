@@ -289,6 +289,8 @@
   .serif { font-family:var(--serif); font-style:normal; font-weight:800; letter-spacing:-.04em; background:#D4FF3A; color:#111318;
             padding:0 .12em; -webkit-box-decoration-break:clone; box-decoration-break:clone; }
   .hero h1 .serif { background:#D4FF3A; -webkit-background-clip:border-box; background-clip:border-box; color:#111318; -webkit-text-fill-color:#111318; }
+  /* the highlighted line of a headline: its own box with a little air above, so the line above (y, g, p) never touches it */
+  h1 .serif, h2 .serif { display:inline-block; margin-top:.16em; padding:.03em .14em .07em; line-height:1.02; max-width:100%; }
   .eyebrow { font-family:var(--mono); font-weight:700; letter-spacing:.18em; color:#2E3BFF; }
   .dark .eyebrow { color:#D4FF3A; }
   .btn { border-radius:999px; font-weight:800; border:2px solid #111318; }

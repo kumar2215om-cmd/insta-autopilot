@@ -826,7 +826,10 @@ def settings_page():
 @app.get("/demo")
 def demo_login():
     """Opens the app with a sample account (no Instagram login), to preview everything."""
-    demo.seed()
+    # rebuilding the sample account is ~950 writes: do it at most every 15 minutes (or when it's missing), batched
+    if store.claim("s:demo:fresh", 900) or not store.load_account(demo.DEMO_ID):
+        with store.batch():
+            demo.seed()
     session.clear()
     session["uid"] = demo.DEMO_ID
     return redirect(url_for("dashboard"))

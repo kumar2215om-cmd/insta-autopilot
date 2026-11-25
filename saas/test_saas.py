@@ -1756,6 +1756,22 @@ class SaasTest(unittest.TestCase):
         self.c.put("/api/page", json={"name": "Creator"})
         self.assertNotIn(tag, self.c.get("/creator", **live).get_data(as_text=True))  # never a creator's own page
 
+    def test_demo_opens_fast(self):
+        """The demo rebuild is batched (one round trip per ~200 writes) and done at most every 15 minutes."""
+        import demo
+        calls = {"seed": 0}
+        orig_seed = demo.seed
+
+        def counting_seed():
+            calls["seed"] += 1
+            self.assertIsNotNone(store._batch.cmds)  # inside store.batch()
+            return orig_seed()
+        with mock.patch.object(demo, "seed", counting_seed):
+            self.assertEqual(saas.app.test_client().get("/demo").location, "/app")
+            self.assertEqual(saas.app.test_client().get("/demo").location, "/app")
+        self.assertEqual(calls["seed"], 1)  # the second visitor gets the demo without a rebuild
+        self.assertEqual(store.load_account(demo.DEMO_ID)["username"], demo.USERNAME)
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",
