@@ -1,6 +1,7 @@
 {% import "_logo.html" as logo %}<!doctype html>
 <html lang="{{ page.lang or 'en' }}">
 <head>
+{% include "_gtm.html" %}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ page.title }}{% if page.title|length <= 50 and brand not in page.title %} | {{ brand }}{% endif %}</title>

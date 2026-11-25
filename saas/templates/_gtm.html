@@ -1,0 +1,8 @@
+{# Google tag (Tag Manager container) for ReplyInbox's own public site only: never creators' link pages or the dashboard,
+   and only on the live domain so tests and preview deployments don't send visits. ID from GTM_ID (public, not a secret). #}
+{% if gtm_id and request.host.split(":")[0] in ("replyinbox.in", "www.replyinbox.in") %}<script async src="https://www.googletagmanager.com/gtm.js?id={{ gtm_id }}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>{% endif %}

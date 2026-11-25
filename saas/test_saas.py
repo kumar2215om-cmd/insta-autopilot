@@ -1745,6 +1745,17 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(reels[0]["id"], "9000")  # newest first
         self.assertEqual(len(seen), saas.AUTO_SETUP_RECENT)  # old reels never get automations made for them
 
+    def test_google_tag_only_on_the_live_public_site(self):
+        self.login()
+        tag = "googletagmanager.com/gtm.js?id=GTM-5QQG3RH6"
+        live = {"base_url": "https://replyinbox.in"}
+        for path in ("/", "/pricing", "/guides/instagram-auto-dm-kya-hai", "/privacy", "/signin"):
+            self.assertIn(tag, self.c.get(path, **live).get_data(as_text=True), path)
+        self.assertNotIn(tag, self.c.get("/").get_data(as_text=True))  # tests and preview deployments: no tag
+        self.assertNotIn(tag, self.c.get("/app", **live).get_data(as_text=True))  # never the dashboard
+        self.c.put("/api/page", json={"name": "Creator"})
+        self.assertNotIn(tag, self.c.get("/creator", **live).get_data(as_text=True))  # never a creator's own page
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",

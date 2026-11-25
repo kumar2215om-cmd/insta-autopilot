@@ -213,6 +213,10 @@ def site_url():
     return SITE_URL or request.host_url.rstrip("/")
 
 
+# Google tag (Tag Manager container) on ReplyInbox's public pages; public ID, override or clear with the env var
+GTM_ID = env("GTM_ID", "GTM-5QQG3RH6")
+GTM_ID = GTM_ID if re.fullmatch(r"(GTM|G)-[A-Z0-9]{4,12}", GTM_ID or "") else ""
+
 # Google Search Console HTML-tag verification for replyinbox.in (public by design; override with the env var)
 GOOGLE_SITE_VERIFICATION = env("GOOGLE_SITE_VERIFICATION", "SVdI_dSxjwmjhHFP0wxRZa-GRUsDbV_GRLqhqWvm2-s")
 
@@ -220,7 +224,7 @@ GOOGLE_SITE_VERIFICATION = env("GOOGLE_SITE_VERIFICATION", "SVdI_dSxjwmjhHFP0wxR
 @app.context_processor
 def brand():
     return {"brand": BRAND, "contact_email": CONTACT_EMAIL, "public_url": base_url() if request else "",
-            "site_url": site_url() if request else "", "google_site_verification": GOOGLE_SITE_VERIFICATION}
+            "site_url": site_url() if request else "", "google_site_verification": GOOGLE_SITE_VERIFICATION, "gtm_id": GTM_ID}
 
 
 PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report",
