@@ -99,7 +99,7 @@
     </script>
     {% endif %}
     <p class="fine muted">By continuing you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy policy</a>.
-      Want a look first? <a href="/demo">Try the live demo</a>.</p>
+      {% if show_demo %}Want a look first? <a href="/demo">Try the live demo</a>.{% endif %}</p>
   </div>
 </main>
 {% if email or not google %}<script>

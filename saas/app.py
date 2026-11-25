@@ -213,6 +213,9 @@ def site_url():
     return SITE_URL or request.host_url.rstrip("/")
 
 
+# Links to the live demo (/demo) on public pages: hidden unless SHOW_DEMO=on (the demo itself keeps working)
+SHOW_DEMO = env("SHOW_DEMO", "").lower() in ("on", "1", "true", "yes")
+
 # Google tag (Tag Manager container) on ReplyInbox's public pages; public ID, override or clear with the env var
 GTM_ID = env("GTM_ID", "GTM-5QQG3RH6")
 GTM_ID = GTM_ID if re.fullmatch(r"(GTM|G)-[A-Z0-9]{4,12}", GTM_ID or "") else ""
@@ -224,7 +227,8 @@ GOOGLE_SITE_VERIFICATION = env("GOOGLE_SITE_VERIFICATION", "SVdI_dSxjwmjhHFP0wxR
 @app.context_processor
 def brand():
     return {"brand": BRAND, "contact_email": CONTACT_EMAIL, "public_url": base_url() if request else "",
-            "site_url": site_url() if request else "", "google_site_verification": GOOGLE_SITE_VERIFICATION, "gtm_id": GTM_ID}
+            "site_url": site_url() if request else "", "google_site_verification": GOOGLE_SITE_VERIFICATION, "gtm_id": GTM_ID,
+            "show_demo": SHOW_DEMO}
 
 
 PRIVATE_PREFIXES = ("/app", "/api", "/owner", "/demo", "/join", "/l", "/s", "/r", "/auth", "/login", "/cron", "/mcp", "/report",
@@ -727,7 +731,7 @@ def llms_txt():
             out.append(f"- [{c['title']}]({u}{c['url']}): {fill(cluster_item(kind, s_)['answer'])}")
     out += ["", "## Glossary", f"- [{BRAND} glossary]({u}/glossary): definitions of Instagram DM automation terms"]
     out += [
-           "", "## Links", f"- Website: {u}/", f"- Pricing: {u}/pricing", f"- Every page in full: {u}/llms-full.txt", f"- Live demo: {u}/demo", f"- Privacy: {u}/privacy"]
+           "", "## Links", f"- Website: {u}/", f"- Pricing: {u}/pricing", f"- Every page in full: {u}/llms-full.txt", *([f"- Live demo: {u}/demo"] if SHOW_DEMO else []), f"- Privacy: {u}/privacy"]
     return "\n".join(out) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 

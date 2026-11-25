@@ -1771,6 +1771,11 @@ class SaasTest(unittest.TestCase):
             self.assertEqual(saas.app.test_client().get("/demo").location, "/app")
         self.assertEqual(calls["seed"], 1)  # the second visitor gets the demo without a rebuild
         self.assertEqual(store.load_account(demo.DEMO_ID)["username"], demo.USERNAME)
+        # the demo links are hidden on public pages (SHOW_DEMO off), the demo itself still opens
+        c = saas.app.test_client()
+        for path in ("/", "/signin", "/pricing", "/guides/instagram-auto-dm-kya-hai", "/llms.txt"):
+            self.assertNotIn('/demo"', c.get(path).get_data(as_text=True).replace("llms", ""), path)
+        self.assertNotIn("/demo\n", c.get("/llms.txt").get_data(as_text=True))
 
     def test_three_link_buttons(self):
         self.login()

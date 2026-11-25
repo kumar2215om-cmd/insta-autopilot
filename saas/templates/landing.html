@@ -334,7 +334,7 @@
       {% else %}
         <a class="btn primary" href="/signin">Start free</a>
       {% endif %}
-      <a class="btn ghost" href="/demo">Explore the live demo</a>
+      {% if show_demo %}<a class="btn ghost" href="/demo">Explore the live demo</a>{% endif %}
     </div>
     <div class="trust rise d4"><span class="meta"><svg class="metalogo" viewBox="0 0 36 24" width="22" height="15" aria-hidden="true"><defs><linearGradient id="mg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0064E1"/><stop offset=".5" stop-color="#0082FB"/><stop offset="1" stop-color="#0064E0"/></linearGradient></defs><path d="M3 15.5C3 9.5 6 4 10 4c3.2 0 5.3 3 8 7.8C20.7 16.6 22.8 20 26 20c2.9 0 4.6-2.4 4.6-5.6C30.6 9.2 28 4 24.4 4c-3 0-5 3.1-7 6.6C15 14.6 13 20 9.6 20 6 20 3 18.7 3 15.5z" fill="none" stroke="url(#mg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Built on official Meta APIs</span><span>Free to start, no card</span><span>No password sharing</span></div>
     {% if error %}
@@ -685,14 +685,14 @@
     <div class="eyebrow">Ready when you are</div>
     <h2 style="margin-top:16px">Your next reel can grow your list <span class="serif">while you sleep.</span></h2>
     <p class="lede" style="margin:18px auto 0">Free to start. Your first automation takes two minutes.</p>
-    <div class="cta"><a class="btn primary" href="/signin">Start free</a><a class="btn ghost" href="/demo">Explore the live demo</a></div>
+    <div class="cta"><a class="btn primary" href="/signin">Start free</a>{% if show_demo %}<a class="btn ghost" href="/demo">Explore the live demo</a>{% endif %}</div>
   </div>
 </div>
 
 <footer>
   <div class="wrap">
     <div>{{ logo.wordmark(26, "foot") }}<p>Instagram DM automation for creators. Made in India.</p></div>
-    <div><h4>Product</h4><a href="/features">Features</a><a href="/features/ai-dm-agent">AI agent</a><a href="/pricing">Pricing</a><a href="/demo">Live demo</a></div>
+    <div><h4>Product</h4><a href="/features">Features</a><a href="/features/ai-dm-agent">AI agent</a><a href="/pricing">Pricing</a>{% if show_demo %}<a href="/demo">Live demo</a>{% endif %}</div>
     <div><h4>Compare</h4><a href="/vs/manychat">vs ManyChat</a><a href="/vs/linkdm">vs LinkDM</a><a href="/vs/superprofile">vs SuperProfile</a><a href="/vs/repli">vs Repli</a><a href="/instagram-dm-automation-tools">All comparisons</a></div>
     <div><h4>Learn</h4><a href="/instagram-dm-automation">DM automation guide</a><a href="/instagram-lead-generation">Lead generation</a><a href="/sell-on-instagram">Selling on Instagram</a><a href="/ai-instagram-dm-replies">AI replies</a><a href="/instagram-automation-by-industry">By industry</a><a href="/glossary">Glossary</a></div>
     <div><h4>Company</h4>{% if contact_email %}<a href="mailto:{{ contact_email }}">Contact</a>{% endif %}<a href="#faq">FAQ</a></div>

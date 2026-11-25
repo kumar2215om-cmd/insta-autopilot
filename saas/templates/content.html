@@ -148,10 +148,10 @@
 
   {% if hi %}<section class="cta"><h2>{{ brand }} free mein try karo</h2>
     <p>Comment-to-DM, follow to unlock, AI replies aur sales tracking. Har mahine 1,000 DMs free, official Meta API, password nahi.</p>
-    <a class="btn" href="/signin">Free mein shuru karo</a> <a class="btn line" style="color:#fff !important; border-color:#3A3548" href="/demo">Live demo dekho</a></section>
+    <a class="btn" href="/signin">Free mein shuru karo</a> {% if show_demo %}<a class="btn line" style="color:#fff !important; border-color:#3A3548" href="/demo">Live demo dekho</a>{% endif %}</section>
   {% else %}<section class="cta"><h2>Try {{ brand }} free</h2>
     <p>Comment-to-DM, follow to unlock, AI replies and sales tracking. 1,000 DMs a month free, official Meta API, no password.</p>
-    <a class="btn" href="/signin">Start free</a> <a class="btn line" style="color:#fff !important; border-color:#3A3548" href="/demo">See the live demo</a></section>{% endif %}
+    <a class="btn" href="/signin">Start free</a> {% if show_demo %}<a class="btn line" style="color:#fff !important; border-color:#3A3548" href="/demo">See the live demo</a>{% endif %}</section>{% endif %}
 
   {% if related %}<section class="related"><h2>{% if page.kind == "pillar" %}{{ "Baaki topics" if hi else "Other topics" }}{% elif topic %}{{ "Isi topic mein aur:" if hi else "More in" }} <a href="{{ topic.url }}">{{ topic.short }}</a>{% else %}Related{% endif %}</h2><div class="cards">{% for c in related %}<a href="{{ c.url }}"><h3>{{ c.title }}</h3><p>{{ c.text }}</p></a>{% endfor %}</div></section>{% endif %}
 </div></main>
