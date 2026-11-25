@@ -1725,6 +1725,26 @@ class SaasTest(unittest.TestCase):
             self.assertEqual(r.status_code, 200, f)
             r.close()
 
+    def test_post_picker_loads_every_page_of_posts(self):
+        self.login()
+        posts = [{"id": str(9000 - i), "caption": f"post {i}", "media_product_type": "REELS"} for i in range(70)]
+
+        def fake_get(ig, path, **params):
+            if path == "me":
+                return {"followers_count": 10, "media_count": 70}
+            start = int(params.get("after") or 0)
+            page = posts[start:start + int(params["limit"])]
+            nxt = start + len(page)
+            return {"data": page, "paging": {"cursors": {"after": str(nxt)}, **({"next": "x"} if nxt < len(posts) else {})}}
+
+        seen = []
+        with mock.patch.object(engine.Instagram, "get", fake_get), \
+                mock.patch.object(engine, "auto_setup", lambda acc, m: seen.append(m["id"]) or False):
+            reels = self.c.get("/api/reels?fresh=1").get_json()["reels"]
+        self.assertEqual(len(reels), 70)  # two pages, not just the first 24
+        self.assertEqual(reels[0]["id"], "9000")  # newest first
+        self.assertEqual(len(seen), saas.AUTO_SETUP_RECENT)  # old reels never get automations made for them
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",

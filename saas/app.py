@@ -1359,6 +1359,23 @@ def billing_receipt(order_id):
     return render_template("receipt.html", r=r)
 
 
+MAX_MEDIA = 200  # posts and reels shown in the automation picker (newest first)
+AUTO_SETUP_RECENT = 24
+MEDIA_FIELDS = "id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,timestamp,like_count,comments_count"
+
+
+def all_media(ig):
+    """The account's posts and reels, newest first, page by page (50 at a time) up to MAX_MEDIA."""
+    media, after = [], None
+    while len(media) < MAX_MEDIA:
+        page = ig.get("me/media", limit=50, fields=MEDIA_FIELDS, **({"after": after} if after else {}))
+        media += page.get("data") or []
+        after = ((page.get("paging") or {}).get("cursors") or {}).get("after")
+        if not after or not (page.get("paging") or {}).get("next"):
+            break
+    return media[:MAX_MEDIA]
+
+
 @app.get("/api/reels")
 def api_reels():
     acc = current_account()
@@ -1369,16 +1386,15 @@ def api_reels():
     try:
         ig = engine.Instagram(acc)
         me = ig.get("me", fields="username,profile_picture_url,followers_count,media_count")
-        media = ig.get("me/media", limit=24, fields=(
-            "id,caption,media_type,media_product_type,permalink,thumbnail_url,media_url,"
-            "timestamp,like_count,comments_count"))["data"]
+        media = all_media(ig)
     except Exception as e:
         if cached:
             return jsonify({**cached, "warning": str(e)})
         return jsonify(error=str(e), reels=[]), 502
     acc.update(followers=me.get("followers_count"), pic=me.get("profile_picture_url", acc.get("pic")))
     store.save_account(acc)
-    created = [m["id"] for m in media if engine.auto_setup(acc, m)]  # new reels whose caption asks for a keyword
+    # auto-setup only looks at the newest posts, so loading the whole grid never creates automations for old reels
+    created = [m["id"] for m in media[:AUTO_SETUP_RECENT] if engine.auto_setup(acc, m)]
     data = {"followers": me.get("followers_count"), "media_count": me.get("media_count"),
             "reels": media, "fetched_at": int(time.time()), "auto_created": created}
     store.redis("SET", key, json.dumps(data), "EX", REELS_CACHE_SECONDS)
