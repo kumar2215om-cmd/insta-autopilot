@@ -1385,8 +1385,10 @@ def api_reels():
         return jsonify(cached)
     try:
         ig = engine.Instagram(acc)
-        me = ig.get("me", fields="username,profile_picture_url,followers_count,media_count")
-        media = all_media(ig)
+        with ThreadPoolExecutor(max_workers=2) as pool:  # profile and posts at the same time, not one after the other
+            me_job = pool.submit(ig.get, "me", fields="username,profile_picture_url,followers_count,media_count")
+            media_job = pool.submit(all_media, ig)
+            me, media = me_job.result(), media_job.result()
     except Exception as e:
         if cached:
             return jsonify({**cached, "warning": str(e)})

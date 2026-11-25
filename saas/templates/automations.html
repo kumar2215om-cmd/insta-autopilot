@@ -79,6 +79,9 @@
   .wb { padding:20px 22px; overflow-y:auto; display:grid; gap:16px; align-content:start; }
   .wf { display:flex; align-items:center; gap:10px; padding:14px 22px; border-top:1px solid var(--line2); }
   .wf .stp { margin-right:auto; font:500 12.5px var(--mono); color:var(--mute); }
+  #refresh.busy { opacity:.7; cursor:progress; }
+  @media (prefers-reduced-motion: no-preference) { #refresh.busy { animation:rfpulse 1s ease-in-out infinite; } }
+  @keyframes rfpulse { 50% { opacity:.45; } }
   .acct { text-align:center; display:grid; justify-items:center; gap:6px; }
   .acct .swlink { border:0; background:none; padding:0; font:500 13px var(--text); color:var(--mute); text-decoration:underline; cursor:pointer; }
   .acct .swlink:hover { color:var(--ink); }
@@ -926,7 +929,14 @@ async function loadMedia(fresh) {
   drawList();
   if (wiz && $("wiz").open) drawWizard();
 }
-$("refresh").onclick = () => loadMedia(true);
+$("refresh").onclick = async () => {
+  const b = $("refresh");
+  if (b.disabled) return;
+  b.disabled = true; b.classList.add("busy"); b.textContent = "↻ Refreshing…";  // instant feedback while Instagram answers
+  await loadMedia(true);
+  b.disabled = false; b.classList.remove("busy"); b.textContent = "↻ Refresh posts";
+  toast(`Posts updated · ${media.length} loaded`);
+};
 
 (async () => {
   loadBanners(); loadRetry(); loadSummary();
