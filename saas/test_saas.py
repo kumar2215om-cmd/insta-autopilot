@@ -1777,6 +1777,45 @@ class SaasTest(unittest.TestCase):
             self.assertNotIn('/demo"', c.get(path).get_data(as_text=True).replace("llms", ""), path)
         self.assertNotIn("/demo\n", c.get("/llms.txt").get_data(as_text=True))
 
+    def test_signup_follow_up_emails(self):
+        import onboarding
+        sent = []
+        with mock.patch.object(onboarding, "send", lambda u, k: sent.append((u["email"], k)) or onboarding.users.save(
+                {**u, "onb": {"sent": (u.get("onb") or {}).get("sent", []) + [k], "at": int(time.time())}}) or True):
+            # a new email sign-up gets the welcome right away (no Instagram connected yet)
+            c = saas.app.test_client()
+            self.signin(c, "fresh@example.com")
+            self.assertIn(("fresh@example.com", "welcome"), sent)
+            u = users.by_email("fresh@example.com")
+            day = 86400
+            # nothing more the same day; day 1 the next day; at most one a day
+            self.assertIsNone(onboarding.due_step(u, u["created"] + 3600))
+            u["onb"]["at"] = u["created"]
+            self.assertEqual(onboarding.due_step(u, u["created"] + day + 60), "day1")
+            # someone 5 days in who was never emailed starts at the latest due step, not the welcome
+            old = users.create("old@example.com"); old["created"] = int(time.time()) - 5 * day; users.save(old)
+            self.assertEqual(onboarding.due_step(old), "day4")
+            very_old = users.create("veryold@example.com"); very_old["created"] = int(time.time()) - 30 * day; users.save(very_old)
+            self.assertEqual(onboarding.due_step(very_old), "day9")  # never "last email" as the first one
+            # connecting Instagram stops it; so does unsubscribing; team members never get it
+            self.login()
+            self.assertFalse(onboarding.eligible(users.by_email("om@example.com")))
+            self.assertFalse(onboarding.eligible({**old, "invite": "abc"}))
+            r = saas.app.test_client().get(f"/email/stop?u={old['id']}&t={onboarding._token(old['id'])}")
+            self.assertEqual(r.status_code, 200)
+            self.assertFalse(onboarding.eligible(users.get(old["id"])))
+            self.assertEqual(saas.app.test_client().get(f"/email/stop?u={old['id']}&t=wrong").status_code, 400)
+            # the daily job sends what's due to those still eligible
+            sent.clear()
+            self.assertEqual(onboarding.run(), 1)  # very_old only: old unsubscribed, fresh already had today's
+            self.assertEqual(sent, [("veryold@example.com", "day9")])
+        # every email has the connect button, the unsubscribe link and the person's name
+        subject, page, text = onboarding.render({**old, "name": "Rahul Sharma"}, "day9")
+        self.assertIn("Hi Rahul", page)
+        self.assertIn("/connect?utm_source=email", page)
+        self.assertIn("/email/stop?u=", page)
+        self.assertIn("Unsubscribe:", text)
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",

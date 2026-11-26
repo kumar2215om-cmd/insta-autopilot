@@ -68,6 +68,15 @@
     {% endfor %}
   </table></div>
   </details>
+  <details class="fold" id="f-onb"><summary><h2>Sign-up follow-up emails</h2><span class="cnt">{{ onb[0].values()|sum }} sent</span>
+    <span class="muted small">{{ onb[1] }} unsubscribed</span></summary>
+  <p class="muted small" style="margin:0 0 10px">Logins without Instagram connected get these from Om, one a day at most, until they connect
+    or unsubscribe. Sent by the daily job (about 8:45 AM IST); the welcome goes out right at sign-up.</p>
+  <div style="overflow-x:auto"><table>
+    <tr><th>Day</th><th>Email</th><th>Sent to</th></tr>
+    {% for k, d, subj in onb_steps %}<tr><td>{{ d }}</td><td>{{ subj }}</td><td>{{ onb[0][k] }}</td></tr>{% endfor %}
+  </table></div>
+  </details>
   <details class="fold" id="f-pay"><summary><h2>Payments</h2><span class="cnt">{{ payments|length }}</span>{% if not billing_ready %}<span class="muted small">(Razorpay keys not set)</span>{% elif billing_test %}<span class="muted small">(test mode)</span>{% endif %}<span class="muted small">this month ₹{{ "{:,}".format(paid_month) }}</span></summary>
   <p class="muted small" style="margin:0 0 10px">Received this month: <b>₹{{ "{:,}".format(paid_month) }}</b></p>
   <div style="overflow-x:auto"><table>

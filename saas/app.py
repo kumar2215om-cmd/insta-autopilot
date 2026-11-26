@@ -38,6 +38,7 @@ import videos
 import youtube
 import files
 import guides
+import onboarding
 import demo
 import push
 import engine
@@ -680,6 +681,23 @@ def glossary_page():
     return content_page(page, "/glossary", [("Glossary", None)])
 
 
+@app.route("/email/stop", methods=["GET", "POST"])
+def email_stop():
+    """One-click unsubscribe from the sign-up follow-up emails (link in every email, and the List-Unsubscribe header)."""
+    uid, token = request.values.get("u", ""), request.values.get("t", "")
+    user = users.get(uid) if onboarding.check_token(uid, token) else None
+    if not user:
+        return "This unsubscribe link isn't valid.", 400
+    user["emails_off"] = True
+    users.save(user)
+    if request.method == "POST":
+        return "", 204
+    return (f"<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><meta name=robots content=noindex>"
+            f"<title>Unsubscribed</title><div style='font-family:system-ui,sans-serif;max-width:440px;margin:15vh auto;padding:24px;text-align:center'>"
+            f"<h2>You're unsubscribed</h2><p style='color:#555'>You won't get these emails from {escape(BRAND)} again. "
+            f"Your account stays open.</p><p><a href='/'>Back to {escape(BRAND)}</a></p></div>")
+
+
 @app.get("/favicon.ico")
 def favicon():
     """Google and browsers ask for /favicon.ico at the root; it's the ReplyInbox app icon (16, 32 and 48 px)."""
@@ -873,6 +891,8 @@ def start_session(user):
     session["user"] = user["id"]
     session["sid"] = devices.start(user["id"], *client_info())
     first = next(iter(users.accounts(user)), None)
+    if not first and time.time() - user.get("created", 0) < 3600 and not (user.get("onb") or {}).get("sent"):
+        run_task(onboarding.welcome, user)  # new sign-up: the welcome email (the follow-ups come from the daily job)
     if first:
         session["uid"] = first["id"]
         return session.pop("next", None) or url_for("dashboard")
@@ -4051,6 +4071,10 @@ def cron_refresh_tokens():
     except Exception as e:
         print(f"shop reminders failed: {e}")
     try:
+        onboarding.run()  # follow-up emails to sign-ups who haven't connected Instagram yet
+    except Exception as e:
+        print(f"onboarding emails failed: {e}")
+    try:
         courses.send_sequences()  # course emails N days after enrolling
     except Exception as e:
         print(f"course emails failed: {e}")
@@ -4232,7 +4256,8 @@ def owner():
     month_start = time.mktime(time.strptime(time.strftime("%Y-%m-01"), "%Y-%m-%d"))
     paid_month = sum(p["amount"] for p in payments if p.get("paid_at", 0) >= month_start)
     return render_template("owner.html", feedback=feedback, rows=rows, groups=groups, now=time.time(), plans=plans.PLANS, by_plan=by_plan, mrr=mrr, locks=plans.LOCKS_ON,
-                           payments=payments, paid_month=paid_month, payouts=referrals.payout_requests(), billing_ready=billing.ready(), billing_test=billing.test_mode())
+                           payments=payments, paid_month=paid_month, payouts=referrals.payout_requests(), billing_ready=billing.ready(), billing_test=billing.test_mode(),
+                           onb=onboarding.stats(), onb_steps=[(k, d, subj) for k, d, subj, *_ in onboarding.STEPS])
 
 
 # ---------- public link-in-bio page: replyinbox.in/<username> ----------
