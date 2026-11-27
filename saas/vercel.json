@@ -1,5 +1,11 @@
 {
   "crons": [
-    { "path": "/cron/refresh-tokens", "schedule": "15 3 * * *" }
+    {
+      "path": "/cron/refresh-tokens",
+      "schedule": "15 3 * * *"
+    }
+  ],
+  "regions": [
+    "bom1"
   ]
 }

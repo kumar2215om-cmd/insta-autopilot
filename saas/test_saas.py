@@ -257,6 +257,20 @@ class SaasTest(unittest.TestCase):
         self.assertIn("Instagram connect", page)
         self.assertIn("user_denied", page)
 
+    def test_owner_page_batches_database_reads(self):
+        """/owner reads every account and login in a few batched calls, not one call per record."""
+        for i in range(12):
+            u = users.create(f"p{i}@x.co")
+            if i < 5:
+                users.claim(u, {"id": str(5000 + i), "username": f"p{i}", "token": "t", "created": i})
+        trips = []
+        real = store._send
+        with mock.patch.object(store, "_send", lambda c: trips.append(c[0]) or real(c)):
+            page = self.c.get("/owner", headers={"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()})
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("p11@x.co", page.get_data(as_text=True))
+        self.assertLess(len(trips), 15, trips)
+
     def test_invite_only(self):
         with mock.patch.object(saas, "SIGNUPS", "invite"), mock.patch.object(saas, "INVITE_CODES", {"BETA"}):
             self.assertEqual(self.c.post("/auth/email/start", json={"email": "a@b.co", "invite": "nope"}).status_code, 403)

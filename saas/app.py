@@ -4245,10 +4245,15 @@ def owner():
     if not owner_ok():
         return ("Login required", 401, {"WWW-Authenticate": 'Basic realm="owner"'})
     rows = []
-    for ig_id in store.account_ids():
+    ids, uids = store.account_ids(), users.all_ids()
+    # everything the page reads, in a few batched calls instead of one call per record
+    store.prefetch([store.account_key(i, p) for i in ids for p in ("", "rules", "token_dead", "rate_limited")]
+                   + [f"s:u:{u}" for u in uids])
+    all_counts = store.counts_many(ids)
+    for ig_id in ids:
         acc = store.load_account(ig_id)
         if acc and not demo.is_demo(acc):  # the /demo account isn't a customer
-            c = store.counts(ig_id)
+            c = all_counts.get(ig_id, {})
             owner = users.owner_of(acc)
             rows.append({**public_account(acc), "invite": acc.get("invite", ""), "blocked": engine.is_blocked(acc),
                          "owner_email": owner.get("email", "") if owner else "", "owner_id": owner["id"] if owner else "",
@@ -4268,7 +4273,7 @@ def owner():
                                           "until": r.get("plan_until")})
         g["accounts"].append(r)
     # logins that signed up but haven't connected Instagram yet
-    for uid in users.all_ids():
+    for uid in uids:
         if uid in logins:
             continue
         u = users.get(uid)

@@ -229,6 +229,25 @@ def redis(*command):
     return _send(command)
 
 
+def prefetch(keys):
+    """Reads many account/login records in one round trip and remembers them for the rest of the web request
+    (pages that list every account, like /owner, would otherwise make hundreds of calls one after another)."""
+    cache = _request_cache()
+    keys = [k for k in dict.fromkeys(keys) if _REQUEST_CACHED.fullmatch(k) and (cache is None or k not in cache)]
+    if cache is None or not keys:
+        return
+    for i in range(0, len(keys), 200):
+        chunk = keys[i:i + 200]
+        for k, v in zip(chunk, pipeline([("GET", k) for k in chunk])):
+            cache[k] = v
+
+
+def counts_many(ig_ids):
+    """counts() for several accounts in one round trip."""
+    ig_ids = list(ig_ids)
+    return dict(zip(ig_ids, (_hash(v) for v in pipeline([("HGETALL", account_key(i, "counts")) for i in ig_ids]))))
+
+
 def get_json(key, default=None):
     raw = redis("GET", key)
     return json.loads(raw) if raw else default
