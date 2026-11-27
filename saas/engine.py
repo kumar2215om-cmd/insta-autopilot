@@ -444,7 +444,7 @@ def send_comment_dm(acc, ig, comment_id, key, rule, media_id, username, text, re
                             postbacks=[(rule.get("button_text") or DEFAULT_BUTTON, f"GET|{key}|{media_id}|{variant}".rstrip("|"))])
             ab_count(acc, key, variant, "sent")
         elif rule.get("dm"):
-            ig.send_dm({"comment_id": comment_id}, {"text": fill(rule["dm"])})
+            send_final(acc, ig, {"comment_id": comment_id}, key, rule, username)  # with its link buttons
             store.count(acc["id"], "links_sent")
             store.media_count(acc["id"], media_id, "link")
         note_dm(acc)
@@ -875,20 +875,25 @@ def handle_button(acc, igsid, payload):
         store.log_activity(acc["id"], key, username or igsid, payload, "dm", "error", str(e))
 
 
+def send_final(acc, ig, recipient, key, rule, username):
+    """The final DM itself: text plus its link buttons or menu. recipient is {"id": igsid} or {"comment_id": ...}."""
+    text = track_text(acc, key, rule["dm"].replace("{username}", username), rule)
+    menu = [m for m in rule.get("menu") or [] if m.get("title")][:3]
+    if menu:
+        ig.send_buttons(recipient, text, postbacks=[(m["title"], f"MENU|{key}|{i}") for i, m in enumerate(menu)])
+    elif rule.get("dm_button_url"):
+        more = [b for b in rule.get("dm_buttons_more") or [] if b.get("url")][:2]
+        ig.send_buttons(recipient, text, links=[(rule.get("dm_button_text") or "Open", track(acc, key, rule["dm_button_url"], rule))]
+                        + [(b.get("text") or "Open", track(acc, key, b["url"], rule)) for b in more])
+    else:
+        ig.send_dm(recipient, {"text": text})
+
+
 def deliver(acc, ig, igsid, key, rule, username, media_id, detail, action="dm"):
     """Sends the rule's final DM (message and link, or a menu of choices). Raises when Instagram refuses."""
     if not rule.get("dm"):
         raise RuntimeError("The final DM is empty: add your message and link to this rule")
-    text = track_text(acc, key, rule["dm"].replace("{username}", username), rule)
-    menu = [m for m in rule.get("menu") or [] if m.get("title")][:3]
-    if menu:
-        ig.send_buttons({"id": igsid}, text, postbacks=[(m["title"], f"MENU|{key}|{i}") for i, m in enumerate(menu)])
-    elif rule.get("dm_button_url"):
-        more = [b for b in rule.get("dm_buttons_more") or [] if b.get("url")][:2]
-        ig.send_buttons({"id": igsid}, text, links=[(rule.get("dm_button_text") or "Open", track(acc, key, rule["dm_button_url"], rule))]
-                        + [(b.get("text") or "Open", track(acc, key, b["url"], rule)) for b in more])
-    else:
-        ig.send_dm({"id": igsid}, {"text": text})
+    send_final(acc, ig, {"id": igsid}, key, rule, username)
     store.count(acc["id"], "links_sent")
     store.media_count(acc["id"], media_id, "link")
     store.log_activity(acc["id"], key, username or igsid, detail, action, "ok")

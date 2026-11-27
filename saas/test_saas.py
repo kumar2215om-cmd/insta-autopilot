@@ -1087,6 +1087,19 @@ class SaasTest(unittest.TestCase):
         engine.add_retry(store.load_account("1789"), "old", {"key": "555", "media_id": "555", "username": "z", "text": "x", "at": 1})
         self.assertEqual(self.c.post("/api/retry", json={}).get_json()["expired"], 1)
 
+    def test_direct_dm_keeps_its_link_buttons(self):
+        """No opening button: the comment's one private reply is the final DM itself, with its link buttons."""
+        self.login()
+        self.put_rule("555", require_follow=False, comment_reply="Sent!", dm="Hi {username}! Here's the link",
+                      dm_button_text="Get guide", dm_button_url="https://x.com/g",
+                      dm_buttons_more=[{"text": "Shop", "url": "https://x.com/s"}])
+        self.hook(comment("PROMPTS", cid="d1"))
+        msg = self.ig.messages()[-1]
+        self.assertEqual(msg["recipient"], {"comment_id": "d1"})
+        buttons = msg["message"]["attachment"]["payload"]["buttons"]
+        self.assertEqual([b["title"] for b in buttons], ["Get guide", "Shop"])
+        self.assertTrue(all(b["type"] == "web_url" for b in buttons))
+
     def test_phone_capture(self):
         for text, want in [("98765 43210", "+919876543210"), ("my no is +91-98765-43210", "+919876543210"),
                            ("09876543210", "+919876543210"), ("+44 7700 900123", "+447700900123"),
