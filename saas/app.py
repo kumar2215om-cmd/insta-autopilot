@@ -40,6 +40,7 @@ import files
 import guides
 import monitor
 import onboarding
+import funnel
 import demo
 import push
 import engine
@@ -1019,7 +1020,7 @@ def connect_page():
         return redirect(url_for("signin_page"))
     accs = [{**a, "pic": avatar_url(a)} for a in users.accounts(user)]
     return render_template("connect.html", user=user, accounts=accs, limit=users.limit(user), locks=plans.LOCKS_ON,
-                           error=request.args.get("error", ""), ready=bool(IG_APP_ID))
+                           error=request.args.get("error", ""), why=request.args.get("why", ""), ready=bool(IG_APP_ID))
 
 
 # ---------- Connect an Instagram account (Instagram business login) ----------
@@ -1033,8 +1034,12 @@ def login():
     if not IG_APP_ID:
         return redirect(url_for("connect_page", error="Instagram connect isn't set up yet. Please try again later."))
     session["oauth_state"] = state = secrets.token_urlsafe(24)
+    funnel.note("clicked", user)
+    # Asking for the password again is only needed to add a different account; for the first one, someone already
+    # logged in to Instagram just taps Allow (a forgotten password was a common place to give up).
+    params = {"force_reauth": "true"} if users.accounts(user) or request.args.get("switch") else {}
     return redirect("https://www.instagram.com/oauth/authorize?" + urlencode({
-        "enable_fb_login": 0, "force_reauth": "true", "client_id": IG_APP_ID,
+        "enable_fb_login": 0, **params, "client_id": IG_APP_ID,
         "redirect_uri": base_url() + "/auth/callback", "response_type": "code",
         "scope": SCOPES, "state": state}))
 
@@ -1058,9 +1063,12 @@ def auth_callback():
     if not user:
         return redirect(url_for("signin_page"))
     if request.args.get("error") or not request.args.get("code"):
-        return redirect(url_for("connect_page", error="Instagram login was cancelled. Try again whenever you're ready."))
+        funnel.note("cancelled", user, " · ".join(request.args.get(k, "") for k in ("error", "error_reason", "error_description")
+                                                  if request.args.get(k)))
+        return redirect(url_for("connect_page", error="Instagram login was cancelled. Try again whenever you're ready.", why="cancelled"))
     expected = session.pop("oauth_state", None)
     if not expected or not hmac.compare_digest(str(expected), request.args.get("state", "")):
+        funnel.note("expired", user)
         return redirect(url_for("connect_page", error="That Instagram login expired. Try again."))
     try:
         token = exchange_code(request.args["code"])
@@ -1071,18 +1079,22 @@ def auth_callback():
         me = r.json()
     except Exception as e:
         app.logger.warning("Instagram login failed: %s", e)
-        return redirect(url_for("connect_page", error="Instagram login didn't finish. Your account must be a Business or Creator account."))
+        funnel.note("failed", user, getattr(getattr(e, "response", None), "text", "") or e)
+        return redirect(url_for("connect_page", why="personal",
+                                error="Instagram login didn't finish. Your account must be a Business or Creator account."))
 
     ig_id = str(me["user_id"])  # the ID Instagram puts in webhooks ("entry.id")
     existing = store.load_account(ig_id)
     try:
         users.check_can_add(user, existing, ig_id)
     except users.LoginError as e:
+        funnel.note("refused", user, e)
         return redirect(url_for("connect_page", error=str(e)))
     acc = existing or {"id": ig_id, "created": int(time.time()), "paused": False}
     acc.update(asid=str(me.get("id", "")), username=me.get("username", ""), name=me.get("name", ""),
                pic=me.get("profile_picture_url", ""), followers=me.get("followers_count"),
                token=token, token_at=int(time.time()), invite=acc.get("invite") or user.get("invite", ""))
+    funnel.note("reconnected" if existing else "connected", user)
     if not existing:  # a login's first Instagram account counts as a referral sign-up
         referrals.record_signup(user, session.pop("ref", ""), acc.get("username", ""))
     users.claim(user, acc)  # saves the account with its owner and the user's plan
@@ -4274,7 +4286,7 @@ def owner():
     paid_month = sum(p["amount"] for p in payments if p.get("paid_at", 0) >= month_start)
     return render_template("owner.html", feedback=feedback, rows=rows, groups=groups, now=time.time(), plans=plans.PLANS, by_plan=by_plan, mrr=mrr, locks=plans.LOCKS_ON,
                            payments=payments, paid_month=paid_month, payouts=referrals.payout_requests(), billing_ready=billing.ready(), billing_test=billing.test_mode(),
-                           onb=onboarding.stats(), onb_steps=[(k, d, subj) for k, d, subj, *_ in onboarding.STEPS])
+                           onb=onboarding.stats(), funnel=funnel.stats(), funnel_steps=funnel.STEPS, onb_steps=[(k, d, subj) for k, d, subj, *_ in onboarding.STEPS])
 
 
 # ---------- public link-in-bio page: replyinbox.in/<username> ----------

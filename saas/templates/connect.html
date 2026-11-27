@@ -34,6 +34,11 @@
   .acc img, .acc .av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #FFB199, #FF5B3A); object-fit:cover; }
   .acc span { margin-left:auto; color:var(--mute); font-size:13px; }
   .small { font-size:13px; }
+  details.switch { margin:16px 0 0; border:1px solid var(--line); border-radius:14px; padding:12px 14px; font-size:14px; }
+  details.switch summary { cursor:pointer; font-weight:700; }
+  details.switch[open] { border-color:var(--blue); }
+  details.switch ol { margin:10px 0 6px; padding-left:20px; display:grid; gap:6px; }
+  details.switch p { margin:0; }
   .fine { text-align:center; font-size:12.5px; margin:16px 0 0; }
 </style>
 </head>
@@ -50,6 +55,7 @@
     <ul class="req">
       <li>A Business or Creator account (free to switch in Instagram settings)</li>
       <li>Official Meta login: you can remove access anytime</li>
+      <li>We never post, follow or unfollow for you: only the replies and DMs you set up</li>
       {% if locks %}<li>{{ accounts|length }} of {{ limit }} account{{ "s" if limit != 1 }} on your plan connected</li>{% endif %}
     </ul>
     {% if not ready %}
@@ -59,6 +65,16 @@
     {% else %}
       <a class="btn wide" href="/login">Connect Instagram</a>
     {% endif %}
+    <details class="switch"{% if why == "personal" %} open{% endif %}>
+      <summary>Personal account? Switch to Creator in 30 seconds</summary>
+      <ol>
+        <li>Open Instagram → your profile → <b>☰ menu</b> (top right)</li>
+        <li><b>Settings and privacy</b> → <b>Account type and tools</b></li>
+        <li>Tap <b>Switch to professional account</b> → choose <b>Creator</b> → any category → Done</li>
+        <li>Come back here and tap <b>Connect Instagram</b> again</li>
+      </ol>
+      <p class="muted small">Free, and your followers, posts and DMs stay the same. You can switch back anytime.</p>
+    </details>
     {% if accounts %}
     <div class="accs">
       <div class="small muted">Your accounts</div>

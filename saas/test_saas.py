@@ -24,6 +24,7 @@ import store  # noqa: E402
 import users  # noqa: E402
 import billing  # noqa: E402
 import youtube  # noqa: E402
+import funnel  # noqa: E402
 
 
 class Resp:
@@ -233,6 +234,28 @@ class SaasTest(unittest.TestCase):
         r = self.c.get("/auth/callback?code=abc&state=wrong")
         self.assertIn("/connect?error=", r.location)
         self.assertIsNone(store.load_account("1789"))
+
+    def test_connect_funnel(self):
+        """Each step after Connect is counted for /owner; the first account isn't asked for the password again."""
+        self.signin()
+        first = parse_qs(urlparse(self.c.get("/login").location).query)
+        self.assertNotIn("force_reauth", first)
+        self.c.get("/auth/callback?error=access_denied&error_reason=user_denied")
+        r = self.c.get("/connect?why=personal&error=x").get_data(as_text=True)
+        self.assertIn("Switch to Creator in 30 seconds", r)
+        self.assertRegex(r, r'<details class="switch" open>')
+        self.c.get("/login")
+        self.assertEqual(self.c.get("/auth/callback?code=abc&state=wrong").status_code, 302)
+        self.login()
+        self.assertIn("force_reauth", parse_qs(urlparse(self.c.get("/login").location).query))  # adding another
+        counts, fails = funnel.stats()
+        self.assertEqual({k: counts[k] for k in ("clicked", "cancelled", "expired", "connected")},
+                         {"clicked": 4, "cancelled": 1, "expired": 1, "connected": 1})
+        self.assertEqual(fails[-1]["detail"], "access_denied · user_denied")
+        self.assertEqual(fails[-1]["email"], "om@example.com")
+        page = self.c.get("/owner", headers={"Authorization": "Basic " + base64.b64encode(b"x:boss").decode()}).get_data(as_text=True)
+        self.assertIn("Instagram connect", page)
+        self.assertIn("user_denied", page)
 
     def test_invite_only(self):
         with mock.patch.object(saas, "SIGNUPS", "invite"), mock.patch.object(saas, "INVITE_CODES", {"BETA"}):
