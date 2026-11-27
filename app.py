@@ -1259,10 +1259,16 @@ def run_task(fn, *args):
 SAAS_WEBHOOK_URL = os.environ.get("SAAS_WEBHOOK_URL", "").strip()
 
 
+_MY_IG_ID = []  # kept in memory: it never changes, and every webhook asks for it (a database read each time before)
+
+
 def my_ig_id():
     """This account's Instagram user ID (the "entry.id" in webhooks), or "" if it can't be looked up."""
+    if _MY_IG_ID:
+        return _MY_IG_ID[0]
     cached = kv_get("my_ig_id")
     if cached:
+        _MY_IG_ID.append(cached)
         return cached
     try:
         own = str(ig_get("me", fields="user_id")["user_id"])

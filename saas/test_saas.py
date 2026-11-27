@@ -1816,6 +1816,37 @@ class SaasTest(unittest.TestCase):
         self.assertIn("/email/stop?u=", page)
         self.assertIn("Unsubscribe:", text)
 
+    def test_health_alerts_and_daily_report(self):
+        import monitor
+        sent = []
+        monitor._last_sent.clear()
+        with mock.patch.object(monitor, "email", lambda subj, h, t: sent.append((subj, t)) or True):
+            # an error in a request emails once; the same kind again within 30 minutes doesn't
+            with saas.app.test_request_context("/api/me"):
+                monitor.on_error(saas.app, exception=RuntimeError("boom"))
+                monitor.on_error(saas.app, exception=RuntimeError("boom again"))
+            self.assertEqual(len(sent), 1)
+            self.assertIn("RuntimeError", sent[0][0])
+            # the database refusing requests gets its own alert with what to do
+            db = __import__("requests").HTTPError("400 Client Error: Bad Request for url: https://trusted-cow-1.upstash.io/")
+            with saas.app.test_request_context("/webhook", method="POST"):
+                monitor.on_error(saas.app, exception=db)
+            self.assertIn("database is refusing", sent[-1][0])
+            self.assertIn("console.upstash.com", sent[-1][1])
+            # a traffic spike (sampled 1 in 10) alerts once a day
+            with mock.patch.object(monitor.random, "randrange", return_value=0), mock.patch.dict(os.environ, LOAD_ALERT_PER_HOUR="30"):
+                for _ in range(5):
+                    monitor.note_webhook()
+            spikes = [x for x in sent if "traffic spike" in x[0]]
+            self.assertEqual(len(spikes), 1)
+            self.assertIn("~30 ", spikes[0][0])  # alerts when the level (30) is reached: 3 sampled x 10
+            # the daily report
+            self.login()
+            rows = dict(monitor.daily_report())
+            self.assertTrue(rows["Database"].startswith("OK"))
+            self.assertIn("Errors (yesterday + today)", rows)
+            self.assertIn("daily health", sent[-1][0])
+
     def test_three_link_buttons(self):
         self.login()
         self.assertEqual(self.put_rule("kw:B3", keywords=["B3"], require_follow=False, comment_reply="", dm="Pick one",

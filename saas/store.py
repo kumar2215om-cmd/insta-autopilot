@@ -132,7 +132,7 @@ _http = threading.local()  # one keep-alive HTTPS connection to Redis per thread
 
 # Within one web request the account and login records are read several times (auth, plan, role, the page itself).
 # They're remembered for the rest of that request; any command that writes the key forgets it again.
-_REQUEST_CACHED = re.compile(r"s:t:\d+|s:u:[0-9a-f]+")
+_REQUEST_CACHED = re.compile(r"s:t:\d+(:(rules|token_dead|rate_limited))?|s:u:[0-9a-f]+")
 _READ_ONLY = {"GET", "HGET", "HGETALL", "HMGET", "LRANGE", "LLEN", "SMEMBERS", "SISMEMBER", "SCARD", "EXISTS", "TTL", "MGET",
               "ZRANGE", "ZREVRANGE", "ZSCORE", "ZCARD", "SCAN", "KEYS", "TYPE"}
 
@@ -268,12 +268,24 @@ def take_due(limit=25):
 
 # ---------- per-automation numbers (Auto DM list) ----------
 
+_expiry_set = {}  # key -> day an EXPIRE was last sent from this server (a TTL of weeks needs refreshing once a day, not per hit)
+
+
+def expire_daily(key, seconds):
+    today = day_str()
+    if _expiry_set.get(key) != today:
+        redis("EXPIRE", key, seconds)
+        if len(_expiry_set) > 5000:
+            _expiry_set.clear()
+        _expiry_set[key] = today
+
+
 def rule_count(ig_id, key, field, n=1):
     redis("HINCRBY", account_key(ig_id, f"rs:{key}"), field, n)
     # per day ("2026-11-12|runs") and per hour of the day in India ("21|runs") for the automation's insights
     daily, hourly = account_key(ig_id, f"rsd:{key}"), account_key(ig_id, f"rsh:{key}")
     redis("HINCRBY", daily, f"{day_str()}|{field}", n)
-    redis("EXPIRE", daily, 120 * 86400)
+    expire_daily(daily, 120 * 86400)
     redis("HINCRBY", hourly, f"{time.gmtime(time.time() + 19800).tm_hour}|{field}", n)
 
 
@@ -400,7 +412,7 @@ def count(ig_id, field, n=1):
     if ":" not in field:  # per-day numbers for the weekly summary (monthly counters already carry their month)
         key = account_key(ig_id, f"day:{day_str()}")
         redis("HINCRBY", key, field, n)
-        redis("EXPIRE", key, 40 * 86400)
+        expire_daily(key, 40 * 86400)
 
 
 def days(ig_id, n=14):

@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import requests
-from flask import Flask, abort, jsonify, make_response, Response, redirect, render_template, request, session, url_for
+from flask import Flask, got_request_exception, abort, jsonify, make_response, Response, redirect, render_template, request, session, url_for
 
 import ai_agent
 import content_drafts
@@ -38,6 +38,7 @@ import videos
 import youtube
 import files
 import guides
+import monitor
 import onboarding
 import demo
 import push
@@ -679,6 +680,10 @@ def glossary_page():
             "extra_schema": [{"@context": "https://schema.org", "@type": "DefinedTermSet", "@id": f"{site_url()}/glossary",
                               "name": "Instagram DM automation glossary", "hasDefinedTerm": [term_ld(k) for k in seo.GLOSSARY]}]}
     return content_page(page, "/glossary", [("Glossary", None)])
+
+
+# every unhandled error in a request emails the owner (throttled; see monitor.py)
+got_request_exception.connect(monitor.on_error, app)
 
 
 @app.route("/email/stop", methods=["GET", "POST"])
@@ -3994,12 +3999,20 @@ def run_task(fn, *args):
 def receive_webhook():
     if not valid_signature(request.get_data(), request.headers.get("X-Hub-Signature-256")):
         abort(403)
+    monitor.note_webhook()
     engine.dispatch(request.get_json(silent=True) or {}, run_task)
     run_task(send_followups_safely)
     return "ok"
 
 
+_followups_checked = [0.0]
+
+
 def send_followups_safely():
+    # every webhook used to check the queue (1 database command each); every 30 s per server is plenty
+    if time.time() - _followups_checked[0] < 30:
+        return
+    _followups_checked[0] = time.time()
     try:
         engine.send_due_followups()
     except Exception:
@@ -4070,6 +4083,10 @@ def cron_refresh_tokens():
         shop.send_reminders()  # events and bookings happening in the next 24 hours
     except Exception as e:
         print(f"shop reminders failed: {e}")
+    try:
+        monitor.daily_report()  # the owner's morning health email
+    except Exception as e:
+        print(f"health report failed: {e}")
     try:
         onboarding.run()  # follow-up emails to sign-ups who haven't connected Instagram yet
     except Exception as e:
