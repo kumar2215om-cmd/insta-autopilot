@@ -1257,6 +1257,8 @@ def run_task(fn, *args):
 # also connected to ReplyInbox, and automations made there only run if ReplyInbox hears about the comment. This app
 # still answers its own keywords below; give each keyword to one dashboard only, or a comment gets two replies.
 SAAS_WEBHOOK_URL = os.environ.get("SAAS_WEBHOOK_URL", "").strip()
+# Off by default: @aiwith.om's comment/DM automations moved to ReplyInbox (saas/). ROOT_AUTOMATIONS=on brings them back here.
+ROOT_AUTOMATIONS = os.environ.get("ROOT_AUTOMATIONS", "").strip().lower() in ("1", "on", "true", "yes")
 
 
 _MY_IG_ID = []  # kept in memory: it never changes, and every webhook asks for it (a database read each time before)
@@ -1295,9 +1297,11 @@ def receive_webhook():
         if not hmac.compare_digest(expected, request.headers.get("X-Hub-Signature-256", "")):
             abort(403)
     body = request.get_json(silent=True) or {}
-    own = my_ig_id()
     if SAAS_WEBHOOK_URL:
         forward_to_saas()
+    if not ROOT_AUTOMATIONS:
+        return "ok"  # @aiwith.om's automations run on ReplyInbox now; answering here too would double every reply
+    own = my_ig_id()
     for entry in body.get("entry", []):
         # Other creators' accounts (connected through the multi-account app in saas/) aren't ours to answer.
         if own and str(entry.get("id")) != own:
@@ -1396,7 +1400,7 @@ def cron_retry_failed():
             record_growth(fetch_stats())
         except Exception:
             pass
-    return jsonify(retry_failed_dms())
+    return jsonify(retry_failed_dms() if ROOT_AUTOMATIONS else {"skipped": "automations run on ReplyInbox"})
 
 
 @app.get("/cron/refresh-token")
