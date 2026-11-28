@@ -1383,6 +1383,45 @@ class SaasTest(unittest.TestCase):
                      "Giveaway picker", "Connect Claude (MCP)", "5% + GST"):
             self.assertIn(text, html)
 
+    def test_referral_sticks_across_browsers(self):
+        """The invite counts when Instagram is connected from another browser, after signing out, or when typed in."""
+        self.login()  # @creator, om@example.com: the referrer
+        me_id = users.by_email("om@example.com")["id"]
+        self.c.post("/logout")
+        friend_me = lambda n: {"id": f"asid{n}", "user_id": str(4000 + n), "username": f"friend{n}", "name": "F",
+                               "profile_picture_url": "", "followers_count": 1}
+        # 1. link opened and signed in in Instagram's browser, Instagram connected later in Chrome
+        insta, chrome = saas.app.test_client(), saas.app.test_client()
+        insta.get("/r/creator")
+        self.signin(insta, "a@example.com")
+        self.ig.me = friend_me(1)
+        self.login(chrome, "a@example.com")
+        self.assertEqual(users.by_email("a@example.com").get("referred_by"), me_id)
+        # 2. link opened, then signed out and back in (the session is cleared, the 60-day cookie isn't)
+        b = saas.app.test_client()
+        b.get("/r/creator")
+        with b.session_transaction() as sess:
+            sess.clear()
+        self.ig.me = friend_me(2)
+        self.login(b, "b@example.com")
+        self.assertEqual(users.by_email("b@example.com").get("referred_by"), me_id)
+        # 3. no link at all: typed on the Connect page
+        c = saas.app.test_client()
+        self.signin(c, "c@example.com")
+        self.assertIn("Invited by a creator?", c.get("/connect").get_data(as_text=True))
+        self.assertEqual(c.post("/api/invited-by", json={"username": "nobody.here"}).status_code, 400)
+        self.assertEqual(c.post("/api/invited-by", json={"username": "@Creator"}).get_json(), {"ok": True, "username": "creator"})
+        self.assertIn("Invited by <b id=\"invName\">@creator</b>", c.get("/connect").get_data(as_text=True))
+        self.ig.me = friend_me(3)
+        self.login(c, "c@example.com")
+        self.assertEqual(users.by_email("c@example.com").get("referred_by"), me_id)
+        self.assertEqual(c.post("/api/invited-by", json={"username": "creator"}).status_code, 400)  # too late now
+        self.assertEqual(len(users.get(me_id)["ref_signups"]), 3)
+        # nobody can refer themselves
+        self.c.post("/logout")
+        self.signin(self.c, "om@example.com")
+        self.assertNotIn("Invited by a creator?", self.c.get("/connect").get_data(as_text=True))
+
     def test_referrals(self):
         import referrals
         import users

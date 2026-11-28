@@ -34,6 +34,12 @@
   .acc img, .acc .av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #FFB199, #FF5B3A); object-fit:cover; }
   .acc span { margin-left:auto; color:var(--mute); font-size:13px; }
   .small { font-size:13px; }
+  .invite { margin:14px 0 0; font-size:14px; text-align:center; }
+  .invite button#invEdit { background:none; border:0; padding:0; color:var(--blue); font:600 13px Manrope, Inter, sans-serif; cursor:pointer; }
+  .invite label { display:block; margin:0 0 6px; text-align:left; }
+  .invrow { display:flex; gap:8px; }
+  .invrow input { flex:1; min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:12px; font:inherit; }
+  .invrow .btn { padding:10px 16px; }
   details.switch { margin:16px 0 0; border:1px solid var(--line); border-radius:14px; padding:12px 14px; font-size:14px; }
   details.switch summary { cursor:pointer; font-weight:700; }
   details.switch[open] { border-color:var(--blue); }
@@ -65,6 +71,17 @@
     {% else %}
       <a class="btn wide" href="/login">Connect Instagram</a>
     {% endif %}
+    {% if show_invite %}
+    <div class="invite" id="invite">
+      <span id="invShow"{% if not invited_by %} hidden{% endif %}>🎁 Invited by <b id="invName">@{{ invited_by }}</b> · <button type="button" id="invEdit">change</button></span>
+      <form id="invForm"{% if invited_by %} hidden{% endif %}>
+        <label for="invInput">Invited by a creator? <span class="muted">(optional)</span></label>
+        <div class="invrow"><input id="invInput" placeholder="their Instagram username" autocomplete="off" autocapitalize="none" value="{{ invited_by }}">
+          <button type="submit" class="btn ghost">Save</button></div>
+        <div id="invErr" class="small" style="color:var(--bad)" role="alert"></div>
+      </form>
+    </div>
+    {% endif %}
     <details class="switch"{% if why == "personal" %} open{% endif %}>
       <summary>Personal account? Switch to Creator in 30 seconds</summary>
       <ol>
@@ -87,6 +104,21 @@
   </div>
 </main>
 <script>
+const invForm = document.getElementById("invForm");
+if (invForm) {
+  document.getElementById("invEdit").onclick = () => { invForm.hidden = false; document.getElementById("invShow").hidden = true; document.getElementById("invInput").focus(); };
+  invForm.onsubmit = async (e) => {
+    e.preventDefault();
+    const err = document.getElementById("invErr"); err.textContent = "";
+    const r = await fetch("/api/invited-by", {method: "POST", headers: {"Content-Type": "application/json"},
+                                              body: JSON.stringify({username: document.getElementById("invInput").value})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { err.textContent = d.error || "Couldn't save. Try again."; return; }
+    if (!d.username) return;
+    document.getElementById("invName").textContent = "@" + d.username;
+    invForm.hidden = true; document.getElementById("invShow").hidden = false;
+  };
+}
 document.addEventListener("click", async (e) => {
   const a = e.target.closest("[data-switch]");
   if (!a) return;

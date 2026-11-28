@@ -312,7 +312,7 @@ def guard():
             and request.headers.get("Sec-Fetch-Site") == "cross-site":
         return jsonify(error="Cross-site request refused."), 403  # a second lock on top of the JSON rule
     if request.path.startswith("/api/"):
-        if not current_account() and not ((request.path == "/api/switch" or request.path.startswith("/api/billing")) and current_user()):
+        if not current_account() and not ((request.path in ("/api/switch", "/api/invited-by") or request.path.startswith("/api/billing")) and current_user()):
             return jsonify(error="Please log in again."), 401
         # file uploads are multipart; a custom header still can't be sent cross-site without CORS
         upload = (request.path in ("/api/files", "/api/shop/upload", "/api/courses/upload", "/api/guides/import") or request.path.startswith("/api/courses/video/")) \
@@ -333,9 +333,10 @@ def landing():
     if ref:
         session["ref"] = ref
     referrer = store.account_by_username(session["ref"]) if session.get("ref") else None
-    return render_template("landing.html", invite_only=SIGNUPS == "invite", error=request.args.get("error", ""),
+    resp = make_response(render_template("landing.html", invite_only=SIGNUPS == "invite", error=request.args.get("error", ""),
                            signed_in=bool(current_user() or current_account()), schema=landing_schema(), billing_live=billing.ready(),
-                           referrer=referrer.get("username") if referrer else "")
+                           referrer=referrer.get("username") if referrer else ""))
+    return remember_ref(resp, ref)
 
 
 # ---------- public pages for search engines and AI assistants (SEO / AEO / GEO) ----------
@@ -766,13 +767,48 @@ def clean_ref(value):
     return value if re.fullmatch(r"[a-z0-9._]{1,30}", value) else ""
 
 
+REF_COOKIE = "ri_ref"
+REF_COOKIE_DAYS = 60
+
+
+def remember_ref(resp, ref):
+    """Keeps the invite code in its own 60-day cookie too: the session one is lost when the sign-in is cleared."""
+    if ref:
+        resp.set_cookie(REF_COOKIE, ref, max_age=REF_COOKIE_DAYS * 86400, secure=request.is_secure, httponly=True, samesite="Lax")
+    return resp
+
+
+def pending_ref(user=None):
+    """The invite code for this person: this visit, the 60-day cookie, or the one saved on their login."""
+    return (session.get("ref") or clean_ref(request.cookies.get(REF_COOKIE))
+            or ((user or {}).get("ref_code") or ""))
+
+
 @app.get("/r/<code>")
 def referral_link(code):
     """Short invite link: replyinbox.in/r/<username>."""
     ref = clean_ref(code)
     if ref:
         session["ref"] = ref
-    return redirect(url_for("landing"))
+    return remember_ref(redirect(url_for("landing")), ref)
+
+
+@app.post("/api/invited-by")
+def api_invited_by():
+    """Connect page: "Invited by @…" for people who opened the invite link in another browser or app."""
+    user = current_user()
+    if not user:
+        return jsonify(error="Sign in first."), 401
+    if user.get("accounts") or user.get("referred_by"):
+        return jsonify(error="Invites count only before your first Instagram account is connected."), 400
+    code = clean_ref((request.get_json(silent=True) or {}).get("username"))
+    ref = referrals.referrer_for(code) if code else None
+    if code and (not ref or ref["id"] == user["id"]):
+        return jsonify(error="No ReplyInbox creator with that Instagram username."), 400
+    user["ref_code"] = code
+    users.save(user)
+    session.pop("ref", None)
+    return jsonify(ok=True, username=code)
 
 
 @app.get("/app/refer")
@@ -896,6 +932,10 @@ def start_session(user):
     session.permanent = True
     session["user"] = user["id"]
     session["sid"] = devices.start(user["id"], *client_info())
+    ref = pending_ref()
+    if ref and not user.get("accounts") and not user.get("referred_by") and user.get("ref_code") != ref:
+        user["ref_code"] = ref  # saved on the login: counts even if Instagram is connected from another browser
+        users.save(user)
     if session.get("pending_ig"):  # came back from Instagram signed out: finish connecting it first
         return url_for("auth_finish")
     first = next(iter(users.accounts(user)), None)
@@ -1021,7 +1061,9 @@ def connect_page():
     if not user:
         return redirect(url_for("signin_page"))
     accs = [{**a, "pic": avatar_url(a)} for a in users.accounts(user)]
+    ref = pending_ref(user) if not accs and not user.get("referred_by") else ""
     return render_template("connect.html", user=user, accounts=accs, limit=users.limit(user), locks=plans.LOCKS_ON,
+                           invited_by=ref, show_invite=not accs and not user.get("referred_by"),
                            error=request.args.get("error", ""), why=request.args.get("why", ""), ready=bool(IG_APP_ID))
 
 
@@ -1155,7 +1197,8 @@ def finish_connect(user, code):
                token=token, token_at=int(time.time()), invite=acc.get("invite") or user.get("invite", ""))
     funnel.note("reconnected" if existing else "connected", user)
     if not existing:  # a login's first Instagram account counts as a referral sign-up
-        referrals.record_signup(user, session.pop("ref", ""), acc.get("username", ""))
+        referrals.record_signup(user, pending_ref(user), acc.get("username", ""))
+        session.pop("ref", None)
     users.claim(user, acc)  # saves the account with its owner and the user's plan
     store.redis("DEL", store.account_key(ig_id, "token_dead"))
     try:  # without this subscription Instagram sends no comment/DM events for the account
