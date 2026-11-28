@@ -44,6 +44,7 @@
     <h1>Welcome to {{ brand }}</h1>
     <p class="sub muted">Sign in or create your account. It's free to start.</p>
     {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+    {% if notice %}<div class="alert" role="status" style="background:#EEF0FF;color:var(--ink)">{{ notice }}</div>{% endif %}
 
     {% if google %}
     <a class="btn google" href="/auth/google">

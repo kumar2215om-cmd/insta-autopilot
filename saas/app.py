@@ -890,12 +890,14 @@ def invite_ok(code):
 
 def start_session(user):
     """Signs the user in and picks their first Instagram account; returns where to go next."""
-    keep = {k: session[k] for k in ("ref", "next") if k in session}
+    keep = {k: session[k] for k in ("ref", "next", "pending_ig") if k in session}
     session.clear()
     session.update(keep)
     session.permanent = True
     session["user"] = user["id"]
     session["sid"] = devices.start(user["id"], *client_info())
+    if session.get("pending_ig"):  # came back from Instagram signed out: finish connecting it first
+        return url_for("auth_finish")
     first = next(iter(users.accounts(user)), None)
     if not first and time.time() - user.get("created", 0) < 3600 and not (user.get("onb") or {}).get("sent"):
         run_task(onboarding.welcome, user)  # new sign-up: the welcome email (the follow-ups come from the daily job)
@@ -932,7 +934,7 @@ def signin_page():
         session["next"] = nxt
     return render_template("signin.html", google=users.google_ready(), email=users.email_ready(), review=users.review_ready(),
                            invite_only=SIGNUPS == "invite",
-                           error=request.args.get("error", ""))
+                           error=request.args.get("error", ""), notice=request.args.get("notice", "")[:200])
 
 
 @app.post("/auth/email/start")
@@ -1033,7 +1035,7 @@ def login():
         return redirect(url_for("signin_page"))
     if not IG_APP_ID:
         return redirect(url_for("connect_page", error="Instagram connect isn't set up yet. Please try again later."))
-    session["oauth_state"] = state = secrets.token_urlsafe(24)
+    session["oauth_state"] = state = make_state(user)
     funnel.note("clicked", user)
     # Asking for the password again is only needed to add a different account; for the first one, someone already
     # logged in to Instagram just taps Allow (a forgotten password was a common place to give up).
@@ -1057,21 +1059,78 @@ def exchange_code(code):
     return r.json()["access_token"]  # long-lived: 60 days, renewed by the daily cron
 
 
+STATE_MAX_AGE = 3600  # Instagram's login codes last about an hour
+
+
+def _state_sig(body):
+    return hmac.new(app.secret_key.encode() if isinstance(app.secret_key, str) else app.secret_key,
+                    f"ig-connect|{body}".encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def make_state(user):
+    """The OAuth state: which login started this connect, signed, so it can finish even when Instagram sends the person
+    back to a different browser or app (common on phones: the Instagram app's own browser has no ReplyInbox cookie)."""
+    body = f"{user['id']}.{int(time.time())}.{secrets.token_urlsafe(12)}"
+    return f"{body}.{_state_sig(body)}"
+
+
+def state_owner(state):
+    """The login id a state was made for, or "" when it's forged or too old."""
+    body, _, sig = (state or "").rpartition(".")
+    parts = body.split(".")
+    if len(parts) != 3 or not hmac.compare_digest(sig, _state_sig(body)):
+        return ""
+    try:
+        if time.time() - int(parts[1]) > STATE_MAX_AGE:
+            return ""
+    except ValueError:
+        return ""
+    return parts[0]
+
+
 @app.get("/auth/callback")
 def auth_callback():
     user = current_user()
+    state = request.args.get("state", "")
     if not user:
-        return redirect(url_for("signin_page"))
+        # Back from Instagram in a browser that isn't signed in. Keep the login code here and finish once they sign in
+        # again *as the same login* (checked in /auth/finish), so nobody can attach an Instagram account to someone else.
+        owner = state_owner(state)
+        if not owner or request.args.get("error") or not request.args.get("code"):
+            return redirect(url_for("signin_page"))
+        funnel.note("signed_out", users.get(owner))
+        session["pending_ig"] = {"code": request.args["code"], "state": state, "at": int(time.time())}
+        return redirect(url_for("signin_page", notice="One last step: sign in to ReplyInbox here to finish connecting your Instagram."))
     if request.args.get("error") or not request.args.get("code"):
         funnel.note("cancelled", user, " · ".join(request.args.get(k, "") for k in ("error", "error_reason", "error_description")
                                                   if request.args.get(k)))
         return redirect(url_for("connect_page", error="Instagram login was cancelled. Try again whenever you're ready.", why="cancelled"))
     expected = session.pop("oauth_state", None)
-    if not expected or not hmac.compare_digest(str(expected), request.args.get("state", "")):
+    same_browser = expected and hmac.compare_digest(str(expected), state)
+    if not same_browser and state_owner(state) != user["id"]:
         funnel.note("expired", user)
         return redirect(url_for("connect_page", error="That Instagram login expired. Try again."))
+    return finish_connect(user, request.args["code"])
+
+
+@app.get("/auth/finish")
+def auth_finish():
+    """After signing in again: finishes a connect that came back from Instagram while signed out."""
+    user, pending = current_user(), session.pop("pending_ig", None)
+    if not user:
+        return redirect(url_for("signin_page"))
+    if not pending or time.time() - pending.get("at", 0) > STATE_MAX_AGE:
+        return redirect(url_for("connect_page"))
+    if state_owner(pending.get("state")) != user["id"]:
+        funnel.note("refused", user, "signed in as a different login than the one that started the connect")
+        return redirect(url_for("connect_page", error="That Instagram login was started from another ReplyInbox login. Tap Connect Instagram to try again."))
+    return finish_connect(user, pending["code"])
+
+
+def finish_connect(user, code):
+    """Swaps Instagram's login code for a token and saves the account to this login."""
     try:
-        token = exchange_code(request.args["code"])
+        token = exchange_code(code)
         r = requests.get(f"{engine.GRAPH}/me", timeout=20, params={
             "access_token": token,
             "fields": "id,user_id,username,name,profile_picture_url,followers_count,account_type"})

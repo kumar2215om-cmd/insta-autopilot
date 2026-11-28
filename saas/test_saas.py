@@ -248,7 +248,8 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(self.c.get("/auth/callback?code=abc&state=wrong").status_code, 302)
         self.login()
         self.assertIn("force_reauth", parse_qs(urlparse(self.c.get("/login").location).query))  # adding another
-        counts, fails = funnel.stats()
+        counts, people, fails = funnel.stats()
+        self.assertEqual(people["clicked"], 1)  # one login, four taps
         self.assertEqual({k: counts[k] for k in ("clicked", "cancelled", "expired", "connected")},
                          {"clicked": 4, "cancelled": 1, "expired": 1, "connected": 1})
         self.assertEqual(fails[-1]["detail"], "access_denied · user_denied")
@@ -270,6 +271,45 @@ class SaasTest(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn("p11@x.co", page.get_data(as_text=True))
         self.assertLess(len(trips), 15, trips)
+
+    def test_connect_finishes_when_instagram_returns_signed_out(self):
+        """Phones often come back from Instagram in another browser: sign in again there and the connect finishes,
+        but only for the login that started it."""
+        self.signin()
+        state = parse_qs(urlparse(self.c.get("/login").location).query)["state"][0]
+        other = saas.app.test_client()  # the Instagram app's own browser: no ReplyInbox cookie
+        r = other.get(f"/auth/callback?code=abc&state={state}")
+        self.assertIn("/signin", r.location)
+        self.assertIn("One last step", other.get(r.location).get_data(as_text=True))
+        self.assertIsNone(store.load_account("1789"))
+        nxt = self.signin(other)  # same email: the same login
+        self.assertTrue(nxt.endswith("/auth/finish"), nxt)
+        r = other.get("/auth/finish")
+        self.assertTrue(r.location.endswith("/app"), r.location)
+        self.assertEqual(users.owner_of(store.load_account("1789"))["email"], "om@example.com")
+        counts, people, _ = funnel.stats()
+        self.assertEqual((counts["signed_out"], counts["connected"]), (1, 1))
+
+    def test_connect_state_cannot_attach_to_another_login(self):
+        self.signin(email="attacker@example.com")
+        state = parse_qs(urlparse(self.c.get("/login").location).query)["state"][0]
+        victim = saas.app.test_client()
+        victim.get(f"/auth/callback?code=abc&state={state}")
+        self.signin(victim, email="victim@example.com")
+        r = victim.get("/auth/finish")
+        self.assertIn("/connect?error=", r.location)
+        self.assertIsNone(store.load_account("1789"))
+        # signed in elsewhere as someone else: also refused
+        self.signin(email="victim@example.com")
+        self.assertIn("/connect?error=", self.c.get(f"/auth/callback?code=abc&state={state}").location)
+        # forged or old states are refused too
+        body = state.rsplit(".", 1)[0]
+        self.assertEqual(saas.state_owner(body + ".0000"), "")
+        uid, ts, nonce = body.split(".")
+        old = f"{uid}.{int(ts) - 7200}.{nonce}"
+        self.assertEqual(saas.state_owner(f"{old}.{saas._state_sig(old)}"), "")
+        self.assertEqual(saas.state_owner(state), uid)
+        self.assertIsNone(store.load_account("1789"))
 
     def test_invite_only(self):
         with mock.patch.object(saas, "SIGNUPS", "invite"), mock.patch.object(saas, "INVITE_CODES", {"BETA"}):

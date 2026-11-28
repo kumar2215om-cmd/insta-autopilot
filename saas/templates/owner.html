@@ -68,20 +68,21 @@
     {% endfor %}
   </table></div>
   </details>
-  {% set fc = funnel[0] %}
-  <details class="fold" id="f-funnel"><summary><h2>Instagram connect</h2><span class="cnt">{{ fc.connected }} of {{ fc.clicked }} clicks</span>
+  {% set fc, fp = funnel[0], funnel[1] %}
+  <details class="fold" id="f-funnel"><summary><h2>Instagram connect</h2><span class="cnt">{{ fp.connected }} of {{ fp.clicked }} people</span>
     <span class="muted small">{{ fc.failed }} failed · {{ fc.cancelled }} cancelled</span></summary>
   <p class="muted small" style="margin:0 0 10px">What happens after a login taps Connect Instagram (counted from 27 Nov 2026). "Failed" is
     usually a personal account (Instagram allows only Business or Creator); "Cancelled" means they backed out on Instagram's screen.</p>
   <div style="overflow-x:auto"><table>
-    <tr><th>Step</th><th>Times</th></tr>
-    {% for k, label in funnel_steps %}<tr><td>{{ label }}</td><td>{{ fc[k] }}</td></tr>{% endfor %}
+    <tr><th>Step</th><th>People</th><th>Times</th></tr>
+    {% for k, label in funnel_steps %}<tr><td>{{ label }}</td><td>{{ fp[k] }}</td><td>{{ fc[k] }}</td></tr>{% endfor %}
+    <tr><td class="muted">Went to Instagram, no result back yet</td><td class="muted">{{ [fp.clicked - fp.connected - fp.reconnected, 0]|max }} not connected</td><td class="muted">{{ [fc.clicked - fc.cancelled - fc.expired - fc.failed - fc.refused - fc.connected - fc.reconnected, 0]|max }}</td></tr>
   </table></div>
-  {% if funnel[1] %}
+  {% if funnel[2] %}
   <p class="muted small" style="margin:14px 0 6px">Latest failures (Instagram's own reason)</p>
   <div style="overflow-x:auto"><table>
     <tr><th>When</th><th>Login</th><th>Step</th><th>Reason</th></tr>
-    {% for f in funnel[1] %}<tr><td data-ts="{{ f.at }}"></td><td>{{ f.email }}</td><td>{{ f.step }}</td><td style="font-size:12px;overflow-wrap:anywhere">{{ f.detail }}</td></tr>{% endfor %}
+    {% for f in funnel[2] %}<tr><td data-ts="{{ f.at }}"></td><td>{{ f.email }}</td><td>{{ f.step }}</td><td style="font-size:12px;overflow-wrap:anywhere">{{ f.detail }}</td></tr>{% endfor %}
   </table></div>
   {% endif %}
   </details>
